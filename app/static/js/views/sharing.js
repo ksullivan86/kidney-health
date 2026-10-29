@@ -44,6 +44,7 @@
     const qs = KH.util.qs;
     return {
       summary: (start, end) => request('GET', `${base}/log/summary?${qs({ start, end })}`),
+      range: (start, end) => request('GET', `${base}/log/range?${qs({ start, end })}`),
       labs: (params = {}) => request('GET', `${base}/labs?${qs(params)}`),
       symptoms: (start, end) => request('GET', `${base}/symptoms?${qs({ start, end })}`),
       bodySummary: (date) => request('GET', `${base}/body/summary?${qs({ date })}`),
@@ -182,13 +183,14 @@
       for (const p of people) {
         const actions = h('div', { class: 'token-actions' });
         const open = button('Open', 'primary', () => openShared(p), { 'aria-label': `Open what ${whoText(p)} shares with you` });
+        const trends = button('Trends', 'secondary', () => openTrends(p), { 'aria-label': `Open ${whoText(p)}'s trends` });
         const stop = h('button', { class: 'btn secondary', type: 'button', 'aria-label': `Stop seeing what ${whoText(p)} shares` }, 'Stop seeing');
         stop.addEventListener('click', () => confirm.inline(actions, stop, {
           message: `Stop seeing what ${whoText(p)} shares? They would have to send you a new link.`,
           confirmText: 'Stop seeing',
           onConfirm: async () => { await A.stop(p.id); toast(`You no longer see ${p.name || p.username}'s data`, 'ok'); await load(body, null, '#set-shared-h'); return true; },
         }));
-        actions.append(open, stop);
+        actions.append(open, trends, stop);
         ul.append(h('li', { class: 'device' }, h('div', { class: 'device-main' }, h('span', { class: 'row-title' }, whoText(p)),
           h('span', { class: 'row-sub' }, personLine(p))), actions));
       }
@@ -255,6 +257,10 @@
   // ---------------------------------------------------------------------------
   function openShared(person) {
     if (KH.views.visit && KH.views.visit.openShared) KH.views.visit.openShared({ ...person, reads: reads(person.id) });
+  }
+  /** The person's Trends charts, read-only (js/views/trends.js shared mode). */
+  function openTrends(person) {
+    if (KH.views.trends && KH.views.trends.openShared) KH.views.trends.openShared({ ...person, reads: reads(person.id) });
   }
 
   /** One day of a shared food log into `box`: the entries by meal and the day's totals against the targets. */

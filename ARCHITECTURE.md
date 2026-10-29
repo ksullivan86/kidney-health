@@ -4072,7 +4072,7 @@ it, then reads the areas the owner ticked. Every route needs a session and answe
 | `POST /api/shared/info` | user | `{code}` → `{name, username, areas, days, expires_at}` without using the link up; a wrong, used, cancelled or expired link (or one from a turned-off account) is the generic 404 "That link does not work. Ask for a new one."; your own link is 400; 20 tries an hour per account and per address (`share_link`) |
 | `POST /api/shared/accept` | user | `{code}` → 201 the item of `GET /api/shared`; a newer link from someone who already shares with you ends the old share (`ended_by: replaced`); 409 when the owner already shares with 10 people; audit `share.accepted` in the owner's activity |
 | `GET /api/shared/{id}/profile` | any area | → `{name, ckd_stage, dialysis, diabetes, dialysis_days, week_start, weight_kg, targets}` (`SharedProfile`: no date of birth or other profile field) |
-| `GET /api/shared/{id}/log?date=`, `/log/summary?start=&end=` | `food` | as `GET /api/log` and `/api/log/summary` answer the owner |
+| `GET /api/shared/{id}/log?date=`, `/log/range?start=&end=`, `/log/summary?start=&end=` | `food` | as `GET /api/log`, `/api/log/range` and `/api/log/summary` answer the owner |
 | `GET /api/shared/{id}/labs` | `labs` | as `GET /api/labs` |
 | `GET /api/shared/{id}/body/summary`, `/body/weights`, `/body/blood-pressure` | `body` | as the owner's `/api/body/*` |
 | `GET /api/shared/{id}/symptoms` | `symptoms` | as `GET /api/symptoms` |
@@ -4094,6 +4094,10 @@ it, then reads the areas the owner ticked. Every route needs a session and answe
   cleared), then asks in `#sheet-share` once someone is signed in; nothing is accepted before **Accept**. **Open** shows the Visit
   prep page (`js/views/visit.js`) in its shared mode: the reads come from `KH.sharing.reads(id)`, headings and the banner name the
   owner, parts that were not shared say so, and a day card lists one day's food. The page has no control that writes.
+  **Trends** opens `js/views/trends.js` in its shared mode (`KH.views.trends.openShared`): the charts and period summary read
+  `reads.range` / `reads.summary`, `KH.symptoms.trends` and `KH.bodyTrends.show` take the share as `source`, the `#trends-shared`
+  banner names the owner, and the CSV export, the insights card and the Visit prep link are hidden. The Trends tab, or any other way
+  in, shows the signed-in person's own data.
 
 ### Pairing the iPhone app (`app/pairing.py`, note 15 §4.3)
 

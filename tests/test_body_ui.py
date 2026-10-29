@@ -97,7 +97,7 @@ def test_trends_has_the_section_between_the_symptoms_and_the_charts():
 
 
 def test_today_trends_and_the_api_wrappers_are_wired():
-    assert "KH.body.today(day.date)" in TODAY and "KH.bodyTrends.show(start, end)" in TRENDS
+    assert "KH.body.today(day.date)" in TODAY and "KH.bodyTrends.show(start, end, src)" in TRENDS
     for wrapper in ("bodyWeights: (start, end) => request('GET', '/api/body/weights?'", "addWeight: (b) => request('POST', '/api/body/weights', b)",
                     "updateWeight: (id, b) => request('PUT', `/api/body/weights/${id}`, b)", "deleteWeight: (id) => request('DELETE', `/api/body/weights/${id}`)",
                     "bloodPressures: (start, end) => request('GET', '/api/body/blood-pressure?'", "addBloodPressure: (b) => request('POST', '/api/body/blood-pressure', b)",
@@ -230,7 +230,7 @@ def test_the_trends_charts_are_plain_svg_each_with_a_table_under_it():
     block = TRENDS_CODE[TRENDS_CODE.index("function weightBlock"):TRENDS_CODE.index("function render()")]
     assert block.index("weightChart(") < block.index("weightTable(") and block.index("bpChart(") < block.index("bpTable(")
     # weight: one line, a dashed line for the dry weight only on hemodialysis, a diamond for a weight after dialysis
-    assert "state.profile.dialysis === 'hemodialysis'" in TRENDS_CODE and "diamond(" in TRENDS_CODE and "'ref dry'" in TRENDS_CODE
+    assert "profile.dialysis === 'hemodialysis'" in TRENDS_CODE and "diamond(" in TRENDS_CODE and "'ref dry'" in TRENDS_CODE
     # blood pressure: two lines, goal lines dashed and named, a circle and a square per reading
     for needle in ("'series top'", "'series bottom'", "'goal-top'", "'goal-bottom'", "`ref ${cls}`", "circle(", "rect("):
         assert needle in TRENDS_CODE, needle

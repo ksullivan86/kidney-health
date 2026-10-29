@@ -13,6 +13,21 @@
   const chartsEl = $('#charts');
   const chartTip = $('#chart-tip');
   let trendsRequest = 0;
+  // What someone shares with the signed-in person (design note 19 §11): set by openShared just before the view shows; the Trends
+  // tab, or any other way in, shows the person's own data. `source` = { id, name, areas, reads } (js/views/sharing.js reads(id)).
+  const T = { source: null, pending: null };
+  const sharedHas = (area) => !T.source || (T.source.areas || []).includes(area);
+  function renderMode() {
+    const shared = !!T.source;
+    const banner = $('#trends-shared');
+    banner.hidden = !shared;
+    banner.textContent = shared
+      ? `These are ${T.source.name}'s trends, shared with you. You can look, but not change anything. Where a line says "your", it means ${T.source.name}'s.` : '';
+    $('#export-csv').hidden = shared; // the CSV is the person's own download
+    $('#guidance-period').hidden = shared || $('#guidance-period').hidden;
+    const visit = $('#visit-open');
+    if (visit) visit.closest('.period-visit').hidden = shared;
+  }
   $$('.segmented .seg[data-days]').forEach((b) => b.addEventListener('click', () => {
     state.trendsDays = Number(b.dataset.days);
     $$('.segmented .seg[data-days]').forEach((x) => x.setAttribute('aria-pressed', x === b ? 'true' : 'false'));
@@ -22,10 +37,11 @@
     const reqId = ++trendsRequest;
     const end = todayStr();
     const start = addDays(end, -(state.trendsDays - 1));
-    $('#trends-title').textContent = `Last ${state.trendsDays} days`;
-    if (KH.guidance) KH.guidance.trends(state.trendsDays).catch((e) => console.warn('Insights:', e)); // js/views/guidance.js
-    if (KH.symptoms) KH.symptoms.trends(start, end).catch((e) => console.warn('Symptoms:', e)); // js/views/symptoms.js
-    if (KH.bodyTrends) KH.bodyTrends.show(start, end).catch((e) => console.warn('Weight and blood pressure:', e)); // js/views/body_trends.js
+    const src = T.source;
+    $('#trends-title').textContent = src ? `${src.name}: last ${state.trendsDays} days` : `Last ${state.trendsDays} days`;
+    if (KH.guidance && !src) KH.guidance.trends(state.trendsDays).catch((e) => console.warn('Insights:', e)); // js/views/guidance.js
+    if (KH.symptoms) KH.symptoms.trends(start, end, src).catch((e) => console.warn('Symptoms:', e)); // js/views/symptoms.js
+    if (KH.bodyTrends) KH.bodyTrends.show(start, end, src).catch((e) => console.warn('Weight and blood pressure:', e)); // js/views/body_trends.js
     $('#trends-range').textContent = `${fmtDateShort(start)} – ${fmtDateShort(end)}`;
     const exportLink = $('#export-csv');
     if (MOCK) {
@@ -41,11 +57,21 @@
       exportLink.href = api.exportUrl(start, end);
       exportLink.onclick = null;
     }
+    if (src && !sharedHas('food')) {
+      state.trends = null;
+      clear(chartsEl).append(h('p', { class: 'empty-state' }, `${src.name} has not shared their food log with you.`));
+      $('#period-sub').textContent = '';
+      clear($('#period-interdialytic')).hidden = true;
+      clear($('#period-notes'));
+      clear($('#period-body')).append(h('p', { class: 'empty-state' }, `${src.name} has not shared their food log with you.`));
+      return;
+    }
+    const reads = src ? src.reads : api; // the signed-in person's own reads, or the read-only routes of a share
     chartsEl.style.opacity = state.trends ? '0.6' : '';
     try {
       const [res, sum] = await Promise.all([
-        api.range(start, end),
-        api.summary(start, end).then((v) => ({ ok: v })).catch((e) => ({ err: e })),
+        reads.range(start, end),
+        reads.summary(start, end).then((v) => ({ ok: v })).catch((e) => ({ err: e })),
       ]);
       if (reqId !== trendsRequest) return;
       state.trends = { start, end, days: res.days || [] };
@@ -102,7 +128,7 @@
     $('#period-sub').textContent = `${fmtRange(sum.start, sum.end)} · ${sum.logged_days} of ${sum.days} days logged`;
     const keys = Object.keys(sum.nutrients || {}).filter((k) => NUT[k]).sort((a, b) => TREND_ORDER.indexOf(a) - TREND_ORDER.indexOf(b));
     if (!keys.length) {
-      body.append(h('p', { class: 'empty-state' }, 'No targets set yet. Set targets in Profile to see a summary.'));
+      body.append(h('p', { class: 'empty-state' }, T.source ? 'No targets set yet.' : 'No targets set yet. Set targets in Profile to see a summary.'));
       return;
     }
     const grid = h('div', { class: 'period-grid' });
@@ -163,7 +189,7 @@
     for (const d of t.days) for (const k of Object.keys(d.status || {})) if (NUT[k]) keys.add(k);
     const ordered = [...keys].sort((a, b) => TREND_ORDER.indexOf(a) - TREND_ORDER.indexOf(b));
     if (!ordered.length) {
-      chartsEl.append(h('p', { class: 'card empty-state' }, 'No targets set yet. Set targets in Profile to see trends.'));
+      chartsEl.append(h('p', { class: 'card empty-state' }, T.source ? 'No targets set yet.' : 'No targets set yet. Set targets in Profile to see trends.'));
       return;
     }
     const width = Math.max(240, Math.floor((chartsEl.clientWidth - (chartsEl.clientWidth >= 700 ? 12 : 0)) / (chartsEl.clientWidth >= 700 ? 2 : 1)) - 34);
@@ -349,6 +375,16 @@
     resizeRaf = requestAnimationFrame(renderTrends);
   });
 
-  router.register('trends', () => loadTrends());
-  KH.views.trends = { loadTrends, renderTrends, renderPeriodSummary };
+  router.register('trends', () => {
+    T.source = T.pending; // set by openShared just before; the Trends tab shows the person's own data
+    T.pending = null;
+    state.trends = null;
+    renderMode();
+    return loadTrends();
+  });
+  function openShared(person) {
+    T.pending = { id: person.id, name: person.name || person.username, areas: person.areas || [], reads: person.reads };
+    router.show('trends');
+  }
+  KH.views.trends = { loadTrends, renderTrends, renderPeriodSummary, openShared };
 })();

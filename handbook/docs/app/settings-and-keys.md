@@ -179,7 +179,8 @@ sign-in activity.
 
 - Your list in **Sharing** shows who can see your data, until when, and when they last looked. **Stop sharing** ends it at once.
 - A share with an end date stops by itself on that day. Your activity says so.
-- When someone shares with you, they are under **Shared with you**. **Open** shows their page; **Stop seeing** ends it.
+- When someone shares with you, they are under **Shared with you**. **Open** shows their page, **Trends** their charts over 7, 14
+  or 30 days; **Stop seeing** ends it.
 - A link nobody has used yet can be cancelled from the same list.
 
 ## Assistant access

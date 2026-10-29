@@ -13,6 +13,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
   90 days or a year. On that day the share stops by itself, and your activity says so. Both of you see the end date. See
   [`docs/accounts.md`](docs/accounts.md#sharing-with-a-caregiver).
 
+* **Trends for someone who shares with you.** Under Settings → Account → Sharing → Shared with you, **Trends** shows their charts,
+  period summary, symptoms and weight and blood pressure, read-only, with a banner. Parts they did not share say so.
+
 ### For people who run a server
 
 * **`python -m app.admin env-template`** prints every setting's variable as a `.env` file to fill in, with what each does, its
