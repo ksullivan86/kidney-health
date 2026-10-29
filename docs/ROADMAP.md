@@ -35,7 +35,7 @@ insulin or medicines.
 ## Accounts, sign-in and secrets (note 07)
 
 * OIDC sign-in (Authelia, Authentik, Keycloak, Kanidm, Pocket ID), choosing between Authlib 1.8 + itsdangerous and the project's own PKCE code (a new runtime dependency needs a contract decision) — note 07 F7, §3.1 and §6 "Later (v0.4)".
-* A second factor for local sign-in: one-time codes (TOTP) are **built** ([note 17](dev/research/17-two-step-sign-in.md)). Still later: requiring them for admins, and passkeys (WebAuthn, `webauthn` 3.0.1) as a second factor or passwordless; with a second factor the 8-character password minimum becomes acceptable — note 07 §3.1, §6 "Later (v0.4)" and §8 risk R3.
+* A second factor for local sign-in: one-time codes (TOTP) are **built** ([note 17](dev/research/17-two-step-sign-in.md)). Requiring them for admins is built too. Still later: passkeys (WebAuthn, `webauthn` 3.0.1) as a second factor or passwordless; with a second factor the 8-character password minimum becomes acceptable — note 07 §3.1, §6 "Later (v0.4)" and §8 risk R3.
 * Optional SMTP for self-service password resets (today an admin makes a reset link or uses `python -m app.admin reset-password`) — note 07 §6 "Later (v0.4)".
 * Read-only sharing with a caregiver or dietitian (`shares(owner_user_id, grantee_user_id, scope, created_at, revoked_at)` and a `Principal(user, acting_for)` dependency) — note 07 §6 "Later (v0.4)".
 * An opt-in password pepper (`PASSWORD_PEPPER_FILE`) once operators keep their keys off the data volume — note 07 §3.2 ("not in v0.3 … revisit").

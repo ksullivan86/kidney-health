@@ -15,6 +15,10 @@ the API. Security fixes are released as patch versions of the newest minor versi
   `python -m app.admin remove-two-step USERNAME`. The QR code is drawn in the browser from a vendored library, so the secret goes to
   no other site. Schema step 22 adds two tables and changes nothing else. See [`docs/accounts.md`](docs/accounts.md#two-step-sign-in)
   and [design note 17](docs/dev/research/17-two-step-sign-in.md).
+* **Admins can be made to use two-step sign-in.** A new switch, **Server administration → Server settings → Admins must use two-step
+  sign-in**, or `AUTH_REQUIRE_TWO_STEP_ADMINS=true`. While it is on, an admin without two-step sign-in can still use the app, but
+  Server administration only shows a note sending them to turn it on. You can turn the switch on only after turning on your own.
+  It is off by default.
 
 ### For contributors
 

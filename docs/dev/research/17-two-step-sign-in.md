@@ -130,6 +130,8 @@ not-yours; the sealed secret (moved row does not decrypt, key rotation); the CLI
 
 ## 10. Later
 
-* `AUTH_REQUIRE_TWO_STEP_ADMINS=true`: admins must turn it on.
+* ~~`AUTH_REQUIRE_TWO_STEP_ADMINS=true`: admins must turn it on.~~ Built 2026-10-29 as the setting `auth.require_two_step_admins`
+  (env `AUTH_REQUIRE_TWO_STEP_ADMINS`, off by default): `require_admin` answers `403 {"two_step_required": true}` to a local admin
+  without it in `AUTH_MODE=local`; the admin turning it on must have it on (`409`); `GET /api/me/totp` says `required`.
 * Passkeys (WebAuthn) as a second factor or instead of the password (note 07 §3.1); then the password minimum can drop to 8.
 * "Trust this device for 30 days".

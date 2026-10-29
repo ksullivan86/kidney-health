@@ -15,7 +15,7 @@ from ..audit import audit
 from ..db import get_db
 from . import clock, sessions, totp
 from .context import auth_context, request_ip
-from .deps import CurrentUser, RecentUser, current_user
+from .deps import CurrentUser, RecentUser, current_user, two_step_required
 from .errors import ApiProblem
 from .models import User
 from .ratelimit import register_limit
@@ -53,8 +53,10 @@ def status(conn: sqlite3.Connection, user_id: int) -> dict[str, Any]:
 def read_totp(request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """Whether two-step sign-in is on, and how many recovery codes are left. Never the secret."""
     if not available(request, user):
-        return {"available": False, "enabled": False, "enabled_at": None, "recovery_codes_left": 0}
-    return {"available": True, **status(conn, user.id)}
+        return {"available": False, "enabled": False, "enabled_at": None, "recovery_codes_left": 0, "required": False}
+    # required: this person is an admin and the server asks admins to use it (auth.require_two_step_admins).
+    required = user.role == "admin" and two_step_required(auth_context(request), conn, user)
+    return {"available": True, **status(conn, user.id), "required": required}
 
 
 @router.post("/setup")

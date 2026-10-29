@@ -1,4 +1,4 @@
-Status: complete (2026-10-28): server and screens built and tested; the full pytest run had one failure (the isolation matrix), fixed in b0db64d. The PR waits for the owner.
+Status: complete (2026-10-29): two-step sign-in (#103) and "Admins must use two-step sign-in" built; full pytest passed.
 
 # Two-step sign-in (design note 17)
 

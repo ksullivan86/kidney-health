@@ -89,6 +89,10 @@ to use it. The codes come from the phone's clock, so they need no network, no te
 * No phone and no recovery codes: **Server administration → People → Remove two-step sign-in**, or
   `python -m app.admin remove-two-step USERNAME` (this works for the only admin too). The person then signs in with the password
   alone and can turn it on again.
+* **Admins must use it** is a switch in **Server administration → Server settings → Sign-in and registration**, or
+  `AUTH_REQUIRE_TWO_STEP_ADMINS=true`. While it is on, an admin without two-step sign-in can still use the app, but Server
+  administration shows only a note that sends them to turn it on. You can switch it on there only after turning on your own.
+  The command line is not affected.
 * The secret each phone holds is stored encrypted with `SECRET_KEY`. If you lose that key, the codes stop working, but recovery
   codes still do, and you can remove two-step sign-in as above.
 

@@ -5,7 +5,9 @@
   before first-run setup → 503 ``{"setup_required": true}``; while ``must_change_password`` is set
   every route except ``POST /api/me/password`` and ``POST /api/auth/logout`` → 403
   ``{"password_change_required": true}`` (§9 N8).
-* :func:`require_admin` / :data:`AdminUser`: ``role == 'admin'`` or 403.
+* :func:`require_admin` / :data:`AdminUser`: ``role == 'admin'`` or 403. With ``auth.require_two_step_admins`` on (env
+  ``AUTH_REQUIRE_TWO_STEP_ADMINS``, design note 17 §10) a local admin in ``AUTH_MODE=local`` also needs two-step sign-in on, or 403
+  ``{"two_step_required": true}``; the person can still use the app and turn it on under ``/api/me/totp``.
 * :func:`require_recent_auth`: the password was entered within ``REAUTH_MINUTES`` on this session,
   or 403 ``{"reauth_required": true}``. Proxy and no-login modes have no local password: the
   identity provider (or nobody) is responsible, so it passes there.
@@ -22,7 +24,7 @@ from typing import Annotated
 from fastapi import Depends, Request
 
 from ..db import get_db
-from . import housekeeping, proxy, sessions
+from . import housekeeping, proxy, sessions, totp
 from .context import AuthContext, auth_context
 from .errors import ApiProblem, password_change_required, reauth_required, setup_required, sign_in_required
 from .models import User, load_user, setup_required as needs_setup, user_row
@@ -97,9 +99,24 @@ def current_user(request: Request, conn: Annotated[sqlite3.Connection, Depends(g
 CurrentUser = Annotated[User, Depends(current_user)]
 
 
-def require_admin(user: CurrentUser) -> User:
+TWO_STEP_SETTING = "auth.require_two_step_admins"
+TWO_STEP_FIRST = ("This server asks admins to use two-step sign-in. Turn it on in Settings → Account → Two-step sign-in, "
+                  "then open Server administration again.")
+
+
+def two_step_required(ctx: AuthContext, conn: sqlite3.Connection, user: User) -> bool:
+    """Whether this admin must turn on two-step sign-in before using admin routes: the switch is on, sign-in is local, and the
+    account signs in with a password. The sign-in proxy (or no sign-in) is responsible for its own second factor."""
+    if ctx.settings.auth_mode != "local" or user.auth_source != "local":
+        return False
+    return bool(ctx.store.get(conn, TWO_STEP_SETTING))
+
+
+def require_admin(user: CurrentUser, request: Request, conn: Annotated[sqlite3.Connection, Depends(get_db)]) -> User:
     if user.role != "admin":
         raise ApiProblem(403, "Admins only")
+    if two_step_required(auth_context(request), conn, user) and not totp.is_enabled(conn, user.id):
+        raise ApiProblem(403, TWO_STEP_FIRST, two_step_required=True)
     return user
 
 

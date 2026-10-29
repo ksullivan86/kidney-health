@@ -125,7 +125,8 @@ def audit_actions(app: Any) -> list[tuple[str, str | None]]:
 
 
 def test_off_until_the_person_types_a_code_from_the_new_secret(client: TestClient, fake_clock: FakeClock) -> None:
-    assert client.get("/api/me/totp").json() == {"available": True, "enabled": False, "enabled_at": None, "recovery_codes_left": 0}
+    assert client.get("/api/me/totp").json() == {"available": True, "enabled": False, "enabled_at": None, "recovery_codes_left": 0,
+                                                "required": False}
     r = client.post("/api/me/totp/setup")
     assert r.status_code == 200
     got = r.json()
@@ -326,7 +327,8 @@ def test_deleting_the_account_deletes_its_two_step_rows(pair: tuple[TestClient, 
 def test_not_offered_without_local_sign_in(tmp_path: Any, foods_json: Any) -> None:
     settings: Settings = make_settings(tmp_path, foods_json, auth_mode="none")
     with TestClient(create_app(settings)) as c:
-        assert c.get("/api/me/totp").json() == {"available": False, "enabled": False, "enabled_at": None, "recovery_codes_left": 0}
+        assert c.get("/api/me/totp").json() == {"available": False, "enabled": False, "enabled_at": None, "recovery_codes_left": 0,
+                                                    "required": False}
         for method, path in (("post", "/api/me/totp/setup"), ("post", "/api/me/totp/enable"), ("post", "/api/me/totp/recovery-codes"),
                              ("delete", "/api/me/totp")):
             r = c.request(method, path, json={"code": "123456"} if path.endswith("enable") else None)
@@ -380,3 +382,71 @@ def test_the_cli_removes_it(client: TestClient, fake_clock: FakeClock) -> None:
     assert "does not use" in out.getvalue()
     assert cli.main(["remove-two-step", "nobody"], env=env, out=io.StringIO()) != 0
     assert any(a == "totp.disabled" and '"via":"cli"' in (d or "") for a, d in audit_actions(client.app))
+
+
+# --------------------------------------------------------------------------- #
+# Admins must use it (auth.require_two_step_admins, note 17 §10)
+# --------------------------------------------------------------------------- #
+
+
+def test_an_admin_can_require_it_only_after_turning_on_their_own(client: TestClient, fake_clock: FakeClock) -> None:
+    r = client.patch("/api/admin/settings", json={"auth.require_two_step_admins": True})
+    assert r.status_code == 409 and r.json()["field"] == "auth.require_two_step_admins"
+    assert client.get("/api/admin/users").status_code == 200  # nothing changed
+    turn_on(client, fake_clock)
+    r = client.patch("/api/admin/settings", json={"auth.require_two_step_admins": True})
+    assert r.status_code == 200 and r.json()["settings"]["auth.require_two_step_admins"]["value"] is True
+    assert client.get("/api/admin/users").status_code == 200  # the admin who turned it on keeps the page
+    assert client.get("/api/me/totp").json()["required"] is True
+    assert client.patch("/api/admin/settings", json={"auth.require_two_step_admins": False}).status_code == 200
+
+
+def test_another_admin_without_it_is_sent_to_settings_and_back_after_turning_it_on(pair: tuple[TestClient, TestClient],
+                                                                                    fake_clock: FakeClock) -> None:
+    admin, sam = pair
+    sid = sam_id(admin)
+    assert admin.patch(f"/api/admin/users/{sid}", json={"role": "admin"}).status_code == 200
+    base = str(admin.base_url).rstrip("/")
+    sam = TestClient(admin.app, base_url=base)
+    assert login(admin.app, password=USER_PASSWORD, username="sam", client=sam).status_code == 200  # the role change signed sam out
+    turn_on(admin, fake_clock)
+    assert admin.patch("/api/admin/settings", json={"auth.require_two_step_admins": True}).status_code == 200
+
+    r = sam.get("/api/admin/users")
+    assert r.status_code == 403 and r.json()["two_step_required"] is True and "Settings → Account" in r.json()["detail"]
+    assert sam.get("/api/admin/settings").status_code == 403
+    assert sam.get("/api/me").status_code == 200 and sam.get("/api/log", params={"date": "2026-10-28"}).status_code == 200  # still uses the app
+    assert sam.get("/api/me/totp").json() == {"available": True, "enabled": False, "enabled_at": None, "recovery_codes_left": 0, "required": True}
+    turn_on(sam, fake_clock)
+    assert sam.get("/api/admin/users").status_code == 200
+
+    # A member is unaffected (the usual "Admins only" answer) and is never told the switch is on.
+    assert admin.patch(f"/api/admin/users/{sid}", json={"role": "user"}).status_code == 200
+    member = TestClient(admin.app, base_url=base)
+    r = login(admin.app, password=USER_PASSWORD, username="sam", client=member)
+    assert r.status_code == 401 and r.json()["totp_required"]  # sam keeps two-step sign-in; only admins are asked to have it
+    assert admin.get("/api/me/totp").json()["required"] is True
+
+
+def test_the_switch_can_come_from_the_environment(tmp_path: Any, foods_json: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AUTH_REQUIRE_TWO_STEP_ADMINS", "true")
+    with TestClient(create_app(make_settings(tmp_path, foods_json))) as c:
+        assert login(c.app, client=c).status_code == 200
+        r = c.get("/api/admin/users")
+        assert r.status_code == 403 and r.json()["two_step_required"] is True
+        view = c.get("/api/me/totp").json()
+        assert view["required"] is True and view["enabled"] is False
+        r = c.post("/api/me/totp/setup")
+        assert r.status_code == 200  # the admin can still turn it on
+        assert c.post("/api/me/totp/enable", json={"code": code_now(r.json()["secret"])}).status_code == 200
+        assert c.get("/api/admin/users").status_code == 200
+        item = c.get("/api/admin/settings").json()["settings"]["auth.require_two_step_admins"]
+        assert item["value"] is True and item["locked_by_env"] == "AUTH_REQUIRE_TWO_STEP_ADMINS"
+        assert c.patch("/api/admin/settings", json={"auth.require_two_step_admins": False}).status_code == 409
+
+
+def test_the_switch_does_nothing_without_local_sign_in(tmp_path: Any, foods_json: Any, monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("AUTH_REQUIRE_TWO_STEP_ADMINS", "true")
+    with TestClient(create_app(make_settings(tmp_path, foods_json, auth_mode="none"))) as c:
+        assert c.get("/api/admin/settings").status_code == 200  # everyone is the admin here; there is no second factor to ask for
+        assert c.get("/api/me/totp").json()["required"] is False

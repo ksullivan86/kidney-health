@@ -146,6 +146,8 @@ Environment=TRUSTED_PROXIES=127.0.0.1,::1
 # Phone shortcuts (docs/push.md): each person may make device tokens (Settings → Phone shortcuts) that an iPhone Shortcut uses to
 # add weights and blood pressure readings to their own log (POST /push/v1/body). A token can only add. Off by default.
 # Environment=PUSH_ENABLED=true
+# Admins must use two-step sign-in before they can open Server administration (docs/accounts.md). Off by default.
+# Environment=AUTH_REQUIRE_TWO_STEP_ADMINS=true
 # Environment=PASSWORD_BREACH_CHECK=true
 
 # Health: exec form (JSON array). A plain string would run through /bin/sh, which the image does

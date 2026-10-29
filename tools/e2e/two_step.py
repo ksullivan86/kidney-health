@@ -94,8 +94,9 @@ class Watch:
         self.requests: list[str] = []
         self.errors: list[str] = []
         self.dialogs: list[str] = []
-        self.expected_401 = 0
+        self.forbidden: list[str] = []
         page.on("request", self._request)
+        page.on("response", lambda r: self.forbidden.append(urlsplit(r.url).path) if r.status == 403 else None)
         page.on("console", self._console)
         page.on("pageerror", lambda e: self.errors.append(str(e)))
         page.on("dialog", self._dialog)
@@ -146,7 +147,7 @@ class Pass:
     def finish(self, server_mode: bool) -> None:
         csp = self.page.evaluate("window.__csp || []")
         check(f"[{self.tag}] no console error, no CSP violation, no browser dialog", not self.watch.errors and not csp and not self.watch.dialogs,
-              "; ".join(self.watch.errors + csp + self.watch.dialogs))
+              "; ".join(self.watch.errors + csp + self.watch.dialogs) + (f" (403 from {self.watch.forbidden})" if self.watch.forbidden else ""))
         others = sorted(h for h in self.watch.hosts if h != urlsplit(self.base).netloc)
         check(f"[{self.tag}] the browser asked no other host", not others, str(others))
         if not server_mode:
@@ -304,6 +305,35 @@ def walk_reset(p: Pass, admin: Any, bob: Any, base: str) -> None:
     p.finish(server_mode=True)
 
 
+def walk_required(p: Pass, admin: Any, carl: Any) -> None:
+    """auth.require_two_step_admins: an admin without two-step sign-in is sent to Settings, and gets the page back after turning it on."""
+    page = p.page
+    setup = admin.json("POST", "/api/me/totp/setup")
+    admin.json("POST", "/api/me/totp/enable", {"code": code_for(setup["secret"])})
+    admin.json("PATCH", "/api/admin/settings", {"auth.require_two_step_admins": True})
+    page.goto("/#admin")
+    page.wait_for_selector("#admin-two-step-go", timeout=30000)
+    check(f"[{p.tag}] an admin without two-step sign-in sees why, and no admin sections",
+          "asks admins to use two-step sign-in" in text_of(page, "#set-admin-body") and not page.locator("#set-people").count())
+    p.shot("required", "#set-admin-body")
+    page.click("#admin-two-step-go")
+    page.wait_for_selector("#set-two-step-required", timeout=20000)
+    check(f"[{p.tag}] Open Settings leads to the block, which says the server asks for it", page.is_visible("#set-two-step-on"))
+    page.click("#set-two-step-on")
+    page.wait_for_selector(".two-step-qr .qr-dark", timeout=20000)
+    key = page.inner_text("#set-two-step-key").replace(" ", "")
+    page.fill("#set-two-step-code", code_for(key))
+    page.click("#set-two-step-confirm")
+    page.wait_for_selector("#set-two-step-done", timeout=15000)
+    page.click("#set-two-step-done")
+    page.goto("/#admin")
+    page.wait_for_selector("#set-people .user-row", timeout=30000)
+    check(f"[{p.tag}] after turning it on, Server administration opens", not page.locator("#admin-two-step-go").count())
+    p.no_overflow("admin required")
+    admin.json("PATCH", "/api/admin/settings", {"auth.require_two_step_admins": False})
+    p.finish(server_mode=True)
+
+
 def walk_demo(p: Pass) -> None:
     page = p.page
     page.goto("/?mock=1")
@@ -343,6 +373,7 @@ def main(argv: list[str] | None = None) -> int:
         ana_api = khserver.Api(server.base)
         ana_api.login("ana")
         bob = invite_user(server, admin, "bob")
+        carl = invite_user(server, admin, "carl", role="admin")
         base = f"http://localhost:{args.port}"
         with sync_playwright() as pw:
             browser = pw.chromium.launch(executable_path=khserver.chromium_executable(), args=["--no-sandbox"])
@@ -350,6 +381,7 @@ def main(argv: list[str] | None = None) -> int:
                 codes = walk_ana(Pass(browser, base, out, 375, 812, "light", "ana-375-light", ana_browser.cookies()), ana_api)
                 walk_admin(Pass(browser, base, out, 1280, 800, "dark", "admin-1280-dark", admin.cookies()), base, codes[1])
                 walk_reset(Pass(browser, base, out, 375, 812, "dark", "bob-375-dark"), admin, bob, base)
+                walk_required(Pass(browser, base, out, 375, 812, "light", "carl-375-light", carl.cookies()), admin, carl)
                 walk_demo(Pass(browser, base, out, 375, 812, "light", "demo-375-light"))
             finally:
                 browser.close()

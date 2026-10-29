@@ -127,6 +127,10 @@
       return;
     }
     if (st.enabled) { renderOn(body, st); return; }
+    if (st.required) {
+      body.append(h('div', { class: 'settings-note caution', role: 'note', id: 'set-two-step-required' },
+        h('p', {}, h('strong', {}, 'Your server asks admins to use two-step sign-in. '), 'Turn it on to open Server administration again.')));
+    }
     body.append(
       h('p', {}, h('strong', {}, 'Off. '), `With two-step sign-in, signing in needs your password and a 6-digit code from an app on your phone, such as ${APPS}. Someone who learns your password still cannot sign in.`),
       h('div', { class: 'settings-actions' }, button('Turn on two-step sign-in', 'primary', async () => { await startSetup(body); }, { id: 'set-two-step-on' })));

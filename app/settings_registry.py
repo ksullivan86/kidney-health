@@ -807,6 +807,17 @@ register(
 
 register(
     SettingDef(
+        key="auth.require_two_step_admins",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="AUTH_REQUIRE_TWO_STEP_ADMINS",
+        label="Admins must use two-step sign-in",
+        help='Off by default. When on, an admin must use two-step sign-in (a code from an authenticator app) to open Server administration. An admin without it can still use the app and turns it on in Settings → Account → Two-step sign-in. Has no effect when a sign-in proxy or no sign-in is used. You can turn it on only after turning on your own two-step sign-in.',
+    ),
+)
+register(
+    SettingDef(
         key="push.enabled",
         model=bool,
         default=False,
