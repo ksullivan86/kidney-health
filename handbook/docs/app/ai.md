@@ -91,6 +91,8 @@ in your AI activity and count in your daily limit. Ask and lab report photos nev
   problem is that a portion is too big, the app makes it smaller, a quarter of a serving at a time, until the meal fits.
   You then see **"The app made a portion smaller so the meal fits your targets."** under the idea, and the amounts and
   numbers shown are the smaller ones. Any other problem, such as a food to avoid with kidney disease, drops the idea.
+  AI recipes work the same way: too much of one food in a serving is made smaller, with **"The app made a portion smaller
+  so the recipe fits your targets."**
 - **No free text from AI in the meal features.** The reasons you read under an idea ("Low in potassium; fits your
   dinner carbohydrate goal") are written by the app's maintainers, not by the AI. **Ask** is the one place
   where the AI writes sentences, and the app checks them before you see them (see "Ask" below).

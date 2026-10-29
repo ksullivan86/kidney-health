@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # ai-recipe-share-repair: an AI recipe whose only problem is a too-big share is fitted, not dropped
 
@@ -34,10 +34,18 @@ fast-forwarded to 501b87e (PR #123) at the start. Local commits only, never push
    `tests/test_ai_golden.py` + new golden case `recipes-share-too-big-lowered`, `tests/data/gen_guidance_vectors.py` +
    regenerated `tests/data/guidance_vectors.json`.
 
-## Next
+2. Docs: docs/ai.md (recipes row, "What the app does", the live run note), ARCHITECTURE.md (`POST /api/ai/recipes`),
+   handbook/docs/app/ai.md, handbook/docs/app/planning-and-menus.md, the note 16 V3 row, one CHANGELOG line.
+3. Checks, all green: tests/test_ai_*.py + tests/guidance + tests/test_recipe*.py (about 2,000 passed), the doc tests
+   (`-k "doc or changelog or handbook or readme or architecture or plain or words"`, about 950 passed),
+   `node --test tests/js/*.test.mjs` (166 passed), `node tests/js/run_vectors.mjs` (exit 0),
+   `gen_guidance_vectors.py --check`, `gen_openapi.py --check`, ruff.
 
-2. Docs: docs/ai.md, ARCHITECTURE.md, handbook/docs/app/ai.md (+ planning-and-menus.md), CHANGELOG.
-3. Run the checks below, commit.
+## Left for the owner
+
+* The live run (`scripts/ai_eval.py`) should show `share_too_large` gone from `dropped_reasons` and counted in
+  `recipes_lowered` instead.
+* A recipe the fit cannot fix for an unknown value still drops as `would_exceed:portion` (unchanged, a vague code).
 
 ## Commands
 
