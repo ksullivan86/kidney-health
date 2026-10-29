@@ -14,7 +14,8 @@
                                              answers, a daily download of the visible foods), for offline search
        outbox     key client_id, index created_at
                                              {client_id, user_id, kind, method, path, body, food, created_at,
-                                              attempts, state: 'pending'|'failed', last_error}
+                                              attempts, state: 'pending'|'failed', last_error, sent, edited_after_send,
+                                              deleted}; an edit or delete adds entry_id, version, base, rev
      The demo and the preview keep the same tables in memory only (they store nothing on the device); a browser
      without IndexedDB does the same and Settings says so.
    * Queued while unreachable (R5 "queueable"): POST /api/log, POST /api/log/quick and POST /api/log/mark-eaten,
@@ -33,6 +34,10 @@
      sent again with the new version, otherwise the item becomes a conflict card (Settings → This device) with the
      server's entry and the person's side by side: "Keep the saved one" drops the change, "Use mine" sends it with
      the new version. A 404 means the entry is gone (or not the person's): "This entry no longer exists", dropped.
+   * A change made while its item is being sent is never lost. A create is marked `sent` as it goes; an edit of it after
+     that is marked `edited_after_send`, a delete keeps the row as `deleted`, and the server's answer (the entry, found by
+     its client_id) turns the row into the edit or the delete of that entry, sent next with If-Match. A second edit that
+     joins a change being sent raises its `rev`, and the answer leaves what is still different waiting.
    * Sync: FIFO under the Web Lock `kdl-sync` (one tab at a time; a plain-HTTP page has no Web Locks, and the
      client_id keeps a double send harmless). Consecutive POST /api/log items go together through POST
      /api/log/batch (≤ 40, all or nothing on the server); quick adds and mark-eaten one by one. The first network
@@ -117,16 +122,18 @@
       if (r) r.onsuccess = () => { out = r.result; };
     });
   }
+  // The outbox in memory is copied in and out, as IndexedDB does: a row read for a send never changes under it.
+  const memCopy = (name, v) => (name === 'outbox' ? clone(v) : v);
   const store = {
     async get(name, key) {
       const db = await openDb();
-      if (!db) return memory[name].get(JSON.stringify(key)) || null;
+      if (!db) return memCopy(name, memory[name].get(JSON.stringify(key))) || null;
       try { return (await tx(db, name, 'readonly', (s) => s.get(key))) || null; } catch (e) { console.warn('Offline storage read failed:', e); return null; }
     },
     async put(name, value) {
       const db = await openDb();
-      if (!db) { memory[name].set(memKey(name, value), value); return; }
-      try { await tx(db, name, 'readwrite', (s) => s.put(value)); } catch (e) { console.warn('Offline storage write failed:', e); memory[name].set(memKey(name, value), value); }
+      if (!db) { memory[name].set(memKey(name, value), memCopy(name, value)); return; }
+      try { await tx(db, name, 'readwrite', (s) => s.put(value)); } catch (e) { console.warn('Offline storage write failed:', e); memory[name].set(memKey(name, value), memCopy(name, value)); }
     },
     async del(name, key) {
       const db = await openDb();
@@ -136,9 +143,33 @@
     },
     async all(name) {
       const db = await openDb();
-      const mem = [...memory[name].values()];
+      const mem = [...memory[name].values()].map((v) => memCopy(name, v));
       if (!db) return mem;
       try { return [...((await tx(db, name, 'readonly', (s) => s.getAll())) || []), ...mem]; } catch (e) { console.warn('Offline storage read failed:', e); return mem; }
+    },
+    // Read, change and write one row in a single step, so a change made in between (the person editing an entry while the
+    // sync settles it) is never written over. `fn(row or null)` returns the row to store, null to delete it, or undefined to
+    // leave it; it must not wait for anything. Resolves to what `fn` returned.
+    async update(name, key, fn) {
+      const db = await openDb();
+      const k = JSON.stringify(key);
+      if (!db || memory[name].has(k)) { // no IndexedDB, or a row that lives in memory after a failed write
+        const out = fn(memory[name].has(k) ? clone(memory[name].get(k)) : null);
+        if (out === null) memory[name].delete(k); else if (out !== undefined) memory[name].set(k, clone(out));
+        return out;
+      }
+      try {
+        return await new Promise((resolve, reject) => {
+          let out;
+          const t = db.transaction(name, 'readwrite');
+          const s = t.objectStore(name);
+          const r = s.get(key);
+          r.onsuccess = () => { out = fn(r.result || null); if (out === null) s.delete(key); else if (out !== undefined) s.put(out); };
+          t.oncomplete = () => resolve(out);
+          t.onerror = () => reject(t.error);
+          t.onabort = () => reject(t.error || new Error('aborted'));
+        });
+      } catch (e) { console.warn('Offline storage write failed:', e); return undefined; }
     },
   };
 
@@ -168,6 +199,7 @@
     return null;
   }
   const isChange = (item) => item.kind === 'edit' || item.kind === 'delete'; // a change to an entry that is on the server
+  const isCreate = (item) => item.kind === 'entry' || item.kind === 'quick'; // an entry that is made when it is sent
   const isQueued = (item) => item.state !== 'failed' && item.state !== 'conflict'; // what a sync run sends
   const clone = (v) => (v == null ? v : JSON.parse(JSON.stringify(v)));
   // Answers served from this device, with when they were saved (views say "Saved at …").
@@ -368,8 +400,11 @@
   async function markExpected(markBody) {
     for (const it of await myItems()) {
       if (isChange(it) && it.base && it.base.date === markBody.date && it.base.status === 'planned' && (!markBody.meal || it.base.meal === markBody.meal)) {
-        it.base.status = 'eaten';
-        await store.put('outbox', it);
+        await store.update('outbox', it.client_id, (row) => {
+          if (!row || !isChange(row) || !row.base || row.base.status !== 'planned') return undefined;
+          row.base.status = 'eaten';
+          return row;
+        });
       }
     }
   }
@@ -406,17 +441,23 @@
     if (waiting && waiting.kind === 'delete') throw problem(404, 'This entry no longer exists');
     const changes = kind === 'edit' ? changedFields(base, body) : null;
     if (kind === 'edit' && !Object.keys(changes).length) return waiting ? editedView(waiting, await foodOf(waiting.base)) : { ...base, pending: false }; // nothing differs
-    let item = waiting;
-    if (item) {
-      if (kind === 'delete') { item.kind = 'delete'; item.method = 'DELETE'; item.body = null; } else item.body = { ...item.body, ...changes };
-      item.created_at = queueStamp(); // it goes after anything queued since (a "mark eaten"), as the person did it
-      item.state = 'pending'; item.last_error = null; item.attempts = 0; item.rebased = false;
-    } else {
+    // Joined in one step: the sync may be sending this item right now, and `rev` tells it a newer change came in meanwhile.
+    let decided = false;
+    let item = waiting ? await store.update('outbox', waiting.client_id, (row) => {
+      if (!row || !isChange(row) || row.entry_id !== entryId) return undefined; // just sent: a new item below
+      if (row.state === 'conflict') { decided = true; return undefined; }
+      if (kind === 'delete') { row.kind = 'delete'; row.method = 'DELETE'; row.body = null; } else row.body = { ...row.body, ...changes };
+      row.created_at = queueStamp(); // it goes after anything queued since (a "mark eaten"), as the person did it
+      row.state = 'pending'; row.last_error = null; row.attempts = 0; row.rebased = false; row.rev = (row.rev || 0) + 1;
+      return row;
+    }) : undefined;
+    if (decided) throw problem(409, 'This entry was changed on another device. Choose which version to keep in Settings → This device first.');
+    if (!item) {
       item = { client_id: uuid4(), user_id: uid, kind, method, path, entry_id: entryId, body: changes,
         version: typeof opts.ifMatch === 'string' ? opts.ifMatch : base.version || null, base, created_at: queueStamp(), attempts: 0, state: 'pending',
-        last_error: null, rebased: false };
+        last_error: null, rebased: false, rev: 0 };
+      await store.put('outbox', item);
     }
-    await store.put('outbox', item);
     await refreshCounts();
     if (offline) announce('Saved on this device. It will sync when your server can be reached.');
     return kind === 'delete' ? { pending: true } : editedView(item, await foodOf(item.base));
@@ -438,36 +479,47 @@
     err.message = err.detail = 'This entry was changed on another device, so your change was not saved. Choose which version to keep in Settings → This device.';
   }
   // Editing or deleting an entry that is still only on this device (id "pending:<client_id>"): the queued create is
-  // rewritten, or removed, and the server hears of neither.
+  // rewritten, or removed, and the server hears of neither. Once a send of it has started (`sent`), the server may already
+  // have it: an edit is marked `edited_after_send` and a delete keeps the row as `deleted`, and when the server's answer
+  // comes the sync sends the edit, or the delete, of the entry it made (settleCreate). Nothing the person did last is lost.
   async function editWaiting(clientId, body) {
-    const item = await store.get('outbox', clientId);
-    if (!item || item.user_id !== userId() || !(item.kind === 'entry' || item.kind === 'quick')) {
-      throw problem(409, 'This entry has just reached your server. Close this and open it again to change it.');
-    }
-    const b = item.body;
-    for (const key of ['date', 'meal', 'status']) if (body[key]) b[key] = body[key];
-    if ('note' in body) b.note = body.note ? String(body.note) : null;
-    if (body.purpose === 'hypo' || body.purpose === 'none') b.purpose = body.purpose;
-    if ('servings' in body || 'grams' in body) {
-      if (item.kind === 'entry' && body.grams != null) { b.grams = Number(body.grams); if (body.servings != null) b.servings = Number(body.servings); }
-      else {
-        delete b.grams;
-        const food = itemFood(item);
-        if (body.servings != null) b.servings = Number(body.servings);
-        else if (body.grams != null && food && food.serving_g) b.servings = Number(body.grams) / Number(food.serving_g);
+    let gone = false;
+    const item = await store.update('outbox', clientId, (row) => {
+      if (!row || row.user_id !== userId() || !isCreate(row)) return undefined;
+      if (row.deleted) { gone = true; return undefined; }
+      const b = row.body;
+      for (const key of ['date', 'meal', 'status']) if (body[key]) b[key] = body[key];
+      if ('note' in body) b.note = body.note ? String(body.note) : null;
+      if (body.purpose === 'hypo' || body.purpose === 'none') b.purpose = body.purpose;
+      if ('servings' in body || 'grams' in body) {
+        if (row.kind === 'entry' && body.grams != null) { b.grams = Number(body.grams); if (body.servings != null) b.servings = Number(body.servings); }
+        else {
+          delete b.grams;
+          const food = itemFood(row);
+          if (body.servings != null) b.servings = Number(body.servings);
+          else if (body.grams != null && food && food.serving_g) b.servings = Number(body.grams) / Number(food.serving_g);
+        }
       }
-    }
-    item.state = 'pending'; item.last_error = null; item.attempts = 0; // a changed entry is sent again
-    await store.put('outbox', item);
+      row.state = 'pending'; row.last_error = null; row.attempts = 0; // a changed entry is sent again
+      if (row.sent) row.edited_after_send = true;
+      return row;
+    });
+    if (gone) throw problem(404, 'This entry no longer exists');
+    if (!item) throw problem(409, 'This entry has just reached your server. Close this and open it again to change it.');
     await refreshCounts();
     return entryView(item);
   }
   async function deleteWaiting(clientId) {
-    const item = await store.get('outbox', clientId);
-    if (!item || item.user_id !== userId() || !(item.kind === 'entry' || item.kind === 'quick')) {
-      throw problem(409, 'This entry has just reached your server. Close this and open it again to delete it.');
-    }
-    await store.del('outbox', clientId);
+    let found = false;
+    await store.update('outbox', clientId, (row) => {
+      if (!row || row.user_id !== userId() || !isCreate(row)) return undefined;
+      found = true;
+      if (row.deleted) return undefined;
+      if (!row.sent || row.state === 'failed') return null; // the server never took it: gone with no request
+      row.deleted = true; // it may be on the server already: delete it there once the answer says which entry it is
+      return row;
+    });
+    if (!found) throw problem(409, 'This entry has just reached your server. Close this and open it again to delete it.');
     await refreshCounts();
     announce('Removed from this device.');
     return null;
@@ -547,10 +599,18 @@
   function cleanReason(detail) {
     return String(detail || 'The server refused this entry.').replace(/^entries(?:\.\d+\.|\[\d+\][.:]?\s?)/, '').replace(/^\w+: /, (m) => m);
   }
+  // The server refused the item: kept as "not saved" with its reason, on the row as it is now (an edit made meanwhile stays).
+  // An entry the person deleted while it was being sent is simply gone: the server refused it, so it never made it.
   async function markFailed(item, err) {
-    item.state = 'failed'; item.attempts += 1; item.last_error = cleanReason(err.detail || err.message);
-    await store.put('outbox', item);
+    await store.update('outbox', item.client_id, (row) => {
+      if (!row) return undefined;
+      if (row.deleted) return null;
+      row.state = 'failed'; row.attempts = (row.attempts || 0) + 1; row.last_error = cleanReason(err.detail || err.message);
+      return row;
+    });
   }
+  // Changes the stored row of `item` (the one being sent) with `fn`, so a change the person made meanwhile is kept.
+  const updateItem = (item, fn) => store.update('outbox', item.client_id, (row) => (row ? (fn(row), row) : undefined));
   const STOP = Symbol('stop');
   // A request of the run: STOP on a network error, 5xx, 429 or a sign-in problem; the error for any other 4xx.
   async function send(path, body, method = 'POST', extra = {}) {
@@ -569,7 +629,9 @@
   //   { conflict }   a 412 with a different entry: kept as a card for the person to decide, nothing sent
   //   { gone }       a 404: the entry is gone (or never was the person's, which the server does not tell): dropped
   //   { failed }     any other 4xx: kept as "not saved" with the server's reason
-  async function sendChange(item) {
+  async function sendChange(head) {
+    const item = await store.get('outbox', head.client_id); // as it is now: an edit may have joined it since the run began
+    if (!item || !isChange(item) || !isQueued(item)) return {};
     if (!item.version && item.base) {
       // The entry came from a copy this device saved before entries had versions: there is nothing to send as If-Match, and
       // sending none would overwrite unchecked. Read the server's entry first and compare it with the one the change was
@@ -580,29 +642,74 @@
       const current = ((day.data && day.data.entries) || []).find((e) => e.id === item.entry_id);
       if (!current) { await store.del('outbox', item.client_id); return { gone: item.base.food_name || 'entry' }; }
       if (current.version && !sameContent(item.base, current)) {
-        item.state = 'conflict'; item.server = current; item.attempts += 1; item.last_error = 'changed on another device';
-        await store.put('outbox', item);
+        await updateItem(item, (row) => { row.state = 'conflict'; row.server = current; row.attempts += 1; row.last_error = 'changed on another device'; });
         return { conflict: 1 };
       }
-      if (current.version) { item.version = current.version; await store.put('outbox', item); }
+      if (current.version) { item.version = current.version; await updateItem(item, (row) => { row.version = current.version; }); }
     }
-    const r = await send(item.path, item.kind === 'edit' ? item.body : undefined, item.method, item.version ? { ifMatch: item.version } : {});
+    const rev = item.rev || 0;
+    const r = await send(item.path, item.kind === 'edit' ? clone(item.body) : undefined, item.method, item.version ? { ifMatch: item.version } : {});
     if (r === STOP) return STOP;
-    if (r.ok) { await store.del('outbox', item.client_id); return { sent: 1 }; }
+    if (r.ok) {
+      // Done, unless the person changed the entry again while this was on its way (`rev`): then what is left goes next,
+      // checked against the entry the server answered with. A delete is the last word.
+      const answered = r.data && r.data.id != null ? r.data : null;
+      await store.update('outbox', item.client_id, (row) => {
+        if (!row) return undefined;
+        if ((row.rev || 0) === rev || item.kind === 'delete' || !isChange(row)) return null;
+        const now = answered || appliedEntry(item.base, item.body || {}, null);
+        if (row.kind === 'edit') {
+          row.body = changedFields(now, row.body || {});
+          if (!Object.keys(row.body).length) return null;
+        }
+        row.base = clone(now); row.version = answered ? answered.version || null : null; row.rebased = false;
+        row.state = 'pending'; row.attempts = 0; row.last_error = null;
+        return row;
+      });
+      return { sent: 1 };
+    }
     const err = r.error;
     if (err.status === 404) { await store.del('outbox', item.client_id); return { gone: (item.base && item.base.food_name) || 'entry' }; }
     if (err.status === 412) {
       const current = err.data && err.data.current;
       if (current && current.version && !item.rebased && sameContent(item.base, current)) {
-        item.version = current.version; item.rebased = true;
-        await store.put('outbox', item);
+        await updateItem(item, (row) => { row.version = current.version; row.rebased = true; });
         return { retry: 1 };
       }
-      item.state = 'conflict'; item.server = current || null; item.attempts += 1; item.last_error = 'changed on another device';
-      await store.put('outbox', item);
+      await updateItem(item, (row) => { row.state = 'conflict'; row.server = current || null; row.attempts += 1; row.last_error = 'changed on another device'; });
       return { conflict: 1 };
     }
     await markFailed(item, err);
+    return { failed: 1 };
+  }
+  // A create (an entry, a quick add, a "mark eaten") is marked `sent` and its body read in the same step, so a change the
+  // person makes from now on is known to come after this send. Resolves to the row as sent, or null when it no longer waits.
+  async function startSend(clientId) {
+    return (await store.update('outbox', clientId, (row) => (row && isQueued(row) ? Object.assign(row, { sent: true }) : undefined))) || null;
+  }
+  // The server answered a create with `entry`. Usually the item is done. If the person deleted the entry while it was on its
+  // way, the item becomes the delete of the entry the server made; if they edited it, the edit of it (only what differs).
+  // Both then go like any other change (If-Match with the version the server gave), next in the queue.
+  async function settleCreate(clientId, entry) {
+    await store.update('outbox', clientId, (row) => {
+      if (!row || !isCreate(row)) return row && row.kind === 'mark' ? null : undefined; // a "mark eaten" is simply done
+      if (!entry || entry.id == null || !(row.deleted || row.edited_after_send)) return null;
+      const changes = row.deleted ? null : changedFields(entry, row.body || {});
+      if (changes && !Object.keys(changes).length) return null;
+      const kind = row.deleted ? 'delete' : 'edit';
+      return { client_id: row.client_id, user_id: row.user_id, kind, method: kind === 'delete' ? 'DELETE' : 'PUT', path: `/api/log/${entry.id}`,
+        entry_id: entry.id, body: changes, version: entry.version || null, base: clone(entry), created_at: row.created_at, attempts: 0,
+        state: 'pending', last_error: null, rebased: false, rev: 0 };
+    });
+  }
+  // One create on its own (a quick add, a "mark eaten", or an entry of a batch that is sent one by one).
+  async function sendCreate(path, clientId) {
+    const row = await startSend(clientId);
+    if (!row) return {};
+    const r = await send(path, clone(row.body));
+    if (r === STOP) return STOP;
+    if (r.ok) { await settleCreate(clientId, r.data); return { sent: 1 }; }
+    await markFailed(row, r.error);
     return { failed: 1 };
   }
   async function syncRun() {
@@ -615,28 +722,31 @@
         const head = items[0];
         if (head.kind === 'entry') {
           let chunk = [];
-          for (const it of items) { if (it.kind !== 'entry' || chunk.length >= BATCH_MAX) break; chunk.push(it); }
+          for (const it of items) { if (it.kind !== 'entry' || chunk.length >= BATCH_MAX) break; chunk.push(it.client_id); }
           // A batch is all or nothing on the server: drop the item it names and send the rest again.
           for (;;) {
-            if (!chunk.length) break;
-            const r = await send('/api/log/batch', { entries: chunk.map((i) => i.body) });
+            const rows = [];
+            for (const id of chunk) { const row = await startSend(id); if (row) rows.push(row); }
+            if (!rows.length) break;
+            const r = await send('/api/log/batch', { entries: rows.map((i) => clone(i.body)) });
             if (r === STOP) return { sent, failed, stopped: true };
             if (r.ok) {
-              for (const it of chunk) await store.del('outbox', it.client_id);
-              sent += chunk.length;
+              const made = (r.data && r.data.entries) || [];
+              for (const [i, row] of rows.entries()) await settleCreate(row.client_id, made.find((e) => e.client_id === row.client_id) || made[i]);
+              sent += rows.length;
               break;
             }
             const index = failedIndex(r.error.detail);
-            if (index != null && chunk[index]) {
-              await markFailed(chunk[index], r.error); failed += 1;
-              chunk = chunk.filter((_, i) => i !== index);
+            if (index != null && rows[index]) {
+              await markFailed(rows[index], r.error); failed += 1;
+              chunk = rows.filter((_, i) => i !== index).map((row) => row.client_id);
               continue;
             }
             // No item named: send them one by one to find the one the server refuses.
-            for (const it of chunk) {
-              const one = await send('/api/log', it.body);
+            for (const row of rows) {
+              const one = await sendCreate('/api/log', row.client_id);
               if (one === STOP) return { sent, failed, stopped: true };
-              if (one.ok) { await store.del('outbox', it.client_id); sent += 1; } else { await markFailed(it, one.error); failed += 1; }
+              sent += one.sent || 0; failed += one.failed || 0;
             }
             break;
           }
@@ -647,9 +757,9 @@
           failed += r.failed || 0; conflicts += r.conflict || 0;
           if (r.gone) gone.push(r.gone);
         } else {
-          const r = await send(head.path, head.body);
+          const r = await sendCreate(head.path, head.client_id);
           if (r === STOP) return { sent, failed, conflicts, gone: gone.length, stopped: true };
-          if (r.ok) { await store.del('outbox', head.client_id); sent += 1; } else { await markFailed(head, r.error); failed += 1; }
+          sent += r.sent || 0; failed += r.failed || 0;
         }
         items = (await myItems()).filter(isQueued);
       }
@@ -784,12 +894,17 @@
     return (item.body && item.body.date) === date;
   }
   async function withWaiting(day, date) {
-    const items = (await myItems()).filter((i) => touchesDay(i, date));
-    if (!items.length) return day;
+    const mine = await myItems();
+    const items = mine.filter((i) => touchesDay(i, date));
+    // An entry that is being sent can already be on the server: the day shows it once, as it waits here (or not at all
+    // when the person deleted it meanwhile).
+    const sending = new Set(mine.filter((i) => isCreate(i) && i.sent).map((i) => i.client_id));
+    const onServer = (e) => !(e.client_id && sending.has(e.client_id));
+    if (!items.length && (!day || (day.entries || []).every(onServer))) return day;
     const profile = state.profile || {};
     const base = day ? clone(day) : { date, entries: [], targets: profile.targets || {} };
     const targets = base.targets || profile.targets || {};
-    const entries = base.entries || [];
+    const entries = (base.entries || []).filter(onServer);
     for (const item of items) {
       if (item.kind === 'mark') {
         for (const e of entries) {
@@ -808,7 +923,7 @@
           else entries.push(view); // moved in from another day
         }
       } else {
-        entries.push(entryView(item));
+        if (!item.deleted) entries.push(entryView(item));
       }
     }
     const order = { breakfast: 0, lunch: 1, dinner: 2, snack: 3 };
@@ -957,7 +1072,7 @@
       return `${item.kind === 'edit' ? 'Change' : 'Delete'}: ${v.food_name}, ${amountOf(v)}: ${rules.MEAL_LABEL[v.meal] || v.meal}${v.status === 'planned' ? ' (planned)' : ''}, ${util.fmtDateLong(v.date)}`;
     }
     const v = entryView(item);
-    return `${v.food_name}, ${amountOf(v)}: ${rules.MEAL_LABEL[v.meal] || v.meal}${v.status === 'planned' ? ' (planned)' : ''}, ${util.fmtDateLong(v.date)}`;
+    return `${item.deleted ? 'Delete: ' : ''}${v.food_name}, ${amountOf(v)}: ${rules.MEAL_LABEL[v.meal] || v.meal}${v.status === 'planned' ? ' (planned)' : ''}, ${util.fmtDateLong(v.date)}`;
   }
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
   // "3 entries have" / "2 items have" (once an edit or delete is among them they are not all entries).
@@ -1103,7 +1218,8 @@
         const drop = h('button', { class: 'btn danger', type: 'button', 'aria-label': `Discard: ${itemLine(item)}` }, 'Discard');
         drop.addEventListener('click', () => KH.confirm.inline(actions, drop, {
           message: isChange(item) ? `Discard “${itemLine(item)}”? The entry stays as it is on your server.`
-            : `Discard “${itemLine(item)}”? It has not reached your server, so it will be gone.`, confirmText: 'Discard',
+            : item.deleted ? `Discard “${itemLine(item)}”? If the entry reached your server, it stays there.`
+              : `Discard “${itemLine(item)}”? It has not reached your server, so it will be gone.`, confirmText: 'Discard',
           onConfirm: async () => { await discard(item.client_id); await draw(); const next = $('#set-outbox button'); if (next) next.focus(); return true; },
         }));
         actions.append(drop);

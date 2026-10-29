@@ -81,7 +81,9 @@ working with what this device saved:
   or note, tap **Eaten** on a planned one, or delete an entry that is already on your server: the
   change waits on the device too (**waiting to sync**, shown on Today at once, counted in the badge)
   and is sent in order when the server can be reached. An entry you added offline and that has
-  not been sent yet is simply changed, or removed, on the phone.
+  not been sent yet is simply changed, or removed, on the phone. If you change or delete it while
+  it is being sent, the app waits for the server's answer and then sends your change too, so your
+  last change is the one your server keeps.
 * **Nothing is overwritten silently.** Each change is sent together with the version of the entry
   you saw. If that entry was changed on another device while yours was offline, your change is **not**
   sent. **Settings → This device** shows a card, "This entry was changed on another device while

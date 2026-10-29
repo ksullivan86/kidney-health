@@ -21,7 +21,8 @@ the service worker and the camera are allowed):
 * ``outbox``   with the service worker in control: an entry logged with the network off (context.set_offline), a
                reload while offline (the app starts from this device's copies, the entry shows "waiting to sync"),
                reconnect, synced once; a lost batch response (the server got it, the page did not) synced again
-               without a second row; an item the server refuses shown with Retry/Discard; sign-out asks first.
+               without a second row; an entry edited and another deleted while the batch answer is on its way (both
+               changes reach the server); an item the server refuses shown with Retry/Discard; sign-out asks first.
 * ``changes``  offline edits and deletes of entries already on the server: an entry edited and another deleted with
                the network off (Today shows both at once, the badge counts "2 to sync", an offline reload keeps them),
                reconnect: each sent once with If-Match (the version it was made on); another device changed the entry
@@ -783,6 +784,36 @@ def section_outbox(hx: Harness, state: dict[str, Any]) -> None:
               json.dumps([(e["id"], e["client_id"], e["created_at"]) for e in stored]) + f" route calls {lost}")
         page.unroute("**/api/log/batch")
         watch.offline = False
+        # 5b. Changed while the batch is on its way: the server has stored both entries, the answer has not come back yet,
+        # and the person edits one and deletes the other. Both changes reach the server once the answer is in. (Foods and a
+        # meal no other section uses: the `changes` section opens its rows on Today by food name.)
+        peach = hx.api("GET", "/api/foods?q=peach%20raw&limit=1")["foods"][0]["id"]
+        mango = hx.api("GET", "/api/foods?q=mango%20raw&limit=1")["foods"][0]["id"]
+        watch.offline = True
+        ctx.set_offline(True)
+        made = page.evaluate(f"Promise.all([KH.api.addEntry({{ date: '{TODAY}', meal: 'breakfast', food_id: {peach}, servings: 1 }}),"
+                             f" KH.api.addEntry({{ date: '{TODAY}', meal: 'breakfast', food_id: {mango}, servings: 1 }})])")
+        held: list[Any] = []
+
+        def hold_answer(route: Any) -> None:
+            held.append((route, route.fetch()))  # the server stores them; the answer waits here
+        page.route("**/api/log/batch", hold_answer)
+        ctx.set_offline(False)
+        watch.offline = False
+        wait_js(page, "navigator.onLine")
+        deadline = time.monotonic() + TIMEOUT_MS / 1000
+        while not held and time.monotonic() < deadline:
+            page.wait_for_timeout(100)
+        on_server = {e["food_id"] for e in hx.entries() if e["client_id"] in {m["client_id"] for m in made}}
+        check(area, "in flight: the server has both entries before the page hears back", held and on_server == {peach, mango}, str(on_server))
+        page.evaluate("([a, b]) => Promise.all([KH.api.updateEntry(a.id, { servings: 3, note: 'harness edit' }, a), KH.api.deleteEntry(b.id, b)])", made)
+        route, answer = held[0]
+        route.fulfill(response=answer)
+        wait_js(page, "KH.offline.items().then((items) => items.length === 0)", TIMEOUT_MS)
+        rows = [e for e in hx.entries() if e["client_id"] in {m["client_id"] for m in made}]
+        check(area, "the edit made while it was on its way is on the server, the deleted one is gone",
+              [(e["food_id"], e["servings"], e["note"]) for e in rows] == [(peach, 3, "harness edit")], json.dumps(rows)[:400])
+        page.unroute("**/api/log/batch")
         # 6. Sign-out asks while something waits.
         watch.offline = True
         ctx.set_offline(True)

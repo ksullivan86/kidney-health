@@ -97,7 +97,7 @@ def test_an_edit_or_delete_sends_the_version_it_was_made_on_as_if_match() -> Non
     assert "item.version ? { ifMatch: item.version } : {}" in send
     assert "err.status === 412" in send and "err.status === 404" in send
     assert "!item.rebased && sameContent(item.base, current)" in send  # at most one silent resend, and only for our own change
-    assert "item.state = 'conflict'" in send
+    assert "row.state = 'conflict'" in send  # kept on the row as it is now, so an edit that joined meanwhile stays
     # Only what the person changed is queued, so "Use mine" never rewrites a field they did not touch.
     assert "changedFields(base, body)" in function_source(OFFLINE, "enqueueChange")
     assert "changedFields(opts.base" in function_source(OFFLINE, "onConflict")

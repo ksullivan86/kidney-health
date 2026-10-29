@@ -25,6 +25,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
   adds one serving, the amount the recipe card shows. Before, it asked for a scale and 1 added the whole pot. If you used to
   type a fraction such as 0.25 for one serving of a recipe that makes 4, type 1 now. The preview shows what will be added.
   Plain saved meals still use Scale.
+* **A change made while an entry syncs is no longer lost.** Edit or delete a waiting entry as it is being sent, and your
+  change now follows it to the server.
 
 ### For people who run a server
 
