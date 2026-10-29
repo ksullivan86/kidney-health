@@ -267,6 +267,10 @@ serving's share of a food is its amount in the whole recipe divided by the servi
 the same totals, unknown values, carbohydrate and "avoid" rules as a saved meal, no lower limit on a share (a spoon of oil in 4
 servings), at most 3 servings of one food in a serving, and no "high" share of a nutrient that is not ok today.
 
+The Fit sheet labels missing nutrient amounts **not listed** and partial amounts **≥** on each check,
+including the carbohydrate before/after confirmation. Before and after use their own missing-data
+flags: a swap may fill a data gap. A known zero still reads 0.
+
 When it does not fit, the app tries these in order and stops at the first that fits:
 
 1. **Lower amounts**, one ingredient at a time, the largest contributor first, a quarter serving at a time, down to half the

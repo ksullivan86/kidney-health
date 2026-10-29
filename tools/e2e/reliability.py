@@ -11,6 +11,7 @@
    server answers 201.
 4. **A slow day, then another.** The answer for the day before waits while Ana goes back to today; when it comes, today stays.
 5. **A save that fails.** The entry sheet stays open with the amount typed and its button works again; the next try saves once.
+6. **Recipe fit data gaps.** Missing potassium says "not listed", partial potassium says "≥", and known zero still says 0 mg.
 
     python3 tools/e2e/reliability.py            # a real server on 127.0.0.1:8097, Chromium; exit 1 on any failed check
 """
@@ -147,6 +148,19 @@ def walk_saved_meals(page: Any) -> None:
     check("Add: the saved-meal shortcuts say 'not listed' and '≥' the same way", "K not listed" in chips and "K ≥" in chips, chips)
 
 
+def walk_fit_unknown(page: Any) -> None:
+    page.click("#tab-plan")
+    wait_text(page, "#saved-meals", "Known zero")
+    for name, expected in (("Crackers only", "Potassium not listed"), ("Crackers and banana", "Potassium ≥"),
+                           ("Known zero", "Potassium 0 mg")):
+        page.locator("#saved-meals .saved-meal", has_text=name).get_by_role("button", name="Fit to my targets").click()
+        page.wait_for_selector("#fit-result .fit-checks")
+        rows = page.locator("#fit-result .fit-checks li").all_inner_texts()
+        potassium = next((" ".join(row.split()) for row in rows if row.startswith("Potassium")), "")
+        check(f"Fit: {name} shows {expected}", expected in potassium, potassium)
+        page.evaluate("() => document.querySelector('#sheet-fit').close()")
+
+
 def walk_recipe(page: Any, recipe_id: int) -> None:
     def halve(route: Any) -> None:
         answer = route.fetch().json()
@@ -243,6 +257,9 @@ def main(argv: list[str] | None = None) -> int:
                                                    "nutrients": {"calories_kcal": 120, "carbs_g": 20, "sodium_mg": 180}})["id"]
         ana.json("POST", "/api/meals", {"name": "Crackers only", "items": [{"food_id": crackers, "servings": 1}]})
         ana.json("POST", "/api/meals", {"name": "Crackers and banana", "items": [{"food_id": crackers, "servings": 1}, {"food_id": banana, "servings": 1}]})
+        zero = ana.json("POST", "/api/foods", {"name": "Known zero test food", "serving_desc": "1 portion", "serving_g": 30,
+                                               "nutrients": {"calories_kcal": 20, "carbs_g": 5, "potassium_mg": 0, "phosphorus_mg": 0, "sodium_mg": 0}})["id"]
+        ana.json("POST", "/api/meals", {"name": "Known zero", "items": [{"food_id": zero, "servings": 1}]})
         recipe = ana.json("POST", "/api/meals", {"name": "Big pot", "items": [{"food_id": banana, "servings": 10}], "servings_made": 100})["id"]
         with sync_playwright() as pw:
             browser = pw.chromium.launch(executable_path=khserver.chromium_executable(), args=["--no-sandbox"])
@@ -254,7 +271,7 @@ def main(argv: list[str] | None = None) -> int:
                 for name, walk in (("Today", lambda: walk_today(page)), ("Slow day", lambda: walk_slow_then_switch(page)),
                                    ("Failed save", lambda: walk_failed_save(page)), ("Lab cache", lambda: walk_lab_cache(page)),
                                    ("Saved meals", lambda: walk_saved_meals(page)),
-                                   ("Recipe", lambda: walk_recipe(page, recipe))):
+                                   ("Fit data gaps", lambda: walk_fit_unknown(page)), ("Recipe", lambda: walk_recipe(page, recipe))):
                     try:  # each step on its own, so one bug does not hide the others
                         walk()
                     except Exception:

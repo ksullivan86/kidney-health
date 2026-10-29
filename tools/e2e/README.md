@@ -55,6 +55,9 @@ its outbound proxy pointing nowhere, so nothing can leave the machine.
 
 ## Running
 
+The recipe Fit checks in `reliability.py` open saved meals with missing, partial and known-zero
+potassium and verify the qualifiers on the nutrient row itself.
+
 `recipes_ai.py` also delays a synthetic meal-idea reply while changing breakfast to dinner: the old card and Add button
 must stay gone, while a fresh dinner answer still renders and plans dinner. Those controlled calls write nothing to the server.
 `reliability.py` also holds a synthetic lab-list read across cache invalidation, then delivers it after a fresh read.

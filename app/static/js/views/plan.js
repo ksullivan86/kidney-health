@@ -599,14 +599,22 @@
       renderFit();
     } catch (err) { if (req === fit.req) { clear(host); toastError(err); } }
   }
-  function fitRow(c, after) {
+  function fitAmount(figures, key, value) {
+    const unknown = !!(figures.unknown || {})[key];
+    if (value == null || (unknown && !(value > 0))) return 'not listed';
+    const unit = NUT[key] ? NUT[key].unit : '';
+    return `${unknown ? '≥ ' : ''}${fmtNum(value, key)}${unit ? ` ${unit}` : ''}`;
+  }
+  function fitRow(c, before, after) {
     const key = c.nutrient;
     const unit = NUT[key] ? NUT[key].unit : '';
     const label = NUT[key] ? NUT[key].label || NUT[key].short : key;
     const now = after ? after.checks.find((x) => x.nutrient === key) : null;
-    const text = now && now.used !== c.used ? `${fmtNum(c.used, key)} → ${fmtNum(now.used, key)}` : fmtNum(c.used, key);
+    const was = fitAmount(before, key, c.used);
+    const next = now ? fitAmount(after, key, now.used) : was;
+    const text = next !== was ? `${was} → ${next}` : was;
     const ok = now ? now.ok : c.ok;
-    return h('li', { class: ok ? 'fit-ok' : 'fit-over' }, h('span', {}, label), ' ', h('b', {}, `${text} ${unit}`),
+    return h('li', { class: ok ? 'fit-ok' : 'fit-over' }, h('span', {}, label), ' ', h('b', {}, text),
       h('span', { class: 'muted' }, ` of ${fmtNum(c.room, key)} ${unit} room`), ok ? '' : h('span', { class: 'fit-over-word' }, ' (over)'));
   }
   function renderFit() {
@@ -615,9 +623,9 @@
     if (!r || !STATUS_HEAD[r.status]) { host.append(h('p', {}, r && r.message ? r.message : 'The app cannot check this now.')); return; }
     host.append(h('p', { class: 'fit-head' }, STATUS_HEAD[r.status]));
     const after = r.after || (r.closest ? r.closest.after : null);
-    const unknown = Object.keys(r.before.unknown || {}).filter((k) => NUT[k]);
-    host.append(h('ul', { class: 'fit-checks' }, r.before.checks.map((c) => fitRow(c, after))));
-    if (unknown.length) host.append(h('p', { class: 'muted small' }, `Some foods do not list ${unknown.map((k) => NUT[k].short.toLowerCase()).join(', ')}, so those numbers are at least what is shown.`));
+    const unknown = [...new Set([...Object.keys(r.before.unknown || {}), ...Object.keys(after ? after.unknown || {} : {})])].filter((k) => NUT[k]);
+    host.append(h('ul', { class: 'fit-checks' }, r.before.checks.map((c) => fitRow(c, r.before, after))));
+    if (unknown.length) host.append(h('p', { class: 'muted small' }, `Some foods do not list ${unknown.map((k) => NUT[k].short.toLowerCase()).join(', ')}. Those amounts are incomplete: “not listed” means the amount is missing, and “≥” counts only what is listed.`));
     if (r.changes.length) host.append(h('ul', { class: 'fit-changes' }, r.changes.map((c) => h('li', {}, c.text))));
     const shape = r.fitted || r.closest;
     if (shape && r.status !== 'fits') {
@@ -645,8 +653,10 @@
   const bodyOf = (t) => ({ name: t.name, note: t.note, meal_hint: t.meal_hint || null, items: t.items.map((it) => ({ food_id: it.food_id, servings: it.servings })),
     servings_made: t.servings_made ?? null, steps: t.steps || null, source_url: t.source_url || null });
   const carbsLine = () => {
-    const before = fit.result.before.per_serving.carbs_g, after = fit.result.after ? fit.result.after.per_serving.carbs_g : null;
-    return `Carbohydrate per serving goes from ${fmtNum(before, 'carbs_g')} g to ${fmtNum(after, 'carbs_g')} g.`;
+    const r = fit.result;
+    const before = fitAmount(r.before, 'carbs_g', r.before.per_serving.carbs_g);
+    const after = r.after ? fitAmount(r.after, 'carbs_g', r.after.per_serving.carbs_g) : 'not listed';
+    return `Carbohydrate per serving goes from ${before} to ${after}.`;
   };
   $('#fit-target').addEventListener('change', () => { fit.undo = null; runFit(); });
   $('#fit-rework').addEventListener('click', () => {
