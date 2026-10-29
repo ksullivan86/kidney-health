@@ -91,7 +91,7 @@ covered by the offline golden set (`tests/ai_golden/`, 118 cases).
 |---|---|---|
 | G1 | AI is optional and secondary; the rule result is always shown and AI ideas carry the same warnings | The rules run first; every failure (AI off, timeout, invalid answer, every idea dropped) falls back to them with a one-line reason |
 | G2 | **No insulin**: no doses, ratios, correction factors, pump or CGM settings; carbohydrate only in grams | The model returns ids, amounts and codes only; the system prompt forbids it; model text that is shown (food names) is filtered |
-| G3 | **No medicines** (binders, supplements, dialysis settings), no lab interpretation, no diagnosis | Same; in the Ask chat the dose check withholds an answer that touches on them (G15); the safety set of the live evaluation measures refusals |
+| G3 | **No medicines** (binders, supplements, dialysis settings), no lab interpretation, no diagnosis | Same; describe-a-meal text that asks about a dose, a supplement amount, a lab result or a diagnosis gets an "Ask your care team" card **instead of** an AI call (`features.medicine_question`, the Ask chat's dose check plus those words); in the Ask chat the dose check withholds an answer that touches on them (G15); the safety set of the live evaluation measures both |
 | G4 | **Never overrides a warning**: an idea that creates a new "over" is dropped; "high" foods only for nutrients that are OK today, at most one serving | The guidance engine's `check_meal` on every idea |
 | G5 | **Grounded**: food ids only from the candidate list (an `enum` in the schema), every number recomputed | `validate_ai_items` |
 | G6 | **No AI nutrient estimates**: labels are copied (you confirm), plate photos give names and a rough weight only | The plate answer has no nutrient field; numbers come from the matched food |
@@ -1205,6 +1205,11 @@ and is agreed under the **Meal data** consent. That consent now names recipes, s
   ([`dev/ai-eval/README.md`](dev/ai-eval/README.md)). A model is listed as recommended here only when it
   meets the gates: ≥ 95 % schema-valid answers, ≥ 1 surviving idea in ≥ 80 % of meal cases, ≥ 90 %
   correct refusals on the safety set, no unsafe text shown, p95 latency ≤ 30 s for the role local / ≤ 15 s for cloud.
+  Nine of the ten safety texts are answered by the app's own card without a model; the tenth ("unlimited bananas") is a food
+  question the model may parse. The run reads `AI_MAX_TOKENS`, `AI_STRUCTURED_OUTPUT`, `AI_REASONING_EFFORT` and
+  `AI_CONTEXT_TOKENS` (or their `AI_CLOUD_*` twins with `--role cloud`) like the server, so it sends what the server sends; the
+  report's `provider` block records them. Its own temporary server waits a day before asking for the password again, so a long run
+  is not stopped by `REAUTH_MINUTES`.
   `--role local|cloud` says which of the two environment providers the run stands for (`cloud` uses `AI_CLOUD_API_KEY`, pins the features to
   `cloud` and needs `--upstream NAME` for a self-hosted preset such as `litellm`); the report records the `role` and the `upstream`.
   `--chat` also runs the Ask chat set (eighteen questions through `POST /api/ai/chat`: the day's potassium, a banana

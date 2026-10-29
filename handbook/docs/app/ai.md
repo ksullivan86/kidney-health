@@ -84,6 +84,9 @@ in your AI activity and count in your daily limit. Ask and lab report photos nev
 - **Red-flag symptoms never go to AI.** If you type "chest pain", "can't breathe", "confused", "faint" or
   "seizure", the app shows a **Get help now** card (call your emergency number; treat a low first)
   instead.
+- **Dose and lab questions never go to AI.** If what you type to describe a meal also asks about insulin, a medicine or
+  supplement dose, a lab result or what a symptom means, the app shows **Ask your care team** and does not call AI. Describe
+  only the food to log the meal.
 - **AI never overrides a warning.** An idea that would push your day over a limit is dropped.
 - **No free text from AI in the meal features.** The reasons you read under an idea ("Low in potassium; fits your
   dinner carbohydrate goal") are written by the app's maintainers, not by the AI. **Ask** is the one place
