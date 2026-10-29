@@ -548,6 +548,10 @@ v0.2 changes to the other views:
   appears once the profile holds a weight, height, name or target.
 * Touch targets: on a coarse pointer or below 720 px every control (chips, segments, link
   buttons, checkboxes, `<summary>` toggles, saved-meal actions) is at least `--tap` (44 px) tall.
+* Text size and keyboard: text sizes are in `rem` (the page is 16 px only when the browser's text size is the default), so
+  the text follows the person's setting; at 200 % rows wrap and grids drop to fewer columns rather than scroll sideways.
+  The page keeps `scroll-padding` for the sticky header and the phone tab bar, so a control reached with Tab is never under
+  them. `tools/e2e/a11y.py` checks both, with names and contrast.
 * Trends: a **Period summary** card at the top (same data as GET /api/log/summary for the
   selected range): per nutrient the average per logged day vs target with level color, days over,
   change vs the previous period, and the interdialytic block when applicable; the explanatory

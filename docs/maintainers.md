@@ -39,7 +39,10 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
    * `ARCHITECTURE.md`, `docs/` and the handbook's "Using the app" pages describe what ships.
 2. **The release gate: real phones and assistive tech.** A release does not ship until each line below was done by a person on
    the release candidate, and the release pull request lists who did it, on what device, and what they saw. A failure is fixed
-   before the tag, or written under "Known limitations" in `CHANGELOG.md` with the owner's agreement:
+   before the tag, or written under "Known limitations" in `CHANGELOG.md` with the owner's agreement.
+   First run the automated check, `python tools/e2e/a11y.py` (about 4 minutes, no phone needed): it tabs through the main
+   screens and sheets, looks for missing names, text at twice the size and low contrast, in light and dark. Fix what it finds,
+   so the people with the phones only meet what a machine cannot see. Its open design questions are listed in the report.
    * **iPhone offline**: the app installed on the Home Screen from an `https://` address; turn on Airplane Mode; Today opens from
      the saved copy and says so; add an entry, edit one and delete one; turn the network back on and see all three on another device.
    * **Large text**: iPhone Settings → Accessibility → Larger Text at the largest size, and Android font size and display size at
@@ -53,7 +56,7 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
      `device.py`, `guidance_perf.py`, `learn.py`, `journey.py` (needs a built handbook) and `upgrade.py`
      (needs a full clone), and the ones that belong to a feature: `prefs.py`, `ask.py`, `ask_voice.py`, `fallback.py`,
      `symptoms.py`, `visitprep.py`, `body.py`, `menuplan.py` (needs a built handbook), `demo_local.py`, `import_walk.py`, `body_import.py`,
-     `push.py`, `lab_pdf.py`, `mcp_smoke.py` and `reliability.py`
+     `push.py`, `lab_pdf.py`, `mcp_smoke.py`, `reliability.py` and `a11y.py`
      ([tools/e2e/README.md](../tools/e2e/README.md)). Run them one after another on a machine that is busy:
      `ask.py` and `fallback.py` each failed once when run beside a full test run, because they read the server right after a
      click (they pass alone);

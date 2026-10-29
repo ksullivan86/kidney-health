@@ -49,8 +49,20 @@ the API. Security fixes are released as patch versions of the newest minor versi
   Server settings and the rest twice.
 * **Ask keeps what you typed while you waited.** When a question got no answer, it went back into the box and wiped your
   next question. Now both are there.
+* **Bigger text works.** The text now follows the text size you set in your browser. At twice the size, nothing runs off the
+  side of the screen: long button words wrap, the meal choices keep every word, and the week on Plan and the boxes on Profile
+  make room.
+* **You can always see where you are with the keyboard.** With Tab, a button never hides under the tab bar at the bottom of a
+  phone screen, the calendar button in a date or time field shows the focus outline, and the meal choices in the entry sheet
+  scroll into view.
+* **Easier to read in the dark theme.** The web address field of a saved meal looks like the other fields, and the grey hint
+  text in it and in the steps box is easier to read.
 
 ### For people who run a server
+
+* **An automated accessibility check.** `python tools/e2e/a11y.py` tabs through the main screens and sheets at phone and desktop
+  size, light and dark, and checks names, text at twice the size and contrast. Run it before the check on real phones
+  ([docs/maintainers.md](docs/maintainers.md)).
 
 * **`scripts/ai_eval.py` sends what your server sends.** It reads `AI_MAX_TOKENS`, `AI_STRUCTURED_OUTPUT`, `AI_REASONING_EFFORT`
   and `AI_CONTEXT_TOKENS`, or their `AI_CLOUD_*` twins with `--role cloud`, and the report records them. Before, a cloud run always
