@@ -44,6 +44,13 @@ counter and an AbortController), loadDevices (checks the box is still on the pag
    - Test: tests/js/usda_late_reply.test.mjs (+ tests/test_usda_late_reply.py). Old add.js: 6 of 7 fail; new: 7 of 7.
      Also run: test_demo_servings_only, test_device_ui, test_offline_edits_ui, test_reliability_ui.
    - Docs: ARCHITECTURE.md (Add food), handbook app/logging.md (Search USDA), CHANGELOG.
+3. **ask.js: a failed send wiped what was typed meanwhile** (candidate 4). Done.
+   - The question goes back first, then a blank line, then what was typed. Box empty: the question alone, as before.
+   - Known limit: a combined message is a new request_id, so a trusted save that reached the server before its answer
+     was lost could be saved again if the person sends the combined text. Rare (trust on, reply lost, typed meanwhile).
+   - Test: tests/js/ask_late_reply.test.mjs (+ tests/test_ask_late_reply.py). Old ask.js: 1 of 3 fail (the bug case);
+     new: 3 of 3. Also run: test_ai_cloud_env, test_ask_taste_ui, test_ask_ui, test_ask_voice_ui.
+   - Docs: ARCHITECTURE.md (Ask chat), handbook app/ai.md, CHANGELOG.
 
 ## Found, not changed (for the report)
 

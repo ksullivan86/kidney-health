@@ -256,7 +256,8 @@ for example "How much potassium do I have left today?" or "Can I have a banana a
 - The first time, a sheet asks you to agree to send your messages and the numbers it looks up. **What will be
   sent?** shows the exact request first.
 - Ask answers can be wrong or slow, like any AI. If a number matters, check it on **Today**. It does not replace
-  your care team.
+  your care team. If a question gets no answer, it goes back into the box, and anything you typed while you waited
+  stays there after it.
 
 ### Talking to Ask (optional)
 

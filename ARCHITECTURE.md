@@ -3109,7 +3109,8 @@ true when AI is on, the person opted in and a provider resolves (no quota, nothi
   answer with `numbers`, a plain notice for `withheld`, `unfinished` and `error`, "New conversation", the consent sheet on
   first use (`KH.ai.withConsent('chat', …)`, with "What will be sent?"), and the line "Answers come from an AI model; every
   number is the app's own. Not medical advice." The last 20 messages are sent each time; nothing is stored in the browser.
-  A question that was not answered (consent declined, 429, 503) goes back into the box. Demo and preview: the tab shows a
+  A question that was not answered (consent declined, 429, 503) goes back into the box, before anything typed while it
+  waited (`tests/js/ask_late_reply.test.mjs`). Demo and preview: the tab shows a
   note that the chat works in the installed app with an AI provider, and no input (no mock answers).
   Saving (part C, the self-contained section "Saving from the chat" of `ask.js`): the trust line `#ask-trust`, the confirm card
   (`pending_save`: Save as eaten / Save as planned / Cancel), the saved card with Undo, and the app's questions; Save, import and
