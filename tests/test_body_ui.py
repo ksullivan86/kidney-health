@@ -97,7 +97,8 @@ def test_trends_has_the_section_between_the_symptoms_and_the_charts():
 
 
 def test_today_trends_and_the_api_wrappers_are_wired():
-    assert "KH.body.today(day.date)" in TODAY and "KH.bodyTrends.show(start, end, src)" in TRENDS
+    assert "KH.body.today(state.date)" in TODAY and "KH.bodyTrends.show(start, end, src)" in TRENDS
+    assert "KH.body.today(day.date)" not in TODAY  # food rendering must not restart the independent body read
     for wrapper in ("bodyWeights: (start, end) => request('GET', '/api/body/weights?'", "addWeight: (b) => request('POST', '/api/body/weights', b)",
                     "updateWeight: (id, b) => request('PUT', `/api/body/weights/${id}`, b)", "deleteWeight: (id) => request('DELETE', `/api/body/weights/${id}`)",
                     "bloodPressures: (start, end) => request('GET', '/api/body/blood-pressure?'", "addBloodPressure: (b) => request('POST', '/api/body/blood-pressure', b)",

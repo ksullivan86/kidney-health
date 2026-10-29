@@ -3506,6 +3506,8 @@ a person types and how it is worded, the chart scales, the table rows) and, for 
   Changing the date clears the card and its summary immediately, including old alarm/goal lines.
   Loading has its own message; failed reads offer **Try again**, including a handled sign-in failure.
   Late replies or errors cannot replace the newest day's card.
+  Today starts the body read before waiting for food, as it does for Symptoms. Food rendering and
+  food errors do not restart the measurement read, so a slow food request cannot retain old rows.
 * **The sheets**: the weight in the person's unit (`user.units.weight`, pounds until the server says otherwise) with the other unit echoed ("154.3 lb = 70.0 kg"),
   and **when it was taken** as radio choices that the page makes (morning / before dialysis / after dialysis / other; the two dialysis ones only when the
   profile's `dialysis` is not `none`, and always the row's own choice when editing); **no choice is pre-ticked**. A note-only edit keeps the stored weight to
