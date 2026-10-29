@@ -93,7 +93,8 @@ test('a late fitted-copy success does not close a newer dialog or describe B car
   s.calls.creates[0].resolve({ name: 'Recipe A (fitted)' }); await pending;
   assert.equal(s.$('#sheet-fit').open, true);
   assert.match(s.calls.toasts[0], /20 g to 10 g/);
-  assert.doesNotMatch(s.calls.toasts[0], /40 g|20 g\.$/);
+  assert.doesNotMatch(s.calls.toasts[0], /40 g/);
+  assert.doesNotMatch(s.calls.toasts[0], /20 g\.$/);
 });
 test('closing the dialog invalidates a pending fit read', async () => {
   const s = setup({ slowRead: true }); await s.open(1); s.close();
