@@ -15,7 +15,9 @@ Status: in progress (2026-10-29): built and tested locally; PR next, after the r
   "Pair with …?" alert in `ContentView.swift`, `pairingQuestion` and `notAPairingLink` in `SyncModel.swift`, a simulator test in
   `SettingsScreenTests.swift`. Not compiled here (no Xcode): the macOS CI job builds and tests it.
 * Web: `pushPairBox` in `settings.js` (QR from `KH.twoStep.qrSvg`, now exported with a label), CSS, `tests/js/push_page.mjs` cases.
-* Tests: `tests/test_pairing.py`, pairing checks in `tests/test_push_ui.py` and `tests/test_ios_app.py`.
+* Tests: `tests/test_pairing.py`, pairing checks in `tests/test_push_ui.py` and `tests/test_ios_app.py`. Chromium: `tools/e2e/push.py`
+  checks the box on a plain-http server and draws a pairing link with the vendored module (101/101; one earlier run had a timing miss
+  in the Trends table read, which passed on rerun and on main).
 * Docs: ARCHITECTURE (file map, feature row, "Pairing the iPhone app"), `docs/push.md`, `ios/README.md`, note 15 (§4.2, §4.3, §6,
   §7), CHANGELOG, handbook weight-and-blood-pressure.
 

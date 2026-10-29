@@ -312,6 +312,12 @@ def walk_person(p: Pass, server: Server, base: str, admin_pass: Pass, person: An
     check(f"[{tag}] the token is shown, a khd_ token, with the words that it is shown once",
           token.startswith("khd_") and len(token) > 24 and "It is shown only now. Paste it into your shortcut." in text_of(page, "#set-push"), token[:6])
     check(f"[{tag}] and the address to send to is this server's origin and /push/v1/body", address == f"{base}/push/v1/body", address)
+    check(f"[{tag}] the iPhone app box says a QR code needs the server's https:// address (this server is plain http)",
+          "The iPhone app needs this server at an https:// address." in text_of(page, "#set-push-body [aria-label='Pair the iPhone app']")
+          and page.locator("#set-push-body [aria-label='Pair the iPhone app'] svg").count() == 0)
+    drawn = page.evaluate("""async () => { const svg = await KH.twoStep.qrSvg('kidneyhealthsync://pair?v=1&server=https%3A%2F%2Ffood.example.org&token=khd_' + 'A'.repeat(43), 'x');
+      return { label: svg.getAttribute('aria-label'), path: (svg.querySelector('path.qr-dark') || { getAttribute: () => '' }).getAttribute('d').length }; }""")
+    check(f"[{tag}] the page draws a pairing link as a QR code with the vendored module, in this browser", drawn["label"] == "x" and drawn["path"] > 1000, json.dumps(drawn))
     p.shot("token-shown", "#set-push")
     page.click("#set-push-body [aria-label='New token'] button:has-text('Copy token')")
     wait_text(page, "#toast", "Token copied")
