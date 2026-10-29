@@ -39,8 +39,12 @@ that name. Mount `/backups` as a separate volume and point the backup tool there
 database.
 
 **Server administration → About this server** shows when the last `app.admin backup` ran. When there was none in the last
-7 days, or ever, it says so with the command and a link to [Restore](#restore). A copy made another way (a snapshot of the
-volume) is not seen there.
+7 days, or ever, it says so with the command and a link to [Restore](#restore). `BACKUP_REMINDER_DAYS` changes the 7 days; `0`
+turns the reminder off.
+
+If your backups run another way (a snapshot of the volume, restic, a NAS job), the app cannot see them. End the backup job with
+`python -m app.admin record-backup` (in the container: `podman exec <container> python -m app.admin record-backup`). The app then
+counts that run as the last backup. It copies nothing, so check now and then that your backups really restore.
 
 ## The secret key is separate
 

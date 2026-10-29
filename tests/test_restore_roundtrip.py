@@ -44,7 +44,37 @@ def test_the_admin_page_reminds_about_an_old_or_missing_backup():
 
     view = (Path(__file__).resolve().parents[1] / "app" / "static" / "js" / "views" / "settings.js").read_text(encoding="utf-8")
     due = view[view.index("function backupDue"):view.index("// ---- About this server")]
-    assert "const BACKUP_DUE_DAYS = 7;" in view and "if (days != null && days < BACKUP_DUE_DAYS) return null;" in due
+    assert "const BACKUP_DUE_DAYS = 7;" in view and "if (days != null && days < dueDays) return null;" in due
     assert "No backup has been taken on this server yet." in due and "The last backup is ${days} days old." in due
     assert "KH.learn.href('self-hosting/backups/#restore')" in due and "'How to restore a backup'" in due
-    assert "const due = backupDue(a.last_backup_at);" in view
+    assert "const due = backupDue(a.last_backup_at, a.backup_reminder_days ?? BACKUP_DUE_DAYS);" in view
+    assert "if (!dueDays) return null;" in due and "days < dueDays" in due  # BACKUP_REMINDER_DAYS, 0 = off
+    assert "python -m app.admin record-backup" in due
+
+
+def test_a_backup_made_outside_the_app_can_be_recorded(tmp_path, foods_json):
+    """A volume snapshot leaves no row, so the reminder never stopped. ``record-backup`` from the backup job records one."""
+    settings = make_settings(tmp_path, foods_json)
+    with signed_in_client(settings) as c:
+        about = c.get("/api/admin/about").json()
+        assert about["last_backup_at"] is None and about["backup_reminder_days"] == 7
+    out = io.StringIO()
+    assert admin.main(["record-backup"], env={"DATA_DIR": str(settings.data_dir)}, out=out) == 0, out.getvalue()
+    assert "recorded" in out.getvalue()
+    with signed_in_client(settings) as c:
+        assert c.get("/api/admin/about").json()["last_backup_at"] is not None
+        events = [e for e in c.get("/api/admin/audit").json()["events"] if e["action"] == "backup.created"]
+        assert [e["details"].get("target") for e in events] == ["outside"], events
+
+
+def test_the_reminder_follows_backup_reminder_days(tmp_path, foods_json):
+    import pytest
+
+    from app.config import ConfigError, load_settings
+
+    assert load_settings({"DATA_DIR": str(tmp_path), "BACKUP_REMINDER_DAYS": "0"}).backup_reminder_days == 0
+    assert load_settings({"DATA_DIR": str(tmp_path), "BACKUP_REMINDER_DAYS": "30"}).backup_reminder_days == 30
+    with pytest.raises(ConfigError):
+        load_settings({"DATA_DIR": str(tmp_path), "BACKUP_REMINDER_DAYS": "-1"})
+    with signed_in_client(make_settings(tmp_path / "off", foods_json, backup_reminder_days=0)) as c:
+        assert c.get("/api/admin/about").json()["backup_reminder_days"] == 0
