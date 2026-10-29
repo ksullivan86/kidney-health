@@ -59,11 +59,25 @@ its outbound proxy pointing nowhere, so nothing can leave the machine.
 `reliability.py` also opens the saved-meal editor with missing and partial nutrient values, changes
 **Makes**, and checks that a failed save keeps the note and servings count for a successful retry.
 
+The recipe-serving checks in `reliability.py` compare the Add-to-a-day preview, API scale and stored
+entries for one and two recipe servings. A failed apply keeps the count and date; retry sends the
+same body and logs one serving once.
+
 The recipe Fit checks in `reliability.py` open saved meals with missing, partial and known-zero
 potassium and verify the qualifiers on the nutrient row itself.
 
 `body.py` also delays a previous day's weight read while the date changes back. It checks that
-the card clears during loading and the late reply cannot restore old measurements.
+the card clears even while food is held too, and late replies cannot restore old measurements.
+
+`symptoms.py` also delays a previous day's reply, changes back to today, and exercises a failed
+date read followed by **Try again**. It checks that old symptoms and handbook blocks clear first.
+
+For a failed weight or blood pressure save, `reliability.py` asks the server too: nothing is stored, the next try sends
+the same reading, and it is stored once.
+
+`reliability.py` also holds a recipe Replace while another Fit sheet opens. The late write must
+not offer the first recipe's Undo on the second, whose stored data stays unchanged. A normal
+Replace and Undo then restore the same recipe's foods and serving count.
 
 `recipes_ai.py` also delays a synthetic meal-idea reply while changing breakfast to dinner: the old card and Add button
 must stay gone, while a fresh dinner answer still renders and plans dinner. Those controlled calls write nothing to the server.

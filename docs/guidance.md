@@ -264,9 +264,17 @@ Chromium by `tools/e2e/prefs.py`.
 
 ## Recipes that fit
 
+**Add to a day** asks for recipe servings, starting at one, and previews those ingredient and nutrient
+amounts. The client divides by Makes to send the API's existing whole-pot `scale`; callers of the
+API and the demo API keep that contract. Plain saved meals continue to use Scale (1 = as saved).
+
 The New/Edit saved-meal preview keeps missing nutrients distinct from zero too. It shows
 **not listed** when no ingredient lists a value and **≥** when only some do. Changing ingredients
 or **Makes** updates the preview; a known zero stays 0.
+
+Replace and Undo stay attached to the recipe you confirmed. If you open another recipe while a
+save waits, the old save may finish, but it cannot offer Undo on the new recipe or close its sheet.
+Changing the fit target clears any earlier Replace question so you can review the new result.
 
 `POST /api/guidance/fit-recipe` checks one serving of a recipe (a saved meal with `servings_made`, or a draft) against the room for a
 meal (the same room as What fits now) or against what is left today (no per-meal cap, no fair share and no carbohydrate check). One

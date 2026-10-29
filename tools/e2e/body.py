@@ -371,8 +371,15 @@ def walk_today(p: Pass, person: Any | None, mock: bool, hd: bool = False) -> Non
 def walk_date_loading(p: Pass) -> None:
     """The other day's rows disappear while delayed reads wait; an old reply cannot restore them."""
     page, tag = p.page, p.tag
+    page.evaluate("() => KH.views.today.loadDay()")
+    wait_today(page)
     original = say(page)
     yesterday = iso(-1)
+    page.evaluate("""(day) => {
+      window.originalBodyFoodDay = KH.api.day;
+      window.pendingBodyFoodDays = [];
+      KH.api.day = (date) => date === day ? new Promise(resolve => window.pendingBodyFoodDays.push(resolve)) : window.originalBodyFoodDay(date);
+    }""", yesterday)
     pattern = f"**/api/body/weights?start={yesterday}&end={yesterday}"
     held: list[Any] = []
     page.route(pattern, lambda route: held.append(route))
@@ -384,16 +391,19 @@ def walk_date_loading(p: Pass) -> None:
                 break
             page.wait_for_timeout(100)
         check(f"[{tag}] the delayed date has no old readings, alarm or goal",
-              bool(held) and page.locator("#body-today-body .body-item, #body-today-body .body-flag, #body-today-body .body-hint-line").count() == 0)
+              bool(held) and page.locator("#body-today-body .body-item, #body-today-body .body-flag, #body-today-body .body-hint-line").count() == 0
+              and page.evaluate("window.pendingBodyFoodDays.length > 0"))
         page.click("#date-next")
         wait_today(page)
         page.wait_for_function("(text) => document.querySelector('#body-today-body').innerText === text", arg=original)
         for route in held:
             route.fulfill(status=200, content_type="application/json", body=json.dumps({"weights": []}))
         held.clear()
+        page.evaluate("(day) => { KH.api.day = window.originalBodyFoodDay; window.pendingBodyFoodDays.forEach(resolve => resolve({date: day})); }", yesterday)
         page.wait_for_timeout(100)
         check(f"[{tag}] a late weight reply cannot replace the day shown now", say(page) == original)
     finally:
+        page.evaluate("() => { KH.api.day = window.originalBodyFoodDay; }")
         page.unroute(pattern)
         for route in held:
             route.abort()

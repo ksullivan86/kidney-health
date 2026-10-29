@@ -38,6 +38,7 @@ using the app; the pages below are for the people who run, maintain and check it
 * [Weight and blood pressure](body.md): the log of weights and blood pressure readings: the tables, routes and settings, what the app works out
   (kilograms and pounds, the weight-gain alarm, the 7-day means against the goal), the handbook's words for a warning sign, export and import,
   the demo's twin and its checks (screens come in the next part).
+* [Symptoms](symptoms.md): recording symptoms, loading another day, retrying a failed request and the Trends list.
 * [Meal guidance](guidance.md): what fits now, swaps, treating a low, plan the day, insights; every rule
   and number with its source; performance.
 * [Optional AI](ai.md): what AI does and never does, what is sent, consent, providers and recipes,

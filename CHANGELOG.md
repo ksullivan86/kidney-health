@@ -13,6 +13,16 @@ the API. Security fixes are released as patch versions of the newest minor versi
   hides the new link. It stays until it is used or cancelled.
 * **A device you signed out stays gone.** In Settings → Signed-in devices, a slow earlier load can no longer bring it back.
 * **A failed food search says so.** On the Add tab, the old results are cleared and you see "Could not search" with **Retry**.
+* **Symptoms, weight and blood pressure load on their own.** When you change the date on Today, the Symptoms card clears
+  and says it is loading. Neither card waits for the food log any more, so a slow or failed food day cannot leave the other
+  day's symptoms or weights on screen. If a card cannot load, **Try again** shows, also after you had to sign in again.
+* **Undo in Fit to my targets belongs to the recipe you replaced.** If you opened another recipe while **Replace** was still
+  saving, the new recipe could get the first one's **Undo**, and pressing it wrote the first recipe over the second. Now Undo
+  always puts back the recipe you replaced. Changing the fit target clears an older Replace question.
+* **Add a recipe to a day by servings.** For a recipe, **Add to a day** now asks for **Servings to add** and starts at 1, so it
+  adds one serving, the amount the recipe card shows. Before, it asked for a scale and 1 added the whole pot. If you used to
+  type a fraction such as 0.25 for one serving of a recipe that makes 4, type 1 now. The preview shows what will be added.
+  Plain saved meals still use Scale.
 
 ## 0.11.0 — 2026-10-29
 

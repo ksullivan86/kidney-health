@@ -655,7 +655,12 @@ link with a host and no password, at most 900 characters, never fetched; `""` is
 the stored value, as for `meal_hint`; `null` clears it. The items of a recipe are for the whole pot: `apply` logs them times
 `scale`, so one serving is `scale = 1 / servings_made`. What fits now (`context.load_saved_meals`, and the demo's twin) divides
 each item by `servings_made`, so a recipe is judged and offered one serving at a time. Export and import carry the three fields;
-`per_serving` and `unknown` are worked out again on read. The screens (Plan → saved meals): the editor has **Makes**, **Recipe
+`per_serving` and `unknown` are worked out again on read.
+The **Add to a day** sheet asks for **Servings to add** for a recipe and starts at 1. It previews
+that many recipe servings and sends the existing API multiplier `servings / servings_made`.
+Ordinary saved meals retain **Scale** (1 = as saved). The API's whole-pot scale contract is unchanged.
+The input limit also respects the API scale maximum for recipes whose Makes is less than 1.
+The screens (Plan → saved meals): the editor has **Makes**, **Recipe
 link** and **Cooking steps**; the list shows one serving's numbers for a recipe and hides a note equal to the old `save_recipe`
 sentence; the New/Edit saved-meal preview also counts missing nutrients for its current ingredients,
 showing **not listed** when none list the value and **≥** for partial totals. **Makes** scales known
@@ -665,7 +670,11 @@ else the next meal today) and offers **Save as a new recipe** (`POST /api/meals`
 `servings_made ÷ serving_fraction` so one saved serving is the size that fits; when that is over 100 it is 100 and every amount is scaled down by the same factor instead) or **Replace this recipe** (`PUT`, after an inline
 confirm with carbohydrate per serving before and after, with an Undo that `PUT`s the old body back).
 Each Fit check and the carbohydrate confirmation show missing amounts as **not listed** and partial amounts with **≥** (a grey
-`fit-unknown` row, never the green `fit-ok`), before and after each from their own `unknown`; a known zero stays 0. The demo answers the route
+`fit-unknown` row, never the green `fit-ok`), before and after each from their own `unknown`; a known zero stays 0.
+Each write stays bound to the recipe and fit result that were confirmed. Undo stores the original
+recipe id with its old body; a late Replace cannot attach Undo to a newly opened recipe. A late
+copy save cannot close a newer Fit sheet or use its carbohydrate figures. Closing invalidates pending
+fit reads, and changing the fit target dismisses any older Replace question. The demo answers the route
 with `engine/guidance/recipes.js`, the twin of `app/guidance/recipes.py`, checked by the `fit_recipe` cases of
 `tests/data/guidance_vectors.json`. **AI recipes** (note 16 phase 3, optional): when `GET /api/ai/status` says `features.recipes`,
 Plan shows **Suggest recipes with AI** and the fit sheet **Rework with AI**; both open the AI sheet (`KH.ai.openRecipes` in
@@ -3370,6 +3379,11 @@ that `handbook/REVIEW.md` tracks for the page itself.
   that stands out and is listed first; the handbook link is `KH.learn.href(red_flag.href)` (no handbook, no link; the line
   stays), opening in a new tab so a sheet in use is not lost. Days after today cannot be added to. Symptoms are not
   queued offline: a save needs the server and the card says so when it cannot load.
+  Changing the date clears the Symptoms card before waiting. The loading message cannot retain
+  another day's entries or handbook blocks; failures offer **Try again**, including handled
+  sign-in failures. Late replies and errors cannot replace the newest day's card.
+  The Symptoms read starts at the beginning of Today loading, independently of the food request;
+  rendering food or its error does not restart that read.
 * **Trends** (`KH.symptoms.trends(start, end)`): one row per symptom (an `other` per label) with the number of days, the
   worst severity, a strip of marks over the period (decoration, `aria-hidden`; a mark's height is the severity), the dates
   written out with their severity, and the same handbook line. No chart library.
@@ -3503,6 +3517,8 @@ a person types and how it is worded, the chart scales, the table rows) and, for 
   Changing the date clears the card and its summary immediately, including old alarm/goal lines.
   Loading has its own message; failed reads offer **Try again**, including a handled sign-in failure.
   Late replies or errors cannot replace the newest day's card.
+  Today starts the body read before waiting for food, as it does for Symptoms. Food rendering and
+  food errors do not restart the measurement read, so a slow food request cannot retain old rows.
 * **The sheets**: the weight in the person's unit (`user.units.weight`, pounds until the server says otherwise) with the other unit echoed ("154.3 lb = 70.0 kg"),
   and **when it was taken** as radio choices that the page makes (morning / before dialysis / after dialysis / other; the two dialysis ones only when the
   profile's `dialysis` is not `none`, and always the row's own choice when editing); **no choice is pre-ticked**. A note-only edit keeps the stored weight to

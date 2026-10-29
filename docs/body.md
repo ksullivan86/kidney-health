@@ -103,6 +103,7 @@ vectors). A screen says nothing about a cause, a treatment or a medicine (`tests
 
 Changing the date clears the card while the new day's weights and readings load. Old measurements,
 alarms and goals cannot stay under the new date. If loading fails, **Try again** reloads that day.
+This read starts independently of the food log, even when food is slow or cannot be loaded.
 
 ## Settings
 
