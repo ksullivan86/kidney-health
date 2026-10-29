@@ -67,6 +67,11 @@ other console/CSP errors still fail the walk, and the fixture-error count remain
 `reliability.py` also checks that delayed Profile and saved-meal reads cannot replace a completed save in the real
 browser cache. Those controlled checks write no profile or meal to the server, and restore the normal reads afterward.
 
+`python tools/e2e/profile_reliability.py` checks Profile against a temporary local server on port 8101:
+editing targets or weight while a suggestion waits preserves the entries, suggesting again works,
+and a failed Profile save keeps the fields for a successful retry. It writes a JSON report to the
+folder given by `--out` (default `/tmp/kidney-health-e2e/profile-reliability`).
+
 Run from the repository root (or anywhere: the harnesses find the repository from their own path).
 
 ```bash
