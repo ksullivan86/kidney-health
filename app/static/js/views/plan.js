@@ -568,6 +568,11 @@
   // ---- Fit to my targets (note 16 §10): POST /api/guidance/fit-recipe, then Save a fitted copy or Replace ---------------
   const fitDlg = $('#sheet-fit');
   const fit = { meal: null, result: null, req: 0, busy: false, undo: null };
+  const currentFit = (req, meal) => fitDlg.open && req === fit.req && meal === fit.meal;
+  fitDlg.addEventListener('close', () => {
+    if (fitDlg.open) return; // a queued close event from the previous opening
+    fit.req += 1; fit.result = null; fit.undo = null;
+  });
   const STATUS_HEAD = {
     fits: 'One serving fits as it is.',
     fits_after_changes: 'It fits with the changes below.',
@@ -589,6 +594,8 @@
   }
   async function runFit() {
     const req = ++fit.req;
+    fit.result = null;
+    confirm.dismiss($('.sheet-foot', fitDlg));
     const host = clear($('#fit-result'));
     host.append(h('p', { class: 'muted' }, 'Checking…'));
     $('#fit-save').hidden = true; $('#fit-replace').hidden = true;
@@ -658,28 +665,31 @@
   });
   $('#fit-save').addEventListener('click', async () => {
     if (fit.busy || !fit.result || !fit.result.fitted) return;
+    const req = fit.req, meal = fit.meal, carbs = carbsLine();
     fit.busy = true;
     try {
-      const saved = await api.createMeal(fittedBody(`${fit.meal.name} (fitted)`));
-      toast(`Saved “${saved.name}”. ${carbsLine()}`, 'ok');
-      fitDlg.close();
+      const saved = await api.createMeal(fittedBody(`${meal.name} (fitted)`));
+      toast(`Saved “${saved.name}”. ${carbs}`, 'ok');
+      if (currentFit(req, meal)) fitDlg.close();
       await KH.loadMeals(true);
       renderSavedMeals();
     } catch (err) { toastError(err); } finally { fit.busy = false; }
   });
   $('#fit-replace').addEventListener('click', (ev) => {
     if (!fit.result || !fit.result.fitted) return;
+    const req = fit.req, meal = fit.meal;
     confirm.inline($('.sheet-foot', fitDlg), ev.currentTarget, {
-      message: `Replace “${fit.meal.name}” with the fitted recipe? ${carbsLine()}`,
+      message: `Replace “${meal.name}” with the fitted recipe? ${carbsLine()}`,
       confirmText: 'Replace',
       onConfirm: async () => {
+        if (!currentFit(req, meal)) return true; // the question no longer describes the open result
         try {
-          const old = bodyOf(fit.meal);
-          await api.updateMeal(fit.meal.id, fittedBody(fit.meal.name));
-          fit.undo = old;
+          const old = { meal_id: meal.id, name: meal.name, body: bodyOf(meal) };
+          await api.updateMeal(meal.id, fittedBody(meal.name));
+          if (currentFit(req, meal)) fit.undo = old;
           await KH.loadMeals(true);
           renderSavedMeals();
-          renderFit();
+          if (currentFit(req, meal)) renderFit();
           return true;
         } catch (err) { toastError(err); return false; }
       },
@@ -687,13 +697,14 @@
   });
   async function undoReplace() {
     if (!fit.undo) return;
+    const undo = fit.undo, req = fit.req, meal = fit.meal;
     try {
-      await api.updateMeal(fit.meal.id, fit.undo);
-      fit.undo = null;
-      toast(`“${fit.meal.name}” is back as it was`, 'ok');
+      await api.updateMeal(undo.meal_id, undo.body);
+      if (currentFit(req, meal) && fit.undo === undo) fit.undo = null;
+      toast(`“${undo.name}” is back as it was`, 'ok');
       await KH.loadMeals(true);
       renderSavedMeals();
-      renderFit();
+      if (currentFit(req, meal)) renderFit();
     } catch (err) { toastError(err); }
   }
 

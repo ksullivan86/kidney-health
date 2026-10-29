@@ -173,7 +173,68 @@ def walk_recipe(page: Any, recipe_id: int) -> None:
     check("Recipe: every food is halved, so one saved serving is the size that fits",
           [i["servings"] for i in body.get("items", [])] == [5.0], json.dumps(body.get("items")))
     check("Recipe: the server accepts it (201)", answers and answers[-1] == 201, str(answers))
+    wait_text(page, "#saved-meals", "Big pot (fitted)")
+    walk_fit_context(page, recipe_id)
     page.unroute("**/api/guidance/fit-recipe")
+
+
+def walk_fit_context(page: Any, recipe_id: int) -> None:
+    """A's delayed Replace must never expose its old body as Undo on B; verify B on the server."""
+    before_b = page.evaluate("async () => (await KH.api.meals()).meals.find(meal => meal.name === 'Crackers only')")
+    page.evaluate("""() => {
+      window.originalFitLoadMeals = KH.loadMeals;
+      window.fitCacheLoads = 0;
+      KH.loadMeals = async (...args) => { const result = await window.originalFitLoadMeals(...args); window.fitCacheLoads++; return result; };
+    }""")
+    held: list[Any] = []
+    pattern = f"**/api/meals/{recipe_id}"
+    page.route(pattern, lambda route: held.append(route))
+
+    def open_recipe(name: str) -> None:
+        page.evaluate("(name) => KH.views.plan.openFitSheet(KH.state.meals.find(meal => meal.name === name), null)", name)
+        page.wait_for_selector("#fit-replace:not([hidden])")
+
+    def replace() -> None:
+        page.click("#fit-replace")
+        page.locator("#sheet-fit .confirm-row").get_by_role("button", name="Replace", exact=True).click()
+
+    try:
+        open_recipe("Big pot")
+        replace()
+        for _ in range(50):
+            if held:
+                break
+            page.wait_for_timeout(100)
+        if not held:
+            raise AssertionError("the Replace request was not held")
+        page.evaluate("() => document.querySelector('#sheet-fit').close()")
+        open_recipe("Crackers only")
+        held.pop().continue_()
+        page.wait_for_function("() => window.fitCacheLoads === 1")
+        check("Recipe race: the old Replace cannot attach A's Undo to B",
+              page.locator("#fit-result").get_by_role("button", name="Undo", exact=True).count() == 0)
+        check("Recipe race: B's Fit sheet remains open after A's write",
+              page.is_visible("#sheet-fit") and "Crackers only" in text_of(page, "#sheet-fit-sub"))
+        after_b = page.evaluate("async () => (await KH.api.meals()).meals.find(meal => meal.name === 'Crackers only')")
+        check("Recipe race: B's stored recipe is unchanged", after_b == before_b)
+        page.unroute(pattern)
+        page.evaluate("() => document.querySelector('#sheet-fit').close()")
+        before_undo = page.evaluate("async (id) => (await KH.api.meals()).meals.find(meal => meal.id === id)", recipe_id)
+        open_recipe("Big pot")
+        replace()
+        page.wait_for_function("() => window.fitCacheLoads === 2")
+        check("Recipe: an unchanged result still offers Undo after Replace",
+              page.locator("#fit-result").get_by_role("button", name="Undo", exact=True).is_visible())
+        page.locator("#fit-result").get_by_role("button", name="Undo", exact=True).click()
+        page.wait_for_function("() => window.fitCacheLoads === 3")
+        restored = page.evaluate("async (id) => (await KH.api.meals()).meals.find(meal => meal.id === id)", recipe_id)
+        check("Recipe: Undo restores that recipe's original foods and serving count",
+              restored["items"] == before_undo["items"] and restored["servings_made"] == before_undo["servings_made"])
+    finally:
+        page.unroute(pattern)
+        for route in held:
+            route.abort()
+        page.evaluate("() => { KH.loadMeals = window.originalFitLoadMeals; document.querySelector('#sheet-fit').close(); }")
 
 
 def walk_lab_cache(page: Any) -> None:

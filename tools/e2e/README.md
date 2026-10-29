@@ -55,6 +55,10 @@ its outbound proxy pointing nowhere, so nothing can leave the machine.
 
 ## Running
 
+`reliability.py` also holds a recipe Replace while another Fit sheet opens. The late write must
+not offer the first recipe's Undo on the second, whose stored data stays unchanged. A normal
+Replace and Undo then restore the same recipe's foods and serving count.
+
 `recipes_ai.py` also delays a synthetic meal-idea reply while changing breakfast to dinner: the old card and Add button
 must stay gone, while a fresh dinner answer still renders and plans dinner. Those controlled calls write nothing to the server.
 `reliability.py` also holds a synthetic lab-list read across cache invalidation, then delivers it after a fresh read.
