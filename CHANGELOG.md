@@ -40,6 +40,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
   result or change your profile, a slower older read cannot bring back the previous values or potassium alert. A shared food day
   shows the day you picked last, with **Retry** if it cannot load. A sharing link's **Accept** button always belongs to the link
   you opened last.
+* **A late barcode or label answer no longer jumps in.** If you close Scan while a barcode is being looked up, the food no
+  longer opens on its own later. If you remove or change the label photo, or close Quick add, before the AI has read it,
+  its answer no longer fills in the form over what you typed.
 
 ### For people who run a server
 

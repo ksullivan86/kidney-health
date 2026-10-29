@@ -2173,14 +2173,18 @@ with lookups off on both sides.
   and swaps refuse grams with the server's text, `tests/test_demo_servings_only.py` through `tests/js/demo_api.mjs`).
   404 → *Enter from the label* (Quick add with the barcode and the photo prompt) and the Open Food Facts contribute link; 503 `off_consent_required` → the
   consent panel (`PATCH /api/me/settings {"food.off_consent": true}` then the lookup again); 503 lookups off,
-  429 (with the wait), 502, 400 (the reason's text) each have their own panel and a way forward.
+  429 (with the wait), 502, 400 (the reason's text) each have their own panel and a way forward. Each lookup, and each
+  opening or closing of the sheet, takes a new turn: an answer for an older turn is dropped, so a lookup that answers after
+  the sheet was closed (or after another code was looked up) opens nothing (`tests/js/scan_late_reply.test.mjs`).
 * **Quick add** gains *Barcode* (optional, checked like the scan), *Ingredients* (optional; the browser
   additive scan shows "Phosphate additives / Potassium additives / …" before saving and the server stores
   the same flags) and *Use a photo of the label*: shown beside the form on wide screens (above it on
   phones), zoom 1×/2×/3×, an object URL revoked when removed or closed, never uploaded unless the person
   presses *Read the label for me (AI)* (offered when `KH.ai` reports the `label` feature): the browser
   re-encodes it to a JPEG with the long edge ≤ 1600 px through a canvas (no EXIF), asks consent once per
-  destination, and fills the fields marked "from photo" (the mark goes when a field is edited).
+  destination, and fills the fields marked "from photo" (the mark goes when a field is edited). An answer for a
+  photo that was removed or replaced, or for a Quick add that was closed, fills nothing, and the JPEG of an old photo
+  is never sent once a new one is chosen.
 * **Settings → About** lists the data sources (Open Food Facts ODbL notice and method file, USDA FoodData
   Central citation, the decoder's licences); Admin → Server settings groups the `food.*` keys.
 
