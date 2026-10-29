@@ -9,6 +9,8 @@
 3. **A fitted recipe that makes 100 servings.** The fit answer is the server's own, changed to "fits as half a serving" (the case
    the audit found). Save must send a recipe the server accepts (at most 100 servings, one serving the size that fits), and the
    server answers 201.
+4. **A slow day, then another.** The answer for the day before waits while Ana goes back to today; when it comes, today stays.
+5. **A save that fails.** The entry sheet stays open with the amount typed and its button works again; the next try saves once.
 
     python3 tools/e2e/reliability.py            # a real server on 127.0.0.1:8097, Chromium; exit 1 on any failed check
 """
@@ -70,6 +72,63 @@ def walk_today(page: Any) -> None:
     page.click("#day-retry")
     page.wait_for_selector("#day-unavailable", state="detached", timeout=15000)
     check("Today: Retry loads the day", "could not be loaded" not in text_of(page, "#meals") and text_of(page, "#status-bars") != "")
+
+
+def walk_slow_then_switch(page: Any) -> None:
+    """A day that answers slowly must not replace the day the person switched to meanwhile."""
+    today = date.today()
+    yesterday = (today - timedelta(days=1)).isoformat()
+    page.click("#tab-today")
+    page.goto("/")
+    wait_text(page, "#meals", "Banana")
+    held: list[Any] = []
+    slow = f"**/api/log?date={yesterday}*"
+    page.route(slow, lambda route: held.append(route))  # the answer for yesterday waits until the check releases it
+    page.click("#date-prev")
+    for _ in range(50):
+        if held:
+            break
+        page.wait_for_timeout(100)
+    page.click("#date-next")
+    wait_text(page, "#meals", "Banana")
+    page.unroute(slow)
+    for route in held:
+        try:
+            route.fulfill(status=200, content_type="application/json",
+                          body=json.dumps({"date": yesterday, "entries": [], "totals": {}, "targets": {}, "alerts": []}))
+        except Exception:  # noqa: BLE001 - the page already gave up on it (the request was cancelled): also fine
+            pass
+    page.wait_for_timeout(800)
+    check("Today: a slow answer for the day before does not replace the day shown now",
+          "Banana" in text_of(page, "#meals") and not page.is_visible("#day-unavailable"), text_of(page, "#meals")[:160])
+
+
+def walk_failed_save(page: Any) -> None:
+    """A save that fails keeps the sheet open with what was typed, says why, and the next try saves once."""
+    page.click("#tab-add")
+    page.fill("#food-search", "apple")
+    page.wait_for_selector("#food-results .row-btn")
+    page.click("#food-results .row-btn >> text=/apple/i >> nth=0")
+    page.wait_for_selector("#sheet-entry[open]")
+    page.fill("#entry-servings", "2")
+    failing = "**/api/log"
+    page.route(failing, lambda route: route.fulfill(status=500, content_type="application/json",
+                                                    body=json.dumps({"detail": "The server had a problem."}))
+               if route.request.method == "POST" else route.continue_())
+    page.click("#entry-save")
+    page.wait_for_timeout(800)
+    still_open = page.is_visible("#sheet-entry[open]")
+    kept = page.input_value("#entry-servings") == "2"
+    check("Add: a save that fails keeps the sheet open with the amount typed", still_open and kept,
+          f"open={still_open} servings={page.input_value('#entry-servings') if still_open else '-'}")
+    check("Add: the button can be pressed again after a failed save", page.is_enabled("#entry-save"))
+    page.unroute(failing)
+    sent: list[str] = []
+    page.on("request", lambda r: sent.append(r.url) if r.method == "POST" and urlsplit(r.url).path == "/api/log" else None)
+    page.click("#entry-save")
+    page.wait_for_selector("#sheet-entry", state="hidden")
+    wait_text(page, "#meals", "Apple")
+    check("Add: the second try saves the entry once", len(sent) == 1, str(sent))
 
 
 def walk_saved_meals(page: Any) -> None:
@@ -146,7 +205,8 @@ def main(argv: list[str] | None = None) -> int:
                 ctx.add_cookies([{"name": k, "value": v, "url": server.base} for k, v in ana.cookies().items()])
                 page = ctx.new_page()
                 page.set_default_timeout(15000)
-                for name, walk in (("Today", lambda: walk_today(page)), ("Saved meals", lambda: walk_saved_meals(page)),
+                for name, walk in (("Today", lambda: walk_today(page)), ("Slow day", lambda: walk_slow_then_switch(page)),
+                                   ("Failed save", lambda: walk_failed_save(page)), ("Saved meals", lambda: walk_saved_meals(page)),
                                    ("Recipe", lambda: walk_recipe(page, recipe))):
                     try:  # each step on its own, so one bug does not hide the others
                         walk()
