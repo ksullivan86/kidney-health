@@ -55,6 +55,9 @@ its outbound proxy pointing nowhere, so nothing can leave the machine.
 
 ## Running
 
+`reliability.py` also holds a synthetic lab-list read across cache invalidation, then delivers it after a fresh read.
+It checks that both readers, the history and kidney-function card keep the new result. This case writes no lab to the server.
+
 Run from the repository root (or anywhere: the harnesses find the repository from their own path).
 
 ```bash

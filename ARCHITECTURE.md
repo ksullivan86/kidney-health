@@ -1655,7 +1655,10 @@ lab validation messages, history, deletion, the kidney-function card, ~150 sugge
   the cumulative *Review suggested targets* notice in Profile (`state.targetsReview`; never applied),
   the potassium banner (POST alert, else `GET /api/labs` `alerts`: the newest potassium while fresh under
   `targets.lab_fresh_days.potassium`, the suggestions' window; the browser applies no window of its own),
-  the kidney-function card and the history with in-page delete confirmation.
+  the kidney-function card and the history with in-page delete confirmation. Saving, deleting, importing or changing Profile
+  invalidates the shared lab/kidney-function cache and pending reads. An older reply cannot restore the pre-change cache
+  or replace a newer Lab results/Profile summary. Concurrent readers share one read until invalidated; older readers then
+  converge on the fresh result.
 * **Today**: a `{min}`-only target (fiber) is a goal bar ("of at least X", no over state); a range with
   `min === max` reads "about X". **Settings**: Preferences → *Units for lab results* (`user.units.labs`);
   Admin → server settings group *Personalised targets and lab results* (`targets.*`, `user.units.labs` default).
