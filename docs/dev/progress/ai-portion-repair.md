@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # ai-portion-repair: AI meal ideas that are a little too big are made smaller, not dropped
 
@@ -49,9 +49,18 @@ Worktree: `/home/user/kidney-health/.claude/worktrees/agent-a0f680c60c2411e99`, 
    line, which also now quotes the real message), CHANGELOG.md (one line for people using the app, one for people who run a
    server).
 
-## Next
+3. Full `python -m pytest`: everything passes except one test that already fails on `next-batch`:
+   `tests/test_deploy.py::test_self_hosting_pages_link_to_commands_instead_of_copying_them[backups.md]` (the
+   `podman exec` line from dd88a39, not touched here). 53 setup errors in test_lab_photo, test_learn_offline,
+   test_log_if_match and test_mcp came from the shared `/tmp/pytest-of-root` used by other agents at the same time; rerun
+   with `--basetemp` in the scratchpad they all pass.
 
-1. Full `python -m pytest` run, then mark complete.
+## Findings outside the meal ideas
+
+* Rerank, swap and plan cannot drop for a portion: they pick refs or option indexes from lists the rules already passed
+  (or, for plan, the planner rebuilds the day). Nothing changed there.
+* AI recipes drop `share_too_large` (more than 3 servings of a food in one serving) before `fit_recipe` runs, although
+  `fit_recipe` can already lower `portion_out_of_range`. One drop of 118 in the live run; left as is.
 
 ## Old vs new (tests/test_ai_portion_repair.py, rice 4 quarters + a 170 mg potassium food 6 quarters)
 
