@@ -655,7 +655,9 @@ link** and **Cooking steps**; the list shows one serving's numbers for a recipe 
 sentence; **Fit to my targets** opens a sheet that calls `POST /api/guidance/fit-recipe` (default target: the recipe's `meal_hint`,
 else the next meal today) and offers **Save as a new recipe** (`POST /api/meals`, name "<name> (fitted)", `servings_made` =
 `servings_made ÷ serving_fraction` so one saved serving is the size that fits; when that is over 100 it is 100 and every amount is scaled down by the same factor instead) or **Replace this recipe** (`PUT`, after an inline
-confirm with carbohydrate per serving before and after, with an Undo that `PUT`s the old body back). The demo answers the route
+confirm with carbohydrate per serving before and after, with an Undo that `PUT`s the old body back).
+Each Fit check and carbohydrate confirmation shows missing amounts as **not listed** and partial
+amounts with **≥**, separately for before and after; known zero remains 0. The demo answers the route
 with `engine/guidance/recipes.js`, the twin of `app/guidance/recipes.py`, checked by the `fit_recipe` cases of
 `tests/data/guidance_vectors.json`. **AI recipes** (note 16 phase 3, optional): when `GET /api/ai/status` says `features.recipes`,
 Plan shows **Suggest recipes with AI** and the fit sheet **Rework with AI**; both open the AI sheet (`KH.ai.openRecipes` in

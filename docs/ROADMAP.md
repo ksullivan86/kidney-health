@@ -17,7 +17,8 @@ recovery trustworthy before more AI or native-app features.
    `tools/e2e/profile_reliability.py`. Still to test the same way: Plan, Labs, weight and blood pressure.
 2. **Unknown, zero and partial, the same on every screen.** Today, Trends, saved meals and the Add tab's shortcuts say "not listed"
    and "≥". So do the "Add a saved meal" sheet, the meals in What fits now and the day plan, and AI meal ideas (`unknown` next
-   to each meal's `totals`). Still to check: the swap ideas and the Fit to my targets sheet.
+   to each meal's `totals`). Fit to my targets marks missing and partial amounts on every check and the
+   carbohydrate confirmation too. Swap ideas use portions and explanatory text rather than a numeric nutrient-total row.
 3. **Backup and restore that a person can find and follow.** Done: Server administration shows the last backup and a reminder
    after 7 days (`BACKUP_REMINDER_DAYS`) with the restore link, `tests/test_restore_roundtrip.py` restores a backup into an empty
    server in CI, and a backup job outside the app ends with `python -m app.admin record-backup` so the reminder sees it.
