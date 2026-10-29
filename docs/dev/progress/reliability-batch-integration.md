@@ -1,4 +1,4 @@
-Status: complete
+Status: in progress
 
 Verification branch test/reliability-batch-integration, based on Claude cbc48fc and main 84330f3.
 Branches refreshed immediately before starting. No PR, deployment or environment publication.
@@ -39,3 +39,9 @@ Main advanced to 6fa43ab (#120) while tests ran; its app/tests/tools match the C
 included here. Claude 289c2b3 also has new Scan/USDA/Ask/admin fixes in different files; those later
 changes are not in this snapshot. The recipe-apply serving improvement is on a separate branch
 and is not part of these results. No PR or deployment; this branch is ready for Claude's review.
+
+Follow-up integration: refresh to main 6fa43ab and Claude 289c2b3 (Scan/USDA/Ask/admin fixes),
+and add recipe-apply-serving-preview e866a04. The earlier results above remain for 12523c2 only.
+Also finish the matching parent-loader timing for weight/BP: the body module clears on start,
+but Today still waits for food before calling it. Symptoms already starts independently.
+Next: merge current work, isolate that small timing fix, then verify the new combined snapshot.
