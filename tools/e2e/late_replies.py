@@ -5,6 +5,12 @@
 2. **Search USDA twice.** Two searches wait; the newer answers first, then the older. Only the newer list is shown.
 3. **Server administration, tapped twice.** The two-step check of the first load waits while the shield is tapped again.
    Each part of the page is there once.
+4. **Add tab search fails.** After a search that worked, the next one gets a server error. The list says "Could not search"
+   with Retry under the new search, and the old results are gone. Retry shows the answer.
+5. **Signed-in devices.** Ana signs out two other devices quickly. The list for the first answers last, with both devices still
+   in it (a slow server). The second device does not come back.
+6. **Sharing.** Ana stops sharing with Bob, then makes a link before the list has loaded again. The two loads answer newest
+   first. The new link is on the screen.
 
 The answers are held with Playwright routes, so no USDA key or Open Food Facts is needed and nothing leaves the machine.
 
@@ -21,7 +27,7 @@ from pathlib import Path
 from typing import Any
 
 import khserver
-from khserver import Server, first_admin
+from khserver import Server, first_admin, invite_user
 from playwright.sync_api import sync_playwright
 
 OUT = Path(tempfile.gettempdir()) / "kidney-health-e2e" / "late-replies"
@@ -112,6 +118,68 @@ def walk_admin(page: Any) -> None:
     page.unroute("**/api/me/totp")
 
 
+def walk_search_failed(page: Any) -> None:
+    page.click("#tab-add")
+    page.fill("#food-search", "banana")
+    page.press("#food-search", "Enter")
+    page.wait_for_selector("#food-results .row-title")
+    page.route("**/api/foods?*", lambda route: answer(route, {"detail": "The server had a problem"}, 500))
+    page.fill("#food-search", "apple")
+    page.press("#food-search", "Enter")
+    page.wait_for_selector("#food-results button:has-text('Retry')")
+    text = page.inner_text("#food-results")
+    check("Search: a failed search says so in place of the old results",
+          "Could not search" in text and "Banana" not in text and page.inner_text("#results-heading") == "Results for “apple”", text)
+    page.unroute("**/api/foods?*")
+    page.click("#food-results button:has-text('Retry')")
+    page.wait_for_selector("#food-results .row-title")
+    rows = page.evaluate("() => [...document.querySelectorAll('#food-results .row-title')].map((e) => e.innerText.trim())")
+    check("Search: Retry shows the answer", rows and all("apple" in r.lower() for r in rows), json.dumps(rows[:5]))
+
+
+def open_settings(page: Any, ready: str) -> None:
+    page.click("#settings-open")
+    page.wait_for_selector(ready, timeout=20000)
+    page.locator(ready).first.scroll_into_view_if_needed()
+
+
+def walk_devices(page: Any, stale: dict[str, Any]) -> None:
+    open_settings(page, "#set-devices li")
+    held: list[Any] = []
+    page.route("**/api/me/sessions", lambda route: held.append(route) if route.request.method == "GET" else route.continue_())
+    others = page.locator("#set-devices li:not(:has(.this-device)) button")
+    others.nth(0).click()
+    wait_for(page, held, 1)
+    others.nth(1).click()
+    wait_for(page, held, 2)
+    held[1].continue_()  # the newer load: the real list, with only this device
+    page.wait_for_function("() => document.querySelectorAll('#set-devices li').length === 1")
+    answer(held[0], stale)  # the older load answers last, with the list from before both sign-outs
+    page.wait_for_timeout(800)
+    n = page.evaluate("() => document.querySelectorAll('#set-devices li').length")
+    check("Devices: a slow older list does not bring back a signed-out device", n == 1, f"{n} devices shown")
+    page.unroute("**/api/me/sessions")
+
+
+def walk_sharing(page: Any) -> None:
+    open_settings(page, "#set-sharing-list")
+    held: list[Any] = []
+    page.route("**/api/me/shares", lambda route: held.append(route) if route.request.method == "GET" else route.continue_())
+    page.get_by_role("button", name="Stop sharing with bob").click()
+    page.locator("#set-sharing-list").get_by_role("button", name="Stop sharing", exact=True).click()
+    wait_for(page, held, 1)
+    page.click("#set-sharing-make")
+    wait_for(page, held, 2)
+    held[1].continue_()  # the load after Make a link answers first
+    page.wait_for_selector("#set-share-link")
+    page.wait_for_timeout(300)
+    held[0].continue_()  # then the load after Stop sharing
+    page.wait_for_timeout(1000)
+    link = page.input_value("#set-share-link") if page.is_visible("#set-share-link") else ""
+    check("Sharing: Stop sharing, then Make a link at once keeps the new link on screen", "/#/share/" in link, link[:60])
+    page.unroute("**/api/me/shares")
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--port", type=int, default=PORT)
@@ -122,12 +190,18 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     out = khserver.free_dir(args.out)
     env = {"HTTPS_PROXY": "http://127.0.0.1:9", "HTTP_PROXY": "http://127.0.0.1:9", "NO_PROXY": "127.0.0.1,localhost",
-           "HANDBOOK_DIR": str(out / "no-handbook")}
+           "HANDBOOK_DIR": str(out / "no-handbook"), "SHARING_ENABLED": "true"}
     server = Server(args.port, out / "data", log_path=out / "server.log", env=env)
     try:
         server.start()
         ana = first_admin(server, "ana")
         banana = ana.json("GET", "/api/foods", params={"q": "banana"})["foods"][0]
+        for _ in range(2):  # two more devices for the Signed-in devices step
+            khserver.Api(server.base).login("ana")
+        stale = ana.json("GET", "/api/me/sessions")
+        bo = invite_user(server, ana, "bob")
+        made = ana.json("POST", "/api/me/shares", {"areas": ["food"], "days": None})
+        bo.json("POST", "/api/shared/accept", {"code": made["link"].rsplit("/", 1)[-1]})
         with sync_playwright() as pw:
             browser = pw.chromium.launch(executable_path=khserver.chromium_executable(), args=["--no-sandbox"])
             try:
@@ -136,13 +210,15 @@ def main(argv: list[str] | None = None) -> int:
                 page = ctx.new_page()
                 page.set_default_timeout(15000)
                 for name, walk in (("Scan", lambda: walk_scan(page, banana)), ("USDA", lambda: walk_usda(page)),
-                                   ("Admin", lambda: walk_admin(page))):
+                                   ("Admin", lambda: walk_admin(page)), ("Search", lambda: walk_search_failed(page)),
+                                   ("Devices", lambda: walk_devices(page, stale)), ("Sharing", lambda: walk_sharing(page))):
                     try:  # each step on its own, from a fresh page, so one bug does not hide the others
                         page.goto("/")
                         page.wait_for_selector("#view-today:not([hidden])")
                         walk()
                     except Exception:
-                        check(f"{name}: the step ran to the end", False, traceback.format_exc(limit=2).splitlines()[-1])
+                        traceback.print_exc(limit=2)
+                        check(f"{name}: the step ran to the end", False, traceback.format_exc(limit=2).strip().splitlines()[-1])
                         page.unroute_all()
                         page.goto("/")
                 ctx.close()

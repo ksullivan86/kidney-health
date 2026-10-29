@@ -20,6 +20,10 @@ Three small loading fixes. Worktree branch `worktree-agent-a3f2ee7639205c3ed`, m
    `tests/test_food_search_failed.py`), 3 cases: 2 failed on the old code (old results stayed, no Retry), all pass now.
    Tests that read add.js, USDA and scan late replies pass. Docs: ARCHITECTURE Add food, handbook logging.md "If something
    goes wrong", CHANGELOG.
-4. Next: e2e cases in tools/e2e/late_replies.py, then the full pytest and node vectors.
+4. E2E: DONE. tools/e2e/late_replies.py has three new steps (Search, Devices, Sharing; the server runs with
+   SHARING_ENABLED=true; Ana gets two more sessions and a share with bob before the browser opens). On the old view files
+   (from 289c2b3) all three fail; with the fixes 8 of 8 pass. A failed step now prints its traceback. tools/e2e/README.md
+   updated. Run: `python3 tools/e2e/late_replies.py --out <empty dir>`.
+5. Next: full `python -m pytest`; node tests/js/run_vectors.mjs passed.
 
 Python: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/venv312/bin/python
