@@ -142,6 +142,9 @@ and **Add to plan**. If no AI idea fits your targets, the app shows its own idea
 without the foods it has already suggested, so you get different ones. Each ask counts as one AI call. If your admin
 has switched on **Ask**, a tab called **Ask** is there too.
 
+If you change the meal, date or recipe inputs while waiting, the old answer will not appear. Ask again for your new choice.
+The request you already sent may still count as an AI call.
+
 ## Read a lab report from a photo or a PDF
 
 On the **Lab results** screen, below "Import from a spreadsheet", **Read a lab report photo or PDF** copies the printed results

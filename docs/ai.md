@@ -190,6 +190,8 @@ Where the data goes depends on the provider your admin chose (the consent sheet 
   the ordinary log). If every idea is left out, the app's own ideas are shown instead. **Other ideas** sends
   `exclude_food_ids` (the foods of the ideas shown so far, at most 60), so the candidates are new foods; AI recipes have
   **Other recipes** the same way (ingredients such as oil and flour stay).
+  If you change the meal, date or recipe inputs while waiting, the old answer is left out. Ask again for the new choice;
+  an answer checked for breakfast is never relabelled as dinner. A request already sent may still use an AI call.
 * **Turning it on.** Settings → **AI ideas** → **Use AI ideas** (off by default). The section says when
   AI is off on the server. Choose the provider your admin offers, or your own key when allowed.
 * **Where each feature runs.** Once your admin has set up routing, Settings → AI ideas lists one line per

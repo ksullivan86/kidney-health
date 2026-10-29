@@ -118,6 +118,56 @@ def meals(admin: Any) -> list[dict[str, Any]]:
     return admin.json("GET", "/api/meals")["meals"]
 
 
+def walk_idea_context(page: Any, tag: str) -> None:
+    """Deferred synthetic replies exercise the real idea widget without AI or log writes."""
+    result = page.evaluate("""async () => {
+      const api = KH.ai.api;
+      const saved = {me: api.me, status: api.status, nextMeal: api.nextMeal, logBatch: api.logBatch};
+      const box = KH.h('div', {});
+      document.body.append(box);
+      const writes = [], calls = [];
+      let resolve;
+      const tick = () => new Promise(r => setTimeout(r, 0));
+      const idea = title => ({status: 'ok', ideas: [{title, why: '', totals: {},
+        items: [{food_id: 1, name: 'Test food', servings: 1}], after: {carbs_g: {meal_after: 60, goal: 60}}}]});
+      try {
+        api.me = async () => ({enabled: true});
+        api.status = async () => ({enabled: true, consent: {text: {skip_preview: true}}});
+        api.nextMeal = body => { calls.push(body); return new Promise(r => { resolve = r; }); };
+        api.logBatch = async entries => { writes.push(...entries); };
+        KH.ai.forget();
+        const controller = KH.ai.mountIdeas(box, {date: '2026-10-29', meal: 'breakfast'});
+        const ask = box.querySelector('button');
+        ask.click();
+        await tick();
+        controller.setMeal('dinner');
+        resolve(idea('Old breakfast result'));
+        await tick();
+        const stale = box.querySelector('.ai-results').innerText;
+        const oldAdd = !!box.querySelector('.ai-results button');
+        ask.click();
+        await tick();
+        resolve(idea('Current dinner result'));
+        await tick();
+        const current = box.querySelector('.ai-results').innerText;
+        box.querySelector('.ai-results button').click();
+        await tick();
+        return {stale, oldAdd, current, calls, writes};
+      } finally {
+        Object.assign(api, saved);
+        KH.ai.forget();
+        box.remove();
+      }
+    }""")
+    check(f"[{tag}] old breakfast ideas do not reappear as dinner after changing the meal",
+          "Old breakfast result" not in result["stale"] and not result["oldAdd"], result["stale"])
+    check(f"[{tag}] a fresh dinner answer still renders and Add to plan uses its requested context",
+          "Current dinner result" in result["current"] and "Dinner carbohydrate" in result["current"]
+          and [c["meal"] for c in result["calls"]] == ["breakfast", "dinner"]
+          and len(result["writes"]) == 1 and result["writes"][0]["meal"] == "dinner"
+          and result["writes"][0]["date"] == "2026-10-29")
+
+
 def walk(browser: Any, admin: Any, fake: FakeAi, ids: dict[str, int], base: str, out: Path, width: int, height: int, scheme: str) -> None:
     tag = f"{width}-{scheme}"
     ctx = browser.new_context(viewport={"width": width, "height": height}, color_scheme=scheme, base_url=base)
@@ -207,6 +257,7 @@ def walk(browser: Any, admin: Any, fake: FakeAi, ids: dict[str, int], base: str,
     check(f"[{tag}] no sideways scroll with steps", not overflow(page))
     page.screenshot(path=str(out / "shots" / f"steps-{tag}.png"), full_page=True)
     close_sheets(page)
+    walk_idea_context(page, tag)
     check(f"[{tag}] no console or page errors", not errors, "; ".join(errors[:3]))
     ctx.close()
 

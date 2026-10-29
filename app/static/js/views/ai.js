@@ -499,27 +499,31 @@
   // The person's AI ideas for one meal, as a block (guidance's "What fits now" can mount it).
   function mountIdeas(container, { date = state.date, meal = util.defaultMealForNow() } = {}) {
     const ctx = { date, meal, seen: [], last: [] }; // seen: foods of the ideas shown so far, for "Other ideas"
+    let request = 0;
     const out = h('div', { class: 'ai-results', 'aria-live': 'polite' });
     const err = formError();
     async function run(btn, exclude) {
+      const req = ++request;
+      const requested = { date: ctx.date, meal: ctx.meal };
       clear(err);
       const label = btn.textContent;
       btn.textContent = 'Asking…';
       out.setAttribute('aria-busy', 'true');
       try {
-        const body = { meal: ctx.meal, date: ctx.date, mode: 'ideas', ...(exclude.length ? { exclude_food_ids: exclude } : {}) };
+        const body = { ...requested, mode: 'ideas', ...(exclude.length ? { exclude_food_ids: exclude } : {}) };
         const answer = await withConsent('text', () => api.nextMeal(body), () => api.nextMeal(body, true), btn);
+        if (req !== request) return;
         if (answer) {
-          renderIdeas(out, answer, ctx);
+          renderIdeas(out, answer, requested);
           ctx.seen = exclude;
           ctx.last = foodIdsOf((answer.ideas || []).flatMap((i) => i.items || []));
           other.hidden = !ctx.last.length;
         }
       } catch (e) {
-        if (!e.handled && !e.cancelled) showError(err, e);
+        if (req === request && !e.handled && !e.cancelled) showError(err, e);
       } finally {
         btn.textContent = label;
-        out.removeAttribute('aria-busy');
+        if (req === request) out.removeAttribute('aria-busy');
       }
     }
     const ask = button('Ask AI for ideas', 'primary', (btn) => run(btn, []));
@@ -528,7 +532,7 @@
       clear(err);
       try { await showSent(await api.nextMeal({ meal: ctx.meal, date: ctx.date, mode: 'ideas' }, true), { trigger: btn }); } catch (e) { showError(err, e); }
     });
-    const reset = () => { clear(out); ctx.seen = []; ctx.last = []; other.hidden = true; };
+    const reset = () => { ++request; clear(out); clear(err); out.removeAttribute('aria-busy'); ctx.seen = []; ctx.last = []; other.hidden = true; };
     clear(container).append(h('div', { class: 'settings-actions' }, ask, other, what), err, out);
     return { setMeal(m) { ctx.meal = m; reset(); }, setDate(d) { ctx.date = d; reset(); } };
   }
@@ -611,7 +615,10 @@
     const reqBody = () => (change ? { mode: 'change', meal_id: mealId, meal: ctx.meal, date: ctx.date }
       : { mode: 'suggest', dish: dish.value, makes: Number(makes.value), meal: ctx.meal, date: ctx.date });
     const seen = { foods: [], last: [] }; // foods of the recipes shown so far, for "Other recipes"
+    let request = 0;
     async function run(btn, exclude) {
+      const req = ++request;
+      const requested = { date: ctx.date, meal: ctx.meal };
       clear(err);
       const label = btn.textContent;
       btn.textContent = 'Asking…';
@@ -619,22 +626,23 @@
       try {
         const b = { ...reqBody(), ...(exclude.length ? { exclude_food_ids: exclude } : {}) };
         const answer = await withConsent('text', () => api.recipes(b), () => api.recipes(b, true), btn, 'recipes');
+        if (req !== request) return;
         if (answer) {
-          renderRecipes(out, answer, ctx, onSaved);
+          renderRecipes(out, answer, requested, onSaved);
           seen.foods = exclude;
           seen.last = foodIdsOf((answer.recipes || []).flatMap((r) => (r.body && r.body.items) || []));
           other.hidden = !seen.last.length;
         }
       } catch (e) {
-        if (!e.handled && !e.cancelled) showError(err, e);
+        if (req === request && !e.handled && !e.cancelled) showError(err, e);
       } finally {
         btn.textContent = label;
-        out.removeAttribute('aria-busy');
+        if (req === request) out.removeAttribute('aria-busy');
       }
     }
     const ask = button(change ? 'Ask AI to rework it' : 'Ask AI for recipes', 'primary', (btn) => run(btn, []));
     const other = button(change ? 'Another way' : 'Other recipes', 'secondary', (btn) => run(btn, moreSeen(seen.foods, seen.last)), { hidden: '' });
-    const reset = () => { clear(out); seen.foods = []; seen.last = []; other.hidden = true; };
+    const reset = () => { ++request; clear(out); clear(err); out.removeAttribute('aria-busy'); seen.foods = []; seen.last = []; other.hidden = true; };
     for (const el of [dish, makes]) el.addEventListener('change', reset);
     const what = button('What will be sent?', 'secondary', async (btn) => {
       clear(err);
