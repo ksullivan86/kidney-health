@@ -658,7 +658,9 @@ amounts without changing missing counts; removing ingredients recalculates both.
 **Fit to my targets** opens a sheet that calls `POST /api/guidance/fit-recipe` (default target: the recipe's `meal_hint`,
 else the next meal today) and offers **Save as a new recipe** (`POST /api/meals`, name "<name> (fitted)", `servings_made` =
 `servings_made ÷ serving_fraction` so one saved serving is the size that fits; when that is over 100 it is 100 and every amount is scaled down by the same factor instead) or **Replace this recipe** (`PUT`, after an inline
-confirm with carbohydrate per serving before and after, with an Undo that `PUT`s the old body back). The demo answers the route
+confirm with carbohydrate per serving before and after, with an Undo that `PUT`s the old body back).
+Each Fit check and the carbohydrate confirmation show missing amounts as **not listed** and partial amounts with **≥** (a grey
+`fit-unknown` row, never the green `fit-ok`), before and after each from their own `unknown`; a known zero stays 0. The demo answers the route
 with `engine/guidance/recipes.js`, the twin of `app/guidance/recipes.py`, checked by the `fit_recipe` cases of
 `tests/data/guidance_vectors.json`. **AI recipes** (note 16 phase 3, optional): when `GET /api/ai/status` says `features.recipes`,
 Plan shows **Suggest recipes with AI** and the fit sheet **Rework with AI**; both open the AI sheet (`KH.ai.openRecipes` in
@@ -2078,9 +2080,8 @@ values), noted `filled_from_<src>:<key>`; flags and additives are the union.
   their chips, the meal sheet, the plan and the idea cards show those totals as "≥ …" or "… not listed"; the entry sheet's impact says "would reach at least …".
   Swap ideas (`SwapIdea.deltas`) hold `null` for a nutrient either food does not list, and the swap, smaller-portion and
   low-treatment texts say "carbs not listed" / "potassium not listed" (`amount_word` / `amountWord`); a low-treatment row shows
-  "potassium not listed" too. The Fit to my targets sheet reads `before`/`after` `unknown` and `per_serving`: a row is "≥ …" on
-  grey (`fit-unknown`, never the green `fit-ok`) or "not listed", and each change line says "at least" (`amount_text` /
-  `amountText`). The UNKNOWN cases of the guidance vectors and `tests/test_unknown_swaps_fit_ui.py` check both sides. The twin uses
+  "potassium not listed" too. On the Fit to my targets sheet each change line says "at least" (`amount_text` / `amountText`); its rows are under
+  "Recipes" above. The UNKNOWN cases of the guidance vectors and `tests/test_unknown_swaps_fit_ui.py` check both sides. The twin uses
   `KH.rules.countUnknown` / `mergeUnknown` / `markUnknown` (twins of `nutrients.count_unknown` / `merge_unknown` /
   `mark_unknown`) and is compared with the server by `tests/test_unknown_values_twin.py` and `tools/e2e/parity.py`.
 

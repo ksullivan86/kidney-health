@@ -26,11 +26,12 @@ def _between(text: str, start: str, end: str) -> str:
 
 
 def test_the_fit_sheet_rows_say_at_least_or_not_listed():
+    # The rows themselves are rendered by tests/js/recipe_fit_unknown.test.mjs.
     number = _between(PLAN, "function fitNumber(", "function fitRow(")
-    assert "fig.per_serving[key] == null" in number and "return null;" in number
+    assert "fig.per_serving[key] == null) return 'not listed';" in number
     assert "atLeast(fmtNum(check.used, key), unknownOf(fig.unknown, key))" in number
     row = _between(PLAN, "function fitRow(", "function renderFit(")
-    assert "fitNumber(before, c, key)" in row and "fitNumber(after, now, key)" in row and "'not listed'" in row
+    assert "fitNumber(before, c, key)" in row and "fitNumber(after, now, key)" in row
     assert "'fit-unknown'" in row  # within the room on what is known: grey, never the green "fits"
     assert "fitRow(c, r.before, after)" in PLAN
     assert ".fit-checks li.fit-unknown" in CSS

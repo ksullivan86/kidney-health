@@ -293,7 +293,8 @@ are said under every result.
 When some food of the recipe does not list a nutrient, `before` and `after` count it in `unknown` and the figure counts only the
 other foods. Every change line then says "at least" ("Potassium per serving: at least 925 → at least 752 mg"), and a value no food
 lists is "not listed". The sheet shows such a row as "≥ 925 mg" on grey, never the green "fits", names those nutrients under the
-rows, and the message after Save or Replace says "at least" for carbohydrate too.
+rows, and the message after Save or Replace says "at least" for carbohydrate too. Before and after each use their own `unknown`,
+since a swap can fill a gap ("≥ 100 mg → 100 mg"). A known 0 stays 0 mg.
 
 ## Treating a low
 

@@ -609,26 +609,27 @@
       renderFit();
     } catch (err) { if (req === fit.req) { clear(host); toastError(err); } }
   }
-  // One serving's amount in a check, without the unit: "≥ 191" when some food of the recipe does not list it (the sum counts
-  // only the others), null when no food lists it ("not listed"). Never a plain number or 0 for a value that is not there.
+  // One serving's amount in a check: "≥ 191 mg" when some food of the recipe does not list it (the sum counts only the
+  // others), "not listed" when no food lists it. Never a plain number or 0 for a value that is not there; a known 0 stays 0 mg.
   function fitNumber(fig, check, key) {
-    if (fig.per_serving && fig.per_serving[key] == null) return null;
-    return atLeast(fmtNum(check.used, key), unknownOf(fig.unknown, key));
+    if (fig.per_serving && fig.per_serving[key] == null) return 'not listed';
+    const unit = NUT[key] ? NUT[key].unit : '';
+    return `${atLeast(fmtNum(check.used, key), unknownOf(fig.unknown, key))}${unit ? ` ${unit}` : ''}`;
   }
   function fitRow(c, before, after) {
     const key = c.nutrient;
     const unit = NUT[key] ? NUT[key].unit : '';
     const label = NUT[key] ? NUT[key].label || NUT[key].short : key;
     const now = after ? after.checks.find((x) => x.nutrient === key) : null;
+    // Before and after each use their own figures: a swap can fill a gap ("≥ 100 mg → 100 mg") or open one.
     const was = fitNumber(before, c, key);
     const is = now ? fitNumber(after, now, key) : was;
-    const shown = (v) => (v == null ? 'not listed' : v);
-    const text = is === was ? shown(was) : `${shown(was)} → ${shown(is)}`;
+    const text = is === was ? was : `${was} → ${is}`;
     const ok = now ? now.ok : c.ok;
     // Within the room on what is known while some food does not list it: grey, never the green "fits" ("Not complete" on Today).
     const partial = unknownOf((now ? after : before).unknown, key) > 0;
     const cls = !ok ? 'fit-over' : partial ? 'fit-unknown' : 'fit-ok';
-    return h('li', { class: cls }, h('span', {}, label), ' ', h('b', {}, is == null ? text : `${text} ${unit}`),
+    return h('li', { class: cls }, h('span', {}, label), ' ', h('b', {}, text),
       h('span', { class: 'muted' }, ` of ${fmtNum(c.room, key)} ${unit} room`), ok ? '' : h('span', { class: 'fit-over-word' }, ' (over)'));
   }
   // "potassium", "potassium and phosphorus", "carbohydrate, potassium and phosphorus".
