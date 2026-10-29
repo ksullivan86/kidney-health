@@ -169,7 +169,8 @@
     for (const [, [cand, q, neu, sameCategory, fits, score]] of found.slice(0, limit)) {
       const item = F.foodCore(cand, q);
       const deltas = {};
-      for (const k of [R.CARBS, R.K, R.P, R.NA]) deltas[k] = roundValue(k, (neu[k] || 0.0) - (orig[k] || 0.0));
+      // A value either food does not list has no difference (null), never a difference from 0.
+      for (const k of [R.CARBS, R.K, R.P, R.NA]) deltas[k] = neu[k] == null || orig[k] == null ? null : roundValue(k, neu[k] - orig[k]);
       let text;
       if (mode === 'hypo') text = M.swapHypoText(cand.name, q, cand.serving_desc, neu[R.CARBS] || 0.0, neu[R.K]);
       else if (mode === 'avoid') text = M.swapAvoidText(cand.name, q, cand.serving_desc, neu, food.name);
@@ -205,7 +206,7 @@
       if (fraction === 0.75 && !clears) continue;
       const shown = keys.filter((k) => k !== R.FLUID);
       return { servings: q, fraction, fits_meal: true, nutrients: roundNutrients(a),
-        text: M.portionOptionText(fraction, a[R.CARBS] || 0.0, a, shown.length ? shown : [R.K]) };
+        text: M.portionOptionText(fraction, a[R.CARBS], a, shown.length ? shown : [R.K]) };
     }
     return null;
   }

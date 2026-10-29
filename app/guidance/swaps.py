@@ -245,7 +245,9 @@ def find_swaps(ctx: GuidanceContext, meal: str, food: FoodVec, servings: float, 
     swaps: list[dict[str, Any]] = []
     for _, (cand, q, new, same_category, fits, score) in found[:limit]:
         item = food_core(cand, q)
-        deltas = {k: round_value(k, (new[k] or 0.0) - (orig[k] or 0.0)) for k in (R.CARBS, R.K, R.P, R.NA)}
+        # A value either food does not list has no difference (``None``), never a difference from 0.
+        deltas = {k: None if new[k] is None or orig[k] is None else round_value(k, new[k] - orig[k])  # type: ignore[operator]
+                  for k in (R.CARBS, R.K, R.P, R.NA)}
         if mode == "hypo":
             text = M.swap_hypo_text(cand.name, q, cand.serving_desc, new[R.CARBS] or 0.0, new[R.K])
         elif mode == "avoid":
@@ -292,7 +294,7 @@ def portion_option(food: FoodVec, servings: float, room: Room, triggers: Sequenc
             "fraction": fraction,
             "fits_meal": True,
             "nutrients": round_nutrients(a),
-            "text": M.portion_option_text(fraction, a[R.CARBS] or 0.0, a, [k for k in keys if k != R.FLUID] or [R.K]),
+            "text": M.portion_option_text(fraction, a[R.CARBS], a, [k for k in keys if k != R.FLUID] or [R.K]),
         }
     return None
 

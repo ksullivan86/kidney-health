@@ -222,6 +222,9 @@
     return result('does_not_fit', before, items, n, fractions[fractions.length - 1], changes, room, target);
   }
 
+  // Some food of the serving does not list the nutrient, so its figure counts only the others ("at least").
+  const partial = (fig, key) => (fig.unknown[key] || 0) > 0;
+
   function result(status, before, items, n, fraction, swaps, room, target) {
     const after = figures(items, n, room, fraction);
     const full = fraction !== 1.0 ? figures(items, n, room) : after;
@@ -231,13 +234,15 @@
       if (it.swapped_from == null && Math.abs(it.amount - it.original) > 1e-9) {
         const key = it.because || R.K;
         changes.push({ code: 'lowered', food_id: it.food.id, from: it.original, to: it.amount, because: key,
-          text: M.recipeLoweredText(it.food.name, it.food.serving_desc, it.original, it.amount, key, label, before.per_serving[key], full.per_serving[key]) });
+          text: M.recipeLoweredText(it.food.name, it.food.serving_desc, it.original, it.amount, key, label, before.per_serving[key], full.per_serving[key],
+            partial(before, key), partial(full, key)) });
       }
     }
     for (const s of swaps) {
       const out = {};
       for (const [k, v] of Object.entries(s)) if (!k.startsWith('_')) out[k] = v;
-      out.text = M.recipeSwappedText(s._from_food.name, s._to_food.name, s._to_food.serving_desc, s.to, s.because, label, before.per_serving, full.per_serving);
+      out.text = M.recipeSwappedText(s._from_food.name, s._to_food.name, s._to_food.serving_desc, s.to, s.because, label, before.per_serving, full.per_serving,
+        before.unknown, full.unknown);
       changes.push(out);
     }
     if (status === 'fits_smaller_serving') {
@@ -245,7 +250,7 @@
       const key = failing ? failing.nutrient : R.K;
       const roomCheck = full.checks.find((c) => c.nutrient === key);
       changes.push({ code: 'smaller_serving', fraction, because: key,
-        text: M.recipeSmallerText(fraction, key, label, full.per_serving[key], after.per_serving[key], roomCheck ? roomCheck.room : null) });
+        text: M.recipeSmallerText(fraction, key, label, full.per_serving[key], after.per_serving[key], roomCheck ? roomCheck.room : null, partial(full, key)) });
     }
     const fitted = {
       items: items.map((it) => ({ food_id: it.food.id, name: it.food.name, servings: it.amount, serving_desc: it.food.serving_desc,
@@ -262,7 +267,7 @@
     };
     if (noFit) {
       const over = after.checks.find((c) => !c.ok) || null;
-      out.changes.push({ code: 'does_not_fit', text: M.recipeNoFitText(label, over) });
+      out.changes.push({ code: 'does_not_fit', text: M.recipeNoFitText(label, over, over != null && partial(after, over.nutrient)) });
     }
     return out;
   }

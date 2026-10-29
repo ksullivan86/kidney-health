@@ -85,6 +85,22 @@ def with_unit(key: str, value: float | None) -> str:
     return f"{fmt_amount(key, value)} {unit}"
 
 
+def amount_text(key: str, value: float | None, partial: bool = False, unit: bool = True) -> str:
+    """``600 mg``; ``at least 600 mg`` when some food does not list the nutrient (the total counts only the others);
+    ``not listed`` when no food lists it. Never a 0 or a ``?`` for a value that is not there."""
+    if value is None:
+        return "not listed"
+    text = with_unit(key, value) if unit else fmt_amount(key, value)
+    return f"at least {text}" if partial else text
+
+
+def amount_word(key: str, value: float | None) -> str:
+    """``11 g carbs`` or ``carbs not listed``: one food's amount and the nutrient's word."""
+    if value is None:
+        return f"{NUTRIENT_WORD[key]} not listed"
+    return f"{with_unit(key, value)} {NUTRIENT_WORD[key]}"
+
+
 def pct(fraction: float) -> int:
     return whole(fraction * 100.0)
 
@@ -315,20 +331,21 @@ def swap_text(match: str, name: str, servings: float, serving_desc: str, new: Ma
 
 
 def swap_avoid_text(name: str, servings: float, serving_desc: str, new: Mapping[str, float | None], original: str) -> str:
-    return (f"{safe_name(name)} ({portion_short(servings, serving_desc)}): {fmt_g(new.get(R.CARBS) or 0.0)} g carbs and "
-            f"{fmt_amount(R.K, new.get(R.K))} mg potassium, without the warning that {safe_name(original)} has")
+    """"Blueberries (½ cup): 11 g carbs and 55 mg potassium, …"; a value the food does not list reads "carbs not listed"."""
+    return (f"{safe_name(name)} ({portion_short(servings, serving_desc)}): {amount_word(R.CARBS, new.get(R.CARBS))} and "
+            f"{amount_word(R.K, new.get(R.K))}, without the warning that {safe_name(original)} has")
 
 
 def swap_hypo_text(name: str, servings: float, serving_desc: str, carbs: float, k: float | None) -> str:
-    """"For your next low: Glucose tablets, 4 (1 × 4 tablets) gives 16 g carbs with 0 mg potassium"."""
-    return (f"For your next low: {safe_name(name)} ({portion_short(servings, serving_desc)}) gives {fmt_g(carbs)} g carbs "
-            f"with {fmt_amount(R.K, k)} mg potassium")
+    """"For your next low: Glucose tablets, 4 (1 × 4 tablets) gives 16 g carbs with 0 mg potassium" (or "…; potassium not
+    listed" when the food does not list it)."""
+    head = f"For your next low: {safe_name(name)} ({portion_short(servings, serving_desc)}) gives {fmt_g(carbs)} g carbs"
+    return f"{head}; potassium not listed" if k is None else f"{head} with {with_unit(R.K, k)} potassium"
 
 
-def portion_option_text(fraction: float, carbs: float, amounts: Mapping[str, float | None], keys: Sequence[str]) -> str:
+def portion_option_text(fraction: float, carbs: float | None, amounts: Mapping[str, float | None], keys: Sequence[str]) -> str:
     """"Half portion: 19 g carbs and 463 mg potassium. The carbs change, so count the new amount."."""
-    parts = [f"{fmt_g(carbs)} g carbs"]
-    parts += [f"{fmt_amount(k, amounts.get(k))} {NUTRIENT_BY_KEY[k].unit} {NUTRIENT_WORD[k]}" for k in keys]
+    parts = [amount_word(R.CARBS, carbs)] + [amount_word(k, amounts.get(k)) for k in keys]
     return f"{fraction_word(fraction)} portion: {join_and(parts)}. The carbs change, so count the new amount."
 
 
@@ -423,42 +440,55 @@ def recipe_target_label(kind: str, meal: str) -> str:
     return "what is left today" if kind == "day" else f"this {meal}'s room"
 
 
-def _per_serving(key: str, old: float | None, new: float | None) -> str:
-    return f"{capitalise(NUTRIENT_WORD.get(key, key))} per serving: {fmt_amount(key, old)} → {with_unit(key, new)}"
+def _per_serving(key: str, old: float | None, new: float | None, old_partial: bool = False, new_partial: bool = False) -> str:
+    return (f"{capitalise(NUTRIENT_WORD.get(key, key))} per serving: {amount_text(key, old, old_partial, unit=False)} → "
+            f"{amount_text(key, new, new_partial)}")
+
+
+def _partial(unknown: Mapping[str, int] | None, key: str) -> bool:
+    return bool(unknown) and int(unknown.get(key, 0)) > 0  # type: ignore[union-attr]
 
 
 def recipe_lowered_text(name: str, serving_desc: str, old: float, new: float, key: str, label: str,
-                        old_value: float | None, new_value: float | None) -> str:
+                        old_value: float | None, new_value: float | None, old_partial: bool = False,
+                        new_partial: bool = False) -> str:
     head = f"Used {portion_text(new, serving_desc)} of {safe_name(name)} instead of {portion_text(old, serving_desc)}"
     if key not in NUTRIENT_WORD:  # a share above the app's portion limits
         return f"{head}, so one serving holds a smaller portion of it."
-    return f"{head}, to keep {NUTRIENT_WORD[key]} within {label}. {_per_serving(key, old_value, new_value)}{_FIGURES}"
+    return f"{head}, to keep {NUTRIENT_WORD[key]} within {label}. {_per_serving(key, old_value, new_value, old_partial, new_partial)}{_FIGURES}"
 
 
 def recipe_swapped_text(old_name: str, new_name: str, serving_desc: str, amount: float, key: str, label: str,
-                        before: Mapping[str, float | None], after: Mapping[str, float | None]) -> str:
+                        before: Mapping[str, float | None], after: Mapping[str, float | None],
+                        before_unknown: Mapping[str, int] | None = None, after_unknown: Mapping[str, int] | None = None) -> str:
     text = f"Swapped {safe_name(old_name)} for {safe_name(new_name)}, {portion_text(amount, serving_desc)} in the whole recipe"
     if key == "avoid_ckd":
         return f"{text}, because {safe_name(old_name)} is on the app's list of foods to avoid with kidney disease."
     if key not in NUTRIENT_WORD:
         return f"{text}, because {safe_name(old_name)} does not list a value the app needs today."
-    text += f", to keep {NUTRIENT_WORD[key]} within {label}. {_per_serving(key, before.get(key), after.get(key))}"
+    text += (f", to keep {NUTRIENT_WORD[key]} within {label}. "
+             f"{_per_serving(key, before.get(key), after.get(key), _partial(before_unknown, key), _partial(after_unknown, key))}")
     if key != R.PROTEIN:
-        text += f"; protein {fmt_g(before.get(R.PROTEIN))} → {fmt_g(after.get(R.PROTEIN))} g"
+        text += (f"; protein {amount_text(R.PROTEIN, before.get(R.PROTEIN), _partial(before_unknown, R.PROTEIN), unit=False)} → "
+                 f"{amount_text(R.PROTEIN, after.get(R.PROTEIN), _partial(after_unknown, R.PROTEIN))}")
     return text + _FIGURES
 
 
-def recipe_smaller_text(fraction: float, key: str, label: str, full: float | None, part: float | None, room: float | None) -> str:
-    return (f"Have {fmt_servings(fraction)} of a serving: a full serving would use {with_unit(key, full)} of "
+def recipe_smaller_text(fraction: float, key: str, label: str, full: float | None, part: float | None, room: float | None,
+                        partial: bool = False) -> str:
+    """``partial``: some food of the recipe does not list ``key``, so both amounts are "at least"."""
+    if full is None or part is None:
+        return f"Have {fmt_servings(fraction)} of a serving. No food in it lists {NUTRIENT_WORD.get(key, key)}{_FIGURES}"
+    return (f"Have {fmt_servings(fraction)} of a serving: a full serving would use {amount_text(key, full, partial)} of "
             f"{NUTRIENT_WORD.get(key, key)} against {with_unit(key, room)} of room; {fmt_servings(fraction)} uses "
-            f"{with_unit(key, part)}{_FIGURES}")
+            f"{amount_text(key, part, partial)}{_FIGURES}")
 
 
-def recipe_no_fit_text(label: str, over: Mapping[str, object] | None) -> str:
+def recipe_no_fit_text(label: str, over: Mapping[str, object] | None, partial: bool = False) -> str:
     text = f"This recipe does not fit {label} after lowering amounts, swaps and a ½ serving."
     if over is not None:
         key = str(over["nutrient"])
-        text += (f" Still over: {NUTRIENT_WORD.get(key, key)} {with_unit(key, over['used'])} against "  # type: ignore[arg-type]
+        text += (f" Still over: {NUTRIENT_WORD.get(key, key)} {amount_text(key, over['used'], partial)} against "  # type: ignore[arg-type]
                  f"{with_unit(key, over['room'])} of room")  # type: ignore[arg-type]
         return text + _FIGURES
     return text

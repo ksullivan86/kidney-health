@@ -599,14 +599,26 @@
       renderFit();
     } catch (err) { if (req === fit.req) { clear(host); toastError(err); } }
   }
-  function fitRow(c, after) {
+  // One serving's amount in a check, without the unit: "≥ 191" when some food of the recipe does not list it (the sum counts
+  // only the others), null when no food lists it ("not listed"). Never a plain number or 0 for a value that is not there.
+  function fitNumber(fig, check, key) {
+    if (fig.per_serving && fig.per_serving[key] == null) return null;
+    return atLeast(fmtNum(check.used, key), unknownOf(fig.unknown, key));
+  }
+  function fitRow(c, before, after) {
     const key = c.nutrient;
     const unit = NUT[key] ? NUT[key].unit : '';
     const label = NUT[key] ? NUT[key].label || NUT[key].short : key;
     const now = after ? after.checks.find((x) => x.nutrient === key) : null;
-    const text = now && now.used !== c.used ? `${fmtNum(c.used, key)} → ${fmtNum(now.used, key)}` : fmtNum(c.used, key);
+    const was = fitNumber(before, c, key);
+    const is = now ? fitNumber(after, now, key) : was;
+    const shown = (v) => (v == null ? 'not listed' : v);
+    const text = is === was ? shown(was) : `${shown(was)} → ${shown(is)}`;
     const ok = now ? now.ok : c.ok;
-    return h('li', { class: ok ? 'fit-ok' : 'fit-over' }, h('span', {}, label), ' ', h('b', {}, `${text} ${unit}`),
+    // Within the room on what is known while some food does not list it: grey, never the green "fits" ("Not complete" on Today).
+    const partial = unknownOf((now ? after : before).unknown, key) > 0;
+    const cls = !ok ? 'fit-over' : partial ? 'fit-unknown' : 'fit-ok';
+    return h('li', { class: cls }, h('span', {}, label), ' ', h('b', {}, is == null ? text : `${text} ${unit}`),
       h('span', { class: 'muted' }, ` of ${fmtNum(c.room, key)} ${unit} room`), ok ? '' : h('span', { class: 'fit-over-word' }, ' (over)'));
   }
   function renderFit() {
@@ -615,8 +627,10 @@
     if (!r || !STATUS_HEAD[r.status]) { host.append(h('p', {}, r && r.message ? r.message : 'The app cannot check this now.')); return; }
     host.append(h('p', { class: 'fit-head' }, STATUS_HEAD[r.status]));
     const after = r.after || (r.closest ? r.closest.after : null);
-    const unknown = Object.keys(r.before.unknown || {}).filter((k) => NUT[k]);
-    host.append(h('ul', { class: 'fit-checks' }, r.before.checks.map((c) => fitRow(c, after))));
+    // Only the nutrients the sheet shows, before or after the changes (a swap can bring in a food that lists less).
+    const unknown = r.before.checks.map((c) => c.nutrient)
+      .filter((k) => NUT[k] && (unknownOf(r.before.unknown, k) || (after && unknownOf(after.unknown, k))));
+    host.append(h('ul', { class: 'fit-checks' }, r.before.checks.map((c) => fitRow(c, r.before, after))));
     if (unknown.length) host.append(h('p', { class: 'muted small' }, `Some foods do not list ${unknown.map((k) => NUT[k].short.toLowerCase()).join(', ')}, so those numbers are at least what is shown.`));
     if (r.changes.length) host.append(h('ul', { class: 'fit-changes' }, r.changes.map((c) => h('li', {}, c.text))));
     const shape = r.fitted || r.closest;
@@ -644,9 +658,13 @@
   }
   const bodyOf = (t) => ({ name: t.name, note: t.note, meal_hint: t.meal_hint || null, items: t.items.map((it) => ({ food_id: it.food_id, servings: it.servings })),
     servings_made: t.servings_made ?? null, steps: t.steps || null, source_url: t.source_url || null });
+  // "50 g", or "at least 50 g" when some food does not list carbohydrate; null when no food lists it.
+  const carbsOf = (fig) => (!fig || fig.per_serving.carbs_g == null ? null
+    : `${atLeastWords(fmtNum(fig.per_serving.carbs_g, 'carbs_g'), unknownOf(fig.unknown, 'carbs_g'))} g`);
   const carbsLine = () => {
-    const before = fit.result.before.per_serving.carbs_g, after = fit.result.after ? fit.result.after.per_serving.carbs_g : null;
-    return `Carbohydrate per serving goes from ${fmtNum(before, 'carbs_g')} g to ${fmtNum(after, 'carbs_g')} g.`;
+    const before = carbsOf(fit.result.before), after = carbsOf(fit.result.after);
+    if (before == null && after == null) return 'No food in it lists carbohydrate.';
+    return `Carbohydrate per serving goes from ${before ?? 'not listed'} to ${after ?? 'not listed'}.`;
   };
   $('#fit-target').addEventListener('change', () => { fit.undo = null; runFit(); });
   $('#fit-rework').addEventListener('click', () => {

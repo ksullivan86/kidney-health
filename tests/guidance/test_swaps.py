@@ -108,6 +108,39 @@ def test_a_swap_never_creates_a_new_problem():
     assert 60 not in [s["food_id"] for s in r["swaps"]]  # less potassium but a new "high" sodium portion
 
 
+def _not_listing(fid, **missing):
+    """The fixture foods with one food that does not list some values (``carbs_g=None``)."""
+    fs = fx.foods()
+    f = fs[fid]
+    fs[fid] = make_food(id=f.id, name=f.name, category=f.category, serving_desc=f.serving_desc, serving_g=f.serving_g,
+                        nutrients={**f.nutrients, **missing}, flags=f.flags)
+    return fx.context(food_map=fs)
+
+
+def test_a_value_a_food_does_not_list_is_not_listed_never_0():
+    # Star fruit: the blueberries list no carbs or potassium.
+    r = swap(9, ctx=_not_listing(7, carbs_g=None, potassium_mg=None))
+    top = r["swaps"][0]
+    assert top["food_id"] == 7 and top["deltas"]["carbs_g"] is None and top["deltas"]["potassium_mg"] is None
+    assert top["text"] == ("Blueberries (1 × 1/2 cup): carbs not listed and potassium not listed, without the warning that "
+                           "Star fruit has")
+    # A potato that lists no carbs: no carbohydrate difference and a smaller portion without "0 g carbs".
+    r = swap(2, ctx=_not_listing(2, carbs_g=None))
+    assert r["swaps"] and all(s["deltas"]["carbs_g"] is None for s in r["swaps"])
+    assert r["portion_option"]["text"] == ("Half portion: carbs not listed and 463 mg potassium. The carbs change, so count the "
+                                           "new amount.")
+    # A banana: the blueberries list no phosphorus, so there is no phosphorus difference.
+    top = swap(6, ctx=_not_listing(7, phosphorus_mg=None))["swaps"][0]
+    assert top["food_id"] == 7 and top["deltas"]["phosphorus_mg"] is None and top["deltas"]["potassium_mg"] == -283
+
+
+def test_a_low_treatment_that_lists_no_potassium_says_so():
+    r = swaps.hypo_options(_not_listing(12, potassium_mg=None))
+    juice = next(o for o in r["options"] if o["food_id"] == 12)
+    assert juice["text"] == "For your next low: Apple juice (1¼ × 1/2 cup) gives 18 g carbs; potassium not listed"
+    assert juice["nutrients"]["potassium_mg"] is None
+
+
 def test_portion_option_three_quarters_when_it_clears_the_trigger():
     r = swap(11)  # orange juice: 250 mg; ¾ = 188 mg is no longer high
     assert r["portion_option"]["fraction"] == 0.75

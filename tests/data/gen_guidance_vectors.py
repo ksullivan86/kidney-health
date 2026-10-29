@@ -178,7 +178,7 @@ def call(inp: Mapping[str, Any], spec: Mapping[str, Any], foods: Mapping[int, Fo
         return fits.what_fits(ctx, spec["meal"], limit=spec.get("limit", R.DEFAULT_LIMIT), explain=spec.get("explain", False),
                               exclude=frozenset(spec.get("exclude", ())))
     if fn == "find_swaps":
-        return swaps.find_swaps(ctx, spec["meal"], foods[spec["food_id"]], spec["servings"], spec.get("purpose"),
+        return swaps.find_swaps(ctx, spec["meal"], ctx.foods[spec["food_id"]], spec["servings"], spec.get("purpose"),
                                 explain=spec.get("explain", False))
     if fn == "hypo_options":
         return swaps.hypo_options(ctx)
@@ -192,7 +192,7 @@ def call(inp: Mapping[str, Any], spec: Mapping[str, Any], foods: Mapping[int, Fo
         return fits.learned(ctx)
     if fn == "fit_recipe":
         target = recipes.Target(spec["target"]["kind"], spec["target"].get("meal"))
-        return recipes.fit_recipe(ctx, [(foods[i], q) for i, q in spec["items"]], spec.get("servings_made"), target)
+        return recipes.fit_recipe(ctx, [(ctx.foods[i], q) for i, q in spec["items"]], spec.get("servings_made"), target)
     raise ValueError(f"unknown fn {fn!r}")
 
 
@@ -327,6 +327,16 @@ def preference_cases() -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
          {"fn": "what_fits", "meal": "dinner"}),
         ("UNKNOWN a planned meal with a food that lists no potassium", base_input(day=[], food_overrides={"3": {"potassium_mg": None}}),
          {"fn": "plan_day", "meals": ["dinner"]}),
+        # Swap ideas name a value a food does not list as "not listed", and its difference is null, never a difference from 0.
+        ("UNKNOWN swaps for star fruit, the blueberries list no carbs or potassium",
+         base_input(food_overrides={"7": {"carbs_g": None, "potassium_mg": None}}),
+         {"fn": "find_swaps", "meal": "dinner", "food_id": 9, "servings": 1.0}),
+        ("UNKNOWN swaps for a potato that lists no carbs, and its smaller portion",
+         base_input(food_overrides={"2": {"carbs_g": None}}), {"fn": "find_swaps", "meal": "dinner", "food_id": 2, "servings": 1.0}),
+        ("UNKNOWN swaps for a banana, the blueberries list no phosphorus",
+         base_input(food_overrides={"7": {"phosphorus_mg": None}}), {"fn": "find_swaps", "meal": "dinner", "food_id": 6, "servings": 1.0}),
+        ("UNKNOWN low treatments, the apple juice lists no potassium",
+         base_input(food_overrides={"12": {"potassium_mg": None}}), {"fn": "hypo_options"}),
         ("OTHER foods already shown are left out, so the next ones move up (real list)", real_input(),
          {"fn": "what_fits", "meal": "lunch", "limit": 20, "explain": True,
           "exclude": [rid("Apple, raw, with skin"), rid("Cheese, cheddar"), bread, rice]}),
@@ -572,6 +582,16 @@ def recipe_cases() -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
         ("REC a stew on real foods", real_input(), fit(stew, 4)),
         ("REC a stew on real foods, for one", real_input(), fit(stew, 1)),
         ("REC a stew on real foods, the day", real_input(), fit(stew, 2, {"kind": "day"})),
+        # A food that does not list a value: the figures and the change lines say "at least" (``unknown`` counts the foods).
+        ("UNKNOWN REC lowered potatoes, the green beans list no potassium",
+         base_input(food_overrides={"5": {"potassium_mg": None}}), fit([[2, 4], [5, 4]], 4)),
+        ("UNKNOWN REC a smaller serving, the rice lists no phosphorus",
+         base_input(food_overrides={"1": {"phosphorus_mg": None}}), fit([[3, 4], [1, 4], [5, 4]], 4)),
+        ("UNKNOWN REC swaps, the chicken lists no potassium or protein",
+         base_input(food_overrides={"3": {"potassium_mg": None, "protein_g": None}}),
+         fit([[2, 8], [3, 4]], 4, {"kind": "meal", "meal": "lunch"})),
+        ("UNKNOWN REC does not fit, the green beans list no phosphorus",
+         base_input(food_overrides={"5": {"phosphorus_mg": None}}), fit([[3, 4], [1, 4], [5, 4]], None)),
     ]
 
 
