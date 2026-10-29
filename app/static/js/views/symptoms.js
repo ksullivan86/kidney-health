@@ -194,19 +194,24 @@
       g.red_flag ? flagEl(g.red_flag) : null);
   }
 
-  async function trends(start, end) {
+  /** `source`: someone's share (js/views/trends.js shared mode), read with its own routes; null for the person's own. */
+  async function trends(start, end, source = null) {
     const body = $('#symptoms-trends-body');
     const sub = $('#symptoms-trends-sub');
     if (!body) return;
     const req = ++trendsReq;
     const days = daysBetween(start, end) + 1;
     if (sub) sub.textContent = `last ${days} days`;
+    if (source && !(source.areas || []).includes('symptoms')) {
+      clear(body).append(message(`${source.name} has not shared their symptoms with you.`));
+      return;
+    }
     try {
-      const res = await api.symptoms(start, end);
+      const res = await (source ? source.reads : api).symptoms(start, end);
       if (req !== trendsReq) return;
       const groups = R.summarise(res.symptoms || []);
       clear(body);
-      if (!groups.length) { body.append(message('No symptoms recorded in this period. You can add them on Today.')); return; }
+      if (!groups.length) { body.append(message(source ? 'No symptoms recorded in this period.' : 'No symptoms recorded in this period. You can add them on Today.')); return; }
       const first = (g) => (g.red_flag && g.red_flag.prominent ? 0 : 1);
       groups.sort((a, b) => first(a) - first(b)); // a stable sort: the rest stay most days first
       body.append(h('ul', { class: 'sym-groups' }, groups.map((g) => groupEl(g, start, end))));

@@ -183,11 +183,12 @@
     if (!last) return;
     const width = Math.max(240, Math.floor(box.clientWidth || 320));
     clear(box);
-    const { weights, readings, summary, start, end } = last;
+    const { weights, readings, summary, start, end, profile } = last;
     const goal = summary && summary.bp ? summary.bp.goal : { systolic: null, diastolic: null };
-    const dryKg = state.profile && state.profile.dialysis === 'hemodialysis' && state.profile.weight_kg != null ? Number(state.profile.weight_kg) : null;
+    const dryKg = profile && profile.dialysis === 'hemodialysis' && profile.weight_kg != null ? Number(profile.weight_kg) : null;
     if (!weights.length && !readings.length) {
-      box.append(message('No weights or blood pressure readings in this period. You can add them on Today.'));
+      box.append(message(last.shared ? 'No weights or blood pressure readings in this period.'
+        : 'No weights or blood pressure readings in this period. You can add them on Today.'));
       return;
     }
     box.append(weightBlock({ weights, unit: last.unit, dryKg, start, end, width }), bpBlock({ readings, goal, summary, start, end, width }));
@@ -206,14 +207,26 @@
     slot.append(btn);
   }
 
-  async function show(start, end) {
+  /** `source`: someone's share (js/views/trends.js shared mode), read with its own routes and their profile; null for the
+      person's own. */
+  async function show(start, end, source = null) {
     const my = ++req;
     const days = daysBetween(start, end) + 1;
     const sub = $('#body-trends-sub');
     if (sub) sub.textContent = `last ${days} days`;
-    importButton();
-    if (!state.profile) { try { await KH.loadProfile(); } catch (e) { /* no dry weight line then */ } }
-    const [w, b, sum] = await Promise.allSettled([api.bodyWeights(start, end), api.bloodPressures(start, end), api.bodySummary(end)]);
+    if (source) {
+      clear($('#body-trends-actions')).hidden = true; // no import into someone else's log
+      if (!(source.areas || []).includes('body')) {
+        last = null;
+        clear(box).append(message(`${source.name} has not shared their weight and blood pressure with you.`));
+        return;
+      }
+    } else importButton();
+    const reads = source ? source.reads : api;
+    let profile = state.profile;
+    if (source) { try { profile = await source.reads.profile(); } catch (e) { profile = null; /* no dry weight line then */ } }
+    else if (!state.profile) { try { profile = await KH.loadProfile(); } catch (e) { /* no dry weight line then */ } }
+    const [w, b, sum] = await Promise.allSettled([reads.bodyWeights(start, end), reads.bloodPressures(start, end), reads.bodySummary(end)]);
     if (my !== req) return;
     const failure = [w, b].find((x) => x.status === 'rejected');
     if (failure) {
@@ -224,7 +237,7 @@
       return;
     }
     const summary = sum.status === 'fulfilled' ? sum.value : null;
-    last = { start, end, weights: w.value.weights || [], readings: b.value.readings || [], summary, unit: summary && summary.units === 'kg' ? 'kg' : (summary ? 'lb' : KH.body ? KH.body.units() : 'lb') };
+    last = { start, end, weights: w.value.weights || [], readings: b.value.readings || [], summary, profile: profile || state.profile, shared: !!source, unit: summary && summary.units === 'kg' ? 'kg' : (summary ? 'lb' : KH.body ? KH.body.units() : 'lb') };
     render();
   }
 

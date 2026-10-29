@@ -201,6 +201,40 @@ def walk_sam_accepts(p: Pass, link: str) -> None:
     p.no_overflow("summary")
 
 
+def walk_sam_trends(p: Pass) -> None:
+    """Sam opens Ana's Trends from Settings: her charts read-only, then the Trends tab is his own again."""
+    page = p.page
+    open_sharing(page)
+    wait_text(page, "#set-shared-list", "ana")
+    before = len(p.watch.requests)
+    page.get_by_role("button", name="Open ana's trends").click()
+    page.wait_for_selector("#view-trends:not([hidden])", timeout=20000)
+    wait_text(page, "#trends-shared", "ana's trends")
+    page.wait_for_selector("#charts > *", timeout=20000)
+    wait_text(page, "#period-sub", "of")
+    charts = text_of(page, "#charts")
+    check(f"[{p.tag}] Trends opens Ana's trends with the read-only banner and her name in the title",
+          "You can look, but not change anything" in text_of(page, "#trends-shared") and "ana" in text_of(page, "#trends-title").lower(),
+          text_of(page, "#trends-title"))
+    check(f"[{p.tag}] her period is read from her log (1 day logged), and nothing sends him to her Profile",
+          "1 of" in text_of(page, "#period-sub") and "Profile" not in charts + text_of(page, "#period-body"),
+          text_of(page, "#period-sub") + " | " + charts[:120])
+    check(f"[{p.tag}] there is no CSV export and no Get-ready link on her trends",
+          not page.is_visible("#export-csv") and not page.is_visible("#visit-open"))
+    wait_text(page, "#symptoms-trends-body", "has not shared")
+    check(f"[{p.tag}] her symptoms say they were not shared", "has not shared their symptoms" in text_of(page, "#symptoms-trends-body"))
+    asked = [r for r in p.watch.requests[before:] if "/api/" in r]
+    check(f"[{p.tag}] her trends read only the shared routes, with GET",
+          all(r.startswith("GET /api/shared/") or r.startswith("GET /api/me") or r.startswith("GET /api/auth") for r in asked)
+          and any("/log/range" in r for r in asked), str(asked))
+    p.shot("trends")
+    p.no_overflow("trends")
+    page.click("#tab-trends")
+    page.wait_for_selector("#trends-shared", state="hidden", timeout=20000)
+    check(f"[{p.tag}] the Trends tab then shows his own trends, with the export back", page.is_visible("#export-csv")
+          and "ana" not in text_of(page, "#trends-title").lower(), text_of(page, "#trends-title"))
+
+
 def walk_admin(p: Pass, admin: Any) -> None:
     page = p.page
     ana_id = next(u["id"] for u in admin.json("GET", "/api/admin/users")["users"] if u["username"] == "ana")
@@ -281,6 +315,7 @@ def main(argv: list[str] | None = None) -> int:
                 link = walk_ana_shares(ana_pass)
                 sam_pass = Pass(browser, base, out, 1280, 800, "dark", "sam-1280-dark", sam.cookies())
                 walk_sam_accepts(sam_pass, link)
+                walk_sam_trends(sam_pass)
                 share_id = sam.json("GET", "/api/shared")["people"][0]["id"]
                 walk_admin(Pass(browser, base, out, 1280, 800, "dark", "admin-1280-dark", admin.cookies()), admin)
                 walk_ana_stops(ana_pass)

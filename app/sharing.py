@@ -54,6 +54,7 @@ from .models import (
     LabList,
     Number,
     PeriodSummary,
+    RangeSummary,
     SymptomList,
     TargetValue,
     WeekStart,
@@ -414,6 +415,13 @@ def shared_day(share_id: ShareId, request: Request, owner: FoodShare, date: str 
                conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """A day of the owner's food log, as ``GET /api/log`` answers it to them."""
     return log_module.get_day(owner, request, date, conn)
+
+
+@shared_router.get("/{share_id}/log/range", response_model=RangeSummary)
+def shared_range(share_id: ShareId, owner: FoodShare, start: str | None = None, end: str | None = None,
+                 conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """The owner's daily totals for a range (the Trends charts), as ``GET /api/log/range`` answers it to them."""
+    return log_module.get_range(owner, start, end, conn)
 
 
 @shared_router.get("/{share_id}/log/summary", response_model=PeriodSummary)

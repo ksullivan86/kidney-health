@@ -148,7 +148,7 @@ people sharing and stopping.
 ## 11. Later
 
 * Clinician accounts with notes (ROADMAP): a `clinician` role and notes the person can read; every view logged.
-* Sharing Trends charts as they look to the owner.
+* ~~Sharing Trends charts as they look to the owner~~: built 2026-10-29. **Shared with you → Trends** opens the Trends tab in a read-only mode: the person's charts, period summary, symptoms and weight and blood pressure, from `GET /api/shared/{id}/log/range` (food) and the routes above; no CSV export, no insights, no link to Visit prep; parts not shared say so. The Trends tab itself always shows your own.
 * ~~A time limit on a share ("for the next 30 days")~~: built 2026-10-29, schema step 25. When making the link the owner picks
   until they stop it, a week, 30 days, 90 days or a year (`days`, 1 to 365, in the API). The end date is set when the link is
   accepted (`ends_at`). The next sharing request after it ends the share as if the owner stopped it (`ended_by: owner`), with

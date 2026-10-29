@@ -225,6 +225,7 @@ def fill(owner: TestClient) -> None:
 SAME = [  # (shared path, the owner's own path, area)
     ("log?date={d}", "/api/log?date={d}", "food"),
     ("log/summary?start={s}&end={d}", "/api/log/summary?start={s}&end={d}", "food"),
+    ("log/range?start={s}&end={d}", "/api/log/range?start={s}&end={d}", "food"),
     ("labs", "/api/labs", "labs"),
     ("body/summary?date={d}", "/api/body/summary?date={d}", "body"),
     ("body/weights?start={s}&end={d}", "/api/body/weights?start={s}&end={d}", "body"),

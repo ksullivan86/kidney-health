@@ -80,6 +80,24 @@ def test_the_visit_page_shows_a_share_read_only_with_the_other_persons_name():
         assert word not in VISIT, word
 
 
+def test_trends_show_a_share_read_only():
+    trends = (STATIC / "js" / "views" / "trends.js").read_text(encoding="utf-8")
+    body = (STATIC / "js" / "views" / "body_trends.js").read_text(encoding="utf-8")
+    symptoms = (STATIC / "js" / "views" / "symptoms.js").read_text(encoding="utf-8")
+    assert '<p id="trends-shared" class="visit-shared" role="note" hidden></p>' in INDEX
+    assert "T.source = T.pending; // set by openShared just before; the Trends tab shows the person's own data" in trends
+    assert "const reads = src ? src.reads : api;" in trends and "reads.range(start, end)" in trends
+    assert "$('#export-csv').hidden = shared;" in trends and "if (KH.guidance && !src)" in trends
+    assert "KH.symptoms.trends(start, end, src)" in trends and "KH.bodyTrends.show(start, end, src)" in trends
+    assert "await (source ? source.reads : api).symptoms(start, end)" in symptoms
+    assert "const reads = source ? source.reads : api;" in body and "clear($('#body-trends-actions')).hidden = true;" in body
+    assert "button('Trends', 'secondary', () => openTrends(p)" in CODE and "range: (start, end) => request('GET', `${base}/log/range?" in CODE
+    for code in (trends, body, symptoms):
+        shared_part = code[code.find("source"):]
+        for word in ("api.add", "api.update", "api.delete"):
+            assert word not in shared_part or "source ? source.reads : api" in code, word
+
+
 def test_the_demo_answers_as_a_server_with_sharing_off():
     mock = (STATIC / "js" / "mock" / "auth.js").read_text(encoding="utf-8")
     assert "route('GET', '/api/me/shares', function () { this._currentUser(); return { enabled: false," in mock
@@ -114,7 +132,7 @@ def test_the_pure_helpers():
       require('vm').runInThisContext(require('fs').readFileSync({json.dumps(str(VIEW))}, 'utf8'));
       const S = window.KH.sharing;
       const rd = S.reads(7);
-      rd.summary('2026-10-01', '2026-10-14'); rd.labs({{ limit: 1000 }}); rd.day('2026-10-29'); rd.profile(); rd.bloodPressures('a', 'b');
+      rd.summary('2026-10-01', '2026-10-14'); rd.range('2026-10-01', '2026-10-14'); rd.labs({{ limit: 1000 }}); rd.day('2026-10-29'); rd.profile(); rd.bloodPressures('a', 'b');
       console.log(JSON.stringify({{
         one: S.areasText(['labs']), two: S.areasText(['symptoms', 'food']), all: S.areasText(['body', 'labs', 'food', 'symptoms']),
         today: S.lastLooked('2026-10-29T08:00:00Z', '2026-10-29'), never: S.lastLooked(null, '2026-10-29'),
@@ -145,6 +163,7 @@ def test_the_pure_helpers():
     assert got["lasts"] == ["until one of you stops it", "for 1 day", "for 30 days"]
     assert got["ending"].endswith("and so can you. It ends by itself after 30 days.")
     assert got["entries"] == ["Banana, 1 serving", "Juice, 0.5 servings (planned, to treat a low)", "Rice, 150 g"]
-    assert got["calls"] == [["GET", "/api/shared/7/log/summary?start=2026-10-01&end=2026-10-14"], ["GET", "/api/shared/7/labs?limit=1000"],
+    assert got["calls"] == [["GET", "/api/shared/7/log/summary?start=2026-10-01&end=2026-10-14"],
+                            ["GET", "/api/shared/7/log/range?start=2026-10-01&end=2026-10-14"], ["GET", "/api/shared/7/labs?limit=1000"],
                             ["GET", "/api/shared/7/log?date=2026-10-29"], ["GET", "/api/shared/7/profile"],
                             ["GET", "/api/shared/7/body/blood-pressure?start=a&end=b"]]
