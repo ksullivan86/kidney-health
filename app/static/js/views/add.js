@@ -81,15 +81,28 @@
       renderResults(res.foods || []);
       // Offline, js/offline.js searches the foods this device has seen.
       if (res.offline) resultsCount.textContent = `Offline: ${resultsCount.textContent ? `${resultsCount.textContent} ` : ''}saved on this device`;
-    } catch (e) { if (reqId === searchRequest) toastError(e); }
+    } catch (e) { if (reqId === searchRequest) renderSearchFailed(e); }
   }
   searchInput.addEventListener('input', debounce(runSearch, 250));
   searchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); runSearch(); } });
 
-  function renderResults(foods) {
-    clear(resultsEl);
+  function showHeading() {
     const browsing = !state.query && !state.category;
     resultsHeading.textContent = browsing ? 'Recent foods' : state.query ? `Results for “${state.query}”` : state.category;
+  }
+  // A failed search takes the place of the old results, so they never read as the answer to the new one.
+  function renderSearchFailed(err) {
+    clear(resultsEl);
+    showHeading();
+    resultsCount.textContent = '';
+    const retry = h('button', { class: 'btn secondary', type: 'button' }, 'Retry');
+    retry.addEventListener('click', () => runSearch());
+    const why = String((err && (err.detail || err.message)) || 'something went wrong').replace(/\.$/, '');
+    resultsEl.append(h('li', { class: 'empty-state' }, h('span', { role: 'alert' }, `Could not search: ${why}. `), retry));
+  }
+  function renderResults(foods) {
+    clear(resultsEl);
+    showHeading();
     resultsCount.textContent = foods.length ? `${foods.length}${foods.length >= 25 ? '+' : ''} ${foods.length === 1 ? 'food' : 'foods'}` : '';
     if (!foods.length) {
       resultsEl.append(h('li', { class: 'empty-state' }, 'No foods match. Try fewer words, use Quick add, or search USDA.'));

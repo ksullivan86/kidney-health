@@ -172,6 +172,7 @@ meantime), the entry is kept as **not saved** with the reason under **Settings â
 
 - **"No foods match."** Use fewer words or a different word ("chicken breast" instead of "grilled
   chicken"), try **Quick add**, or search USDA.
+- **"Could not search."** The search did not work, so the old results are cleared. Tap **Retry**.
 - **The numbers look far too high.** The serving is probably 100 g while you ate less, or the other way
   round. Enter grams instead.
 - **A food has no potassium value.** Check the package label and add a corrected copy with

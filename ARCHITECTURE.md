@@ -503,7 +503,9 @@ Mobile-first single page, five views switched client-side (no router library):
 2. **Add food**: search box (debounced, `GET /api/foods?q=`), results show name, serving,
    kidney_rating dot and the key numbers; choosing one opens a sheet to pick meal,
    servings or grams, shows the warnings *before* saving. Buttons for "Quick add"
-   (manual nutrients) and, when USDA is configured, "Search USDA". The USDA sheet shows only the
+   (manual nutrients) and, when USDA is configured, "Search USDA". Only the newest search draws the list; when it fails, the
+   list says "Could not search" with **Retry** under the new search's heading, in place of the old results
+   (`tests/js/food_search_failed.test.mjs`). The USDA sheet shows only the
    answer to the newest search while it is open: an older search, or one from before the sheet was
    closed, is dropped, and an import that finishes after the sheet was closed says so in a toast
    without opening the entry sheet (`tests/js/usda_late_reply.test.mjs`).
@@ -995,6 +997,8 @@ The demo's state is in memory unless the person turns on **Keep my data in this 
   The sign-in screen never hints at an account name (an upgraded v0.2 server's admin is `admin` or
   `ADMIN_USERNAME`; the server log, CHANGELOG and `docs/accounts.md` tell the operator): a public page
   must not reveal who has an account.
+  Signed-in devices (`loadDevices`) draws only its newest load, so a slow older list cannot show a device that was signed out
+  since (`tests/js/devices_loading.test.mjs`).
 * **Server administration** (v0.3.1; `#admin`, no tab; the header shield `#admin-open`, which
   `js/views/auth.js` shows only for `role = "admin"` through `data-admin-only`, and Settings → Admin;
   drawn by `js/views/settings.js`): People (accounts, invites and one-time links), Server settings,
@@ -4141,6 +4145,9 @@ it, then reads the areas the owner ticked. Every route needs a session and answe
   `DELETE /api/admin/users/{id}/shares` *(re-auth)* ends them all → `{ended: n}`.
 * **Screens.** `js/views/sharing.js` draws the Settings block and takes `#/share/<code>` into memory at page load (the address bar is
   cleared), then asks in `#sheet-share` once someone is signed in; nothing is accepted before **Accept**.
+  In the Settings block only the newest load of the list draws (a counter per block), so Stop sharing and Make a link at once
+  cannot redraw an older list. A link just made stays with the block through later loads, and a load that fails, until the list
+  no longer has it as unused; only the load that made it moves the focus to it (`tests/js/sharing_list_loading.test.mjs`).
   Checking another link clears the old Accept code; late info/accept responses or focus callbacks cannot change a newer
   or closed question. **Open** shows the Visit
   prep page (`js/views/visit.js`) in its shared mode: the reads come from `KH.sharing.reads(id)`, headings and the banner name the
