@@ -248,9 +248,9 @@
       }
       const scale = R.SAVED_MEAL_SCALES[R.SAVED_MEAL_SCALES.length - 1];
       const scaledItems = mealItems.map(([f, q]) => [f, q * scale]);
-      const totalsC = S.mealTotals(scaledItems)[0];
+      const [totalsC, unknownC] = S.mealTotals(scaledItems);
       closest = { scale, items: scaledItems.map(([f, q]) => F.foodCore(f, q)), totals: F.totalsJson(totalsC, room),
-        reason: S.checkMeal(scaledItems, room, 'built').reason };
+        unknown: F.unknownJson(unknownC, room), reason: S.checkMeal(scaledItems, room, 'built').reason };
     }
     return [slotPlan(slot, room, 'no_fit', { reason: reason || 'no_candidates', closest }), []];
   }
@@ -359,6 +359,7 @@
       meal: plan.meal, status: plan.status, source: plan.source, name: plan.name, template_id: plan.template_id, scale: plan.scale,
       score: plan.score, items: items.map(([f, q]) => F.foodCore(f, q)),
       totals: items.length ? F.totalsJson(S.mealTotals(items)[0], plan.room) : null,
+      unknown: items.length ? F.unknownJson(S.mealTotals(items)[1], plan.room) : [],
       why: why(plan), room: F.roomJson(plan.room), reason: plan.reason,
     };
     if (plan.status === 'no_fit') {

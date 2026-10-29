@@ -2064,8 +2064,10 @@ values), noted `filled_from_<src>:<key>`; flags and additives are the union.
   the green OK; caution and over keep their warning), no "… left", and "1 food does not list potassium, so the
   total may be higher"; meal lines "K ≥ 55 (+ 1 not listed)" or "K not listed"; entry rows "not listed"; the
   all-totals list, the 7-day strip, "since last dialysis", Trends (days, averages, the period card; a dashed bar
-  edge), Plan's day chips, the saved-meal cards on Plan and the saved-meal shortcuts on Add (from the meal's `unknown` and
-  `per_serving`) the same; the entry sheet's impact says "would reach at least …". The twin uses
+  edge), Plan's day chips, the saved-meal cards on Plan, the saved-meal shortcuts on Add and the "Add a saved meal" sheet (from
+  the meal's `unknown` and `per_serving`) the same. The guidance meals (`FamiliarMeal`, `PlanMeal`, `Closest`) and AI ideas carry
+  `unknown`, the keys of `totals` some food does not list (`unknown_json` in `app/guidance/fits.py`, `unknownJson` in the twin):
+  their chips, the meal sheet, the plan and the idea cards show those totals as "≥ …" or "… not listed"; the entry sheet's impact says "would reach at least …". The twin uses
   `KH.rules.countUnknown` / `mergeUnknown` / `markUnknown` (twins of `nutrients.count_unknown` / `merge_unknown` /
   `mark_unknown`) and is compared with the server by `tests/test_unknown_values_twin.py` and `tools/e2e/parity.py`.
 
@@ -4089,6 +4091,9 @@ it, then reads the areas the owner ticked. Every route needs a session and answe
 * **End date.** `accept` sets `ends_at` from the link's `lasts_days` (schema step 25). `expire(conn)`, run by every sharing route
   and the admin's count, ends each share past it (`ended_by: owner`, the owner chose the date) with `share.ended` (`by: time`, no
   actor) in the owner's activity. A newer link that replaces a share brings its own end date.
+* **Health-card loading.** Trends' symptom and weight/blood-pressure cards clear old content before a new read,
+  including when changing people or periods. The body-chart redraw cache clears too. Failed reads show Retry;
+  only the latest request can replace the loading, error or completed state.
 * **Admin.** `GET /api/admin/users` has `shares` (active shares and unused links the person is on either side of);
   `DELETE /api/admin/users/{id}/shares` *(re-auth)* ends them all → `{ended: n}`.
 * **Screens.** `js/views/sharing.js` draws the Settings block and takes `#/share/<code>` into memory at page load (the address bar is
@@ -4098,7 +4103,11 @@ it, then reads the areas the owner ticked. Every route needs a session and answe
   **Trends** opens `js/views/trends.js` in its shared mode (`KH.views.trends.openShared`): the charts and period summary read
   `reads.range` / `reads.summary`, `KH.symptoms.trends` and `KH.bodyTrends.show` take the share as `source`, the `#trends-shared`
   banner names the owner, and the CSV export, the insights card and the Visit prep link are hidden. The Trends tab, or any other way
-  in, shows the signed-in person's own data.
+  in, shows the signed-in person's own data. Shared weight charts use only the owner's profile for the dry-weight line.
+  If that profile cannot be loaded, omit the line; never fall back to the viewer's profile, including on resize.
+  A new Trends food request clears the old charts, tooltip and period summary
+  before loading, including when changing people or periods. Failure shows an unavailable message and Retry; an older
+  request may not replace the latest loading, error or completed state.
 
 ### Pairing the iPhone app (`app/pairing.py`, note 15 §4.3)
 

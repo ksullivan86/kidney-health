@@ -211,6 +211,8 @@
       person's own. */
   async function show(start, end, source = null) {
     const my = ++req;
+    last = null; // a resize must not redraw the previous person's charts while this read is pending
+    clear(box).append(h('p', { class: 'body-empty', role: 'status' }, 'Loading weights and blood pressure…'));
     const days = daysBetween(start, end) + 1;
     const sub = $('#body-trends-sub');
     if (sub) sub.textContent = `last ${days} days`;
@@ -231,13 +233,15 @@
     const failure = [w, b].find((x) => x.status === 'rejected');
     if (failure) {
       const err = failure.reason;
-      if (err && err.handled) return;
       last = null;
-      clear(box).append(message(err && err.status ? 'Weights and blood pressure could not be loaded.' : NEEDS_CONNECTION));
+      clear(box).append(message(err && err.status ? 'Weights and blood pressure could not be loaded.' : NEEDS_CONNECTION),
+        h('button', { class: 'btn secondary', type: 'button', onclick: () => show(start, end, source) }, 'Retry'));
       return;
     }
     const summary = sum.status === 'fulfilled' ? sum.value : null;
-    last = { start, end, weights: w.value.weights || [], readings: b.value.readings || [], summary, profile: profile || state.profile, shared: !!source, unit: summary && summary.units === 'kg' ? 'kg' : (summary ? 'lb' : KH.body ? KH.body.units() : 'lb') };
+    // A shared profile can fail independently of the readings. Never substitute the viewer's dry weight.
+    const chartProfile = source ? profile : profile || state.profile;
+    last = { start, end, weights: w.value.weights || [], readings: b.value.readings || [], summary, profile: chartProfile, shared: !!source, unit: summary && summary.units === 'kg' ? 'kg' : (summary ? 'lb' : KH.body ? KH.body.units() : 'lb') };
     render();
   }
 

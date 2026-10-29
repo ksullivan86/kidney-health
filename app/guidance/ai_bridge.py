@@ -32,6 +32,7 @@ from .fits import (
     room_json,
     scaled,
     totals_json,
+    unknown_json,
 )
 from .planner import plan_day
 from .score import Counter, Scorer, check_meal, habit_stats, meal_totals, pref_terms, score_meal, today_stats
@@ -244,11 +245,12 @@ def validate_ai_items(ctx: GuidanceContext, meal: str, ideas: Sequence[Sequence[
         if reason is not None:
             dropped.append({"index": index, "reason": reason})
             continue
-        meal_t, _ = meal_totals(items)
+        meal_t, meal_u = meal_totals(items)
         accepted.append({
             "index": index,
             "items": [food_core(f, q) for f, q in items],
             "totals": totals_json(meal_t, room),
+            "unknown": unknown_json(meal_u, room),
             "score": score_meal(items, room, today, ctx.profile.dialysis != "none", pref=pref),
             "checked": True,
         })

@@ -246,13 +246,15 @@
     go(20);
   }
   // Four key numbers of a portion: "45 g carbs · 55 mg potassium · 70 mg phosphorus · 0 mg sodium".
-  function keyNumbers(n) {
+  // A meal's totals; `unknown` lists the keys some food does not list, shown as "≥" or "not listed" (never as an exact number or 0).
+  function keyNumber(n, k, unknown = []) {
+    const word = NUT[k].label.toLowerCase().replace('carbohydrate', 'carbs');
+    if (!unknown.includes(k)) return `${fmtNum(n[k], k)} ${NUT[k].unit} ${word}`;
+    return n[k] > 0 ? `≥ ${fmtNum(n[k], k)} ${NUT[k].unit} ${word}` : `${word} not listed`;
+  }
+  function keyNumbers(n, unknown = []) {
     if (!n) return '';
-    const parts = [];
-    for (const k of ['carbs_g', 'potassium_mg', 'phosphorus_mg', 'sodium_mg']) {
-      if (n[k] != null) parts.push(`${fmtNum(n[k], k)} ${NUT[k].unit} ${NUT[k].label.toLowerCase().replace('carbohydrate', 'carbs')}`);
-    }
-    return parts.join(' · ');
+    return ['carbs_g', 'potassium_mg', 'phosphorus_mg', 'sodium_mg'].filter((k) => n[k] != null).map((k) => keyNumber(n, k, unknown)).join(' · ');
   }
   function ratingOf(item) { return ratingIcon(item.renal_rating || 'green'); }
 
@@ -539,8 +541,8 @@
   }
   // A saved or usual meal that fits: a chip that opens the meal sheet (add it, plan it).
   function mealChip(m, { meal, date }) {
-    const carbs = m.totals && m.totals.carbs_g != null ? `${fmtNum(m.totals.carbs_g, 'carbs_g')} g carbs` : '';
-    const k = m.totals && m.totals.potassium_mg != null ? `${fmtNum(m.totals.potassium_mg, 'potassium_mg')} mg potassium` : '';
+    const carbs = m.totals && m.totals.carbs_g != null ? keyNumber(m.totals, 'carbs_g', m.unknown) : '';
+    const k = m.totals && m.totals.potassium_mg != null ? keyNumber(m.totals, 'potassium_mg', m.unknown) : '';
     const b = h('button', { class: 'meal-chip', type: 'button',
       'aria-label': `${m.name}: ${m.items.length} ${m.items.length === 1 ? 'food' : 'foods'}${carbs ? `, ${carbs}` : ''}${k ? `, ${k}` : ''}. ${m.note || ''}` },
       h('span', { class: 'meal-chip-main' }, h('span', { class: 'meal-chip-name' }, m.name),
@@ -709,7 +711,7 @@
     body.append(list('compact-items', m.items.map((it) => h('li', {},
       h('span', { class: 'ci-name' }, it.name),
       h('span', { class: 'ci-amt muted' }, KH.rules.fmtServings(it.servings))))));
-    if (m.totals) body.append(h('p', { class: 'tabular' }, keyNumbers(m.totals)));
+    if (m.totals) body.append(h('p', { class: 'tabular' }, keyNumbers(m.totals, m.unknown)));
     const err = h('div', { class: 'form-error', role: 'alert' });
     body.append(err);
     const run = async (status, b) => {
@@ -885,7 +887,7 @@
         h('div', {}, m.message)));
     }
     if (m.items && m.items.length) sec.append(portionList(m.items, { menus: true }));
-    if (m.totals) sec.append(h('p', { class: 'g-totals tabular' }, `Meal: ${keyNumbers(m.totals)}`));
+    if (m.totals) sec.append(h('p', { class: 'g-totals tabular' }, `Meal: ${keyNumbers(m.totals, m.unknown)}`));
     if (m.why && m.why.length) sec.append(list('g-why', m.why.map((w) => h('li', {}, w))));
     if (m.status === 'no_fit' && m.closest && m.closest.items && m.closest.items.length) {
       sec.append(h('p', { class: 'hint' }, 'The closest the app found (not part of the plan):'), portionList(m.closest.items));

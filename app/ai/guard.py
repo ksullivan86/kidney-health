@@ -366,6 +366,7 @@ def judge_ideas(answer: Mapping[str, Any], ctx: Any, meal: str, bridge: Mapping[
             "why": sentence(codes, meal, vec_items),
             "items": accepted["items"],
             "totals": accepted["totals"],
+            "unknown": accepted.get("unknown", []),
             "score": accepted["score"],
             "after": after_room(room, vec_items),
             "handbook": pages,

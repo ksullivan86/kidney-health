@@ -295,9 +295,13 @@ function guidanceVectors(GE, file = GUIDANCE_VECTORS) {
   const REAL_ID0 = 101;
   const allFoods = new Map(doc.foods.map((r) => [r.id, GE.makeFood(r)]));
   const foodsFor = (inp) => {
-    if (inp.food_set === 'all') return allFoods;
     const fixture = inp.food_set === 'fixture';
-    return new Map([...allFoods].filter(([id]) => (id < REAL_ID0) === fixture));
+    const foods = inp.food_set === 'all' ? new Map(allFoods) : new Map([...allFoods].filter(([id]) => (id < REAL_ID0) === fixture));
+    for (const [fid, values] of Object.entries(inp.food_overrides || {})) { // one case's change to a food's values
+      const row = doc.foods.find((r) => r.id === Number(fid));
+      foods.set(Number(fid), GE.makeFood({ ...row, nutrients: { ...row.nutrients, ...values } }));
+    }
+    return foods;
   };
   const history = (rows, foods) => rows.map((h) => GE.historyEntry({ ...h, flags: foods.get(h.food_id).flags }));
   const contextFrom = (inp) => {

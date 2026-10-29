@@ -134,6 +134,10 @@ parent, an adult child, a dietitian. The other person reads and never changes an
 3. The other person opens it, sees who is sharing what, and presses **Accept**. Then **Settings → Account → Sharing → Shared with
    you → Open** shows the person's summary (the Visit prep page) and one day of food at a time, and **Trends** shows their Trends
    charts, both with a banner that says it is read-only.
+   A shared weight chart uses that person's dry weight. If their profile cannot be loaded, the dry-weight line is left out;
+   your own dry weight is never used on their chart.
+   While Trends loads, the food charts, symptoms and weight and blood pressure cards clear first, so the previous person's data
+   is never left under the new heading. If a part cannot load, press **Retry**.
 
 * Never shared: notes about tastes, saved meals and recipes, AI settings and activity, keys, tokens, passkeys, sign-in activity,
   the date of birth and other profile details.

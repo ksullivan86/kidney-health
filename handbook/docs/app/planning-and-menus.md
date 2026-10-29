@@ -129,6 +129,10 @@ numbers worked out again from the foods. A good habit: copy a day that went well
 servings, how many grams, and on how many days. Tick items as you shop. The ticks stay on this device
 only; **Clear checks** removes them.
 
+**Share list** (on a phone) and **Copy list** send what is not ticked yet as plain text, one food a line, to any list app:
+Reminders, Google Keep, Bring!, or a family list app such as KitchenOwl or Grocy. Nothing is sent anywhere until you choose
+where it goes. Where the browser does not allow copying, the list appears as text to select and copy yourself.
+
 ## Using the handbook's sample menus
 
 The handbook has 7-day sample menus for each stage, built with the same targets and the same food list as

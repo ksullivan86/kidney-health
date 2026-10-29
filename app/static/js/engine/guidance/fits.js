@@ -66,6 +66,12 @@
     for (const k of keys) out[k] = roundValue(k, k in totals ? totals[k] : 0.0);
     return out;
   }
+  // The keys of totalsJson that some food of the meal does not list: the total is then "at least" (unknown_json).
+  function unknownJson(unknown, room = null) {
+    const keys = [R.CARBS, R.PROTEIN, R.K, R.P, R.NA];
+    if (room != null && R.FLUID in room.nutrients) keys.push(R.FLUID);
+    return keys.filter((k) => unknown.has(k)).sort();
+  }
 
   // ---- reasons -----------------------------------------------------------------------------------
   const REASON_TOPIC = { fills_carbs: 'carb-counting', low_potassium: 'potassium', low_phosphorus: 'phosphorus',
@@ -185,7 +191,7 @@
     if (scale == null) return null;
     const scaledItems = items.map(([f, q]) => [f, q * scale]);
     const score = S.scoreMeal(scaledItems, room, today, ctx.profile.dialysis !== 'none', scale, counter, null, pref != null ? pref : S.prefTerms(ctx));
-    const totals = S.mealTotals(scaledItems)[0];
+    const [totals, unknown] = S.mealTotals(scaledItems);
     const option = { template_id: templateId, name, source: kind, scale, score, _items: scaledItems, _k: roundValue(R.K, totals[R.K]) || 0 };
     if (!detail) return option;
     let limiting = null;
@@ -197,6 +203,7 @@
     const goal = room.carbs != null ? room.carbs.goal : null;
     option.items = scaledItems.map(([f, q]) => ({ food_id: f.id, name: f.name, servings: R.roundTo(q, 3) }));
     option.totals = totalsJson(totals, room);
+    option.unknown = unknownJson(unknown, room);
     option.note = M.savedMealNote(scale, totals[R.CARBS], B.gapOf(room), goal, room.meal, limiting);
     return option;
   }
@@ -382,7 +389,7 @@
     return { rules_version: R.RULES_VERSION, learn_from_log: !!ctx.prefs.learn_from_log, items };
   }
 
-  GE.fits = { ineligibleReason, eligibleForMeals, eligibleFoods, scaled, gramsOf, foodCore, trackedKeys, roomJson, totalsJson,
+  GE.fits = { ineligibleReason, eligibleForMeals, eligibleFoods, scaled, gramsOf, foodCore, trackedKeys, roomJson, totalsJson, unknownJson,
     reasonsFor, dayTips, resolveItems, bestScale, familiarExcluded, familiarOption, savedMealsFor, shortNames, usualMealEntries,
     usualMealsFor, fittingSavedMeals, publicOption, rankFoods, select, whatFits, learned };
 })(typeof window !== 'undefined' ? window : globalThis);
