@@ -4111,7 +4111,7 @@ it, then reads the areas the owner ticked. Every route needs a session and answe
 | `DELETE /api/shared/{id}` | user | → 204: stop seeing it; audit `share.ended` (`by: grantee`) in the owner's activity; 404 if not yours |
 | `POST /api/shared/info` | user | `{code}` → `{name, username, areas, days, expires_at}` without using the link up; a wrong, used, cancelled or expired link (or one from a turned-off account) is the generic 404 "That link does not work. Ask for a new one."; your own link is 400; 20 tries an hour per account and per address (`share_link`) |
 | `POST /api/shared/accept` | user | `{code}` → 201 the item of `GET /api/shared`; a newer link from someone who already shares with you ends the old share (`ended_by: replaced`); 409 when the owner already shares with 10 people; audit `share.accepted` in the owner's activity |
-| `GET /api/shared/{id}/profile` | any area | → `{name, ckd_stage, dialysis, diabetes, dialysis_days, week_start, weight_kg, targets}` (`SharedProfile`: no date of birth or other profile field) |
+| `GET /api/shared/{id}/profile` | any area | → `{name, ckd_stage, dialysis, diabetes, dialysis_days, week_start, weight_kg, targets}` (`SharedProfile`: no date of birth or other profile field; `weight_kg` is `null` unless `body` was shared, since only the body pages use it) |
 | `GET /api/shared/{id}/log?date=`, `/log/range?start=&end=`, `/log/summary?start=&end=` | `food` | as `GET /api/log`, `/api/log/range` and `/api/log/summary` answer the owner |
 | `GET /api/shared/{id}/labs` | `labs` | as `GET /api/labs` |
 | `GET /api/shared/{id}/body/summary`, `/body/weights`, `/body/blood-pressure` | `body` | as the owner's `/api/body/*` |
