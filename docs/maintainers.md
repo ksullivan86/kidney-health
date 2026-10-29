@@ -37,12 +37,23 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
    * `CHANGELOG.md`: rename `## Unreleased` to `## X.Y.Z — YYYY-MM-DD` (UTC) with highlights, upgrade
      notes, security fixes and known limitations; `docs/ROADMAP.md`: move shipped items out;
    * `ARCHITECTURE.md`, `docs/` and the handbook's "Using the app" pages describe what ships.
-2. **Checks before the tag** (the ones CI cannot do):
+2. **The release gate: real phones and assistive tech.** A release does not ship until each line below was done by a person on
+   the release candidate, and the release pull request lists who did it, on what device, and what they saw. A failure is fixed
+   before the tag, or written under "Known limitations" in `CHANGELOG.md` with the owner's agreement:
+   * **iPhone offline**: the app installed on the Home Screen from an `https://` address; turn on Airplane Mode; Today opens from
+     the saved copy and says so; add an entry, edit one and delete one; turn the network back on and see all three on another device.
+   * **Large text**: iPhone Settings → Accessibility → Larger Text at the largest size, and Android font size and display size at
+     the largest: Today, Add, the entry sheet and Treating a low can be read and used with no sideways scrolling.
+   * **Keyboard only** (desktop Chrome or Firefox): reach every tab, add an entry, open and close the entry sheet and a dialog
+     (Escape closes it and focus goes back), and use Settings, all without a mouse; the focus is always visible.
+   * **VoiceOver** (iPhone) and **TalkBack** (Android Chrome): Today's totals and warnings, adding a food, the entry sheet,
+     Treating a low and Lab results are read in a sensible order, and every button says what it does.
+3. **Other checks before the tag** (the ones CI cannot do):
    * the browser harnesses: `python tools/e2e/parity.py`, `regress.py --no-pytest`, `sandbox.py`,
      `device.py`, `guidance_perf.py`, `learn.py`, `journey.py` (needs a built handbook) and `upgrade.py`
      (needs a full clone), and the ones that belong to a feature: `prefs.py`, `ask.py`, `ask_voice.py`, `fallback.py`,
      `symptoms.py`, `visitprep.py`, `body.py`, `menuplan.py` (needs a built handbook), `demo_local.py`, `import_walk.py`, `body_import.py`,
-     `push.py`, `lab_pdf.py` and `mcp_smoke.py`
+     `push.py`, `lab_pdf.py`, `mcp_smoke.py` and `reliability.py`
      ([tools/e2e/README.md](../tools/e2e/README.md)). Run them one after another on a machine that is busy:
      `ask.py` and `fallback.py` each failed once when run beside a full test run, because they read the server right after a
      click (they pass alone);
@@ -104,7 +115,7 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
    * `python3 scripts/bench_guidance.py --max-p95 200` on a Raspberry Pi 4 and 5 with the image's
      Python, results recorded in [docs/guidance.md](guidance.md#performance);
    * for a release that changes the upgrade path: decide whether to hold `:latest` (below).
-3. **Tag `main`** with an annotated (preferably signed) tag and push it:
+4. **Tag `main`** with an annotated (preferably signed) tag and push it:
 
    ```bash
    git switch main && git pull --ff-only
@@ -112,10 +123,10 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
    git push origin vX.Y.Z
    ```
 
-4. **Watch `Release image`** in the Actions tab (build → two Grype gates → sign, attest, tag). If the
+5. **Watch `Release image`** in the Actions tab (build → two Grype gates → sign, attest, tag). If the
    `release` environment has required reviewers, approve the publish job there.
-5. **Verify** the published image (next sections) before announcing it.
-6. **Publish the GitHub release** with the changelog section as its notes. The `release notes (image
+6. **Verify** the published image (next sections) before announcing it.
+7. **Publish the GitHub release** with the changelog section as its notes. The `release notes (image
    digest)` job of `release.yml` appends an **Image** section (the multi-arch index digest to pin, the
    tags that point at it, and the note that anonymous pulls need a public GHCR package) when the
    release exists by the time the job runs, and it never adds it twice. Paste the section as
@@ -135,11 +146,11 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
      gh release create vX.Y.Z --target main --title "X.Y.Z" --notes-file /tmp/notes.md
      ```
 
-   * **Signed tag first** (step 3's `git tag -s`): create the release after the workflow finishes and
+   * **Signed tag first** (step 4's `git tag -s`): create the release after the workflow finishes and
      paste the Image block the `notes` job printed in its log (Actions → the run → "release notes
      (image digest)"); the build job's summary shows the same digest.
 
-7. **Afterwards**: open `## Unreleased` in `CHANGELOG.md`; watch the next weekly image scan.
+8. **Afterwards**: open `## Unreleased` in `CHANGELOG.md`; watch the next weekly image scan.
 
 **Patch releases of an older minor version** (for example 0.4.4 after 0.5.0 shipped): branch
 `release/0.4` from the last `v0.4.*` tag, fix, and tag from that branch. `release.yml` moves `:latest`

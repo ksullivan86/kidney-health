@@ -33,6 +33,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * **A reminder to back up.** Server administration → About this server says when no backup was taken in the last 7 days, or
   ever, with the command and a link to the restore steps. A new test restores a backup into an empty server and finds every
   entry, saved meal and target again.
+* **A release gate for real phones.** A release now waits for a person to check it on an iPhone offline, with the largest
+  text, by keyboard only, and with VoiceOver and TalkBack ([`docs/maintainers.md`](docs/maintainers.md#release-process)).
 * **`python -m app.admin env-template`** prints every setting's variable as a `.env` file to fill in, with what each does, its
   values and its default. It is made from the app, so it matches the version you run. `--initial-only` starts it with
   `SETTINGS_INITIAL_ONLY=*`. See [`docs/deployment.md`](docs/deployment.md#set-it-up-by-code).

@@ -20,8 +20,9 @@ recovery trustworthy before more AI or native-app features.
 3. **Backup and restore that a person can find and follow.** Done: Server administration shows the last backup and a reminder
    after 7 days with the restore link, and `tests/test_restore_roundtrip.py` restores a backup into an empty server in CI. Left:
    the same reminder for a server whose backups run outside the app (a volume snapshot leaves no `backup.created` row).
-4. **Real phones and assistive tech as a release step.** The checks in [`maintainers.md`](maintainers.md) (iPhone offline, large
-   text, keyboard only, VoiceOver, TalkBack) become a list a release does not ship without.
+4. **Real phones and assistive tech as a release step.** Done: step 2 of the release process in
+   [`maintainers.md`](maintainers.md#release-process) is a gate (iPhone offline, large text, keyboard only, VoiceOver, TalkBack),
+   and the release pull request says who checked each line on what device.
 
 ## Next (the owner, 2026-10-22)
 
