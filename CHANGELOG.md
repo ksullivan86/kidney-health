@@ -15,6 +15,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 * **Trends for someone who shares with you.** Under Settings → Account → Sharing → Shared with you, **Trends** shows their charts,
   period summary, symptoms and weight and blood pressure, read-only, with a banner. Parts they did not share say so.
+  Their weight chart uses their dry weight, never yours: if their profile cannot be loaded, the dry-weight line is left out.
+  When you switch person or period, the old charts, symptoms and weights clear while the new ones load. If a part cannot load,
+  **Retry** shows.
 
 * **Meal suggestions say "≥" or "not listed" too.** The meals in What fits now, the day plan, AI meal ideas and the
   "Add a saved meal" sheet no longer show 0 for a value a food does not list.
@@ -29,8 +32,20 @@ the API. Security fixes are released as patch versions of the newest minor versi
   Add tab's shortcuts say "not listed". When only some do, the number shows as "≥", as on Today.
 * **A fitted recipe can always be saved.** A recipe that makes 100 servings and fits as half a serving used to be refused
   (200 servings is over the limit of 100). Now each serving is made the size that fits, and the recipe still makes 100.
+* **Dose and lab questions never go to AI.** "Describe a meal" text that also asks about insulin, a medicine or supplement dose,
+  a lab result or a diagnosis gets an **Ask your care team** card, and the AI is not called. Before, the AI was sent the question,
+  read the foods and said nothing about it.
+* **Screens no longer show an answer for something you have moved away from.** If you change the meal or day while AI meal ideas
+  or recipes are loading, the old answer is not shown, so **Add to plan** cannot put it under the wrong meal. After you save a lab
+  result or change your profile, a slower older read cannot bring back the previous values or potassium alert. A shared food day
+  shows the day you picked last, with **Retry** if it cannot load. A sharing link's **Accept** button always belongs to the link
+  you opened last.
 
 ### For people who run a server
+
+* **`scripts/ai_eval.py` sends what your server sends.** It reads `AI_MAX_TOKENS`, `AI_STRUCTURED_OUTPUT`, `AI_REASONING_EFFORT`
+  and `AI_CONTEXT_TOKENS`, or their `AI_CLOUD_*` twins with `--role cloud`, and the report records them. Before, a cloud run always
+  tested `json_schema` and 1,500 tokens. A run longer than 10 minutes no longer stops with "Please enter your password again".
 
 * **A reminder to back up.** Server administration → About this server says when no backup was taken in the last 7 days, or
   ever, with the command and a link to the restore steps. A new test restores a backup into an empty server and finds every

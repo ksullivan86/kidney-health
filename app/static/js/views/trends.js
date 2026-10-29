@@ -38,6 +38,14 @@
     const end = todayStr();
     const start = addDays(end, -(state.trendsDays - 1));
     const src = T.source;
+    state.trends = null;
+    state.summary = null;
+    hideTip();
+    clear(chartsEl).append(h('p', { class: 'card empty-state', role: 'status' }, 'Loading food trends…'));
+    $('#period-sub').textContent = '';
+    clear($('#period-interdialytic')).hidden = true;
+    clear($('#period-notes'));
+    clear($('#period-body')).append(h('p', { class: 'empty-state', role: 'status' }, 'Loading food summary…'));
     $('#trends-title').textContent = src ? `${src.name}: last ${state.trendsDays} days` : `Last ${state.trendsDays} days`;
     if (KH.guidance && !src) KH.guidance.trends(state.trendsDays).catch((e) => console.warn('Insights:', e)); // js/views/guidance.js
     if (KH.symptoms) KH.symptoms.trends(start, end, src).catch((e) => console.warn('Symptoms:', e)); // js/views/symptoms.js
@@ -67,7 +75,6 @@
       return;
     }
     const reads = src ? src.reads : api; // the signed-in person's own reads, or the read-only routes of a share
-    chartsEl.style.opacity = state.trends ? '0.6' : '';
     try {
       const [res, sum] = await Promise.all([
         reads.range(start, end),
@@ -78,8 +85,13 @@
       state.summary = sum.ok || null;
       renderTrends();
       renderPeriodSummary(sum.ok, sum.err);
-    } catch (e) { if (reqId === trendsRequest) toastError(e); }
-    finally { chartsEl.style.opacity = ''; }
+    } catch (e) {
+      if (reqId !== trendsRequest) return;
+      clear(chartsEl).append(h('p', { class: 'card empty-state', role: 'status' }, 'Food trends could not be loaded.'),
+        h('button', { class: 'btn secondary', type: 'button', id: 'trends-retry', onclick: () => loadTrends() }, 'Retry'));
+      renderPeriodSummary(null, e);
+      if (!e.handled) toastError(e);
+    }
   }
   // ---- CSV sheet (demo only): the text to copy, since the preview cannot download files ----
   const csvDlg = $('#sheet-csv');

@@ -200,6 +200,7 @@
     const sub = $('#symptoms-trends-sub');
     if (!body) return;
     const req = ++trendsReq;
+    clear(body).append(h('p', { class: 'symptoms-empty', role: 'status' }, 'Loading symptoms…'));
     const days = daysBetween(start, end) + 1;
     if (sub) sub.textContent = `last ${days} days`;
     if (source && !(source.areas || []).includes('symptoms')) {
@@ -216,8 +217,9 @@
       groups.sort((a, b) => first(a) - first(b)); // a stable sort: the rest stay most days first
       body.append(h('ul', { class: 'sym-groups' }, groups.map((g) => groupEl(g, start, end))));
     } catch (err) {
-      if (req !== trendsReq || (err && err.handled)) return;
-      clear(body).append(message(err && err.status ? 'Symptoms could not be loaded.' : 'Symptoms need a connection to your server, and there is none right now.'));
+      if (req !== trendsReq) return;
+      clear(body).append(message(err && err.status ? 'Symptoms could not be loaded.' : 'Symptoms need a connection to your server, and there is none right now.'),
+        h('button', { class: 'btn secondary', type: 'button', onclick: () => trends(start, end, source) }, 'Retry'));
     }
   }
 

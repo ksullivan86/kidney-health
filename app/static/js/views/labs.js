@@ -53,7 +53,8 @@
     ['fiber_g', 'Fiber'], ['sodium_mg', 'Sodium'], ['potassium_mg', 'Potassium'], ['phosphorus_mg', 'Phosphorus'], ['calcium_mg', 'Calcium'], ['fluid_ml', 'Fluid']];
   const FIELD_INPUT = { analyte: 'lab-analyte', value: 'lab-value', unit: 'lab-unit', taken_on: 'lab-date', note: 'lab-note' };
 
-  const cache = { data: null, loading: null, unitSystem: null, gen: 0 };
+  const cache = { data: null, loading: null, unitSystem: null, generation: 0 };
+  let refreshRequest = 0;
   const label = (analyte) => (K.ANALYTES[analyte] ? K.ANALYTES[analyte].label : analyte);
   function learnLink(analyte, text = null) {
     const href = KH.learn && LEARN[analyte] ? KH.learn.href(LEARN[analyte]) : null;
@@ -66,24 +67,25 @@
   // ---------------------------------------------------------------------------
   // Shared helpers (Profile's summary card uses them too)
   // ---------------------------------------------------------------------------
-  // An answer asked for before invalidate() (a save, or another visit to Labs) is never used: whoever waits for it gets a new
-  // load instead, so a slow old answer never draws old results or an error over the ones shown now.
   function load() {
     if (cache.data) return Promise.resolve(cache.data);
     if (!cache.loading) {
-      const gen = cache.gen;
+      const generation = cache.generation;
       const loading = Promise.all([api.labs({ limit: 1000 }), api.kidneyFunction()])
-        .finally(() => { if (cache.loading === loading) cache.loading = null; })
         .then(([list, kf]) => {
-          if (gen !== cache.gen) return load();
+          if (generation !== cache.generation) return load();
           cache.data = { labs: list.labs || [], alerts: list.alerts || [], kf };
           return cache.data;
-        }, (err) => { if (gen !== cache.gen) return load(); throw err; });
+        }, (err) => {
+          if (generation !== cache.generation) return load();
+          throw err;
+        })
+        .finally(() => { if (cache.loading === loading) cache.loading = null; });
       cache.loading = loading;
     }
     return cache.loading;
   }
-  function invalidate() { cache.data = null; cache.loading = null; cache.gen += 1; }
+  function invalidate() { ++cache.generation; ++refreshRequest; cache.data = null; cache.loading = null; }
   function newestOf(labs, analyte) {
     let best = null;
     for (const r of labs) if (r.analyte === analyte && (!best || r.taken_on > best.taken_on || (r.taken_on === best.taken_on && r.id > best.id))) best = r;
@@ -532,13 +534,15 @@
   filterSel.addEventListener('change', () => { if (cache.data) renderHistory(cache.data.labs); });
 
   async function refresh() {
+    const req = ++refreshRequest;
     try {
       const data = await load();
+      if (req !== refreshRequest) return;
       renderAlert(currentAlert(data));
       renderKidneyFunction(data.kf);
       renderHistory(data.labs);
     } catch (err) {
-      if (err.handled) return;
+      if (req !== refreshRequest || err.handled) return;
       clear($('#labs-history')).append(h('p', { class: 'form-error' }, `Lab results could not be loaded: ${err.detail || err.message}`));
     }
   }

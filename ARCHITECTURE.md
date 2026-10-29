@@ -661,7 +661,9 @@ with `engine/guidance/recipes.js`, the twin of `app/guidance/recipes.py`, checke
 Plan shows **Suggest recipes with AI** and the fit sheet **Rework with AI**; both open the AI sheet (`KH.ai.openRecipes` in
 `js/views/ai.js`), which calls `POST /api/ai/recipes` through the consent flow of the feature `recipes` and shows each card with
 **Save recipe** (`POST /api/meals` with the card's `body`, once), **Add to plan** (one serving as planned entries through
-`POST /api/log/batch`) and **Dismiss**. The demo never offers them.
+`POST /api/log/batch`) and **Dismiss**. The demo never offers them. AI idea and recipe screens discard old replies and errors
+when their meal/date or recipe inputs change, or a newer request starts. Add actions keep the context of the request whose
+answer was shown; an answer checked for one meal must not appear as checked for another.
 A food referenced by a template may be hidden later; keep the item, return `hidden: true`, and
 `apply` still works (the entry snapshot comes from the stored food row).
 
@@ -1655,7 +1657,10 @@ lab validation messages, history, deletion, the kidney-function card, ~150 sugge
   the cumulative *Review suggested targets* notice in Profile (`state.targetsReview`; never applied),
   the potassium banner (POST alert, else `GET /api/labs` `alerts`: the newest potassium while fresh under
   `targets.lab_fresh_days.potassium`, the suggestions' window; the browser applies no window of its own),
-  the kidney-function card and the history with in-page delete confirmation.
+  the kidney-function card and the history with in-page delete confirmation. Saving, deleting, importing or changing Profile
+  invalidates the shared lab/kidney-function cache and pending reads. An older reply cannot restore the pre-change cache
+  or replace a newer Lab results/Profile summary. Concurrent readers share one read until invalidated; older readers then
+  converge on the fresh result.
 * **Today**: a `{min}`-only target (fiber) is a goal bar ("of at least X", no over state); a range with
   `min === max` reads "about X". **Settings**: Preferences → *Units for lab results* (`user.units.labs`);
   Admin → server settings group *Personalised targets and lab results* (`targets.*`, `user.units.labs` default).
@@ -2379,7 +2384,10 @@ Provider = {"id", "scope", "preset", "label", "base_url", "host", "model", "visi
 * **Instead of calling AI**, next-meal answers like guidance (`{status: "no_targets" | "disabled"}`), and a
   low treatment in swap mode or describe-a-meal text that may describe a low gets `{status:
   "treating_a_low", cards: [LowCard], ai_called: false}` (G7); red-flag symptoms get `{status: "red_flag",
-  cards: [{title: "Get help now", …}], ai_called: false}` (G8).
+  cards: [{title: "Get help now", …}], ai_called: false}` (G8). Describe-a-meal text that asks about a dose, a supplement amount, a
+  lab result or a diagnosis (`features.medicine_question`: the Ask chat's `dose_reason`, then those words) gets `{status:
+  "medicine_question", cards: [{title: "Ask your care team", …}], ai_called: false}` (G2, G3), also for a dry run; only when no low
+  or red-flag card applies, so nothing sits beside a low's card.
 * **Errors:** `503 {"detail", "reason"}` when no provider serves the person (`not_opted_in`,
   `not_configured`, `not_allowed`, `own_unavailable`, `own_key_unreadable`, `provider_disabled`,
   `hermes_tools`, `hermes_check_failed`, `context_too_small`, `vision_not_configured`, `plate_disabled`,
@@ -4088,19 +4096,31 @@ it, then reads the areas the owner ticked. Every route needs a session and answe
   stored (`hmac.compare_digest`). Accepting clears the link's fields, so it works once.
 * **Activity.** The first read of a share each UTC day sets `last_viewed_at` and writes `share.viewed`. Rows that concern the owner
   target the owner (`target_type: user`), so they land in the owner's activity; the owner's own actions target the share.
+* **Shared day loading.** The shared food-day read starts when the Visit page opens, independently of other summary reads.
+  A per-box request guard discards older success and failure replies when changing date or person. Failure offers Retry for
+  that person and date. Separate day boxes can load independently.
 * **End date.** `accept` sets `ends_at` from the link's `lasts_days` (schema step 25). `expire(conn)`, run by every sharing route
   and the admin's count, ends each share past it (`ended_by: owner`, the owner chose the date) with `share.ended` (`by: time`, no
   actor) in the owner's activity. A newer link that replaces a share brings its own end date.
+* **Health-card loading.** Trends' symptom and weight/blood-pressure cards clear old content before a new read,
+  including when changing people or periods. The body-chart redraw cache clears too. Failed reads show Retry;
+  only the latest request can replace the loading, error or completed state.
 * **Admin.** `GET /api/admin/users` has `shares` (active shares and unused links the person is on either side of);
   `DELETE /api/admin/users/{id}/shares` *(re-auth)* ends them all → `{ended: n}`.
 * **Screens.** `js/views/sharing.js` draws the Settings block and takes `#/share/<code>` into memory at page load (the address bar is
-  cleared), then asks in `#sheet-share` once someone is signed in; nothing is accepted before **Accept**. **Open** shows the Visit
+  cleared), then asks in `#sheet-share` once someone is signed in; nothing is accepted before **Accept**.
+  Checking another link clears the old Accept code; late info/accept responses or focus callbacks cannot change a newer
+  or closed question. **Open** shows the Visit
   prep page (`js/views/visit.js`) in its shared mode: the reads come from `KH.sharing.reads(id)`, headings and the banner name the
   owner, parts that were not shared say so, and a day card lists one day's food. The page has no control that writes.
   **Trends** opens `js/views/trends.js` in its shared mode (`KH.views.trends.openShared`): the charts and period summary read
   `reads.range` / `reads.summary`, `KH.symptoms.trends` and `KH.bodyTrends.show` take the share as `source`, the `#trends-shared`
   banner names the owner, and the CSV export, the insights card and the Visit prep link are hidden. The Trends tab, or any other way
-  in, shows the signed-in person's own data.
+  in, shows the signed-in person's own data. Shared weight charts use only the owner's profile for the dry-weight line.
+  If that profile cannot be loaded, omit the line; never fall back to the viewer's profile, including on resize.
+  A new Trends food request clears the old charts, tooltip and period summary
+  before loading, including when changing people or periods. Failure shows an unavailable message and Retry; an older
+  request may not replace the latest loading, error or completed state.
 
 ### Pairing the iPhone app (`app/pairing.py`, note 15 §4.3)
 

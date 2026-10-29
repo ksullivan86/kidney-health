@@ -8,8 +8,9 @@ and the judge) and a **judge** step (pure: turns the model's answer into the res
 * :func:`prepare_next_meal`: modes ``ideas``, ``rerank``, ``swap`` and ``plan`` over the guidance
   engine's candidates (``app.guidance.ai_bridge.candidates_for_ai``); low treatments are never sent.
 * :func:`prepare_parse_meal`: "describe a meal" text → phrases with search terms; **pre-filters** first:
-  text that may describe a low gets the rule-based "Treating a low" card instead of an AI call (G7) and
-  red-flag symptoms get the "Get help now" card (G8).
+  text that may describe a low gets the rule-based "Treating a low" card instead of an AI call (G7),
+  red-flag symptoms get the "Get help now" card (G8), and a question about insulin, medicine or supplement
+  doses, lab results or a diagnosis gets the "Ask your care team" card (G2, G3): the AI is never given it.
 * :func:`prepare_read_label` (``POST /api/vision/label``): printed values only; the server converts
   salt and %DV, runs the additive scan (regex, not AI) and plausibility checks, and returns a Quick-add
   draft the person checks. It never saves.
@@ -46,7 +47,7 @@ Mode = str
 TOKENS_PER_CHAR = 1 / 3.5  # R4 AI_CONTEXT_TOKENS: candidates are trimmed until len(json)/3.5 fits
 
 # --------------------------------------------------------------------------- #
-# Pre-filters (G7, G8)
+# Pre-filters (G7, G8, and G2/G3 for describe-a-meal)
 # --------------------------------------------------------------------------- #
 
 RED_FLAG = re.compile(
@@ -71,23 +72,65 @@ RED_FLAG_CARD = {
 }
 
 
+MEDICINE_CARD = {
+    "title": "Ask your care team",
+    "lines": [
+        "This app does not answer questions about insulin, medicine or supplement doses, lab results or what a symptom means. "
+        "The AI was not asked.",
+        "Your care team can answer this. To log the meal, describe only the food, for example \"two eggs and toast\".",
+    ],
+    "handbook": "medicines/your-medicine-list",
+    "url": "/learn/medicines/your-medicine-list/",
+}
+# Narrower than the names blocklist: an amount asked of a supplement or vitamin. Pills and tablets are left out, because
+# glucose tablets treat a low and a question about them must reach the "Treating a low" card, never this one.
+_SUPPLEMENT_AMOUNT = re.compile(
+    r"\bhow (?:much|many)\b[^.?!]*\b(?:supplements?|vitamins?|capsules?)\b|\b(?:supplements?|vitamins?)\b[^.?!]*\bhow (?:much|many)\b",
+    re.IGNORECASE)
+_DIAGNOSE = re.compile(r"\bdiagnos\w*", re.IGNORECASE)
+
+
+def medicine_question(text: str | None) -> str | None:
+    """Why describe-a-meal ``text`` asks something the AI must never be given (G2, G3), as a short code, else ``None``:
+    the Ask chat's dose check (insulin, doses, binder names, skipping or changing medicine), a supplement amount, lab words
+    or a diagnosis. The text is not sent: a dose question is never an AI task, even one the model would refuse."""
+    from .chat import dose_reason, lab_words  # chat imports this module
+
+    if not text:
+        return None
+    code = dose_reason(text)
+    if code:
+        return code
+    folded = guard.fold(text)
+    if _SUPPLEMENT_AMOUNT.search(folded):
+        return "supplement"
+    if lab_words(text):
+        return "lab"
+    if _DIAGNOSE.search(folded):
+        return "diagnose"
+    return None
+
+
 def red_flag(text: str | None) -> bool:
     """G8: free text that may describe an emergency (matched after NFKC and invisible-character removal)."""
     return bool(text) and bool(RED_FLAG.search(guard.fold(text or "")))
 
 
 def prefilter(text: str | None, dose_g: float) -> dict[str, Any] | None:
-    """The cards to show **instead of** calling AI, or ``None`` (G7, G8). The AI is never called when this
-    returns a card."""
+    """The cards to show **instead of** calling AI, or ``None`` (G7, G8, G2/G3). The AI is never called when this
+    returns a card. "Get help now" and "Treating a low" come first; the "Ask your care team" card is shown only when
+    neither is, so nothing sits beside a low's card that could read as a reason to wait."""
     cards = []
     if red_flag(text):
         cards.append(dict(RED_FLAG_CARD))
     low = hypo.prefilter(text, dose_g)
     if low is not None:
         cards.append(low["card"])
-    if not cards:
-        return None
-    return {"status": "red_flag" if red_flag(text) else "treating_a_low", "cards": cards, "ai_called": False}
+    if cards:
+        return {"status": "red_flag" if red_flag(text) else "treating_a_low", "cards": cards, "ai_called": False}
+    if medicine_question(text):
+        return {"status": "medicine_question", "cards": [dict(MEDICINE_CARD)], "ai_called": False}
+    return None
 
 
 # --------------------------------------------------------------------------- #
