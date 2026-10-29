@@ -39,7 +39,7 @@ the API. Security fixes are released as patch versions of the newest minor versi
   or recipes are loading, the old answer is not shown, so **Add to plan** cannot put it under the wrong meal. After you save a lab
   result or change your profile, a slower older read cannot bring back the previous values or potassium alert. A shared food day
   shows the day you picked last, with **Retry** if it cannot load. A sharing link's **Accept** button always belongs to the link
-  you opened last.
+  you opened last. A slow read of your profile or saved meals can no longer undo a save or an import you just made.
 
 ### For people who run a server
 

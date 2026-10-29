@@ -2050,7 +2050,7 @@
   // bad upgrade. A week is the project's own choice, the most a person should have to type in again.
   const BACKUP_DUE_DAYS = 7; // the server's BACKUP_REMINDER_DAYS default, for a server too old to send it
   function backupDue(lastAt, dueDays = BACKUP_DUE_DAYS, now = Date.now()) {
-    if (!dueDays) return null; // BACKUP_REMINDER_DAYS=0: the admin turned the reminder off
+    if (!dueDays) return null; // BACKUP_REMINDER_DAYS=0: the admin turned this note off
     const days = lastAt ? Math.floor((now - Date.parse(lastAt)) / 86400000) : null;
     if (days != null && days < dueDays) return null;
     const how = KH.learn && typeof KH.learn.href === 'function' ? KH.learn.href('self-hosting/backups/#restore') : null;
