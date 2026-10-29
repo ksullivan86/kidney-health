@@ -187,6 +187,8 @@ sign-in activity.
 
 On a shared summary, the food-day card loads on its own. You can change the date while it loads;
 an older reply will not replace your choice. If the day cannot load, tap **Retry**.
+**Accept** appears after the app checks the link and shows who is sharing. If you open another link while waiting,
+the question follows that new link; an older reply will not replace it.
 
 ## Assistant access
 
