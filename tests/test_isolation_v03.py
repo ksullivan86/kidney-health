@@ -32,6 +32,7 @@ import test_lab_photo
 import test_log_if_match
 import test_mcp_write
 import test_passkeys
+import test_sharing
 import test_totp
 import test_body
 import test_symptoms
@@ -95,6 +96,9 @@ MATRIX: dict[str, tuple[str, ...]] = {
     "passkeys": ("test_passkeys.test_rename_and_remove_and_not_yours_is_404",  # passkeys, step 23 (note 18)
                  "test_passkeys.test_the_challenge_works_once_and_only_for_its_person",
                  "test_passkeys.test_deleting_the_account_deletes_its_passkeys"),
+    "shares": ("test_sharing.test_another_persons_ended_or_unknown_share_is_the_same_404",  # sharing, step 24 (note 19)
+               "test_sharing.test_an_area_that_was_not_shared_is_404",
+               "test_sharing.test_deleting_either_account_deletes_its_shares"),
 }
 SHARED_OR_SYSTEM = {
     "users": "the accounts themselves (admins only, tests/test_auth_coverage.py)",
@@ -111,7 +115,7 @@ MODULES = {"test_isolation": test_isolation, "test_export_delete": test_export_d
            "test_mcp_write": test_mcp_write, "test_data_import": test_data_import,
            "test_ai_chat_save": test_ai_chat_save, "test_symptoms": test_symptoms, "test_body": test_body, "test_lab_photo": test_lab_photo,
            "test_log_if_match": test_log_if_match, "test_totp": test_totp,
-           "test_passkeys": test_passkeys}
+           "test_passkeys": test_passkeys, "test_sharing": test_sharing}
 
 
 def _tables_with_people(conn: sqlite3.Connection) -> dict[str, list[str]]:

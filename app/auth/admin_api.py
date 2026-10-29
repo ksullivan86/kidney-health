@@ -13,7 +13,7 @@ from typing import Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, Response
 
-from .. import account, credentials
+from .. import account, credentials, sharing
 from ..audit import audit, list_events
 from ..crypto import secret_report
 from ..db import database_file, get_db, get_meta, get_schema_version, utcnow
@@ -58,13 +58,15 @@ def _user_or_404(conn: sqlite3.Connection, user_id: int) -> sqlite3.Row:
 
 def _user_view(conn: sqlite3.Connection, row: sqlite3.Row, links: dict[int, dict[str, Any]] | None = None,
                assistant: dict[int, int] | None = None, device: dict[int, int] | None = None,
-               two_step: set[int] | None = None, keys: dict[int, int] | None = None) -> dict[str, Any]:
+               two_step: set[int] | None = None, keys: dict[int, int] | None = None,
+               shared: dict[int, int] | None = None) -> dict[str, Any]:
     """``user_admin_dict`` plus ``reset_link``: the open reset or account-setup link for the account
     (``{id, created_by, created_at, expires_at}``, never the token), so an admin can see and revoke a
     link that someone else issued, including one for their own account; and ``assistant_tokens`` and ``device_tokens``,
     how many active tokens of each family (assistant tokens, phone-shortcut tokens) the person has (numbers only, never a
-    token) for "Revoke tokens", which ends both families; ``two_step``, whether two-step sign-in is on (note 17); and ``passkeys``,
-    how many passkeys the person has (note 18)."""
+    token) for "Revoke tokens", which ends both families; ``two_step``, whether two-step sign-in is on (note 17); ``passkeys``,
+    how many passkeys the person has (note 18); and ``shares``, how many shares and unused share links the person is on either
+    side of (note 19)."""
     if links is None:
         links = tokens.open_reset_links(conn)
     if assistant is None:
@@ -75,9 +77,11 @@ def _user_view(conn: sqlite3.Connection, row: sqlite3.Row, links: dict[int, dict
         two_step = totp.enabled_ids(conn)
     if keys is None:
         keys = passkeys.counts(conn)
+    if shared is None:
+        shared = sharing.counts(conn)
     return {**user_admin_dict(row), "reset_link": links.get(int(row["id"])),
             "assistant_tokens": assistant.get(int(row["id"]), 0), "device_tokens": device.get(int(row["id"]), 0),
-            "two_step": int(row["id"]) in two_step, "passkeys": keys.get(int(row["id"]), 0)}
+            "two_step": int(row["id"]) in two_step, "passkeys": keys.get(int(row["id"]), 0), "shares": shared.get(int(row["id"]), 0)}
 
 
 def _void_admin_links(conn: sqlite3.Connection, uid: int) -> dict[str, int]:
@@ -100,7 +104,8 @@ def list_users(request: Request, admin: AdminUser, conn: sqlite3.Connection = De
     device = api_tokens.active_counts(conn, api_tokens.DEVICE)
     two_step = totp.enabled_ids(conn)
     keys = passkeys.counts(conn)
-    return {"users": [_user_view(conn, r, links, assistant, device, two_step, keys) for r in rows]}
+    shared = sharing.counts(conn)
+    return {"users": [_user_view(conn, r, links, assistant, device, two_step, keys, shared) for r in rows]}
 
 
 @router.post("/users", status_code=201)
@@ -290,6 +295,19 @@ def remove_user_passkeys(user_id: int, request: Request, admin: RecentAdmin, con
         audit(conn, admin.id, "passkey.removed", "user", int(row["id"]), ip=request_ip(request), via="admin", count=removed)
     conn.commit()
     return {"removed": removed}
+
+
+@router.delete("/users/{user_id}/shares")
+def end_user_shares(user_id: int, request: Request, admin: RecentAdmin, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """End every share and unused share link where the person is either side (note 19 §5), when a caregiver relationship has
+    ended badly. ``{"ended": 0}`` when there were none."""
+    _no_accounts_in_none_mode(auth_context(request))
+    row = _user_or_404(conn, user_id)
+    ended = sharing.end_all(conn, int(row["id"]), "admin")
+    if ended:
+        audit(conn, admin.id, "share.ended", "user", int(row["id"]), ip=request_ip(request), by="admin", count=ended)
+    conn.commit()
+    return {"ended": ended}
 
 
 # --------------------------------------------------------------------------- #

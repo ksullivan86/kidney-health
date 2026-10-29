@@ -30,6 +30,7 @@ from .ai import routes as ai_routes  # M2 ai: /api/ai, /api/me/ai, /api/admin/ai
 from . import mcp as assistant_mcp  # assistant step 1: POST /mcp, the MCP server for a chat assistant
 from . import data_import  # POST /api/me/import: the person's own export.json (own body limit, MAX_IMPORT_BYTES)
 from . import meta  # design note 14 change 4: GET /api/meta (versions, capabilities, the nutrient registry)
+from . import sharing  # schema step 24: read-only sharing with a caregiver or dietitian (/api/me/shares, /api/shared)
 from . import openapi_doc  # design note 14 change 2: stable operation ids, honest errors and security schemes in the OpenAPI document
 from .auth import bootstrap as auth_bootstrap
 from .config import DEFAULT_STATIC_DIR, ConfigError, Settings, load_settings
@@ -131,6 +132,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(push.api_router)
     app.include_router(data_import.router)
     app.include_router(meta.router)
+    app.include_router(sharing.me_router)
+    app.include_router(sharing.shared_router)
 
     @app.get("/healthz")
     def healthz(conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:

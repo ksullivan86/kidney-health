@@ -1814,6 +1814,7 @@
     ['Which AI each feature uses', ['ai.route.photos', 'ai.route.meal_ideas', 'ai.route.describe', 'ai.route.chat', 'ai.route.labs',
       'ai.route.recipes', 'ai.route.local_provider', 'ai.route.cloud_provider']],
     ['Phone shortcuts', ['push.enabled']],
+    ['Sharing', ['sharing.enabled']],
     ['Activity log', ['audit.retention_days']],
   ];
   const ROUTING_GROUP = 'Which AI each feature uses';
