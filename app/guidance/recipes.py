@@ -310,6 +310,11 @@ def fit_recipe(ctx: GuidanceContext, recipe: Sequence[tuple[FoodVec, float]], se
     return _result("does_not_fit", before, items, n, R.RECIPE_SERVING_FRACTIONS[-1], changes, room, target)
 
 
+def _partial(fig: dict[str, Any], key: str) -> bool:
+    """Some food of the serving does not list ``key``, so its figure counts only the others ("at least")."""
+    return fig["unknown"].get(key, 0) > 0
+
+
 def _result(status: str, before: dict[str, Any], items: Sequence[Item], n: float, fraction: float,
             swaps: list[dict[str, Any]], room: Room, target: Target) -> dict[str, Any]:
     after = figures(items, n, room, fraction)
@@ -321,17 +326,19 @@ def _result(status: str, before: dict[str, Any], items: Sequence[Item], n: float
             key = it.because or R.K
             changes.append({"code": "lowered", "food_id": it.food.id, "from": it.original, "to": it.amount, "because": key,
                             "text": M.recipe_lowered_text(it.food.name, it.food.serving_desc, it.original, it.amount, key, label,
-                                                          before["per_serving"].get(key), full["per_serving"].get(key))})
+                                                          before["per_serving"].get(key), full["per_serving"].get(key),
+                                                          _partial(before, key), _partial(full, key))})
     for s in swaps:
         key = s["because"]
         changes.append({k: v for k, v in s.items() if not k.startswith("_")} | {
             "text": M.recipe_swapped_text(s["_from_food"].name, s["_to_food"].name, s["_to_food"].serving_desc, s["to"], key, label,
-                                          before["per_serving"], full["per_serving"])})
+                                          before["per_serving"], full["per_serving"], before["unknown"], full["unknown"])})
     if status == "fits_smaller_serving":
         key = next((c["nutrient"] for c in full["checks"] if not c["ok"]), R.K)
         changes.append({"code": "smaller_serving", "fraction": fraction, "because": key,
                         "text": M.recipe_smaller_text(fraction, key, label, full["per_serving"].get(key), after["per_serving"].get(key),
-                                                      next((c["room"] for c in full["checks"] if c["nutrient"] == key), None))})
+                                                      next((c["room"] for c in full["checks"] if c["nutrient"] == key), None),
+                                                      _partial(full, key))})
     fitted = {
         "items": [{"food_id": it.food.id, "name": it.food.name, "servings": it.amount, "serving_desc": it.food.serving_desc,
                    "portion_text": M.portion_text(it.amount, it.food.serving_desc)} for it in items],
@@ -351,5 +358,6 @@ def _result(status: str, before: dict[str, Any], items: Sequence[Item], n: float
     }
     if status == "does_not_fit":
         over = next((c for c in after["checks"] if not c["ok"]), None)
-        out["changes"].append({"code": "does_not_fit", "text": M.recipe_no_fit_text(label, over)})
+        partial = over is not None and _partial(after, str(over["nutrient"]))
+        out["changes"].append({"code": "does_not_fit", "text": M.recipe_no_fit_text(label, over, partial)})
     return out

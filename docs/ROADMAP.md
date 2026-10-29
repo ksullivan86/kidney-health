@@ -14,9 +14,10 @@ recovery trustworthy before more AI or native-app features.
    unknown potassium or phosphorus as 0; a fitted 100-serving recipe could not be saved. `tools/e2e/reliability.py` makes each one
    happen in Chromium, and so are a slow day load followed by a quick date change, and a failed save with its retry on the entry
    sheet. Still to test the same way: the other screens that save (Plan, Labs, Profile, weight and blood pressure).
-2. **Unknown, zero and partial, the same on every screen.** Today, Trends, saved meals and the Add tab's shortcuts say "not listed"
-   and "≥". So do the "Add a saved meal" sheet, the meals in What fits now and the day plan, and AI meal ideas (`unknown` next
-   to each meal's `totals`). Still to check: the swap ideas and the Fit to my targets sheet.
+2. **Done: unknown, zero and partial, the same on every screen.** Today, Trends, saved meals and the Add tab's shortcuts say
+   "not listed" and "≥". So do the "Add a saved meal" sheet, the New/Edit saved-meal preview, the meals in What fits now and
+   the day plan, AI meal ideas (`unknown` next to each meal's `totals`), the swap ideas and low treatments (a `null` difference,
+   "potassium not listed") and the Fit to my targets sheet ("≥" on a grey row, "at least" in each change line).
 3. **Backup and restore that a person can find and follow.** Done: Server administration shows the last backup and a reminder
    after 7 days (`BACKUP_REMINDER_DAYS`) with the restore link, `tests/test_restore_roundtrip.py` restores a backup into an empty
    server in CI, and a backup job outside the app ends with `python -m app.admin record-backup` so the reminder sees it.

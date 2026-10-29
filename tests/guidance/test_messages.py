@@ -72,6 +72,27 @@ def test_note_06_example_strings():
     assert M.DISCLAIMER == "Suggestions compare foods with the targets your care team set. They are not medical advice."
 
 
+def test_a_value_that_is_not_listed_is_never_0_or_a_question_mark():
+    assert M.amount_text("potassium_mg", 600) == "600 mg" and M.amount_text("potassium_mg", 600, True) == "at least 600 mg"
+    assert M.amount_text("potassium_mg", 600, True, unit=False) == "at least 600"
+    assert M.amount_text("potassium_mg", None) == "not listed" and M.amount_text("carbs_g", None, True) == "not listed"
+    assert M.amount_word("carbs_g", 11) == "11 g carbs" and M.amount_word("carbs_g", None) == "carbs not listed"
+    assert M.swap_hypo_text("Apple juice", 1.25, "1/2 cup (124 g)", 18, None) == (
+        "For your next low: Apple juice (1¼ × 1/2 cup) gives 18 g carbs; potassium not listed")
+    assert M.portion_option_text(0.5, None, {"potassium_mg": None}, ["potassium_mg"]) == (
+        "Half portion: carbs not listed and potassium not listed. The carbs change, so count the new amount.")
+    assert M.swap_avoid_text("Blueberries", 1, "1/2 cup (74 g)", {"carbs_g": None, "potassium_mg": 55}, "Star fruit") == (
+        "Blueberries (1 × 1/2 cup): carbs not listed and 55 mg potassium, without the warning that Star fruit has")
+    assert M.recipe_smaller_text(0.5, "potassium_mg", "this dinner's room", None, None, 750) == (
+        "Have ½ of a serving. No food in it lists potassium (app figures).")
+    assert M.recipe_no_fit_text("this dinner's room", {"nutrient": "potassium_mg", "used": 900, "room": 750}, True) == (
+        "This recipe does not fit this dinner's room after lowering amounts, swaps and a ½ serving. Still over: potassium at "
+        "least 900 mg against 750 mg of room (app figures).")
+    assert M.fit_text({"carbs_g": None, "potassium_mg": 55}, ["potassium_mg"], True) == "Fits: carbs not listed · 55 mg potassium"
+    for text in (M.swap_hypo_text("Apple juice", 1, "1/2 cup", 15, None), M.portion_option_text(0.5, None, {}, ["potassium_mg"])):
+        assert "?" not in text and " 0 " not in text
+
+
 def test_untrusted_names_are_trimmed_and_never_empty():
     assert M.safe_name("  Soup   with\nspaces ") == "Soup with spaces"
     assert len(M.safe_name("x" * 100)) == 60 and M.safe_name("x" * 100).endswith("…")

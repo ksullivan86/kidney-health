@@ -252,10 +252,13 @@
     if (!unknown.includes(k)) return `${fmtNum(n[k], k)} ${NUT[k].unit} ${word}`;
     return n[k] > 0 ? `≥ ${fmtNum(n[k], k)} ${NUT[k].unit} ${word}` : `${word} not listed`;
   }
+  const KEY_NUMBERS = ['carbs_g', 'potassium_mg', 'phosphorus_mg', 'sodium_mg'];
   function keyNumbers(n, unknown = []) {
     if (!n) return '';
-    return ['carbs_g', 'potassium_mg', 'phosphorus_mg', 'sodium_mg'].filter((k) => n[k] != null).map((k) => keyNumber(n, k, unknown)).join(' · ');
+    return KEY_NUMBERS.filter((k) => n[k] != null || unknown.includes(k)).map((k) => keyNumber(n, k, unknown)).join(' · ');
   }
+  // One food's own amounts: a value it does not list reads "potassium not listed", never 0 and never left out.
+  const notListedIn = (n) => KEY_NUMBERS.filter((k) => n && n[k] == null);
   function ratingOf(item) { return ratingIcon(item.renal_rating || 'green'); }
 
   // ---------------------------------------------------------------------------
@@ -1050,7 +1053,7 @@
         h('div', { class: 'g-food-text' },
           h('div', { class: 'row-title', id: nameId }, o.name),
           h('div', { class: 'row-sub' }, o.portion_text),
-          h('div', { class: 'g-fit tabular' }, keyNumbers(o.nutrients)))),
+          h('div', { class: 'g-fit tabular' }, keyNumbers(o.nutrients, notListedIn(o.nutrients))))),
       h('div', { class: 'g-actions' }, log));
   }
 

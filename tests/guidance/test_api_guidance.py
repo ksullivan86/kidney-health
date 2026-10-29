@@ -117,6 +117,25 @@ def test_meal_totals_say_which_values_a_food_does_not_list(real):
     assert "unknown" in lunch and (lunch["source"] != "saved" or lunch["unknown"] == ["phosphorus_mg", "potassium_mg"])
 
 
+def test_low_treatments_and_the_fit_sheet_say_which_values_a_food_does_not_list(real):
+    set_targets(real)
+    juice = real.post("/api/foods", json={"name": "Juice box (test)", "serving_desc": "1 box (200 mL)", "serving_g": 200,
+                                          "nutrients": {"carbs_g": 22, "sugar_g": 20}, "flags": ["hypo_treatment"]}).json()["id"]
+    lows = real.get("/api/guidance/hypo-options", params={"date": DAY}).json()
+    box = next(o for o in lows["options"] if o["food_id"] == juice)
+    assert box["nutrients"]["potassium_mg"] is None and box["text"].endswith("; potassium not listed")
+    crackers = real.post("/api/foods", json={"name": "Plain crackers (test)", "serving_desc": "5 crackers (30 g)", "serving_g": 30,
+                                               "nutrients": {"calories_kcal": 120, "carbs_g": 20, "sodium_mg": 180, "protein_g": 2}}).json()["id"]
+    potato = food_id(real, "Potato, baked, with skin")
+    r = real.post("/api/guidance/fit-recipe", json={"items": [{"food_id": potato, "servings": 4}, {"food_id": crackers, "servings": 2}],
+                                                     "servings_made": 2, "target": {"kind": "meal", "meal": "dinner", "date": DAY}})
+    assert r.status_code == 200, r.text
+    fit = r.json()
+    assert fit["before"]["unknown"]["potassium_mg"] == 1 and fit["before"]["per_serving"]["potassium_mg"] > 0
+    lines = [c["text"] for c in fit["changes"] if "Potassium per serving" in c["text"]]
+    assert lines and all("at least" in t for t in lines)
+
+
 def test_show_other_foods_leaves_out_the_ones_already_shown(real):
     set_targets(real)
     first = real.get("/api/guidance/next-meal", params={"date": DAY, "meal": "lunch"}).json()["foods"]

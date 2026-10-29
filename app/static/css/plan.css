@@ -102,6 +102,7 @@
 .fit-checks, .fit-changes { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 6px; }
 .fit-checks li { padding: 6px 10px; border-radius: 8px; background: var(--ok-tint); color: var(--ok-text); }
 .fit-checks li.fit-over { background: var(--over-tint); color: var(--over-text); }
+.fit-checks li.fit-unknown { background: var(--surface-2); color: var(--text); }
 .fit-checks .muted { color: inherit; opacity: 0.8; }
 .fit-over-word { font-weight: 600; }
 .fit-changes li { padding-left: 12px; border-left: 3px solid var(--border); }
