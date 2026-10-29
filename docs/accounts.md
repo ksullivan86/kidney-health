@@ -136,8 +136,8 @@ parent, an adult child, a dietitian. The other person reads and never changes an
    charts, both with a banner that says it is read-only.
    A shared weight chart uses that person's dry weight. If their profile cannot be loaded, the dry-weight line is left out;
    your own dry weight is never used on their chart.
-   When loading food trends, the previous charts and summary clear first. If loading fails, press **Retry**;
-   the previous person's food data is not left under the new heading.
+   While Trends loads, the food charts, symptoms and weight and blood pressure cards clear first, so the previous person's data
+   is never left under the new heading. If a part cannot load, press **Retry**.
 
 * Never shared: notes about tastes, saved meals and recipes, AI settings and activity, keys, tokens, passkeys, sign-in activity,
   the date of birth and other profile details.
@@ -150,9 +150,6 @@ parent, an adult child, a dietitian. The other person reads and never changes an
 * Not with `AUTH_MODE=none`, where there is only one person.
 
 How it works, and why: [design note 19](dev/research/19-sharing.md).
-
-When opening Trends, the symptom and weight/blood-pressure cards clear their old contents while loading.
-If a card cannot load, **Retry** tries the same person and period again. Resizing does not bring back an old chart.
 
 ## Adding people
 

@@ -16,7 +16,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * **Trends for someone who shares with you.** Under Settings → Account → Sharing → Shared with you, **Trends** shows their charts,
   period summary, symptoms and weight and blood pressure, read-only, with a banner. Parts they did not share say so.
   Their weight chart uses their dry weight, never yours: if their profile cannot be loaded, the dry-weight line is left out.
-  When you switch person or period, the old food charts clear while the new ones load. If they cannot load, **Retry** shows.
+  When you switch person or period, the old charts, symptoms and weights clear while the new ones load. If a part cannot load,
+  **Retry** shows.
 
 * **Meal suggestions say "≥" or "not listed" too.** The meals in What fits now, the day plan, AI meal ideas and the
   "Add a saved meal" sheet no longer show 0 for a value a food does not list.
