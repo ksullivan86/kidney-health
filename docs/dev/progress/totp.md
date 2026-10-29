@@ -1,4 +1,4 @@
-Status: in progress (2026-10-29): "Admins must use two-step sign-in" (auth.require_two_step_admins) built; full pytest, then PR.
+Status: complete (2026-10-29): two-step sign-in (#103) and "Admins must use two-step sign-in" built; full pytest passed.
 
 # Two-step sign-in (design note 17)
 
