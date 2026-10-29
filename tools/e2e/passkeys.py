@@ -11,8 +11,9 @@ phone, so the page, the browser's WebAuthn code and the server's checks all run 
 * Ana at 375x812 light: Settings → Account → Passkeys says "No passkeys yet"; Add a passkey (with a name; her password is asked
   again only if she typed it more than a few minutes ago), then the list shows the name, "not used yet" and no key or ID; adding a second passkey on the same device is refused in
   words (the browser's own "already has a passkey" answer); Rename changes the name;
-* she signs out: the sign-in page shows "Sign in with a passkey"; it signs her in with no password and no code, and the list then
-  says when it was last used;
+* she signs out: the sign-in page shows "Sign in with a passkey" and the username field offers passkeys in its autofill; nothing
+  signs her in until she picks one; the autofill pick and then the button each sign her in with no password and no code, and the
+  list then says when it was last used;
 * her password was last typed long ago: the next sensitive action opens "Enter your password again" with **Use a passkey
   instead**, which answers it, and the action carries on;
 * the admin at 1280x800 dark: People shows "1 passkey" on Ana's row; Remove passkeys asks first, then the badge is gone;
@@ -112,6 +113,10 @@ class Pass:
                 "protocol": "ctap2", "ctap2Version": "ctap2_1", "transport": "internal", "hasResidentKey": True,
                 "hasUserVerification": True, "isUserVerified": True, "automaticPresenceSimulation": True}})["authenticatorId"]
 
+    def presence(self, on: bool) -> None:
+        """Whether the virtual authenticator answers by itself, as if the person touched it."""
+        self.cdp.send("WebAuthn.setAutomaticPresenceSimulation", {"authenticatorId": self.authenticator_id, "enabled": on})
+
     def credentials(self) -> list[dict]:
         return self.cdp.send("WebAuthn.getCredentials", {"authenticatorId": self.authenticator_id})["credentials"]
 
@@ -207,14 +212,30 @@ def walk_ana(p: Pass, ana_api: Any, db: Path) -> None:
     wait_text(page, "#set-passkey-list", "Phone")
     check(f"[{p.tag}] Rename changes the name", ana_api.json("GET", "/api/me/passkeys")["passkeys"][0]["name"] == "Phone")
 
+    # The virtual authenticator says yes by itself while automatic presence is on, so the sign-in page's waiting autofill request
+    # (passkeys in the username field, note 18 §10) would sign Ana straight back in. A real browser waits until she picks the
+    # passkey from the list. Presence is turned off to see the page, then on: the waiting request is the autofill pick.
+    p.presence(False)
     sign_out(page)
     page.wait_for_selector("#login-passkey:not([hidden])", timeout=10000)
-    check(f"[{p.tag}] the sign-in page offers Sign in with a passkey", page.is_visible("#login-passkey-btn"))
+    check(f"[{p.tag}] the sign-in page offers Sign in with a passkey, and the username field offers passkeys in its autofill",
+          page.is_visible("#login-passkey-btn") and page.get_attribute("#login-username", "autocomplete") == "username webauthn")
     p.shot("sign-in", "#view-auth")
     p.no_overflow("sign-in")
-    page.click("#login-passkey-btn")
+    page.wait_for_timeout(1500)
+    check(f"[{p.tag}] nothing signs her in until she picks the passkey", page.is_visible("#form-login"))
+    p.presence(True)  # a waiting request is not answered by this; a new one is, as a pick from the list would answer it
+    page.reload()
     page.wait_for_selector("#settings-open", state="visible", timeout=20000)
-    check(f"[{p.tag}] the passkey signs her in with no password and no code", page.is_visible("#settings-open"))
+    check(f"[{p.tag}] picking the passkey from the autofill signs her in with no password and no code", page.is_visible("#settings-open"))
+
+    p.presence(False)
+    sign_out(page)
+    page.wait_for_selector("#login-passkey:not([hidden])", timeout=10000)
+    p.presence(True)
+    page.click("#login-passkey-btn")  # stops the waiting autofill request and asks now
+    page.wait_for_selector("#settings-open", state="visible", timeout=20000)
+    check(f"[{p.tag}] the button signs her in too", page.is_visible("#settings-open"))
     open_passkeys(page)
     check(f"[{p.tag}] the list then says when it was last used", "last used" in text_of(page, "#set-passkey-list"), text_of(page, "#set-passkey-list"))
 

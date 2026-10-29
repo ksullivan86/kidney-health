@@ -68,7 +68,8 @@ def _parse(html: str) -> _Inputs:
 def test_auth_forms_are_password_manager_friendly() -> None:
     auth = _parse(_section('<section id="view-auth"', "</section>\n"))
     by_id = {i["id"]: i for i in auth.inputs if i.get("id")}
-    assert by_id["login-username"]["autocomplete"] == "username"
+    # "webauthn" lets the browser offer this server's passkeys in the same autofill (design note 18 §10)
+    assert by_id["login-username"]["autocomplete"] == "username webauthn"
     assert by_id["login-password"]["autocomplete"] == "current-password"
     for new in ("setup-password", "reg-password", "reset-password", "chg-new"):
         assert by_id[new]["autocomplete"] == "new-password" and by_id[new]["type"] == "password", new

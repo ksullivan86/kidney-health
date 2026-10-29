@@ -122,5 +122,8 @@ migration; Chromium with a virtual authenticator (`WebAuthn.addVirtualAuthentica
   `POST /api/auth/reauth/passkey/options` lists only the person's own passkeys, `POST /api/auth/reauth/passkey` checks the answer
   as a sign-in does and marks the session as recently checked. A failure counts toward the same five as a wrong password. The
   "Enter your password again" sheet shows **Use a passkey instead** when the person has a passkey.
-* Passkeys in the username field's autofill ("conditional UI").
+* ~~Passkeys in the username field's autofill ("conditional UI").~~ Built 2026-10-29: the username field has
+  `autocomplete="username webauthn"`, and the sign-in page keeps a `mediation: "conditional"` request waiting, so the browser lists
+  this server's passkeys when the person taps the field. Picking one signs in as the button does. The button and the password form
+  stop the waiting request first, and it is renewed every 4 minutes because a challenge lasts 5.
 * Accounts with passkeys only; then "Admins must use two-step sign-in" could accept a passkey.

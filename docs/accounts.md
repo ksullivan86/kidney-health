@@ -106,6 +106,7 @@ passkey**. The private key stays on the device, and the browser offers it only t
 phished or reused from a leak.
 
 * Passkeys are an extra way in. The password keeps working, with the two-step code if that is on.
+* Browsers that support it also list the person's passkeys when they tap the username field, so picking one there signs in too.
 * A passkey sign-in is not asked for the two-step code: the device has already checked a fingerprint, face or PIN.
 * Passkeys need the server's name, not an IP address, and HTTPS (or `localhost`). Set `PUBLIC_URL` to the address people open; a
   passkey works only there. Opened by an IP address, Settings says why it cannot add one.
