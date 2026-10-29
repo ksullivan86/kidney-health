@@ -541,6 +541,16 @@ renames it when complete, then deletes all but the newest 14 files of that name 
 in the directory is touched). `/backups` is a second volume you mount into the container (writable by
 UID 10001); point the backup tool at that directory.
 
+If your backups are made outside the app (a snapshot of the volume, restic of the volume directory, a NAS job),
+end the job with `record-backup`, so Server administration counts it and its reminder (`BACKUP_REMINDER_DAYS`,
+default 7, `0` for none) waits. It copies nothing:
+
+```bash
+podman exec kidney-health python -m app.admin record-backup
+# Kubernetes
+kubectl -n kidney-health exec deploy/kidney-health -- python -m app.admin record-backup
+```
+
 Then:
 
 * **Encrypt** the copies (restic, borg or age): they contain special-category health data.
