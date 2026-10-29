@@ -55,6 +55,9 @@ its outbound proxy pointing nowhere, so nothing can leave the machine.
 
 ## Running
 
+`recipes_ai.py` also delays a synthetic meal-idea reply while changing breakfast to dinner: the old card and Add button
+must stay gone, while a fresh dinner answer still renders and plans dinner. Those controlled calls write nothing to the server.
+
 Run from the repository root (or anywhere: the harnesses find the repository from their own path).
 
 ```bash

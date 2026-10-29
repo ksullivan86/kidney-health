@@ -661,7 +661,9 @@ with `engine/guidance/recipes.js`, the twin of `app/guidance/recipes.py`, checke
 Plan shows **Suggest recipes with AI** and the fit sheet **Rework with AI**; both open the AI sheet (`KH.ai.openRecipes` in
 `js/views/ai.js`), which calls `POST /api/ai/recipes` through the consent flow of the feature `recipes` and shows each card with
 **Save recipe** (`POST /api/meals` with the card's `body`, once), **Add to plan** (one serving as planned entries through
-`POST /api/log/batch`) and **Dismiss**. The demo never offers them.
+`POST /api/log/batch`) and **Dismiss**. The demo never offers them. AI idea and recipe screens discard old replies and errors
+when their meal/date or recipe inputs change, or a newer request starts. Add actions keep the context of the request whose
+answer was shown; an answer checked for one meal must not appear as checked for another.
 A food referenced by a template may be hidden later; keep the item, return `hidden: true`, and
 `apply` still works (the entry snapshot comes from the stored food row).
 
