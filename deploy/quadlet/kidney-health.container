@@ -148,6 +148,8 @@ Environment=TRUSTED_PROXIES=127.0.0.1,::1
 # Environment=PUSH_ENABLED=true
 # Read-only sharing (docs/accounts.md): a person may let someone else with an account here read parts of their log. Off by default.
 # Environment=SHARING_ENABLED=true
+# Names listed here are first values, not locks: written once, then changeable in the app (docs/deployment.md).
+# Environment=SETTINGS_INITIAL_ONLY=SHARING_ENABLED,PUSH_ENABLED
 # Admins must use two-step sign-in before they can open Server administration (docs/accounts.md). Off by default.
 # Environment=AUTH_REQUIRE_TWO_STEP_ADMINS=true
 # Environment=PASSWORD_BREACH_CHECK=true

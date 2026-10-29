@@ -7,9 +7,9 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-14
+last_checked: 2026-10-29
 fact_checked: 2026-10-05
-sources: [NOTE01, NOTE03, NOTE04, NOTE06, NOTE07, NOTE08, NOTE12, NOTE17, DEPLOY, SECDOC, NIST-63B4, FDC-API, OFF-API]
+sources: [NOTE01, NOTE03, NOTE04, NOTE06, NOTE07, NOTE08, NOTE12, NOTE17, NOTE20, DEPLOY, SECDOC, NIST-63B4, FDC-API, OFF-API]
 ---
 
 # Configuration
@@ -27,7 +27,8 @@ the app with a message that names the variable; it never starts half-configured
   error; an empty file means "unset"; trailing newlines are ignored. Environment variables leak through
   `inspect` output and crash dumps, so use files ([operator security guide][SECDOC]).
 - **Set by the server means locked.** A setting given here shows in the app as "Set by the server" and
-  cannot be changed in **Settings** ([design note 07][NOTE07]).
+  cannot be changed in **Settings** ([design note 07][NOTE07]), unless you list it in
+  `SETTINGS_INITIAL_ONLY` ([below](#set-it-up-by-code)).
 - Booleans accept `true/false`, `1/0`, `yes/no`, `on/off`.
 
 ## Address and network
@@ -169,6 +170,29 @@ uses) is not served: the log says why, and the food log itself keeps working. To
 from its own host name instead, see [Security](security.md#serving-learn-from-its-own-origin-optional)
 and the [operator security guide](https://github.com/ksullivan86/kidney-health/blob/main/docs/security.md#the-handbook-at-learn-its-own-policy-and-its-own-origin).
 
+## Set it up by code
+
+Every setting in **Server administration → Server settings** has a variable, so a script or an AI agent
+can set a server up with no clicks. With `ADMIN_USERNAME` and `ADMIN_PASSWORD_FILE` the first admin is
+made from a file too ([Users and keys](users-and-keys.md)).
+
+A variable locks its setting. To give only a **first value**, list the variable in
+`SETTINGS_INITIAL_ONLY` (a comma list, or `*` for all). On the first start that sees it, the server
+writes the value and notes it in the activity log. After that an admin can change it in the app, and a
+restart keeps their choice; changing the variable later does nothing ([design note 20][NOTE20]).
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `SETTINGS_INITIAL_ONLY` | empty | The variables that are first values, not locks. A name that is not a setting's variable stops the start. |
+| `INSTANCE_NAME`, `REGISTRATION_MODE`, `INVITE_TTL_DAYS`, `AUDIT_RETENTION_DAYS` | Kidney Health, `invite`, 7, 365 | The server's name, who may make an account, how long an invite link works, how long the activity log is kept. |
+| `USDA_SHARED_ENABLED`, `USDA_ALLOW_USER_KEYS`, `USDA_SHARED_DAILY_LIMIT` | `true`, `true`, 200 | The server's USDA key: shared or not, people's own keys allowed or not, searches per person per day. |
+| `LAB_RULES_ENABLED`, `LAB_FRESH_DAYS_POTASSIUM`, `_PHOSPHATE`, `_ALBUMIN`, `_BICARBONATE`, `DEFAULT_ACTIVITY` | `true`, 90, 90, 180, 180, `inactive` | Whether lab results change suggested targets, how long each result counts, and the activity level used until a person picks theirs. |
+| `UI_THEME`, `LAB_UNITS`, `WEIGHT_UNITS` | `system`, `us`, `lb` | The theme and units for people who have not picked their own. A lock stops people picking, so list these in `SETTINGS_INITIAL_ONLY`. |
+
+Run `python -m app.admin check` in the container before the first start: it stops on any mistake and
+lists which settings are locked and which are first values. Each person's own choices, like their
+targets and whether they use AI, stay theirs to make in the app.
+
 ## Example: Quadlet behind Caddy on the same host
 
 ```ini
@@ -182,7 +206,8 @@ Environment=AUTH_MODE=local
 
 - **The app exits at start with a message naming a variable**: fix that variable; the message says how.
 - **`SECRET_KEY_FILE points to ..., which does not exist`**: create the secret, or fix its file mode.
-- **A setting is grayed out in the app**: it is set here; change it here and restart.
+- **A setting is grayed out in the app**: it is set here; change it here and restart, or list it in
+  `SETTINGS_INITIAL_ONLY` to make it a first value.
 - More: [Troubleshooting](troubleshooting.md).
 
 ## Related pages
@@ -194,5 +219,6 @@ Environment=AUTH_MODE=local
 - [Design note 01][NOTE01] §5.5 and [design note 07][NOTE07] §4.3: the variables and their rules.
 - [Design note 03][NOTE03] R10; [design note 04][NOTE04] R4; [design note 06][NOTE06] §4.14; [design note 08][NOTE08] §4.6.
 - [Design note 12][NOTE12] §4.4: the `PUSH_ENABLED` switch.
+- [Design note 20][NOTE20]: first values from the environment.
 - [Deployment guide][DEPLOY]; [operator security guide][SECDOC].
 - [NIST SP 800-63B-4][NIST-63B4]; [USDA FoodData Central API guide][FDC-API]; [Open Food Facts API][OFF-API].

@@ -25,6 +25,12 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people who run a server
 
+* **Set the server up by code.** Every server setting now has an environment variable, including the twelve that had none
+  (`INVITE_TTL_DAYS`, `USDA_SHARED_ENABLED`, `USDA_ALLOW_USER_KEYS`, `LAB_RULES_ENABLED`, `LAB_FRESH_DAYS_*`, `DEFAULT_ACTIVITY`,
+  `UI_THEME`, `LAB_UNITS`, `WEIGHT_UNITS`). A variable still locks its setting. List it in `SETTINGS_INITIAL_ONLY` (or write
+  `*`) and it becomes a first value instead: written on the first start, then changeable in the app, and a restart keeps the
+  change. With `ADMIN_USERNAME` and `ADMIN_PASSWORD_FILE`, a script or an AI agent can set a server up with no clicks. See
+  [`docs/deployment.md`](docs/deployment.md#set-it-up-by-code).
 * **Sharing is off until you turn it on:** `SHARING_ENABLED=true`, or Server administration → Server settings → Sharing. Schema
   step 24 adds the `shares` table at the first start; nobody shares anything until they make a link. Server administration →
   People shows who shares and has **End sharing**.

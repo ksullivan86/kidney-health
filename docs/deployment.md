@@ -104,9 +104,11 @@ on every phone. The four options are in [`https.md`](https.md).
 Set these as environment variables (Quadlet `Environment=`, `deploy/.env` for compose, `env:` in
 Kubernetes). Every **secret** is given as a file through its `*_FILE` variable; setting both `NAME`
 and `NAME_FILE` is a start-up error, an empty file means "unset", and trailing newlines are ignored.
-Anything set here is **locked**: the Settings screen shows it as "set by server"; an **empty** value
-counts as unset, so `deploy/.env` can leave a key blank and an admin still chooses in the app. The
-complete list with defaults is at the top of [`app/config.py`](../app/config.py) and in
+A server setting set here is **locked**: the Settings screen shows it as "set by server". To give
+only a **first value** that an admin can change in the app later, list the variable in
+`SETTINGS_INITIAL_ONLY` ([Set it up by code](#set-it-up-by-code)). An **empty** value counts as
+unset, so `deploy/.env` can leave a key blank and an admin still chooses in the app. The complete
+list with defaults is at the top of [`app/config.py`](../app/config.py) and in
 [`app/settings_registry.py`](../app/settings_registry.py).
 
 **Outbound connections.** Meal guidance and everything else in the app work with no internet access.
@@ -148,7 +150,15 @@ NetworkPolicy and the compose, Quadlet and `.env.example` comments name the same
 | `PUSH_ENABLED` | `false` | Phone shortcuts: each person may make device tokens (Settings → Phone shortcuts) that an iPhone Shortcut uses to add weights and blood pressure readings to that person's own log at `POST /push/v1/body`. A token can only add: it reads nothing. Also in Server administration → Server settings. The phone must reach the server (home network or your VPN); a reverse proxy that lists paths needs `/push/v1/`. Nothing leaves the server for it. See [push.md](push.md). |
 | `SHARING_ENABLED` | `false` | Read-only sharing: each person may send a link to a caregiver or dietitian with an account on this server, who can then read the parts that were ticked (food log, lab results, weight and blood pressure, symptoms) and never change anything. Either side can stop it at any time. Also in Server administration → Server settings. Nothing leaves the server for it. See [accounts.md](accounts.md#sharing-with-a-caregiver). |
 | `AUTH_REQUIRE_TWO_STEP_ADMINS` | `false` | Admins must use two-step sign-in (a code from an authenticator app) before they can open Server administration; an admin without it still uses the app and turns it on in Settings → Account. Also in **Server administration → Server settings**, where you can turn it on only after turning on your own. No effect with a sign-in proxy or no sign-in ([accounts.md](accounts.md#two-step-sign-in)). |
-| `INSTANCE_NAME`, `REGISTRATION_MODE`, `AUDIT_RETENTION_DAYS`, `USDA_SHARED_DAILY_LIMIT` | Kidney Health, `invite`, 365, 200 | Server settings an admin can also change in Server administration → Server settings, unless set here. |
+| `INSTANCE_NAME`, `REGISTRATION_MODE`, `INVITE_TTL_DAYS`, `AUDIT_RETENTION_DAYS` | Kidney Health, `invite`, 7, 365 | The name shown in the app, who may make an account (`invite`, `closed`, `open`), how many days an invite link works, and how long the activity log is kept. |
+| `USDA_SHARED_ENABLED`, `USDA_ALLOW_USER_KEYS`, `USDA_SHARED_DAILY_LIMIT` | `true`, `true`, 200 | Whether people use the server's USDA key, whether they may add their own, and the shared key's searches per person per day (0: no limit). |
+| `LAB_RULES_ENABLED`, `LAB_FRESH_DAYS_POTASSIUM`, `_PHOSPHATE`, `_ALBUMIN`, `_BICARBONATE`, `DEFAULT_ACTIVITY` | `true`, 90, 90, 180, 180, `inactive` | Whether lab results change suggested targets, how many days each result counts, and the activity level used until a person picks theirs. See [targets-and-labs.md](targets-and-labs.md). |
+| `UI_THEME`, `LAB_UNITS`, `WEIGHT_UNITS` | `system`, `us`, `lb` | The theme and units for everyone who has not picked their own. A lock here also stops people picking, so list these in `SETTINGS_INITIAL_ONLY`. |
+| `SETTINGS_INITIAL_ONLY` | empty | A comma list of the variables above (or `*` for all) that are first values, not locks. See [Set it up by code](#set-it-up-by-code). |
+
+Every server setting in Server administration has a variable here, except which shared AI provider is the local one and which
+is the cloud one: those name a provider made in the app. A provider from the environment gets its role from
+`AI_PROVIDER_ROLE` and `AI_CLOUD_PROVIDER`.
 
 `APP_PASSWORD` (v0.2's HTTP Basic auth) is **deprecated**: on the first v0.3 start with no admin
 it becomes the admin's password, then it is ignored. HTTP Basic is no longer accepted.
@@ -172,6 +182,41 @@ every API call except the setup screen answers `503 Setup required`.
 Alternatives: `ADMIN_USERNAME` + `ADMIN_PASSWORD_FILE` (GitOps, Kubernetes), or
 `python -m app.admin create-admin` inside the container (the password is read from stdin). After
 setup, invite the other people in your household from Server administration → People.
+
+## Set it up by code
+
+You can set a server up without opening Server administration, for example from a script, GitOps, or an
+AI agent that writes the files for you. Write every choice in one place:
+
+1. **Secret files** in `deploy/secrets/` (or Podman secrets, or a Kubernetes Secret): `secret_key` (one
+   line of 32 characters or more), `admin_password`, and any API keys.
+2. **The settings**, in `deploy/.env` for compose, `Environment=` lines for Quadlet, or `env:` for
+   Kubernetes. Set `PUBLIC_URL`, `ADMIN_USERNAME` with `ADMIN_PASSWORD_FILE`, and the features you want.
+3. **Choose what stays changeable.** A setting's variable locks it. Name the ones an admin may change
+   later in `SETTINGS_INITIAL_ONLY`, or write `*` to make every one a first value. On the first start
+   that sees a first value, the server writes it and notes it in the activity log. After that the app
+   owns it: an admin can change it or put it back to the default, and a restart keeps that. Changing the
+   variable later does nothing. A value an admin had already chosen is never overwritten.
+4. **Check before you start.** `python -m app.admin check` inside the container stops on any mistake and
+   lists which settings are locked and which are first values.
+
+For example, in `deploy/.env`:
+
+```sh
+PUBLIC_URL=https://food.home.example.net
+INSTANCE_NAME=Our kitchen
+REGISTRATION_MODE=invite
+SHARING_ENABLED=true
+PUSH_ENABLED=true
+ASSISTANT_ENABLED=true
+SETTINGS_INITIAL_ONLY=SHARING_ENABLED,PUSH_ENABLED,ASSISTANT_ENABLED
+```
+
+Here the name and the sign-up rule are locked. Sharing, phone shortcuts and assistant access start
+switched on, and an admin can switch them off in the app. `deploy/compose.yaml` passes the common
+variables. Add a line in the same form for any other one you set. People's own choices, like their
+targets and whether they use AI, are theirs to make in the app. See [design note
+20](dev/research/20-setup-by-code.md).
 
 ## Rootless Podman with Quadlet (recommended)
 
