@@ -45,3 +45,10 @@ and add recipe-apply-serving-preview e866a04. The earlier results above remain f
 Also finish the matching parent-loader timing for weight/BP: the body module clears on start,
 but Today still waits for food before calling it. Symptoms already starts independently.
 Next: merge current work, isolate that small timing fix, then verify the new combined snapshot.
+
+Current snapshot: 0718b5e, aligned with main 7729123 (#121), Claude 289c2b3, recipe servings
+e866a04, independent body start 3659261 and Copy day retry checks af8a13d. Fixed validation
+checkout updated to this commit. Full pytest session 5885, log
+/tmp/kidney-current-batch-full-suite.log. Browser sessions: late replies 81330, reliability 80101;
+logs /tmp/kidney-current-batch-{late,reliability}.log. Earlier 710-browser/6551-pytest results
+above remain scoped to 12523c2; final results for 0718b5e are pending.
