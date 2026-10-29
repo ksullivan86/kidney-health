@@ -336,7 +336,14 @@
         h('span', { class: 'ci-amt muted' }, fmtServings(it.servings * scale))));
     }
     const scaled = scaledNutrients(t.totals, scale);
-    for (const k of KEY_NUMBERS) key.append(h('div', { class: 'kn' }, h('span', { class: 'kn-v' }, fmtNum(scaled[k], k)), h('span', { class: 'kn-u' }, NUT[k].unit), h('span', { class: 'kn-l' }, NUT[k].short)));
+    for (const k of KEY_NUMBERS) {
+      // Unknown is never 0: "not listed" when no food lists it, "≥" when only some do (the saved-meal card's rule).
+      const none = !!t.per_serving && t.per_serving[k] == null;
+      const unk = unknownOf(t.unknown, k);
+      key.append(h('div', { class: `kn${none ? ' kn-unknown' : ''}`, title: unk ? foodsNotListing(unk, k) : null },
+        h('span', { class: 'kn-v' }, none ? 'not listed' : atLeast(fmtNum(scaled[k], k), unk)),
+        none ? null : h('span', { class: 'kn-u' }, NUT[k].unit), h('span', { class: 'kn-l' }, NUT[k].short)));
+    }
     const date = $('#apply-date').value;
     if (state.day && state.dayLoadedFor === date) {
       const impact = impactOn(state.day, scaled, selectedMeal($('#apply-meal')), { status: selectedStatus($('#apply-status')) });

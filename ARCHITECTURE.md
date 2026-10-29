@@ -2064,8 +2064,10 @@ values), noted `filled_from_<src>:<key>`; flags and additives are the union.
   the green OK; caution and over keep their warning), no "… left", and "1 food does not list potassium, so the
   total may be higher"; meal lines "K ≥ 55 (+ 1 not listed)" or "K not listed"; entry rows "not listed"; the
   all-totals list, the 7-day strip, "since last dialysis", Trends (days, averages, the period card; a dashed bar
-  edge), Plan's day chips, the saved-meal cards on Plan and the saved-meal shortcuts on Add (from the meal's `unknown` and
-  `per_serving`) the same; the entry sheet's impact says "would reach at least …". The twin uses
+  edge), Plan's day chips, the saved-meal cards on Plan, the saved-meal shortcuts on Add and the "Add a saved meal" sheet (from
+  the meal's `unknown` and `per_serving`) the same. The guidance meals (`FamiliarMeal`, `PlanMeal`, `Closest`) and AI ideas carry
+  `unknown`, the keys of `totals` some food does not list (`unknown_json` in `app/guidance/fits.py`, `unknownJson` in the twin):
+  their chips, the meal sheet, the plan and the idea cards show those totals as "≥ …" or "… not listed"; the entry sheet's impact says "would reach at least …". The twin uses
   `KH.rules.countUnknown` / `mergeUnknown` / `markUnknown` (twins of `nutrients.count_unknown` / `merge_unknown` /
   `mark_unknown`) and is compared with the server by `tests/test_unknown_values_twin.py` and `tools/e2e/parity.py`.
 

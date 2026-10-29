@@ -15,7 +15,8 @@ recovery trustworthy before more AI or native-app features.
    happen in Chromium. Still to test the same way: slow connections, failed saves, quick date changes and retries on every screen
    that saves or loads a day.
 2. **Unknown, zero and partial, the same on every screen.** Today, Trends, saved meals and the Add tab's shortcuts say "not listed"
-   and "≥". Still to check: the recipe previews on Plan and the totals on the guidance cards.
+   and "≥". So do the "Add a saved meal" sheet, the meals in What fits now and the day plan, and AI meal ideas (`unknown` next
+   to each meal's `totals`). Still to check: the swap ideas and the Fit to my targets sheet.
 3. **Backup and restore that a person can find and follow.** Show when the last backup ran and how to restore it, and test a restore
    into a fresh server in CI. The backups themselves work; this is about finding and using them.
 4. **Real phones and assistive tech as a release step.** The checks in [`maintainers.md`](maintainers.md) (iPhone offline, large

@@ -25,7 +25,7 @@ from . import messages as M
 from . import rules as R
 from .budget import Room, day_totals, meal_room
 from .fits import eligible_foods, familiar_excluded, familiar_option, food_core, resolve_items, room_json, \
-    saved_meals_for, totals_json, usual_meals_for
+    saved_meals_for, totals_json, unknown_json, usual_meals_for
 from .score import (
     Counter,
     Evaluation,
@@ -353,9 +353,9 @@ def plan_slot(ctx: GuidanceContext, slot: str, open_meals: Sequence[str], habit:
                 reason = check.reason
         scale = R.SAVED_MEAL_SCALES[-1]
         scaled_items = [(f, q * scale) for f, q in meal_items]
-        totals_c, _ = meal_totals(scaled_items)
+        totals_c, unknown_c = meal_totals(scaled_items)
         closest = {"scale": scale, "items": [food_core(f, q) for f, q in scaled_items],
-                   "totals": totals_json(totals_c, room), "reason": check_meal(scaled_items, room, "built").reason}
+                   "totals": totals_json(totals_c, room), "unknown": unknown_json(unknown_c, room), "reason": check_meal(scaled_items, room, "built").reason}
     return SlotPlan(slot, room, "no_fit", reason=reason or "no_candidates", closest=closest), []
 
 
@@ -487,6 +487,7 @@ def plan_json(ctx: GuidanceContext, plan: SlotPlan) -> dict[str, Any]:
         "score": plan.score,
         "items": [food_core(f, q) for f, q in (plan.items or [])],
         "totals": totals_json(meal_totals(plan.items or [])[0], plan.room) if plan.items else None,
+        "unknown": unknown_json(meal_totals(plan.items)[1], plan.room) if plan.items else [],
         "why": _why(plan),
         "room": room_json(plan.room),
         "reason": plan.reason,

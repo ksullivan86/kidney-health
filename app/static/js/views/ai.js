@@ -223,12 +223,14 @@
     if (!target) return null;
     return h('a', { class: 'learn-more', href: target, target: '_blank', rel: 'noopener' }, `Learn: ${page.title}`, h('span', { class: 'sr-only' }, ' (opens in a new tab)'));
   }
-  function nutrientLine(values, keys) {
+  // `unknown` lists the keys some food does not list: "≥" or "not listed", never an exact number or 0.
+  function nutrientLine(values, keys, unknown = []) {
     const parts = [];
     for (const key of keys) {
       const v = values ? values[key] : null;
       if (v == null || !NUT[key]) continue;
-      parts.push(`${NUT[key].label} ${fmtNum(v, key)} ${NUT[key].unit}`);
+      if (!unknown.includes(key)) parts.push(`${NUT[key].label} ${fmtNum(v, key)} ${NUT[key].unit}`);
+      else parts.push(v > 0 ? `${NUT[key].label} ≥ ${fmtNum(v, key)} ${NUT[key].unit}` : `${NUT[key].label} not listed`);
     }
     return parts.join(' · ');
   }
@@ -455,7 +457,7 @@
       h('h3', { class: 'ai-idea-title' }, idea.title),
       h('p', { class: 'ai-why' }, idea.why),
       h('ul', { class: 'ai-items' }, idea.items.map(itemRow)),
-      h('p', { class: 'small' }, nutrientLine(idea.totals, ['carbs_g', 'protein_g', 'potassium_mg', 'phosphorus_mg', 'sodium_mg'])),
+      h('p', { class: 'small' }, nutrientLine(idea.totals, ['carbs_g', 'protein_g', 'potassium_mg', 'phosphorus_mg', 'sodium_mg'], idea.unknown || [])),
       afterParts.length ? h('p', { class: 'muted small' }, afterParts.join(' · ')) : null,
       (idea.handbook || []).length ? h('p', { class: 'ai-links' }, idea.handbook.map(learnLink).filter(Boolean)) : null,
       h('p', { class: 'ai-label' }, idea.notice),
