@@ -1,4 +1,4 @@
-Status: in progress (2026-10-29): built and tested locally; PR next, after the re-entry PR #107 merges.
+Status: complete (2026-10-29): merged in #108; the macOS CI job built the app and ran its simulator tests.
 
 # Pairing the iPhone app by QR code (design note 15 §4.3)
 

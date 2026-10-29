@@ -155,7 +155,8 @@ peer mentor ([NKF][NKF-PEERS]).
 - [Dialysis access](../prepare/dialysis-access.md) · [Appointments](appointments.md) ·
   [Mood and stress](mental-health.md) · [Advance care planning](../prepare/advance-care-planning.md)
 - In the app: [Logging food](../app/logging.md) (you can log a low treatment for them; the app never
-  warns against it)
+  warns against it) · [Sharing with a caregiver](../app/settings-and-keys.md#sharing) (they can let you look at their log
+  from your own account)
 
 ## Sources
 

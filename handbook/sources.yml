@@ -1618,6 +1618,13 @@ NOTE18:
   licence: "PolyForm Noncommercial 1.0.0 (project)"
   checked: 2026-10-29
   kind: project
+NOTE19:
+  cite: "kidney-health design note 19: read-only sharing with a caregiver or dietitian."
+  short: "Design note 19"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/19-sharing.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-29
+  kind: project
 APPLE-SHORTCUTS:
   cite: "Apple Support. Shortcuts User Guide (Health actions, Format Date, Dictionary, Get Contents of URL, personal automations)."
   short: "Apple: Shortcuts User Guide"

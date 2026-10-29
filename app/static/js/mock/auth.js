@@ -122,7 +122,8 @@
         created_at: u.created_at, last_login_at: u.last_login_at, reset_link: link ? { ...link } : null,
         assistant_tokens: 0, device_tokens: 0, // the demo makes no tokens of either family (app/auth/admin_api.py counts the active ones)
         two_step: false, // nor two-step sign-in (design note 17)
-        passkeys: 0 }; // nor passkeys (design note 18)
+        passkeys: 0, // nor passkeys (design note 18)
+        shares: 0 }; // nor shares (design note 19)
     },
     // app/auth/tokens.py: an open reset/setup link per account (the demo never shows its token).
     _issueResetLink(u, adminId, ms) {
@@ -380,6 +381,13 @@
     route(m, p, function () { this._currentUser(); fail(404, 'Not Found'); });
   }
 
+  // Sharing (app/sharing.py, design note 19): a server where the admin has not turned it on.
+  route('GET', '/api/me/shares', function () { this._currentUser(); return { enabled: false, areas: ['food', 'labs', 'body', 'symptoms'], max: 10, sharing: [], codes: [] }; });
+  for (const [m, p] of [['POST', '/api/me/shares'], ['DELETE', /^\/api\/me\/shares\/(\d+)$/], ['GET', '/api/shared'], ['POST', '/api/shared/info'],
+    ['POST', '/api/shared/accept'], ['DELETE', /^\/api\/shared\/(\d+)$/], ['GET', /^\/api\/shared\/(\d+)\/.+$/]]) {
+    route(m, p, function () { this._currentUser(); fail(404, 'Not Found'); });
+  }
+
   // ---------------------------------------------------------------------------
   // /api/admin: accounts, invites, usage, audit, about (settings and keys: js/mock/settings.js)
   // ---------------------------------------------------------------------------
@@ -518,6 +526,12 @@
     this._requireRecent();
     targetUser(this, id); // nobody in the demo has a passkey
     return { removed: 0 };
+  });
+  route('DELETE', userIdRoute('/shares'), function ({ id }) {
+    this._requireAdmin();
+    this._requireRecent();
+    targetUser(this, id); // nobody in the demo shares anything
+    return { ended: 0 };
   });
   route('GET', '/api/admin/invites', function () {
     this._requireAdmin();

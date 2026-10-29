@@ -84,6 +84,11 @@ ACTIONS: set[str] = {
     "passkey.added",  # passkeys (note 18; app/auth/passkeys_api.py, admin_api.py, app/admin.py)
     "passkey.removed",
     "passkey.counter_went_back",
+    "share.code_created",  # read-only sharing (note 19; app/sharing.py, admin_api.py)
+    "share.code_cancelled",
+    "share.accepted",
+    "share.ended",
+    "share.viewed",
 }
 USER_VISIBLE_ACTIONS = frozenset(
     {
@@ -114,6 +119,11 @@ USER_VISIBLE_ACTIONS = frozenset(
         "passkey.added",
         "passkey.removed",
         "passkey.counter_went_back",
+        "share.code_created",
+        "share.code_cancelled",
+        "share.accepted",
+        "share.ended",
+        "share.viewed",
     }
 )
 _ACTION = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")

@@ -818,6 +818,20 @@ register(
 )
 register(
     SettingDef(
+        key="sharing.enabled",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="SHARING_ENABLED",
+        label="Let people share their log, read-only, with someone else on this server",
+        help="Off by default. When on, each person can make a link in Settings → Account → Sharing and send it to a caregiver "
+        "or dietitian with an account here. Once they accept it, they can read the parts that were ticked (food log, lab results, "
+        "weight and blood pressure, symptoms) and never change anything. Either side can stop it at any time. While off, nobody "
+        "can see anyone else's data; turned on again, shares that were not stopped work again.",
+    ),
+)
+register(
+    SettingDef(
         key="push.enabled",
         model=bool,
         default=False,

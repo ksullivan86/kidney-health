@@ -197,6 +197,11 @@
     { key: 'registration.mode', type: 'choice', options: ['invite', 'closed', 'open'], default: 'invite', scope: 'instance', env: 'REGISTRATION_MODE',
       label: 'Registration',
       help: 'invite: admins send single-use links. closed: admins create accounts. open: anyone who reaches the page can register (HTTPS required).' },
+    // Read-only sharing (design note 19; app/sharing.py). The shares are rows of the shares table, never settings.
+    { key: 'sharing.enabled', type: 'bool', default: false, scope: 'instance', env: 'SHARING_ENABLED',
+      label: 'Let people share their log, read-only, with someone else on this server',
+      help: 'Off by default. When on, each person can make a link in Settings → Account → Sharing and send it to a caregiver or dietitian with an account here. '
+        + 'Once they accept it, they can read the parts that were ticked (food log, lab results, weight and blood pressure, symptoms) and never change anything. Either side can stop it at any time. While off, nobody can see anyone else\'s data; turned on again, shares that were not stopped work again.' },
     // Personalised targets and labs (note 05 §4.9; app/settings_registry.py).
     { key: 'targets.default_activity', type: 'choice', options: ['inactive', 'low_active', 'active', 'very_active'], default: 'inactive', scope: 'instance', env: null,
       label: 'Activity level used until a person chooses theirs', help: 'Used for the calorie estimate (2023 Dietary Reference Intakes).' },

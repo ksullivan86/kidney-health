@@ -322,7 +322,7 @@ def test_visit_prep_has_the_section_between_the_symptoms_and_the_questions_and_p
         assert f"function {fn}(" in VISITPREP
     assert "KH.bodyRules" in VISITPREP and "sixMonthChange(upTo)" in VISITPREP
     # no write and nothing outside the app's own API: the reads are the six the visit prep test lists
-    assert re.findall(r"api\.(\w+)\(", VISIT) == ["summary", "labs", "symptoms", "bodySummary", "bodyWeights", "bloodPressures"]
+    assert re.findall(r"\breads\.(\w+)\(", VISIT) == ["summary", "labs", "symptoms", "bodySummary", "bodyWeights", "bloodPressures", "profile"]
 
 
 def test_visit_prep_lists_the_gains_between_sessions_only_on_hemodialysis_and_says_what_the_alarm_is():

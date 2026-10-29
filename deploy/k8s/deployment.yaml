@@ -99,6 +99,8 @@ spec:
             #   value: "true"                     # reads, and with "Can also save food and recipes" also saves
             # - name: PUSH_ENABLED                # device tokens for an iPhone Shortcut (docs/push.md): a token can only
             #   value: "true"                     # add weights and blood pressure readings (POST /push/v1/body)
+            # - name: SHARING_ENABLED             # read-only sharing with someone else who has an account here
+            #   value: "true"                     # (docs/accounts.md): they can read, never change
             # - name: AUTH_REQUIRE_TWO_STEP_ADMINS  # admins must use two-step sign-in to open Server
             #   value: "true"                     # administration (docs/accounts.md)
           volumeMounts:

@@ -55,7 +55,7 @@ def test_settings_shows_the_block_for_a_password_account_and_the_admin_can_remov
 def test_the_demo_answers_as_a_server_without_passkeys():
     mock = (STATIC / "js" / "mock" / "auth.js").read_text(encoding="utf-8")
     assert "route('GET', '/api/me/passkeys', function () { this._currentUser(); return { available: false, usable: false, reason: null, passkeys: [], max: 10 }; });" in mock
-    assert "passkeys: false," in mock and "passkeys: 0 }" in mock
+    assert "passkeys: false," in mock and "passkeys: 0," in mock
     assert "route('DELETE', userIdRoute('/passkeys')" in mock
 
 

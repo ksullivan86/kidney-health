@@ -53,6 +53,7 @@
     revokeUserTokens: (id) => request('POST', `/api/admin/users/${id}/revoke-tokens`),
     removeUserTwoStep: (id) => request('DELETE', `/api/admin/users/${id}/totp`),
     removeUserPasskeys: (id) => request('DELETE', `/api/admin/users/${id}/passkeys`),
+    endUserShares: (id) => request('DELETE', `/api/admin/users/${id}/shares`),
     invites: () => request('GET', '/api/admin/invites'),
     createInvite: (b) => request('POST', '/api/admin/invites', b),
     deleteInvite: (id) => request('DELETE', `/api/admin/invites/${encodeURIComponent(id)}`),
@@ -354,6 +355,7 @@
     if (hasLocalPassword()) body.append(passwordForm(me));
     if (hasLocalPassword() && KH.twoStep) body.append(KH.twoStep.block()); // js/views/two_step.js (design note 17)
     if (hasLocalPassword() && KH.passkeys) body.append(KH.passkeys.block()); // js/views/passkeys.js (design note 18)
+    if (authMode() !== 'none' && KH.sharing) body.append(KH.sharing.block()); // js/views/sharing.js (design note 19)
 
     body.append(subtitle('Signed-in devices', 'set-devices-h'), h('div', { id: 'set-devices', 'aria-labelledby': 'set-devices-h', role: 'region' }, loading()));
     body.append(subtitle('Your data', 'set-data-h'), dataBlock(me));
@@ -741,6 +743,8 @@
     'totp.enabled': 'Two-step sign-in turned on', 'totp.disabled': 'Two-step sign-in turned off', 'totp.recovery_codes_renewed': 'New recovery codes made',
     'totp.recovery_code_used': 'Signed in with a recovery code',
     'passkey.added': 'Passkey added', 'passkey.removed': 'Passkey removed', 'passkey.counter_went_back': 'Copied passkey refused',
+    'share.code_created': 'Share link made', 'share.code_cancelled': 'Share link cancelled', 'share.accepted': 'Someone accepted your share link',
+    'share.ended': 'Sharing stopped', 'share.viewed': 'Someone looked at what you share',
   };
   // The row's label. Tokens come in two families and the details say which one made or lost a token (phone shortcut tokens: family
   // "device"); a revoke of everything a person had at once (an admin, a password change) names no family and says how many.
@@ -790,6 +794,8 @@
     }
     if (ev.action === 'passkey.added' && d.synced) return 'synced to a cloud account';
     if (ev.action === 'passkey.counter_went_back') return 'a passkey answered like an old copy of itself, so the sign-in was refused';
+    if ((ev.action === 'share.code_created' || ev.action === 'share.accepted') && KH.sharing && d.areas) return KH.sharing.areasText(d.areas);
+    if (ev.action === 'share.ended') return { owner: 'by you', grantee: 'by the person you shared with', admin: 'by an admin' }[d.by] || '';
     if (d.links_revoked) return d.links_revoked === 1 ? '1 open link revoked' : `${d.links_revoked} open links revoked`;
     return '';
   }
@@ -1503,6 +1509,7 @@
     if (u.status !== 'active') badges.push(h('span', { class: `badge status-${u.status}` }, STATUS_LABEL[u.status] || u.status));
     if (u.two_step) badges.push(h('span', { class: 'badge two-step-on' }, 'Two-step sign-in'));
     if (u.passkeys) badges.push(h('span', { class: 'badge passkeys-on' }, u.passkeys === 1 ? '1 passkey' : `${u.passkeys} passkeys`));
+    if (u.shares) badges.push(h('span', { class: 'badge shares-on' }, `Sharing: ${u.shares}`));
     if (self) badges.push(h('span', { class: 'badge this-device' }, 'You'));
     const sub = [u.last_login_at ? `Last signed in ${relTime(u.last_login_at)}` : 'Never signed in', `joined ${fmtDate(u.created_at)}`,
       u.auth_source === 'proxy' ? 'signs in through the proxy' : null].filter(Boolean).join(' · ');
@@ -1630,6 +1637,21 @@
         },
       }));
       actions.append(rm);
+    }
+    // Sharing (design note 19 §5): when a caregiver relationship has ended badly.
+    if (u.shares) {
+      const end = h('button', { class: 'btn secondary', type: 'button' }, 'End sharing');
+      end.addEventListener('click', () => confirm.inline(actions, end, {
+        message: self ? 'End every share and share link of yours, both what you share and what is shared with you?'
+          : `End every share and share link of ${name}, both what they share and what is shared with them?`,
+        confirmText: 'End sharing',
+        onConfirm: async () => {
+          await A.endUserShares(u.id);
+          await done(self ? 'Your sharing was ended' : `Sharing ended for ${name}`);
+          return true;
+        },
+      }));
+      actions.append(end);
     }
     if (!self && u.status === 'active') {
       const dis = h('button', { class: 'btn danger', type: 'button' }, 'Disable account');
@@ -1814,6 +1836,7 @@
     ['Which AI each feature uses', ['ai.route.photos', 'ai.route.meal_ideas', 'ai.route.describe', 'ai.route.chat', 'ai.route.labs',
       'ai.route.recipes', 'ai.route.local_provider', 'ai.route.cloud_provider']],
     ['Phone shortcuts', ['push.enabled']],
+    ['Sharing', ['sharing.enabled']],
     ['Activity log', ['audit.retention_days']],
   ];
   const ROUTING_GROUP = 'Which AI each feature uses';
