@@ -148,7 +148,16 @@ def auth_status(request: Request, conn: sqlite3.Connection = Depends(get_db)) ->
         # AUTH_MODE=none: the UI shows a red banner ("No sign-in: anyone who can open this page can see
         # and change this data").
         "no_login": mode == "none",
+        # Whether the sign-in page offers "Sign in with a passkey" (note 18 §6): local mode on an address with a name.
+        "passkeys": mode == "local" and not _passkeys_need_a_name(request, s),
     }
+
+
+def _passkeys_need_a_name(request: Request, settings: Any) -> bool:
+    from .context import public_base
+    from .passkeys import host_is_ip, rp_id_and_origin
+
+    return host_is_ip(rp_id_and_origin(public_base(request, settings))[0])
 
 
 # --------------------------------------------------------------------------- #

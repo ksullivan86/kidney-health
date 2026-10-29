@@ -17,7 +17,7 @@ from .. import account, credentials
 from ..audit import audit, list_events
 from ..crypto import secret_report
 from ..db import database_file, get_db, get_meta, get_schema_version, utcnow
-from . import api_tokens, clock, sessions, tokens, totp
+from . import api_tokens, clock, passkeys, sessions, tokens, totp
 from .accounts import (
     begin_immediate,
     check_local_username,
@@ -58,12 +58,13 @@ def _user_or_404(conn: sqlite3.Connection, user_id: int) -> sqlite3.Row:
 
 def _user_view(conn: sqlite3.Connection, row: sqlite3.Row, links: dict[int, dict[str, Any]] | None = None,
                assistant: dict[int, int] | None = None, device: dict[int, int] | None = None,
-               two_step: set[int] | None = None) -> dict[str, Any]:
+               two_step: set[int] | None = None, keys: dict[int, int] | None = None) -> dict[str, Any]:
     """``user_admin_dict`` plus ``reset_link``: the open reset or account-setup link for the account
     (``{id, created_by, created_at, expires_at}``, never the token), so an admin can see and revoke a
     link that someone else issued, including one for their own account; and ``assistant_tokens`` and ``device_tokens``,
     how many active tokens of each family (assistant tokens, phone-shortcut tokens) the person has (numbers only, never a
-    token) for "Revoke tokens", which ends both families; and ``two_step``, whether two-step sign-in is on (note 17)."""
+    token) for "Revoke tokens", which ends both families; ``two_step``, whether two-step sign-in is on (note 17); and ``passkeys``,
+    how many passkeys the person has (note 18)."""
     if links is None:
         links = tokens.open_reset_links(conn)
     if assistant is None:
@@ -72,9 +73,11 @@ def _user_view(conn: sqlite3.Connection, row: sqlite3.Row, links: dict[int, dict
         device = api_tokens.active_counts(conn, api_tokens.DEVICE)
     if two_step is None:
         two_step = totp.enabled_ids(conn)
+    if keys is None:
+        keys = passkeys.counts(conn)
     return {**user_admin_dict(row), "reset_link": links.get(int(row["id"])),
             "assistant_tokens": assistant.get(int(row["id"]), 0), "device_tokens": device.get(int(row["id"]), 0),
-            "two_step": int(row["id"]) in two_step}
+            "two_step": int(row["id"]) in two_step, "passkeys": keys.get(int(row["id"]), 0)}
 
 
 def _void_admin_links(conn: sqlite3.Connection, uid: int) -> dict[str, int]:
@@ -96,7 +99,8 @@ def list_users(request: Request, admin: AdminUser, conn: sqlite3.Connection = De
     assistant = api_tokens.active_counts(conn, api_tokens.ASSISTANT)
     device = api_tokens.active_counts(conn, api_tokens.DEVICE)
     two_step = totp.enabled_ids(conn)
-    return {"users": [_user_view(conn, r, links, assistant, device, two_step) for r in rows]}
+    keys = passkeys.counts(conn)
+    return {"users": [_user_view(conn, r, links, assistant, device, two_step, keys) for r in rows]}
 
 
 @router.post("/users", status_code=201)
@@ -271,6 +275,19 @@ def remove_user_totp(user_id: int, request: Request, admin: RecentAdmin, conn: s
     removed = totp.remove(conn, int(row["id"]))
     if removed:
         audit(conn, admin.id, "totp.disabled", "user", int(row["id"]), ip=request_ip(request), via="admin")
+    conn.commit()
+    return {"removed": removed}
+
+
+@router.delete("/users/{user_id}/passkeys")
+def remove_user_passkeys(user_id: int, request: Request, admin: RecentAdmin, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Remove all of another person's passkeys, for a lost or stolen device (note 18 §2). They sign in with the password and
+    can add new ones. ``{"removed": 0}`` when there were none."""
+    _no_accounts_in_none_mode(auth_context(request))
+    row = _user_or_404(conn, user_id)
+    removed = passkeys.remove_all(conn, int(row["id"]))
+    if removed:
+        audit(conn, admin.id, "passkey.removed", "user", int(row["id"]), ip=request_ip(request), via="admin", count=removed)
     conn.commit()
     return {"removed": removed}
 

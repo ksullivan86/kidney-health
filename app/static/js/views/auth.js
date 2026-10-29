@@ -229,6 +229,7 @@
       el.textContent = `At least ${min} characters. A short sentence you will remember works well; no symbols needed. A password manager and pasting are fine.`;
     });
     $('#login-demo').hidden = !MOCK;
+    $('#login-passkey').hidden = !(st.passkeys && KH.passkeys && KH.passkeys.supported());
     const proxy = st.auth_mode === 'proxy';
     $$('.setup-local').forEach((el) => { el.hidden = proxy; });
     $$('.setup-proxy').forEach((el) => { el.hidden = !proxy; });
@@ -518,6 +519,23 @@
         }
         showApiError(err, form, btn);
         if (err.status === 401) { pass.value = ''; showCodeField(false); pass.focus(); }
+      }
+    });
+  });
+
+  // Passkeys (design note 18): the device checks a fingerprint, face or PIN, so no password and no two-step code are asked.
+  $('#login-passkey-btn').addEventListener('click', async () => {
+    const btn = $('#login-passkey-btn');
+    await busy(btn, async () => {
+      setError('');
+      try {
+        const res = await KH.passkeys.signIn();
+        $('#login-password').value = '';
+        showCodeField(false);
+        afterSignIn(res.user, res.notice);
+      } catch (err) {
+        if (err.device) { setError(err.detail); revealError(); return; }
+        showApiError(err, $('#form-login'), btn);
       }
     });
   });

@@ -757,6 +757,33 @@ def cmd_remove_two_step(args: argparse.Namespace, settings: Settings, out: TextI
     return EXIT_OK
 
 
+def cmd_remove_passkeys(args: argparse.Namespace, settings: Settings, out: TextIO) -> int:
+    """Remove all of one person's passkeys (design note 18 §2), for a lost or stolen device. They sign in with the password
+    and can add new ones. Audited (``passkey.removed``, via the CLI). Sessions are left as they are."""
+    from .audit import audit
+    from .auth import passkeys
+
+    conn = _accounts_db(args, settings)
+    try:
+        conn.execute("BEGIN IMMEDIATE")
+        row = _find_user(conn, args.username)
+        removed = passkeys.remove_all(conn, int(row["id"]))
+        if removed:
+            audit(conn, None, "passkey.removed", "user", int(row["id"]), via="cli", count=removed)
+        conn.commit()
+    except BaseException:
+        if conn.in_transaction:
+            conn.rollback()
+        raise
+    finally:
+        conn.close()
+    if removed:
+        print(f"{removed} passkey(s) removed for {row['username']!r}; they can sign in with the password.", file=out)
+    else:
+        print(f"{row['username']!r} has no passkeys", file=out)
+    return EXIT_OK
+
+
 def cmd_purge_pre_v3_backup(args: argparse.Namespace, settings: Settings, out: TextIO) -> int:
     path = Path(f"{_db_path(args, settings)}.pre-v3.bak")
     if not path.exists():
@@ -883,6 +910,10 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("remove-two-step", help="turn off one account's two-step sign-in (lost phone and recovery codes)")
     p.add_argument("username")
     p.set_defaults(func=cmd_remove_two_step)
+
+    p = sub.add_parser("remove-passkeys", help="remove all of one account's passkeys (lost or stolen device)")
+    p.add_argument("username")
+    p.set_defaults(func=cmd_remove_passkeys)
 
     p = sub.add_parser("revoke-sessions", help="sign out one account's devices (or --all)")
     p.add_argument("username", nargs="?")

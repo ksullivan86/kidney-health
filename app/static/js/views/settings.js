@@ -1,6 +1,6 @@
 /* Kidney Diet Log — Settings view (note 07 §4.17; note 02 R10 for This device).
 
-   Sections: Account (name, password, two-step sign-in from js/views/two_step.js, signed-in devices, export, delete, sign out), Preferences
+   Sections: Account (name, password, two-step sign-in from js/views/two_step.js, passkeys from js/views/passkeys.js, signed-in devices, export, delete, sign out), Preferences
    (theme, week start, units), Food data (USDA key, Open Food Facts), AI ideas (filled by M2),
    Assistant access (personal tokens for a chat assistant; only while the admin switch is on, see
    renderAssistant), This device (install, offline, storage; completed by js/pwa.js in the installed
@@ -52,6 +52,7 @@
     revokeUser: (id) => request('POST', `/api/admin/users/${id}/revoke-sessions`),
     revokeUserTokens: (id) => request('POST', `/api/admin/users/${id}/revoke-tokens`),
     removeUserTwoStep: (id) => request('DELETE', `/api/admin/users/${id}/totp`),
+    removeUserPasskeys: (id) => request('DELETE', `/api/admin/users/${id}/passkeys`),
     invites: () => request('GET', '/api/admin/invites'),
     createInvite: (b) => request('POST', '/api/admin/invites', b),
     deleteInvite: (id) => request('DELETE', `/api/admin/invites/${encodeURIComponent(id)}`),
@@ -352,6 +353,7 @@
 
     if (hasLocalPassword()) body.append(passwordForm(me));
     if (hasLocalPassword() && KH.twoStep) body.append(KH.twoStep.block()); // js/views/two_step.js (design note 17)
+    if (hasLocalPassword() && KH.passkeys) body.append(KH.passkeys.block()); // js/views/passkeys.js (design note 18)
 
     body.append(subtitle('Signed-in devices', 'set-devices-h'), h('div', { id: 'set-devices', 'aria-labelledby': 'set-devices-h', role: 'region' }, loading()));
     body.append(subtitle('Your data', 'set-data-h'), dataBlock(me));
@@ -738,6 +740,7 @@
     'ai.trust_changed': 'Trust in the assistant changed',
     'totp.enabled': 'Two-step sign-in turned on', 'totp.disabled': 'Two-step sign-in turned off', 'totp.recovery_codes_renewed': 'New recovery codes made',
     'totp.recovery_code_used': 'Signed in with a recovery code',
+    'passkey.added': 'Passkey added', 'passkey.removed': 'Passkey removed', 'passkey.counter_went_back': 'Copied passkey refused',
   };
   // The row's label. Tokens come in two families and the details say which one made or lost a token (phone shortcut tokens: family
   // "device"); a revoke of everything a person had at once (an admin, a password change) names no family and says how many.
@@ -747,6 +750,8 @@
     if (d.family === 'device' && DEVICE_ACTION_LABEL[ev.action]) return DEVICE_ACTION_LABEL[ev.action];
     if (ev.action === 'api_token.revoked' && d.count != null) return 'Tokens revoked';
     if (ev.action === 'login.failed' && d.via === 'code') return 'Wrong sign-in code entered';
+    if (ev.action === 'login.failed' && d.via === 'passkey') return 'Passkey sign-in failed';
+    if (ev.action === 'login.succeeded' && d.via === 'passkey') return 'Signed in with a passkey';
     return ACTION_LABEL[ev.action] || ev.action;
   }
   // The choices of Settings → AI ideas (js/views/ai.js): the activity list names them the way the choice does.
@@ -779,6 +784,12 @@
     if (ev.action === 'totp.disabled') return { self: 'by the person', admin: 'by an admin', cli: 'with the command line' }[d.via] || '';
     if (ev.action === 'totp.enabled' && d.signed_out) return d.signed_out === 1 ? '1 other device signed out' : `${d.signed_out} other devices signed out`;
     if (ev.action === 'totp.recovery_code_used' && d.left != null) return d.left === 1 ? '1 left' : `${d.left} left`;
+    if (ev.action === 'passkey.removed') {
+      const how = { self: 'by the person', admin: 'by an admin', cli: 'with the command line' }[d.via] || '';
+      return [d.count > 1 ? `${d.count} passkeys` : '', how].filter(Boolean).join(', ');
+    }
+    if (ev.action === 'passkey.added' && d.synced) return 'synced to a cloud account';
+    if (ev.action === 'passkey.counter_went_back') return 'a passkey answered like an old copy of itself, so the sign-in was refused';
     if (d.links_revoked) return d.links_revoked === 1 ? '1 open link revoked' : `${d.links_revoked} open links revoked`;
     return '';
   }
@@ -1474,6 +1485,7 @@
     const badges = [h('span', { class: `badge role-${u.role}` }, ROLE_LABEL[u.role] || u.role)];
     if (u.status !== 'active') badges.push(h('span', { class: `badge status-${u.status}` }, STATUS_LABEL[u.status] || u.status));
     if (u.two_step) badges.push(h('span', { class: 'badge two-step-on' }, 'Two-step sign-in'));
+    if (u.passkeys) badges.push(h('span', { class: 'badge passkeys-on' }, u.passkeys === 1 ? '1 passkey' : `${u.passkeys} passkeys`));
     if (self) badges.push(h('span', { class: 'badge this-device' }, 'You'));
     const sub = [u.last_login_at ? `Last signed in ${relTime(u.last_login_at)}` : 'Never signed in', `joined ${fmtDate(u.created_at)}`,
       u.auth_source === 'proxy' ? 'signs in through the proxy' : null].filter(Boolean).join(' · ');
@@ -1582,6 +1594,21 @@
         onConfirm: async () => {
           await A.removeUserTwoStep(u.id);
           await done(self ? 'Your two-step sign-in was removed' : `Two-step sign-in removed from ${name}`);
+          return true;
+        },
+      }));
+      actions.append(rm);
+    }
+    // Passkeys (design note 18 §2): for a lost or stolen device.
+    if (u.passkeys) {
+      const rm = h('button', { class: 'btn secondary', type: 'button' }, 'Remove passkeys');
+      rm.addEventListener('click', () => confirm.inline(actions, rm, {
+        message: self ? 'Remove all your passkeys? You then sign in with your password.'
+          : `Remove all passkeys of ${name}? Do this when a device of theirs is lost or stolen. They sign in with the password and can add new passkeys.`,
+        confirmText: 'Remove',
+        onConfirm: async () => {
+          await A.removeUserPasskeys(u.id);
+          await done(self ? 'Your passkeys were removed' : `Passkeys removed from ${name}`);
           return true;
         },
       }));

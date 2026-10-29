@@ -180,6 +180,12 @@
           <span class="hint" id="login-code-hint">The 6 digits your app shows now. Lost your phone? Type one of your recovery codes instead.</span>
         </div>
         <button class="btn primary auth-submit" type="submit" id="login-submit">Sign in</button>
+        <!-- Passkeys (design note 18 §6): shown when the server allows them here and the browser can use them (js/views/auth.js). -->
+        <div class="auth-passkey" id="login-passkey" hidden>
+          <p class="auth-or" aria-hidden="true">or</p>
+          <button class="btn secondary auth-passkey-btn" type="button" id="login-passkey-btn">Sign in with a passkey</button>
+          <span class="hint">Your device asks for your fingerprint, face or PIN. No password needed.</span>
+        </div>
         <p class="hint auth-help">Forgot your password? Ask your admin for a reset link; there is no email reset.</p>
         <p class="hint auth-help" id="login-demo" hidden>Demo: sign in as <b>sam</b> with any password of 15 or more characters. Nothing is sent anywhere.</p>
       </form>
@@ -2290,6 +2296,7 @@
 <script src="js/views/auth.js"></script>
 <script src="js/views/settings.js"></script>
 <script src="js/views/two_step.js"></script>
+<script src="js/views/passkeys.js"></script>
 <script src="js/views/ai.js"></script>
 <script src="js/views/ai_routing.js"></script>
 <script src="js/views/ai_quality.js"></script>

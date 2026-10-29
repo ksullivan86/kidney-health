@@ -17,8 +17,8 @@ from cryptography.hazmat.primitives.asymmetric import ec, ed25519
 
 from app.auth.webauthn import FLAG_AT, FLAG_BE, FLAG_BS, FLAG_UP, FLAG_UV, b64url
 
-RP_ID = "testserver"
-ORIGIN = "http://testserver"
+RP_ID = "localhost"
+ORIGIN = "http://localhost"
 
 
 def cbor(value: Any) -> bytes:

@@ -31,6 +31,7 @@ import test_isolation
 import test_lab_photo
 import test_log_if_match
 import test_mcp_write
+import test_passkeys
 import test_totp
 import test_body
 import test_symptoms
@@ -91,6 +92,9 @@ MATRIX: dict[str, tuple[str, ...]] = {
                      "test_totp.test_deleting_the_account_deletes_its_two_step_rows"),
     "totp_recovery_codes": ("test_totp.test_one_persons_two_step_sign_in_is_their_own",
                             "test_totp.test_deleting_the_account_deletes_its_two_step_rows"),
+    "passkeys": ("test_passkeys.test_rename_and_remove_and_not_yours_is_404",  # passkeys, step 23 (note 18)
+                 "test_passkeys.test_the_challenge_works_once_and_only_for_its_person",
+                 "test_passkeys.test_deleting_the_account_deletes_its_passkeys"),
 }
 SHARED_OR_SYSTEM = {
     "users": "the accounts themselves (admins only, tests/test_auth_coverage.py)",
@@ -106,7 +110,8 @@ MODULES = {"test_isolation": test_isolation, "test_export_delete": test_export_d
            "test_auth_coverage": test_auth_coverage, "test_api_tokens": test_api_tokens,
            "test_mcp_write": test_mcp_write, "test_data_import": test_data_import,
            "test_ai_chat_save": test_ai_chat_save, "test_symptoms": test_symptoms, "test_body": test_body, "test_lab_photo": test_lab_photo,
-           "test_log_if_match": test_log_if_match, "test_totp": test_totp}
+           "test_log_if_match": test_log_if_match, "test_totp": test_totp,
+           "test_passkeys": test_passkeys}
 
 
 def _tables_with_people(conn: sqlite3.Connection) -> dict[str, list[str]]:
