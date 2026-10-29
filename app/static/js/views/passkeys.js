@@ -104,6 +104,7 @@
     return out;
   }
   async function signIn() {
+    await stopConditional(); // one WebAuthn request at a time: the autofill one waits, the button asks now
     const opts = await request('POST', '/api/auth/passkey/options', {}, { quiet401: true });
     let cred;
     try {
@@ -111,6 +112,57 @@
     } catch (err) { throw deviceError(err, false); }
     if (!cred) throw deviceError(null, false);
     return request('POST', '/api/auth/passkey', { challenge_id: opts.challenge_id, credential: assertionJSON(cred) }, { quiet401: true });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Passkeys in the username field's autofill ("conditional mediation", WebAuthn L3; design note 18 §10). The browser lists this
+  // server's passkeys under the username field (autocomplete="username webauthn"); picking one signs in as the button does.
+  // Nothing shows until the person taps the field, and the password form works as before. The challenge lasts 5 minutes, so a
+  // request still waiting is renewed every 4. js/views/auth.js starts it on the sign-in screen and stops it when leaving.
+  // ---------------------------------------------------------------------------
+  const RENEW_MS = 4 * 60 * 1000;
+  let conditional = null; // {controller, timer} of the request waiting in the autofill
+  async function conditionalAvailable() {
+    if (MOCK || !supported()) return false;
+    try {
+      const P = window.PublicKeyCredential;
+      return !!(P && typeof P.isConditionalMediationAvailable === 'function' && await P.isConditionalMediationAvailable());
+    } catch (e) { return false; }
+  }
+  /** Stop the waiting autofill request; resolves once the browser has let it go. */
+  async function stopConditional() {
+    const running = conditional;
+    conditional = null;
+    if (!running) return;
+    clearTimeout(running.timer);
+    running.controller.abort();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+  /** Offer passkeys in the autofill. onSignedIn(answer) runs after a passkey was picked and the server took it; onError(err) when
+      the server refused it. False when the browser cannot. */
+  async function startConditional(onSignedIn, onError) {
+    await stopConditional();
+    if (!(await conditionalAvailable())) return false;
+    const mine = { controller: new AbortController(), timer: null };
+    conditional = mine;
+    mine.timer = setTimeout(() => { if (conditional === mine) startConditional(onSignedIn, onError); }, RENEW_MS);
+    let opts;
+    try { opts = await request('POST', '/api/auth/passkey/options', {}, { quiet401: true }); } catch (e) {
+      if (conditional === mine) { clearTimeout(mine.timer); conditional = null; }
+      return false; // the button and the password still work
+    }
+    if (conditional !== mine) return false;
+    let cred;
+    try {
+      cred = await navigator.credentials.get({ mediation: 'conditional', publicKey: requestOptions(opts.publicKey), signal: mine.controller.signal });
+    } catch (e) { return false; } // stopped, or the browser said no: nothing to show
+    if (conditional !== mine || !cred) return false;
+    clearTimeout(mine.timer);
+    conditional = null;
+    try {
+      onSignedIn(await request('POST', '/api/auth/passkey', { challenge_id: opts.challenge_id, credential: assertionJSON(cred) }, { quiet401: true }));
+    } catch (err) { onError(err); }
+    return true;
   }
 
   // ---------------------------------------------------------------------------
@@ -260,5 +312,5 @@
     return li;
   }
 
-  KH.passkeys = { block, signIn, reauth, reauthAvailable, supported, toB64url, fromB64url, creationOptions, requestOptions, registrationJSON, assertionJSON, deviceMessage, itemLine };
+  KH.passkeys = { block, signIn, reauth, reauthAvailable, supported, conditionalAvailable, startConditional, stopConditional, toB64url, fromB64url, creationOptions, requestOptions, registrationJSON, assertionJSON, deviceMessage, itemLine };
 })();

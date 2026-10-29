@@ -148,7 +148,8 @@ To add one:
    for your password again.
 2. Your phone or computer asks to save a passkey. Confirm with your fingerprint, face or PIN.
 
-To sign in with it, tap **Sign in with a passkey** under the sign-in form and confirm on your device.
+To sign in with it, tap **Sign in with a passkey** under the sign-in form and confirm on your device. On many phones and
+computers you can also tap the user name box: your passkey is listed there, and picking it signs you in.
 
 - Add one on each phone or computer you use. A passkey saved to iCloud Keychain or Google Password Manager also works on your
   other devices signed in to that account; the list then says "synced".

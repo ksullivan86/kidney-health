@@ -16,6 +16,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * **A QR code to pair the iPhone app.** When you make a phone token in Settings → Phone shortcuts, the page also shows a QR code.
   Point the iPhone Camera at it and the iPhone app opens, asks "Pair with" your server, and saves the address and the token
   when you say yes. The code needs the server's `https://` address. See [`docs/push.md`](docs/push.md#pairing-the-iphone-app-by-qr-code).
+* **Passkeys in the sign-in box.** On browsers that support it, tapping the user name box lists your passkeys for this server.
+  Picking one signs you in, as **Sign in with a passkey** does.
 * **A passkey instead of retyping your password.** When an action asks for your password again (adding a passkey, changing a
   key, exporting your data), the sheet now has **Use a passkey instead** if you have a passkey. Your fingerprint, face or PIN
   answers it. Only your own passkeys count, and five failures in a row sign the device out, as wrong passwords do. See

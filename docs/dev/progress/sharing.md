@@ -1,4 +1,4 @@
-Status: in progress (2026-10-29): server, screens and docs done; full suite, PR and merge next.
+Status: complete (2026-10-29): merged in #109 (14171bc).
 
 # Read-only sharing with a caregiver or dietitian (design note 19)
 

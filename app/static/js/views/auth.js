@@ -239,6 +239,7 @@
   // Screens
   // ---------------------------------------------------------------------------
   function showScreen(name, { error = '', notice = '', focus = null } = {}) {
+    if (name !== 'login' && KH.passkeys && KH.passkeys.stopConditional) KH.passkeys.stopConditional();
     if (router.VIEWS.includes(state.view)) resumeView = state.view;
     state.view = 'auth';
     for (const v of router.VIEWS) { const p = $(`#view-${v}`); if (p) p.hidden = true; }
@@ -266,6 +267,14 @@
     showScreen('login', opts);
     const known = state.me && state.me.username;
     if (known && !$('#login-username').value) $('#login-username').value = known;
+    // Passkeys in the username field's autofill (js/views/passkeys.js): picking one signs in as the button does.
+    if (status().passkeys && KH.passkeys) {
+      KH.passkeys.startConditional((res) => {
+        $('#login-password').value = '';
+        showCodeField(false);
+        afterSignIn(res.user, res.notice);
+      }, (err) => { if (!err.handled) { setError(err.detail || err.message || 'That passkey did not work.'); revealError(); } }).catch(() => false);
+    }
   }
   // Proxy mode without a person: either the proxy sent no identity (sign in there again), or it
   // did and this server refuses it (not enabled here, name clash); GET /api/me says which.
@@ -415,6 +424,7 @@
     } catch (e) { return ''; }
   }
   function afterSignIn(user, notice) {
+    if (KH.passkeys && KH.passkeys.stopConditional) KH.passkeys.stopConditional(); // leaving the sign-in screen
     if (user.must_change_password) { showChange(user, { notice: notice || '' }); return; }
     enterApp(user, { notice });
   }

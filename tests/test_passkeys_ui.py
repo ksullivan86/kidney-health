@@ -120,3 +120,18 @@ def test_the_password_sheet_offers_a_passkey_instead():
     assert "KH.passkeys.reauthAvailable().then(" in auth and "await KH.passkeys.reauth();" in auth
     view = VIEW.read_text(encoding="utf-8")
     assert "if (MOCK || !supported()) return false;" in view  # the demo never offers it
+
+
+def test_the_username_field_offers_passkeys_in_its_autofill():
+    html = (STATIC / "index.html").read_text(encoding="utf-8")
+    assert '<input id="login-username" name="username" type="text" autocomplete="username webauthn"' in html
+    view = VIEW.read_text(encoding="utf-8")
+    assert "mediation: 'conditional'" in view and "isConditionalMediationAvailable" in view
+    assert "if (MOCK || !supported()) return false;" in view  # never in the demo
+    # one WebAuthn request at a time: the button stops the autofill one first, and the challenge is renewed before it ends
+    sign_in = view[view.index("async function signIn()"):view.index("async function signIn()") + 200]
+    assert "await stopConditional();" in sign_in
+    assert "const RENEW_MS = 4 * 60 * 1000;" in view
+    auth = (STATIC / "js" / "views" / "auth.js").read_text(encoding="utf-8")
+    assert "KH.passkeys.startConditional(" in auth
+    assert "if (name !== 'login' && KH.passkeys && KH.passkeys.stopConditional) KH.passkeys.stopConditional();" in auth
