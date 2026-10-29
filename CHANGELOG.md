@@ -7,6 +7,44 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+Nothing yet.
+
+## 0.10.0 — 2026-10-29
+
+Version 0.10 lets a person share their log, read-only, with a caregiver or dietitian, and makes passkeys and the iPhone app
+easier to use. A server can now be set up from its environment alone. Sharing is off until the admin turns it on.
+
+**Before you upgrade, read [Upgrading from 0.9](#upgrading-from-09-read-this-first).** One schema step runs at the first start.
+Nothing new is switched on.
+
+### Highlights
+
+* **Read-only sharing** in **Settings → Account → Sharing**: a link for someone with an account on your server, who can then
+  look at your summary and your days and never change anything.
+* **Passkeys in more places**: in the sign-in box's suggestions, and instead of retyping your password.
+* **A QR code to pair the iPhone app** with your server.
+* **Set the server up by code**: a variable for every server setting, and `SETTINGS_INITIAL_ONLY` for first values an admin can
+  change in the app later.
+
+### Upgrading from 0.9 (read this first)
+
+1. **Back up first** (`podman exec kidney-health python -m app.admin backup /data/before-0.10.0.db`). Schema step 24 (sharing)
+   runs at the first start. It adds a table and changes nothing that is there.
+2. **Coming from 0.8 or older**, read [Upgrading from 0.8](#upgrading-from-08-read-this-first) too. All the database steps run in
+   one start.
+3. **Change the tag** to `:0.10`, or pin a digest from the release notes. The shipped files already say `:0.10`.
+4. **Nothing new is switched on.** Sharing is off until you set `SHARING_ENABLED=true` or turn it on in Server settings.
+   Settings you set in the environment still lock, as before.
+5. **The iPhone QR code needs HTTPS.** It uses `PUBLIC_URL`, or else the address the page was opened at. Over plain HTTP the page
+   shows no code, and pairing by hand still works.
+
+### Known limitations
+
+* A share has no end date: it lasts until either person stops it.
+* A shared view shows the summary and single days, not the Trends charts.
+* Every account still needs a password.
+* The iPhone app is built and tested in CI, but putting it on a phone needs the owner's Apple Developer account.
+
 ### For people using the app
 
 * **Share your log, read-only, with a caregiver or dietitian.** In Settings → Account → Sharing, tick what to share (food log,

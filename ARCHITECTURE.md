@@ -1016,7 +1016,9 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
 
-**Status (2026-10-29): v0.9.0 is prepared.** It adds two-step sign-in (note 17, schema step 22), "Admins must use two-step
+**Status (2026-10-29): v0.10.0 is prepared.** It adds read-only sharing (note 19, schema step 24), passkeys for re-entry and in
+the sign-in box's autofill (note 18 §10), QR pairing for the iPhone app and first values from the environment (note 20); CHANGELOG.md
+0.10.0. **v0.9.0** added two-step sign-in (note 17, schema step 22), "Admins must use two-step
 sign-in" (`auth.require_two_step_admins`) and passkeys (note 18, schema step 23); CHANGELOG.md 0.9.0. **v0.8.0** added recipes from AI (note 16 phase 3: the feature `recipes`,
 `POST /api/ai/recipes`, steps behind `ai.recipe_steps`; no schema step; CHANGELOG.md 0.8.0). **v0.7.0** added recipes and "Fit to my targets" (note 16 phases 0 to 2, schema
 step 21, `POST /api/guidance/fit-recipe`, the twin `engine/guidance/recipes.js`; CHANGELOG.md 0.7.0). **v0.6.0** added a cloud AI from the environment (`AI_CLOUD_*`, schema step 20), a chain of
@@ -4293,7 +4295,7 @@ Signed in only (`current_user`; an anonymous caller gets the generic `401`, so a
 (`no-store` like every `/api` answer). The answer:
 
 ```json
-{"app_version": "0.9.0", "api_version": 1,
+{"app_version": "0.10.0", "api_version": 1,
  "capabilities": {"ai": false, "ai_next_meal": false, "ai_parse_meal": false, "ai_label": false, "ai_plate": false, "ai_lab_report": false,
                   "chat": false, "voice": false, "assistant": false, "push": false,
                   "barcode": false, "barcode_off": false, "barcode_usda": false, "handbook": false},
