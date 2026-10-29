@@ -60,6 +60,16 @@ counter and an AbortController), loadDevices (checks the box is still on the pag
      test_settings_ui.py::test_the_ui_never_mentions_reminders_before_they_exist, which already fails on next-batch
      (the BACKUP_REMINDER_DAYS comment from commit dd88a39), not touched here.
    - Docs: ARCHITECTURE.md (Server administration), CHANGELOG. The handbook already describes the right behaviour.
+5. **Chromium walk** tools/e2e/late_replies.py (system python3, port 8098): scan-then-close, USDA twice, admin tapped
+   twice. With the old scan.js, add.js and settings.js (from 5f51dcd~1): 0 passed, 4 failed. With the fixes: 4 passed.
+   Listed in tools/e2e/README.md. Ask and the AI label reading need an AI provider, so they are covered by the vm tests only.
+
+## Pre-existing failures seen on next-batch (not from this work)
+
+- tests/test_settings_ui.py::test_the_ui_never_mentions_reminders_before_they_exist (settings.js comment
+  "BACKUP_REMINDER_DAYS=0: the admin turned the reminder off", commit dd88a39).
+- tests/test_deploy.py::test_self_hosting_pages_link_to_commands_instead_of_copying_them[backups.md]
+  (handbook/docs/self-hosting/backups.md repeats `podman exec`).
 
 ## Found, not changed (for the report)
 
