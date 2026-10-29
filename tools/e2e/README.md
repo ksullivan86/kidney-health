@@ -64,6 +64,10 @@ the card clears during loading and the late reply cannot restore old measurement
 `reliability.py` also opens the saved-meal editor with missing and partial nutrient values, changes
 **Makes**, and checks that a failed save keeps the note and servings count for a successful retry.
 
+`python tools/e2e/health_save_retry.py` checks weight, blood pressure and lab saves at phone and
+desktop widths. An injected 500 keeps all typed fields; retry sends the same body and stores exactly
+one row. It uses an isolated server on port 8102 and saves `<out>/report.json` (`--out` is optional).
+
 `recipes_ai.py` also delays a synthetic meal-idea reply while changing breakfast to dinner: the old card and Add button
 must stay gone, while a fresh dinner answer still renders and plans dinner. Those controlled calls write nothing to the server.
 `reliability.py` also holds a synthetic lab-list read across cache invalidation, then delivers it after a fresh read.

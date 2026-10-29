@@ -14,7 +14,9 @@ recovery trustworthy before more AI or native-app features.
    unknown potassium or phosphorus as 0; a fitted 100-serving recipe could not be saved. `tools/e2e/reliability.py` makes each one
    happen in Chromium, and so are a slow day load followed by a quick date change, and a failed save with its retry on the entry
    sheet. Profile's failed save and retry, and suggestions delayed while entries change, are checked by
-   `tools/e2e/profile_reliability.py`. Still to test the same way: Plan, Labs, weight and blood pressure.
+   `tools/e2e/profile_reliability.py`. `tools/e2e/health_save_retry.py` checks weight, blood pressure and Labs on phone
+   and desktop layouts. The saved-meal editor's failed save and retry are checked by `reliability.py`.
+   Still to test the same way: Plan's day-copy and saved-meal apply actions.
 2. **Unknown, zero and partial, the same on every screen.** Today, Trends, saved meals and the Add tab's shortcuts say "not listed"
    and "≥". So do the "Add a saved meal" sheet, the meals in What fits now and the day plan, and AI meal ideas (`unknown` next
    to each meal's `totals`). The New/Edit saved-meal preview marks them as ingredients or Makes change.
