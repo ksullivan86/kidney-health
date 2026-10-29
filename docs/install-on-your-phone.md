@@ -83,7 +83,8 @@ working with what this device saved:
   and is sent in order when the server can be reached. An entry you added offline and that has
   not been sent yet is simply changed, or removed, on the phone. If you change or delete it while
   it is being sent, the app waits for the server's answer and then sends your change too, so your
-  last change is the one your server keeps.
+  last change is the one your server keeps. This also works if you opened the entry before it reached
+  your server and save it after.
 * **Nothing is overwritten silently.** Each change is sent together with the version of the entry
   you saw. If that entry was changed on another device while yours was offline, your change is **not**
   sent. **Settings → This device** shows a card, "This entry was changed on another device while
@@ -106,8 +107,13 @@ working with what this device saved:
 * **If the server refuses an entry** when it syncs (for example the food was deleted meanwhile),
   it is kept as **not saved** with the reason, under **Settings → This device**, where you can
   **Retry** or **Discard** it.
+* **Discarding an entry that is being sent** deletes it on your server too, since it may have got
+  there already. It shows as **Delete: …** until that is done.
 * **Signing out** while entries or changes are still waiting asks first: **Try to sync now**, **Stay signed
-  in**, or **Sign out and lose them**. Signing out removes everything this device saved.
+  in**, or **Sign out and lose them**. Signing out removes everything this device saved. An entry
+  that may have reached your server already is deleted there first. If that cannot be done, the app
+  names the entry and asks again: stay signed in and try later, or **Sign out anyway** and delete it
+  on Today when you sign in again.
 
 Waiting entries are kept in the browser's storage for this app and address, for the person signed
 in; another person signing in on the same phone does not see or send them. Clearing the browser's

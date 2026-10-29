@@ -27,6 +27,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
   Plain saved meals still use Scale.
 * **A change made while an entry syncs is no longer lost.** Edit or delete a waiting entry as it is being sent, and your
   change now follows it to the server.
+* **An entry you discard while it syncs is gone from your server too.** Before, discarding it in Settings or with **Sign out
+  and lose them** could leave it there. Saving an entry you opened just before it synced now works too.
 
 * **Bigger text works.** The text now follows the text size you set in your browser. At twice the size, nothing runs off the
   side of the screen: long button words wrap, the meal choices keep every word, and the week on Plan and the boxes on Profile

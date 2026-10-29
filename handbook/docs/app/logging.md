@@ -147,8 +147,9 @@ another device while you were offline". It shows what your server has and your c
 **Keep the saved one** to drop your change, or **Use mine** to send it on top of what is there now. If the entry
 was deleted elsewhere, the app says "This entry no longer exists" and drops your change. An entry you added
 offline that has not been sent yet is changed or deleted on the phone itself. If you change or delete it just
-as it is being sent, your change is sent right after it, so your server keeps what you did last. Treating a low
-is changed and deleted like any other entry.
+as it is being sent, your change is sent right after it, so your server keeps what you did last. That holds
+even if you opened the entry before it reached your server and save it after. Treating a low is changed and
+deleted like any other entry.
 
 Your phone also keeps a copy of the last two weeks and the coming week, so **Today** opens while you are
 offline when the app was installed from an `https://` address (it says it is showing the copy saved on
@@ -159,7 +160,9 @@ waiting to sync.
 
 If the server refuses a waiting entry when it arrives (for example, the food was deleted in the
 meantime), the entry is kept as **not saved** with the reason under **Settings → This device**. Tap
-**Retry** or **Discard**; nothing is thrown away without you seeing it.
+**Retry** or **Discard**; nothing is thrown away without you seeing it. If you discard an entry while it is being
+sent, it may have reached your server already, so the app deletes it there too. Signing out does the same, and
+tells you if an entry could not be deleted.
 
 ## What to do
 
