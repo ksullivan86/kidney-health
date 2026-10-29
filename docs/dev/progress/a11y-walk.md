@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # a11y-walk: automated accessibility check and fixes
 
@@ -42,7 +42,7 @@ CHANGELOG.md Unreleased). Commit locally only, never push.
   non-text contrast (WCAG 1.4.11); changing them is a design decision.
 
 ## Next
-- Full `python -m pytest`, then mark complete.
+- None. Full `python -m pytest` passed (exit 0, no failures) on dca1ea3.
 
 ## Commands
 - `python3 tools/e2e/a11y.py` (report in `<tmp>/kidney-health-e2e/a11y/report.json`); `--only 375-light --parts large`; `--shots`
