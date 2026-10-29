@@ -16,7 +16,8 @@ recovery trustworthy before more AI or native-app features.
    sheet. Done: the other screens that save are tested the same way (Plan's saved meal editor and "Add to a day", Labs,
    Profile, the weight and blood pressure sheets, and a slow day on the weight card). That found three more bugs, now fixed:
    an error message hidden under an open sheet, Labs drawing an older answer, and the weight card showing another day's
-   weights while a day loads.
+   weights while a day loads. `tools/e2e/profile_reliability.py` checks that suggested targets that arrive late never replace
+   entries changed while they loaded.
 2. **Unknown, zero and partial, the same on every screen.** Today, Trends, saved meals and the Add tab's shortcuts say "not listed"
    and "≥". So do the "Add a saved meal" sheet, the meals in What fits now and the day plan, and AI meal ideas (`unknown` next
    to each meal's `totals`). Still to check: the swap ideas and the Fit to my targets sheet.

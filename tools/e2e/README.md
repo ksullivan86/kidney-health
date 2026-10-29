@@ -65,6 +65,11 @@ It checks that both readers, the history and kidney-function card keep the new r
 `sharing.py` also delays synthetic link-info replies and closes/reopens the share question. It checks that only the latest
 question can supply an Accept code; these controlled requests never accept a link on the server.
 
+`python tools/e2e/profile_reliability.py` checks Profile against a temporary local server on port 8101:
+editing targets or weight while a suggestion waits preserves the entries, suggesting again works,
+and a failed Profile save keeps the fields for a successful retry. It writes a JSON report to the
+folder given by `--out` (default `/tmp/kidney-health-e2e/profile-reliability`).
+
 Run from the repository root (or anywhere: the harnesses find the repository from their own path).
 
 ```bash
