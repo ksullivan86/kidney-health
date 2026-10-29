@@ -1451,14 +1451,20 @@
     const two = await request('GET', '/api/me/totp').catch(() => null);
     return !!(two && two.required && !two.enabled);
   }
+  // Two loads can overlap (a second tap on the shield while the first waits): only the newest builds the page, so every part
+  // and its id is there once.
+  let adminRender = 0;
   async function renderAdminFrame() {
+    const ticket = ++adminRender;
     const body = $('#set-admin-body');
     clear(body);
     if (!isAdmin()) {
       body.append(note('info', h('p', {}, 'Server administration is for admins. Ask your admin if your account needs a change.')));
       return;
     }
-    if (await adminTwoStepBlocked()) {
+    const blocked = await adminTwoStepBlocked();
+    if (ticket !== adminRender) return; // a newer load builds the page
+    if (blocked) {
       clear(body);
       body.append(note('caution', h('p', {}, h('strong', {}, 'This server asks admins to use two-step sign-in. '),
         'Turn it on in Settings → Account → Two-step sign-in, then come back here.')),

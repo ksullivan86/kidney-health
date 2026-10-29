@@ -178,9 +178,11 @@
     if (!answer) {
       // Declined at the consent sheet, or the server refused (busy, out of calls, not available): the question was
       // not answered, so it leaves the conversation and goes back into the box to be sent again.
+      // Anything typed while waiting stays, after the question.
       thread.pop();
       els.list.lastElementChild.remove();
-      els.input.value = text;
+      const typed = els.input.value.trim();
+      els.input.value = typed ? `${text}\n\n${typed}` : text;
       els.list.append(failure ? problemBubble(failure) : problemBubble({ message: 'Nothing was sent. Ask works only after you agree to send your messages to the AI provider.' }));
     } else {
       const entry = { role: 'assistant', text: answer.text || '' }; // a card may update this once it is used
