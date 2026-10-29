@@ -51,6 +51,7 @@ the API. Security fixes are released as patch versions of the newest minor versi
   next question. Now both are there.
 * **A new sharing link stays on the screen.** Stopping a share or cancelling another link just after making one no longer
   hides the new link. It stays until it is used or cancelled.
+* **A device you signed out stays gone.** In Settings → Signed-in devices, a slow earlier load can no longer bring it back.
 
 ### For people who run a server
 

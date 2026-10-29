@@ -9,7 +9,11 @@ Three small loading fixes. Worktree branch `worktree-agent-a3f2ee7639205c3ed`, m
    code (overlap answered newest first, link lost on a later load, link lost on a failed load, older failure replaced the list),
    all 7 pass now. Existing sharing, visit prep, settings and handbook tests pass. Docs: ARCHITECTURE Sharing → Screens,
    handbook settings-and-keys.md step 2, docs/accounts.md step 2, CHANGELOG.
-2. Signed-in devices (`js/views/settings.js`, `loadDevices`): request counter. Not started.
+2. Signed-in devices (`js/views/settings.js`, `loadDevices`): DONE. `devicesRequest` counter; only the newest load draws,
+   success or failure. Test `tests/js/devices_loading.test.mjs` (cuts loadDevices out of settings.js between the end of
+   passwordForm and the data block; pytest `tests/test_devices_loading.py`), 5 cases: 3 failed on the old code (revoked phone
+   came back, newest-first overlap, older failure replaced the list), all pass now. All tests that read settings.js pass
+   (232). Docs: ARCHITECTURE Settings view, CHANGELOG. Handbook unchanged: nothing new on screen.
 3. Add tab search (`js/views/add.js`, `runSearch`): a failed search shows in place of old results, with Retry. Not started.
 
 Python: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/venv312/bin/python

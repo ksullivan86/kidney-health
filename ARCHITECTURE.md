@@ -990,6 +990,8 @@ The demo's state is in memory unless the person turns on **Keep my data in this 
   The sign-in screen never hints at an account name (an upgraded v0.2 server's admin is `admin` or
   `ADMIN_USERNAME`; the server log, CHANGELOG and `docs/accounts.md` tell the operator): a public page
   must not reveal who has an account.
+  Signed-in devices (`loadDevices`) draws only its newest load, so a slow older list cannot show a device that was signed out
+  since (`tests/js/devices_loading.test.mjs`).
 * **Server administration** (v0.3.1; `#admin`, no tab; the header shield `#admin-open`, which
   `js/views/auth.js` shows only for `role = "admin"` through `data-admin-only`, and Settings → Admin;
   drawn by `js/views/settings.js`): People (accounts, invites and one-time links), Server settings,
