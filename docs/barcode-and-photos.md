@@ -152,6 +152,7 @@ beside the form on a wide screen (above it on a phone) with 1×, 2× and 3× zoo
 numbers. It stays on your device (the page shows it from memory and forgets it when you close Quick add).
 Only if your admin set up AI with a vision model is there also **Read the label for me (AI)**, which sends
 a resized copy (see [Photos](#photos)) and fills the fields, each marked "from photo" until you change it.
+An answer that comes after you removed or changed the photo, or closed Quick add, is dropped.
 Under the **Ingredients** box the app says what saving will mark, as you type ("Saving marks this food:
 Phosphate additives", "Potassium additives", or "Avoid with CKD" for a salt substitute): the same rules
 the server applies when you save.
