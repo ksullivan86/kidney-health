@@ -9,6 +9,7 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people using the app
 
+* **A change made while an entry syncs is no longer lost.** Edit or delete a waiting entry as it is being sent, and your change now follows it to the server.
 * **A share can end on a date.** When you make a sharing link, pick how long it lasts: until you stop it, a week, 30 days,
   90 days or a year. On that day the share stops by itself, and your activity says so. Both of you see the end date. See
   [`docs/accounts.md`](docs/accounts.md#sharing-with-a-caregiver).

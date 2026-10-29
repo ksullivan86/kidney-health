@@ -821,7 +821,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | M2 barcode | `app/gtin.py`, `app/additives.py`, `app/off.py`, `app/barcode.py`, `app/migrations/m007_*`, barcode/source fields in `app/foods.py`, flag + warning rule in `app/rules_kidney.py`, `docs/barcode-and-photos.md` (except "Photos"), their tests and fixtures |
 | Symptoms | `app/symptoms.py`, `app/migrations/m015_*`, `SymptomCreate` and the other `Symptom*` models in `app/models.py`, `symptoms` in `app/account.py` and `app/data_import.py`, `js/engine/symptoms.js`, `js/mock/symptoms.js`, `js/views/symptoms.js`, `css/symptoms.css`, `tests/data/gen_symptoms_vectors.py`, `tests/data/symptoms_vectors.json`, `tools/e2e/symptoms.py` |
 | Weight and blood pressure | `app/body.py` (router, pure functions, `RED_FLAGS`), `app/migrations/m018_*`, the `Weight*`, `BloodPressure*` and `Body*` models in `app/models.py`, `weights` and `blood_pressures` in `app/account.py` and `app/data_import.py`, the `user.units.weight`, `body.weight_alarm` and `body.bp_goal` keys (`WeightAlarm`, `BpGoal`) in `app/settings_registry.py`, the `body_batch` limit in `app/auth/ratelimit.py`, `js/engine/body.js`, `js/mock/body.js` (and the sample data in `js/mock/seed.js`), the `body*` helpers in `js/core.js`, `tests/test_body*.py`, `tests/test_migration_m018.py`, `tests/data/gen_body_vectors.py`, `docs/body.md`; Part B, the screens: `js/engine/body_ui.js` (`KH.bodyUi`), `js/views/body.js` (`KH.body`: Today, the sheets, the Settings section, the Profile hints), `js/views/body_trends.js` (`KH.bodyTrends`), `css/body.css`, the cards, sheets and `#set-body` in `index.html`, the body section of `js/engine/visitprep.js` and `js/views/visit.js`, `handbook/docs/app/weight-and-blood-pressure.md`, `tests/test_body_ui*.py`, `tests/js/body_ui_runner.mjs`, `tools/e2e/body.py` |
-| Offline edits and deletes | `entry_version`, `version_matches`, `require_current_version` and the `If-Match` handling of `PUT` / `DELETE /api/log/{id}` in `app/log.py`, `Entry.version` in `app/models.py`, `entry_fields` in `app/account.py` (the export has no `version`), `version` accepted by `app/data_import.py`, the edit and delete items of the outbox in `js/offline.js`, `intercept` / `onConflict` / `ifMatch` in `js/core.js`, the editable waiting entries in `js/views/today.js` and `js/views/add.js`, the conflict card in `css/device.css`, `entryVersion` / `versionMatches` and the 412 in `js/mock/log.js` (`header` in `js/mock/core.js`), `tests/test_log_if_match.py`, `tests/test_entry_version_vectors.py`, `tests/test_offline_edits_ui.py`, `tests/data/gen_entry_version_vectors.py`, `tests/data/entry_version_vectors.json`, `tests/js/outbox_changes.mjs`, the `changes` section of `tools/e2e/device.py` |
+| Offline edits and deletes | `entry_version`, `version_matches`, `require_current_version` and the `If-Match` handling of `PUT` / `DELETE /api/log/{id}` in `app/log.py`, `Entry.version` in `app/models.py`, `entry_fields` in `app/account.py` (the export has no `version`), `version` accepted by `app/data_import.py`, the edit and delete items of the outbox in `js/offline.js`, `intercept` / `onConflict` / `ifMatch` in `js/core.js`, the editable waiting entries in `js/views/today.js` and `js/views/add.js`, the conflict card in `css/device.css`, `entryVersion` / `versionMatches` and the 412 in `js/mock/log.js` (`header` in `js/mock/core.js`), `tests/test_log_if_match.py`, `tests/test_entry_version_vectors.py`, `tests/test_offline_edits_ui.py`, `tests/data/gen_entry_version_vectors.py`, `tests/data/entry_version_vectors.json`, `tests/js/outbox_changes.mjs`, `tests/js/outbox_inflight.test.mjs` with `tests/test_outbox_inflight.py` (changes made while a send is on its way), the `changes` section and step 5b of the `outbox` section of `tools/e2e/device.py` |
 | Keep my data in this browser (demo) | `app/static/js/mock/persist.js`, `mock/export.js`, `mock/import.js`, `js/views/demo_local.js`, `css/demo-local.css`, `#sheet-demo-local` and the banner button in `index.html`, `seed` and `onWrite` in `js/mock/core.js`, `FdcId` in `app/data_import.py`, `tests/data/gen_import_vectors.py`, `tests/data/import_vectors.json`, `tests/js/fake_idb.mjs`, `tests/js/demo_local_storage.mjs`, `tests/test_demo_local_ui.py`, `tests/test_demo_local_storage.py`, `tests/test_import_vectors.py`, `tools/e2e/demo_local.py`, `docs/demo.md` |
 | Visit prep | `js/engine/visitprep.js`, `js/views/visit.js`, `css/visit.css`, the `#view-visit` section and the Trends link in `index.html`, `visit` in `VIEWS` (`js/core.js`), `KH.symptoms.flagEl`, `tests/test_visit_prep_*.py`, `tests/js/visitprep_runner.mjs`, `tools/e2e/visitprep.py` (no route, no table, no server code) |
 | Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*` and `m011_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `app/mcp/**` (the MCP server, part B; `log_food` and `save_recipe`, part C) with `log.day_summary`, `log.insert_logged`, `foods.usda_search_records`, `foods.add_usda_food` and `security.BEARER_PATHS`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py`, `tests/test_migration_m011.py`, `tests/test_mcp.py`, `tests/test_mcp_write.py`, `tools/e2e/mcp_smoke.py` |
@@ -2231,7 +2231,8 @@ with lookups off on both sides.
   device and syncs later."
 * **Checks:** `tests/test_device_ui.py` (static), `tools/e2e/device.py` (Chromium with
   `context.set_offline`: log offline, reload offline from the service worker, reconnect synced once, a lost
-  batch answer resent without a second row, Retry/Discard, the sign-out sheet; the demo's outbox).
+  batch answer resent without a second row, an edit and a delete made while the batch answer is on its way, Retry/Discard,
+  the sign-out sheet; the demo's outbox).
 
 ## M2 API: AI and photos
 
@@ -4452,6 +4453,24 @@ No schema step: nothing is stored for any of this.
 * **An entry that was made offline and is still waiting** (id `pending:<client_id>`): editing it **rewrites the queued create**
   (the same `client_id`, so it is still created exactly once) and deleting it **removes the queued create** with no request.
   If it has just been sent the person is told to open it again.
+* **Changes made while a send is on its way** are never lost (the server may have the entry before the page hears back):
+  * A create (`entry`, `quick`, `mark`) is marked **`sent`** in the same IndexedDB transaction that reads the body it sends
+    (`startSend`). From then on, editing it still rewrites the row but also sets **`edited_after_send`**, and deleting it keeps
+    the row as **`deleted`** (hidden from Today, listed as "Delete: …"). A row never sent, or refused, is removed as before.
+  * When the answer comes (`settleCreate`; the batch's entry is found by its `client_id`) the row is done, unless it was edited
+    or deleted meanwhile: then it becomes an ordinary `edit` (only the fields that differ from the server's entry,
+    `changedFields`) or `delete` of that entry, with the server's `version`, sent next with `If-Match` like any other change.
+    A lost answer leaves the row waiting; the resend answers `existing` with the entry, and the same follow-up goes.
+    A deleted row the server refuses (4xx) is simply removed: nothing was made.
+  * A change being sent carries **`rev`**, raised when another edit or a delete joins it. On a 2xx with a newer `rev` the row
+    stays, now made on the entry the server answered (its `version`, and only what still differs).
+  * Every write the sync makes to a row (sent, settled, failed, conflict, new version) is a read-modify-write in one
+    transaction (`store.update`), so it never writes over what the person did in between. In memory (demo, no IndexedDB)
+    rows are copied in and out, as IndexedDB does.
+  * Today shows an entry that is on the server and still being sent once, as it waits here (`withWaiting` hides the server's
+    copy by `client_id`), and not at all once deleted.
+  * No server change: it uses `client_id` idempotency, the batch answer's `client_id` and `If-Match`. A low treatment goes
+    through all of this like any other entry; nothing looks at `purpose`.
 * **Today** draws what waits: an edited entry in its new form (amount and nutrients worked out from the food this device knows,
   else by scaling the entry's own numbers; warnings from the rules twin), a deleted one gone, one moved to another day on both
   days, all marked "waiting to sync" and counted in the totals (`withWaiting`, the same day maths as the demo). A waiting
@@ -4500,6 +4519,10 @@ No schema step: nothing is stored for any of this.
   replay with `If-Match`, 412 and both answers, 404, a mark queued first, profile and targets still online-only), and the
   `changes` section of `tools/e2e/device.py` (Chromium with `context.set_offline`: edit and delete offline, reload offline,
   reconnect, the conflict card and both buttons, a deleted entry, an entry made offline, "Eaten", a low treatment).
+* `tests/js/outbox_inflight.test.mjs` (run by `tests/test_outbox_inflight.py`) holds a request open after the demo server has
+  applied it and changes the entry meanwhile: an entry and a quick add edited or deleted while sent, a lost answer, a refusal,
+  a second edit or a delete while a PUT is on its way, a low treatment, and one request only when nothing changed. Step 5b of
+  the `outbox` section of `tools/e2e/device.py` does the same in Chromium (`page.route` holds the batch answer).
 
 ## Keep my data in this browser (demo only)
 

@@ -33,9 +33,10 @@ async function scenario(name, run) {
   // hold('POST /api/log/batch') → { reached, release(), lose() }: the next such request is applied by the server now and
   // answered when released (or answered with a 503 by lose(): the server has it, the device never hears).
   const holds = [];
-  function hold(what) {
+  // hold(what, { refuse: detail }) instead refuses the request (the server takes nothing) when released.
+  function hold(what, { refuse = null } = {}) {
     let reached; let open;
-    const h = { what, reached: new Promise((r) => { reached = r; }), gate: new Promise((r) => { open = r; }) };
+    const h = { what, refuse, reached: new Promise((r) => { reached = r; }), gate: new Promise((r) => { open = r; }) };
     h.arrive = reached;
     h.release = () => open('answer');
     h.lose = () => open('lose');
@@ -49,6 +50,7 @@ async function scenario(name, run) {
     if (at < 0) return request(method, path, body, headers);
     const [h] = holds.splice(at, 1);
     const sent = body === undefined ? undefined : JSON.parse(JSON.stringify(body)); // what went over the wire
+    if (h.refuse) { h.arrive(); await h.gate; throw new KH.mock.ApiError(400, h.refuse); }
     const res = api.handle(method, path, sent, headers);
     h.arrive();
     if ((await h.gate) === 'lose') throw new KH.mock.ApiError(503, 'the answer was lost');
@@ -147,6 +149,53 @@ await scenario('the answer is lost after the server got the entry, and the perso
   expect('sent again, then the edit', calls.filter((c) => !c.startsWith('GET')), ['POST /api/log/batch', `PUT /api/log/${onServer()[0].id}`]);
   expect('one entry, with the edit', onServer().map((e) => e.servings), [4]);
   expect('nothing waits', (await KH.offline.items()).length, 0);
+});
+
+await scenario('deleted while on its way, and the answer is lost: the delete still reaches the server', async ({ KH, nav, date, food, hold, onServer, calls }) => {
+  nav.onLine = false;
+  const made = await KH.request('POST', '/api/log', { date, meal: 'lunch', food_id: food.id, servings: 1 });
+  nav.onLine = true;
+  const h = hold('POST /api/log/batch');
+  const run = KH.offline.syncNow();
+  await h.reached;
+  await KH.api.deleteEntry(made.id, made);
+  h.lose();
+  await run;
+  const [waiting] = await KH.offline.items();
+  expect('the delete waits on this device, and the badge counts it', [!!waiting && waiting.deleted, KH.offline.counts().pending], [true, 1]);
+  expect('the day does not show it', (await KH.api.day(date)).entries.length, 0);
+  calls.length = 0;
+  await KH.offline.syncNow();
+  expect('sent again, then deleted', calls.filter((c) => !c.startsWith('GET')).map((c) => c.replace(/\d+$/, 'N')), ['POST /api/log/batch', 'DELETE /api/log/N']);
+  expect('the server has no entry', onServer().length, 0);
+  expect('nothing waits', (await KH.offline.items()).length, 0);
+});
+
+await scenario('deleted while on its way, and the server refuses it: nothing is left anywhere', async ({ KH, nav, date, food, hold, onServer }) => {
+  nav.onLine = false;
+  const made = await KH.request('POST', '/api/log', { date, meal: 'lunch', food_id: food.id, servings: 1 });
+  nav.onLine = true;
+  const h = hold('POST /api/log/batch', { refuse: 'entries[0]: food not found' });
+  const run = KH.offline.syncNow();
+  await h.reached;
+  await KH.api.deleteEntry(made.id, made);
+  h.release();
+  await run;
+  expect('nothing on the server, nothing waits, nothing "not saved"', [onServer().length, (await KH.offline.items()).length], [0, 0]);
+});
+
+await scenario('edited while on its way, and the server refuses it: kept as "not saved" with the edit', async ({ KH, nav, date, food, hold }) => {
+  nav.onLine = false;
+  const made = await KH.request('POST', '/api/log', { date, meal: 'lunch', food_id: food.id, servings: 1 });
+  nav.onLine = true;
+  const h = hold('POST /api/log/batch', { refuse: 'entries[0]: food not found' });
+  const run = KH.offline.syncNow();
+  await h.reached;
+  await KH.api.updateEntry(made.id, { servings: 2 }, made);
+  h.release();
+  await run;
+  const items = await KH.offline.items();
+  expect('one item, not saved, with the person\'s edit', items.map((i) => [i.state, i.body.servings]), [['failed', 2]]);
 });
 
 await scenario('an entry made offline and sent without changes: one request, nothing more', async ({ KH, nav, date, food, calls, onServer }) => {

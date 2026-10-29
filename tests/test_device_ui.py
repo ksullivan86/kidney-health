@@ -223,7 +223,9 @@ def _server_paths() -> list[re.Pattern[str]]:
 
 def test_offline_and_scan_call_only_routes_the_server_has() -> None:
     paths = _server_paths()
-    called = set(re.findall(r"'(/api/[a-z/\-]+)'", OFFLINE + SCAN)) | set(re.findall(r"`(/api/[a-z/\-]+)", OFFLINE + SCAN))
+    called = set(re.findall(r"'(/api/[a-z/\-]+)'", OFFLINE + SCAN))
+    # A template such as `/api/log/${entry.id}` is checked with a number in place of the id.
+    called |= {p + ("1" if tail else "") for p, tail in re.findall(r"`(/api/[a-z/\-]+)(\$\{)?", OFFLINE + SCAN)}
     assert {"/api/log/batch", "/api/foods/barcode", "/api/log"} <= called
     for p in called:
         assert any(rx.match(p) for rx in paths), f"{p} is not a server route"
