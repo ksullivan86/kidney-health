@@ -183,6 +183,9 @@ sign-in activity.
   or 30 days; **Stop seeing** ends it.
 - A link nobody has used yet can be cancelled from the same list.
 
+On a shared summary, the food-day card loads on its own. You can change the date while it loads;
+an older reply will not replace your choice. If the day cannot load, tap **Retry**.
+
 ## Assistant access
 
 When your admin turns assistant access on, **Settings → Assistant access** makes personal **tokens** for a chat
