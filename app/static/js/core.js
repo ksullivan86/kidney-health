@@ -508,16 +508,45 @@
   };
 
   // Shared caches. Profile: Today, Plan and Profile; saved meals: Add, Today and Plan.
+  const stateReads = new Map();
+  function loadState(key, read, force) {
+    if (state[key] && !force) return Promise.resolve(state[key]);
+    const previous = stateReads.get(key);
+    if (!force && previous && previous.pending) return previous.promise;
+    const request = { before: state[key], pending: true, value: undefined, promise: null };
+    const newer = () => {
+      const latest = stateReads.get(key);
+      if (latest !== request) {
+        if (!latest) return loadState(key, read, false); // explicitly invalidated while this read was pending
+        const current = state[key];
+        if (current && current !== latest.before && current !== latest.value) return current; // a completed save
+        return latest.promise;
+      }
+      if (state[key] !== request.before) return state[key] || loadState(key, read, true);
+      return null;
+    };
+    request.promise = read().then((data) => {
+      const replacement = newer();
+      if (replacement) return replacement;
+      request.value = data;
+      state[key] = data;
+      return data;
+    }, (err) => {
+      const replacement = newer();
+      if (replacement) return replacement;
+      throw err;
+    }).finally(() => { request.pending = false; });
+    stateReads.set(key, request);
+    return request.promise;
+  }
+  function invalidateState(key) { state[key] = null; stateReads.delete(key); }
+  function invalidateMeals() { invalidateState('meals'); }
+  function invalidateSharedCaches() { invalidateState('profile'); invalidateMeals(); }
   async function loadProfile(force = false) {
-    if (state.profile && !force) return state.profile;
-    state.profile = await api.profile();
-    return state.profile;
+    return loadState('profile', () => api.profile(), force);
   }
   async function loadMeals(force = false) {
-    if (state.meals && !force) return state.meals;
-    const res = await api.meals();
-    state.meals = res.meals || [];
-    return state.meals;
+    return loadState('meals', async () => { const res = await api.meals(); return res.meals || []; }, force);
   }
 
   // ---------------------------------------------------------------------------
@@ -840,7 +869,7 @@
       daysBetween, defaultStatusFor, fmtChange, defaultMealForNow, debounce, qs, numOrNull,
     },
     $, $$, h, s, clear,
-    api, request, download, auth, state, toast, toastError, loadProfile, loadMeals,
+    api, request, download, auth, state, toast, toastError, loadProfile, loadMeals, invalidateMeals, invalidateSharedCaches,
     theme: { stored: storedTheme, effective: effectiveTheme, apply: applyTheme, sync: syncThemeControls },
     router: { VIEWS, TAB_VIEWS, register: registerView, show: showView, openDay },
     sheets: { setup: setupDialog, open: openDialog, onSubmit },

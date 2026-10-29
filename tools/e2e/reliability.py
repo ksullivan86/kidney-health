@@ -221,6 +221,35 @@ def walk_lab_cache(page: Any) -> None:
           and "New result summary" in result.get("kidney", ""))
 
 
+def walk_shared_state_cache(page: Any) -> None:
+    """Hold real core-helper reads across synthetic completed saves; no server write is made."""
+    results = page.evaluate("""async () => {
+      const results = [];
+      for (const key of ['profile', 'meals']) {
+        const method = KH.api[key], before = KH.state[key];
+        let resolve;
+        const load = key === 'profile' ? KH.loadProfile : KH.loadMeals;
+        const saved = key === 'profile' ? {...before, cache_test: 'saved'} : [];
+        try {
+          KH.api[key] = () => new Promise(r => { resolve = r; });
+          const pending = load(true);
+          KH.state[key] = saved;
+          resolve(key === 'profile' ? {...before} : {meals: before || []});
+          const returned = await pending;
+          results.push({key, keptSave: KH.state[key] === saved && returned === saved});
+        } finally {
+          KH.api[key] = method;
+          KH.state[key] = before;
+        }
+      }
+      KH.invalidateSharedCaches();
+      await Promise.all([KH.loadProfile(), KH.loadMeals()]);
+      return results;
+    }""")
+    for result in results:
+        check(f"Shared cache: a late {result['key']} reply cannot undo a completed save", result["keptSave"])
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--port", type=int, default=PORT)
@@ -253,7 +282,7 @@ def main(argv: list[str] | None = None) -> int:
                 page.set_default_timeout(15000)
                 for name, walk in (("Today", lambda: walk_today(page)), ("Slow day", lambda: walk_slow_then_switch(page)),
                                    ("Failed save", lambda: walk_failed_save(page)), ("Lab cache", lambda: walk_lab_cache(page)),
-                                   ("Saved meals", lambda: walk_saved_meals(page)),
+                                   ("Shared cache", lambda: walk_shared_state_cache(page)), ("Saved meals", lambda: walk_saved_meals(page)),
                                    ("Recipe", lambda: walk_recipe(page, recipe))):
                     try:  # each step on its own, so one bug does not hide the others
                         walk()

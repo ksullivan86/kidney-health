@@ -64,6 +64,8 @@ question can supply an Accept code; these controlled requests never accept a lin
 The regression walk recognizes both Chromium wordings for blocked inline styles in malformed-XML error documents.
 That exception is limited to the controlled broken XML fixtures, `error` severity and the app's `style-src 'self'` directive;
 other console/CSP errors still fail the walk, and the fixture-error count remains bounded.
+`reliability.py` also checks that delayed Profile and saved-meal reads cannot replace a completed save in the real
+browser cache. Those controlled checks write no profile or meal to the server, and restore the normal reads afterward.
 
 Run from the repository root (or anywhere: the harnesses find the repository from their own path).
 

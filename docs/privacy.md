@@ -241,6 +241,8 @@ the server checks the file and shows what would be added and what would be left 
   everyone, only for you.
 * **The numbers of an entry are recalculated** from its food and amount, as for any entry you log, so they
   follow the foods on the new server.
+* After importing, Profile and saved-meal lists reload from the server. A slow request that started before the import
+  cannot put the old data back on screen.
 * **No double counting.** An account that already has entries, foods, saved meals, lab results, symptoms, weights or blood pressure readings refuses
   an import unless you tick *Add to my existing data*; then whatever is already there is left out, so
   importing the same file twice adds nothing. A food that is neither in the file nor built in is listed as

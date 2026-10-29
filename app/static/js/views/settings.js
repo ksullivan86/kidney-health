@@ -666,7 +666,8 @@
         msg.textContent = sentence;
         toast(sentence, 'ok');
         // Everything the other views keep is stale now.
-        state.dayLoadedFor = null; state.plan = null; state.planStart = null; state.trends = null; state.summary = null; state.shopping = null; state.meals = null;
+        state.dayLoadedFor = null; state.plan = null; state.planStart = null; state.trends = null; state.summary = null; state.shopping = null;
+        KH.invalidateSharedCaches();
         if (KH.labs) KH.labs.invalidate();
         try { await KH.loadProfile(true); } catch (e) { /* the next visit loads it */ }
       }, { id: 'set-import-go' });
