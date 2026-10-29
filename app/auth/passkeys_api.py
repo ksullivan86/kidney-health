@@ -43,31 +43,36 @@ IP_HOST = ("This server is opened by its IP address. Passkeys need a name for th
 # --------------------------------------------------------------------------- #
 
 
+# Every string field carries its own max_length (not a model-wide str_max_length, which some Pydantic versions leave out of the
+# OpenAPI document), so docs/api/openapi.json is the same whichever version made it.
+BLOB_MAX = 65536  # base64url of an attestation object, client data or a signature
+
+
 class _Lenient(BaseModel):
-    model_config = ConfigDict(extra="ignore", str_max_length=65536)
+    model_config = ConfigDict(extra="ignore")
 
 
 class PasskeyAttestationResponse(_Lenient):
-    clientDataJSON: str = Field(min_length=1)
-    attestationObject: str = Field(min_length=1)
+    clientDataJSON: str = Field(min_length=1, max_length=BLOB_MAX)
+    attestationObject: str = Field(min_length=1, max_length=BLOB_MAX)
 
 
 class PasskeyAssertionResponse(_Lenient):
-    clientDataJSON: str = Field(min_length=1)
-    authenticatorData: str = Field(min_length=1)
-    signature: str = Field(min_length=1)
-    userHandle: str | None = None
+    clientDataJSON: str = Field(min_length=1, max_length=BLOB_MAX)
+    authenticatorData: str = Field(min_length=1, max_length=BLOB_MAX)
+    signature: str = Field(min_length=1, max_length=BLOB_MAX)
+    userHandle: str | None = Field(default=None, max_length=200)
 
 
 class RegistrationCredential(_Lenient):
     rawId: str = Field(min_length=1, max_length=1400)
-    type: str = "public-key"
+    type: str = Field(default="public-key", max_length=32)
     response: PasskeyAttestationResponse
 
 
 class AssertionCredential(_Lenient):
     rawId: str = Field(min_length=1, max_length=1400)
-    type: str = "public-key"
+    type: str = Field(default="public-key", max_length=32)
     response: PasskeyAssertionResponse
 
 
