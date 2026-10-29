@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # control-borders: field and toggle borders at 3:1, and the sandbox Trends error
 
@@ -29,9 +29,15 @@ reports "Cannot read properties of null" on Trends. Commit locally only, never p
   page error's stack is Playwright's `UtilityScript.evaluate` predicate, not app code (probe
   `<scratchpad>/borders-agent/sb_probe2.py`). Fix: `?.` in the wait. Before: 4 and 6 issues; after: 0 and 0.
 
+- Docs: CHANGELOG Unreleased (two lines for people, one for maintainers), ARCHITECTURE.md ("Field edges" bullet next to
+  "Text size and keyboard"), tools/e2e/README.md a11y row.
+- Checks on the final tree: full `a11y.py` 828 passed, 0 failed, 259 open (was 784/0 before the new check);
+  `regress.py --no-pytest --only 375-light` 142 passed, 0 failed; `node --test tests/js/*.test.mjs` 166 passed;
+  `run_vectors.mjs` passed; pytest on every `tests/test_*ui*.py`, layout, frontend shell, handbook, learn, e2e tools and
+  preview build files: 1404 passed. Full pytest not run (asked not to).
+
 ## Next
-- CHANGELOG lines, ARCHITECTURE.md (tokens, a11y checks), tools/e2e/README.md a11y row.
-- regress.py --no-pytest --only 375-light; node --test tests/js/*.test.mjs; layout/UI/handbook pytest files.
+- None.
 
 ## Decisions
 - `--border` stays for cards, lists and dividers (also the lines between choices inside a row). Buttons
