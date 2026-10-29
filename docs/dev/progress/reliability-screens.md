@@ -1,6 +1,6 @@
 # Progress: ROADMAP item 1, the other screens that save (Plan, Labs, Profile, weight and blood pressure)
 
-Status: in progress (all work done and committed; the last full pytest run is going)
+Status: complete
 
 Branch: worktree-agent-a4cedbd9f24537640 (local only, never pushed). It started at main's d1ba260, so reliability-2 (499af10)
 was merged first (3094f21). Then `claude/adoring-sagan-th5swr` (head of PR #119) was merged (8f6f265), and two commits from
@@ -59,9 +59,7 @@ Bugs found and fixed:
 tools/e2e/README.md row, reliability.py docstring, docs/ROADMAP.md item 1, CHANGELOG Unreleased (error over sheets, weight
 card, suggested targets), ARCHITECTURE "A failed save on a sheet" section, handbook weight-and-blood-pressure.md (a failed save).
 
-## Next
-
-* Full pytest on the final tree (running; output in the scratchpad's full_pytest2.txt).
+* Full pytest on the final tree (after both cherry-picks): exit 0, no failures.
 
 ## Reproduce
 
