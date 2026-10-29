@@ -1,9 +1,11 @@
 """Static checks for the reliability fixes (`tools/e2e/reliability.py` makes each happen in Chromium): the three bugs from the
 2026-10-29 code review (Today after a day fails to load, unknown values in saved meals, a fitted recipe over the 100-serving
-limit), and from testing the other screens that save: a toast hidden under an open sheet, Labs drawing an old answer, and
-the weight card showing another day while a day loads."""
+limit), and from testing the other screens that save: a toast hidden under an open sheet and the weight card showing another day
+while a day loads."""
 from __future__ import annotations
 
+import shutil
+import subprocess
 from pathlib import Path
 
 from app.models import MAX_RECIPE_SERVINGS
@@ -49,33 +51,11 @@ def test_a_fitted_recipe_is_kept_within_the_servings_limit():
     assert "it.servings * scale" in body  # the amounts shrink instead, so one serving stays the size that fits
 
 
-# ---- the other screens that save (ROADMAP item 1): a failed save, a slow load ----------------------------------------------
-CORE = (ROOT / "app" / "static" / "js" / "core.js").read_text(encoding="utf-8")
-LABS = (VIEWS / "labs.js").read_text(encoding="utf-8")
-BODY = (VIEWS / "body.js").read_text(encoding="utf-8")
-
-
-def test_a_toast_is_shown_inside_an_open_sheet():
-    # An open sheet is a modal dialog (the top layer, the page under it inert): a toast left on the page is hidden under it.
-    host = CORE[CORE.index("function toastHost"):CORE.index("function toastError")]
-    assert "$$('dialog[open]')" in host and "d.matches(':modal')" in host and "document.body" in host
-    assert "if (toastEl.parentElement !== host) host.append(toastEl);" in host
-    close = CORE[CORE.index("function setupDialog"):CORE.index("function openDialog")]
-    assert "if (dlg.contains(toastEl)) document.body.append(toastEl);" in close
-
-
-def test_labs_never_draw_an_answer_asked_for_before_invalidate():
-    load = LABS[LABS.index("function load()"):LABS.index("function newestOf")]
-    # invalidate() drops the request in flight too, and an answer from before it is replaced by a new load (its error as well).
-    assert "function invalidate() { cache.data = null; cache.loading = null; cache.gen += 1; }" in load
-    assert "const gen = cache.gen;" in load
-    assert load.count("if (gen !== cache.gen) return load();") == 2
-    assert "if (cache.loading === loading) cache.loading = null;" in load
-
-
-def test_the_weight_card_never_shows_another_days_weights_while_a_day_loads():
-    body = BODY[BODY.index("async function loadToday"):BODY.index("// ---- the sheets: shared parts")]
-    assert "const req = ++S.req;" in body and body.count("if (req !== S.req) return;") == 1  # a late answer is not drawn
-    clear_at = body.index("if (S.drawnDate !== date) { S.drawnDate = null; clear(todayBody).append(message('Loading…')); }")
-    assert clear_at < body.index("await Promise.allSettled")
-    assert body.index("renderToday(") < body.index("S.drawnDate = date;")
+# ---- the other screens that save (ROADMAP item 1) ------------------------------------------------------------------------
+# tests/js/reliability_ui.test.mjs runs the real code: core.js's toast with a sheet open, and the weight card in body.js while a
+# day loads. Labs drawing an old answer is tests/test_lab_cache.py.
+def test_the_toast_and_the_weight_card_in_node():
+    assert shutil.which("node"), "Node.js is required for the reliability UI checks"
+    runner = ROOT / "tests" / "js" / "reliability_ui.test.mjs"
+    result = subprocess.run(["node", "--test", str(runner)], capture_output=True, text=True, timeout=60)
+    assert result.returncode == 0, result.stdout + result.stderr
