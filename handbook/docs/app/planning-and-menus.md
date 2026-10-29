@@ -67,6 +67,8 @@ A saved meal is a list of foods and amounts you eat often, such as "Usual breakf
 | Change or delete it | **Plan** → **Saved meals** → **Edit** or **Delete** |
 
 Each saved meal shows its total carbohydrate and potassium, and the worst rating of its foods.
+If no food lists a nutrient, its number says **not listed**. If only some foods list it, **≥** means
+"at least" that amount; the missing foods could add more. A listed zero still shows as zero.
 
 ### Recipes
 

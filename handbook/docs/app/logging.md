@@ -19,6 +19,9 @@ shows warnings **before** you save, so you can change the portion first ([archit
 
 ## The quick way: search
 
+When you choose a date in **Today**, the previous day's food and totals clear while it loads.
+If the day's food cannot be loaded, tap **Retry** to try again.
+
 1. Tap **Add**.
 2. Type a few words, for example `rice white`. Every word must match, so fewer words find more. With
    the box empty you see **Recent foods**, the ones you log most recently, first.

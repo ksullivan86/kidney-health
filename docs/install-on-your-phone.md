@@ -94,6 +94,8 @@ working with what this device saved:
   connection. So do settings, barcode lookups and AI.
 * **Today, the last two weeks and the next week** open from the copy saved the last time you
   looked (Today says so and when). Totals include the entries and changes that are waiting.
+  If a day's food cannot be loaded, Today clears the previous day's food and totals and offers
+  **Retry**. It does not show another day's food under the date you chose.
 * **Food search** finds the foods this device has seen (the built-in list is downloaded once a
   day while connected). Barcode lookups, AI ideas and anything else that needs the server wait
   until you are back online.

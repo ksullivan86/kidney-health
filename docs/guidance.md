@@ -254,6 +254,10 @@ Chromium by `tools/e2e/prefs.py`.
 
 ## Recipes that fit
 
+In Plan's saved-meal list, a nutrient no food lists says **not listed**. A partial total shows **≥**
+(at least) and the count of foods that do not list it. Known zero remains zero. This applies to plain
+saved meals and recipes, whose numbers are per serving.
+
 `POST /api/guidance/fit-recipe` checks one serving of a recipe (a saved meal with `servings_made`, or a draft) against the room for a
 meal (the same room as What fits now) or against what is left today (no per-meal cap, no fair share and no carbohydrate check). One
 serving's share of a food is its amount in the whole recipe divided by the servings it makes. The gate is `check_meal` kind `recipe`:

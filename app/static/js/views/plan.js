@@ -7,7 +7,7 @@
   const { h, $, $$, clear, api, state, toast, toastError, router, sheets, confirm } = KH;
   const { NUT, NUTRIENTS, MEALS, MEAL_LABEL, fmtNum, fmtServings, pct } = KH.rules;
   const { KEY_NUMBERS, ROW_NUMBERS, PLAN_CHIPS, WEEKDAYS, LEVEL_TEXT, ratingIcon, plusIcon, dashedIcon, checkIcon, closeIcon,
-    selectedMeal, setMeal, selectedStatus, setStatus, isPlanned, scaledNutrients, impactOn, unknownOf, foodsNotListing, atLeast, atLeastWords } = KH.ui;
+    selectedMeal, setMeal, selectedStatus, setStatus, isPlanned, scaledNutrients, impactOn, unknownOf, notListed, foodsNotListing, atLeast, atLeastWords } = KH.ui;
   const { todayStr, parseDate, addDays, fmtDateLong, fmtMonthDay, fmtRange, weekdayMon, weekStartOf, defaultStatusFor, defaultMealForNow, debounce } = KH.util;
   const { SHOP_KEY } = KH.keys;
 
@@ -140,8 +140,19 @@
     for (const t of meals) {
       const li = h('li', { class: 'saved-meal' });
       const nums = h('div', { class: 'row-nums' });
-      const shown = isRecipe(t) ? t.per_serving : t.totals;
-      for (const k of ROW_NUMBERS) nums.append(h('span', { class: 'n' }, `${NUT[k].short} `, h('b', {}, fmtNum(shown[k], k)), ` ${NUT[k].unit}`));
+      // Plain meals also have per_serving (divided by one), with null for a value no food lists.
+      const shown = t.per_serving;
+      for (const k of ROW_NUMBERS) {
+        const missing = unknownOf(t.unknown, k);
+        if (shown[k] == null) {
+          nums.append(h('span', { class: 'n not-listed', 'aria-label': `${NUT[k].label} not listed` }, `${NUT[k].short} `, h('b', {}, 'not listed')));
+        } else {
+          nums.append(h('span', { class: `n${missing ? ' incomplete' : ''}`,
+            'aria-label': `${NUT[k].label}: ${atLeastWords(fmtNum(shown[k], k), missing)} ${NUT[k].unit}${missing ? `; ${foodsNotListing(missing, k)}, so the total may be higher` : ''}` }, `${NUT[k].short} `,
+            h('b', {}, atLeast(fmtNum(shown[k], k), missing)), ` ${NUT[k].unit}`,
+            missing ? h('span', { class: 'not-listed', title: `${foodsNotListing(missing, k)}, so the total may be higher.` }, ` (${notListed(missing)})`) : null));
+        }
+      }
       li.append(h('div', { class: 'saved-meal-main' },
         ratingIcon(t.kidney_rating),
         h('div', { class: 'row-main' },

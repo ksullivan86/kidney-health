@@ -497,7 +497,9 @@ Mobile-first single page, five views switched client-side (no router library):
    meal / delete. A prominent **meal carbohydrate total** for each meal (type 1), against
    `carbs_per_meal_g`; the snack against `carbs_per_snack_g` when set (Profile "Carbohydrate per
    snack"; the alerts too: `rules_kidney.meal_carb_alerts` says "over the snack goal").
-   Alerts banner at top when any level is `caution`/`over`.
+   Alerts banner at top when any level is `caution`/`over`. When loading a day, clear the previous
+   day's food entries, totals and alerts. A failed load shows an unavailable message and Retry,
+   never another day's food beneath the selected date. Only the latest day request may render.
 2. **Add food**: search box (debounced, `GET /api/foods?q=`), results show name, serving,
    kidney_rating dot and the key numbers; choosing one opens a sheet to pick meal,
    servings or grams, shows the warnings *before* saving. Buttons for "Quick add"
@@ -648,7 +650,9 @@ link with a host and no password, at most 900 characters, never fetched; `""` is
 the stored value, as for `meal_hint`; `null` clears it. The items of a recipe are for the whole pot: `apply` logs them times
 `scale`, so one serving is `scale = 1 / servings_made`. What fits now (`context.load_saved_meals`, and the demo's twin) divides
 each item by `servings_made`, so a recipe is judged and offered one serving at a time. Export and import carry the three fields;
-`per_serving` and `unknown` are worked out again on read. The screens (Plan → saved meals): the editor has **Makes**, **Recipe
+`per_serving` and `unknown` are worked out again on read. Saved-meal cards use `per_serving` for plain meals as well as recipes:
+no listed value says "not listed", partial totals say "at least" (≥) with the missing-food count, and known zero stays zero.
+The screens (Plan → saved meals): the editor has **Makes**, **Recipe
 link** and **Cooking steps**; the list shows one serving's numbers for a recipe and hides a note equal to the old `save_recipe`
 sentence; **Fit to my targets** opens a sheet that calls `POST /api/guidance/fit-recipe` (default target: the recipe's `meal_hint`,
 else the next meal today) and offers **Save as a new recipe** (`POST /api/meals`, name "<name> (fitted)", `servings_made` =

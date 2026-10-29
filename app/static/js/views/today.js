@@ -39,21 +39,27 @@
   let dayRequest = 0;
   async function loadDay() {
     const reqId = ++dayRequest;
+    const date = state.date;
     dateInput.value = state.date;
     dateLabel.textContent = fmtDateLong(state.date);
     backToToday.hidden = state.date === todayStr();
-    if (state.dayLoadedFor !== state.date) mealsEl.style.opacity = '0.6';
+    state.day = null;
+    state.dayLoadedFor = null;
+    for (const el of [alertsEl, $('#projected-alerts'), statusBarsEl, mealsEl, totalsAllEl]) clear(el);
+    $('#guidance-day-insights').hidden = true;
+    mealsEl.append(h('p', { class: 'empty-state', role: 'status' }, 'Loading food for this day…'));
     loadWeekStrip();
     try {
-      const day = await api.day(state.date);
+      const day = await api.day(date);
       if (reqId !== dayRequest) return;
       state.day = day;
-      state.dayLoadedFor = state.date;
+      state.dayLoadedFor = date;
       renderToday();
     } catch (e) {
-      if (reqId === dayRequest) toastError(e);
-    } finally {
-      mealsEl.style.opacity = '';
+      if (reqId !== dayRequest) return;
+      clear(mealsEl).append(h('p', { class: 'empty-state', role: 'status' }, 'Food for this day could not be loaded.'),
+        h('button', { class: 'btn secondary', type: 'button', onclick: () => loadDay() }, 'Retry'));
+      if (!e.handled) toastError(e);
     }
   }
 
