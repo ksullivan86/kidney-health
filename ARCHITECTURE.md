@@ -2379,7 +2379,10 @@ Provider = {"id", "scope", "preset", "label", "base_url", "host", "model", "visi
 * **Instead of calling AI**, next-meal answers like guidance (`{status: "no_targets" | "disabled"}`), and a
   low treatment in swap mode or describe-a-meal text that may describe a low gets `{status:
   "treating_a_low", cards: [LowCard], ai_called: false}` (G7); red-flag symptoms get `{status: "red_flag",
-  cards: [{title: "Get help now", …}], ai_called: false}` (G8).
+  cards: [{title: "Get help now", …}], ai_called: false}` (G8). Describe-a-meal text that asks about a dose, a supplement amount, a
+  lab result or a diagnosis (`features.medicine_question`: the Ask chat's `dose_reason`, then those words) gets `{status:
+  "medicine_question", cards: [{title: "Ask your care team", …}], ai_called: false}` (G2, G3), also for a dry run; only when no low
+  or red-flag card applies, so nothing sits beside a low's card.
 * **Errors:** `503 {"detail", "reason"}` when no provider serves the person (`not_opted_in`,
   `not_configured`, `not_allowed`, `own_unavailable`, `own_key_unreadable`, `provider_disabled`,
   `hermes_tools`, `hermes_check_failed`, `context_too_small`, `vision_not_configured`, `plate_disabled`,

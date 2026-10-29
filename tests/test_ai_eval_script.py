@@ -28,6 +28,7 @@ LABEL = {"status": "ok", "product_name": "Crackers", "serving_text": "5 crackers
                                            "sodium_mg", "potassium_mg", "phosphorus_mg", "calcium_mg")},
          "salt_g": None, "percent_dv": {"sodium": None, "potassium": None, "phosphorus": None, "calcium": None},
          "ingredients_text": None, "label_style": "us_nutrition_facts"}
+DEFAULT_TUNING = {"max_tokens": 1500, "structured_output": "auto", "reasoning_effort": None, "context_tokens": None}
 
 
 def scripted_model(request: Any) -> Any:
@@ -74,7 +75,7 @@ def test_the_live_runner_measures_the_golden_inputs_and_the_safety_set(tmp_path)
     s = rep["summary"]
     assert rep["prompt_version"] and rep["provider"] == {"preset": "openai", "kind": "cloud", "role": "cloud", "upstream": None,
                                                          "model": "gpt-6-luna", "vision_model": "gpt-6-luna",
-                                                         "base_url": "https://api.openai.com/v1"}
+                                                         "base_url": "https://api.openai.com/v1", **DEFAULT_TUNING}
     assert s["safety_cases"] == len(ai_eval.SAFETY_SET) and s["safety_refusal_rate"] == 1.0 and s["unsafe_text_shown"] == 0
     assert s["schema_valid_rate"] == 1.0 and s["next_meal_cases"] == 1 and s["next_meal_with_idea_rate"] == 1.0
     assert s["latency_ms"]["p95"] is not None and rep["p95_limit_ms"] == 15_000
@@ -119,6 +120,56 @@ def test_main_writes_the_report_without_the_key(tmp_path, monkeypatch, capsys):
     data = json.loads(out.read_text())
     assert KEY not in out.read_text() and data["recommended"] is False and "report:" in capsys.readouterr().out
     assert ai_eval.output_path(data).name.endswith("-openai-gpt-6-luna.json")
+
+
+def test_a_safety_question_is_answered_by_the_app_and_never_sent(tmp_path):
+    """The live runs of 2026-10-29 parsed the foods and ignored the dose question (cloud 0 %, local 53 %). Now the app's pre-filter
+    answers nine of the ten texts, so the rate no longer depends on the model."""
+    rep = run(tmp_path)
+    safety = [c for c in rep["calls"] if c["kind"] == "safety"]
+    assert sum(1 for c in safety if not c["ai_called"]) == 9 and len(safety) == 10
+
+
+def test_a_run_uses_the_servers_output_tuning_from_the_same_variables(tmp_path, monkeypatch):
+    """A cloud run sends what the server sends: AI_CLOUD_STRUCTURED_OUTPUT and AI_CLOUD_MAX_TOKENS, not the defaults."""
+    from test_ai_cloud_env import config_of
+
+    env = {"AI_CLOUD_STRUCTURED_OUTPUT": "json_object", "AI_CLOUD_MAX_TOKENS": "4096", "AI_MAX_TOKENS": "900"}
+    tuning = ai_eval.tuning_from_env(env, "cloud")
+    assert tuning == {"max_tokens": 4096, "structured": "json_object", "reasoning_effort": None, "context_tokens": None}
+    assert ai_eval.tuning_from_env(env, "local")["max_tokens"] == 900  # the local role reads AI_*
+    cfg = config_of(ai_eval.settings_for(proxy_options(**tuning), tmp_path / "cloud"), "cloud")
+    assert (cfg.max_tokens, cfg.structured) == (4096, "json_object")
+    assert ai_eval.report(proxy_options(**tuning), [])["provider"]["structured_output"] == "json_object"
+
+    seen: dict[str, Any] = {}
+    monkeypatch.setattr(ai_eval, "run_eval", lambda options: seen.setdefault("o", options) and ai_eval.report(options, []))
+    for name, value in env.items():
+        monkeypatch.setenv(name, value)
+    ai_eval.main(["--provider", "openai", "--model", "m", "--runs", "1", "--out", str(tmp_path / "r.json")])
+    assert (seen["o"].max_tokens, seen["o"].structured) == (4096, "json_object")
+
+
+def test_a_long_run_is_not_stopped_by_the_password_check(tmp_path, monkeypatch):
+    """Every case changes an admin setting (the recipe-steps switch), so after REAUTH_MINUTES (10) a run died with "Please enter
+    your password again". The run's own server allows a day."""
+    from datetime import timedelta
+
+    from app.auth import clock
+
+    real, later = clock.now, timedelta()
+
+    def log(line: str) -> None:  # each case runs 11 minutes after the one before
+        nonlocal later
+        later += timedelta(minutes=11)
+
+    monkeypatch.setattr(clock, "now", lambda: real() + later)
+    provider = FakeProvider(route=scripted_model)
+    options = ai_eval.Options(preset="openai", model="m", api_key=KEY, cases=r"^(baseline-good-idea|recipes-good-recipe)$", safety=False)
+    rep = ai_eval.run_eval(options, transport_factory=provider.factory, data_dir=tmp_path / "run", log=log)
+    assert later >= timedelta(minutes=22) and rep["summary"]["recipe_cases"] == 1 and not rep["summary"]["errors"]
+    assert rep["summary"]["steps_dropped_rate"] == 0.5  # the steps switch was on for the recipe case
+    assert ai_eval.settings_for(ai_eval.Options(preset="openai", model="m"), tmp_path).reauth_minutes == ai_eval.RUN_REAUTH_MINUTES == 1440
 
 
 def test_runs_must_be_positive():
@@ -177,7 +228,7 @@ def test_the_report_records_the_role_and_the_company(tmp_path):
     options = proxy_options(cases=r"^(baseline-good-idea|vision-not-a-label)$", safety=False)
     rep = ai_eval.run_eval(options, transport_factory=provider.factory, data_dir=tmp_path, log=lambda line: None)
     assert rep["provider"] == {"preset": "litellm", "kind": "self_hosted", "role": "cloud", "upstream": "Anthropic", "model": "claude-sonnet",
-                               "vision_model": "claude-sonnet", "base_url": CLOUD_URL}
+                               "vision_model": "claude-sonnet", "base_url": CLOUD_URL, **DEFAULT_TUNING}
     assert rep["p95_limit_ms"] == 15_000  # the cloud limit follows the role, not the preset's kind
     assert KEY not in json.dumps(rep) and rep["summary"]["ai_calls"] == 2
     local = ai_eval.report(ai_eval.Options(preset="ollama", model="m"), [])
