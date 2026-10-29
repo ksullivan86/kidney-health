@@ -55,6 +55,10 @@ its outbound proxy pointing nowhere, so nothing can leave the machine.
 
 ## Running
 
+The regression walk recognizes both Chromium wordings for blocked inline styles in malformed-XML error documents.
+That exception is limited to the controlled broken XML fixtures, `error` severity and the app's `style-src 'self'` directive;
+other console/CSP errors still fail the walk, and the fixture-error count remains bounded.
+
 Run from the repository root (or anywhere: the harnesses find the repository from their own path).
 
 ```bash
