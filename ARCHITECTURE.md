@@ -2072,7 +2072,12 @@ values), noted `filled_from_<src>:<key>`; flags and additives are the union.
   edge), Plan's day chips, the saved-meal cards on Plan, the saved-meal shortcuts on Add and the "Add a saved meal" sheet (from
   the meal's `unknown` and `per_serving`) the same. The guidance meals (`FamiliarMeal`, `PlanMeal`, `Closest`) and AI ideas carry
   `unknown`, the keys of `totals` some food does not list (`unknown_json` in `app/guidance/fits.py`, `unknownJson` in the twin):
-  their chips, the meal sheet, the plan and the idea cards show those totals as "≥ …" or "… not listed"; the entry sheet's impact says "would reach at least …". The twin uses
+  their chips, the meal sheet, the plan and the idea cards show those totals as "≥ …" or "… not listed"; the entry sheet's impact says "would reach at least …".
+  Swap ideas (`SwapIdea.deltas`) hold `null` for a nutrient either food does not list, and the swap, smaller-portion and
+  low-treatment texts say "carbs not listed" / "potassium not listed" (`amount_word` / `amountWord`); a low-treatment row shows
+  "potassium not listed" too. The Fit to my targets sheet reads `before`/`after` `unknown` and `per_serving`: a row is "≥ …" on
+  grey (`fit-unknown`, never the green `fit-ok`) or "not listed", and each change line says "at least" (`amount_text` /
+  `amountText`). The UNKNOWN cases of the guidance vectors and `tests/test_unknown_swaps_fit_ui.py` check both sides. The twin uses
   `KH.rules.countUnknown` / `mergeUnknown` / `markUnknown` (twins of `nutrients.count_unknown` / `merge_unknown` /
   `mark_unknown`) and is compared with the server by `tests/test_unknown_values_twin.py` and `tools/e2e/parity.py`.
 

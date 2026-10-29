@@ -21,6 +21,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 * **Meal suggestions say "≥" or "not listed" too.** The meals in What fits now, the day plan, AI meal ideas and the
   "Add a saved meal" sheet no longer show 0 for a value a food does not list.
+* **Swap ideas and Fit to my targets say "not listed" or "at least" too.** A swap idea, its smaller portion and a low
+  treatment say "potassium not listed" when the food does not list it, instead of 0 or nothing. On Fit to my targets, a
+  number that leaves out a food shows as "≥" on a grey row, and each change line says "at least".
 * **Share or copy the shopping list.** Plan → Shopping list has **Share list** (on a phone) and **Copy list**: what is not
   ticked yet, as text, for any list app.
 * **Show other foods.** What fits now has a **Show other foods** button that finds foods not already on the list, and

@@ -8,8 +8,13 @@ Branch `worktree-agent-aec7bcc7cd9e8f4d1` (local only, never pushed). Continues 
 * Merged `claude/adoring-sagan-th5swr` (PR 119 head); conflicts in ARCHITECTURE.md, docs/accounts.md, handbook
   settings-and-keys.md and tools/e2e/reliability.py were only additions from that branch, taken as they are (f62c30c).
 
+* Old vs new: a copy of the tree with the 9 feature files from 2165c19 (before the WIP) fails 13 of the 107 tests below
+  (and 8 of 132 JS vector checks); this tree passes 107 of 107 (`-o addopts=""` prints the count).
+* Docs: ARCHITECTURE.md (guidance meals paragraph), docs/guidance.md (swaps, recipes that fit, treating a low), handbook
+  app/guidance.md and app/planning-and-menus.md, CHANGELOG Unreleased, ROADMAP item 2 marked done. Docs tests: 677 passed.
+
 ## Next
-* Old-vs-new test runs; docs (ARCHITECTURE, docs/guidance.md, handbook, CHANGELOG, ROADMAP); full pytest.
+* Full pytest run in the background.
 * Checked the WIP code: swaps (null deltas, "not listed" texts), the fit sheet (rows "≥"/"not listed", grey row, carbs line)
   and the recipe change lines ("at least"). All WIP tests pass.
 * Added: `fit_text` (What fits now) says "carbs not listed" instead of "0 g carbs" (server + twin; not reachable today

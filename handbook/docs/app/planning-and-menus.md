@@ -87,7 +87,9 @@ what is left today. If it does not fit, the app tries these in order and stops a
    changed.
 3. A smaller serving: ¾, then ½.
 
-Every change is listed with the app's figures. Nothing changes until you choose:
+Every change is listed with the app's figures. If a food in the recipe does not list a value, the numbers count only the
+other foods, so they say "at least" or "≥" and the row is grey, not green. A value no food lists says "not listed".
+Nothing changes until you choose:
 
 * **Save as a new recipe** keeps your recipe and adds "<name> (fitted)". A smaller serving is saved as more servings from
   the same pot, so one saved serving is the size that fits. A recipe makes at most 100 servings: when more would be needed,
