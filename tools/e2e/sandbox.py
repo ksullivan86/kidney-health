@@ -712,8 +712,10 @@ class Run:
         self.shot("trends-viewport")
         self.checks("Trends 14 d", contrast=True)
         for d in (7, 14, 30):  # 14 is the default: 7 first so that every button changes something
+            # The title changes at once and the charts a moment later. Until then #charts holds only "Loading food trends…",
+            # so there is no chart yet: the wait must not read .hit from null (that threw, and was reported as a page error).
             self.press(f".seg[data-days='{d}']", f"Trends {d} days", wait=self.wait_fn(
-                "(d) => document.querySelector('#trends-title').textContent === `Last ${d} days` && document.querySelector('#charts .chart-card svg').querySelectorAll('.hit').length === d", d))
+                "(d) => document.querySelector('#trends-title').textContent === `Last ${d} days` && document.querySelector('#charts .chart-card svg')?.querySelectorAll('.hit').length === d", d))
             pressed = F.evaluate("(d) => document.querySelector(`.seg[data-days='${d}']`).getAttribute('aria-pressed')", d)
             if pressed != "true":
                 self.issue("trends", f"{d} d button not marked pressed", f"aria-pressed={pressed}", "low")

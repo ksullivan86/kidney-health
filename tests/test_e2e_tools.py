@@ -96,6 +96,14 @@ def test_a11y_reads_the_pixels_of_a_browser_picture():
     assert round(ratio((215, 219, 226), (255, 255, 255)), 2) == 1.39  # the old field edge
 
 
+def test_sandbox_waits_for_the_trends_charts_without_reading_null():
+    """Pressing 7 d changes the title at once and draws the charts a moment later. The wait read the first chart before it was
+    there and threw "Cannot read properties of null", which the walk reported as a page error on Trends."""
+    text = (E2E / "sandbox.py").read_text(encoding="utf-8")
+    waits = [line for line in text.splitlines() if "querySelectorAll('.hit').length === d" in line]
+    assert waits and all("#charts .chart-card svg')?.querySelectorAll" in line for line in waits)
+
+
 def test_readme_documents_every_harness():
     readme = (E2E / "README.md").read_text(encoding="utf-8")
     for name in HARNESSES:
