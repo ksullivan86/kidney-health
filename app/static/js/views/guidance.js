@@ -381,7 +381,9 @@
   // ---------------------------------------------------------------------------
   // "What fits now" (Add view)
   // ---------------------------------------------------------------------------
-  const fits = { meal: null, request: 0, last: null, ai: null }; // ai: the AI order for last.meal/date, or null
+  // ai: the AI order for last.meal/date, or null. exclude: the food ids already shown for excludeFor ("Show other foods").
+  const fits = { meal: null, request: 0, last: null, ai: null, exclude: [], excludeFor: null, focusOther: false };
+  const MAX_EXCLUDE = 60; // the server's limit (parse_exclude in app/guidance/api.py)
   const fitsEl = $('#guidance-fits');
   const fitsBody = $('#guidance-fits-body');
   const fitsStatus = $('#guidance-fits-status');
@@ -423,8 +425,10 @@
     $('#guidance-fits-clear').hidden = false;
     fitsBody.setAttribute('aria-busy', 'true');
     clear(fitsBody).append(loadingNote(`Finding foods that fit ${MEAL_LABEL[meal].toLowerCase()}…`));
+    if (fits.excludeFor !== `${date}:${meal}`) { fits.exclude = []; fits.excludeFor = `${date}:${meal}`; }
+    const exclude = fits.exclude.join(',');
     try {
-      const { data, at } = await remembered(`next:${date}:${meal}`, () => api.nextMeal({ meal, date }));
+      const { data, at } = await remembered(`next:${date}:${meal}:${exclude}`, () => api.nextMeal(exclude ? { meal, date, exclude } : { meal, date }));
       if (reqId !== fits.request) return;
       noteAnswer(data);
       if (!fits.last || fits.last.meal !== meal || fits.last.date !== date) fits.ai = null;
@@ -478,7 +482,10 @@
       }
       fitsBody.append(sec);
     }
-    if (!foods.length) fitsBody.append(h('p', { class: 'empty-state' }, `No foods in your list fit ${mealWord} within what is left today. Try a smaller portion of something you like, or plan the rest of the day.`));
+    if (!foods.length && fits.exclude.length) fitsBody.append(h('p', { class: 'empty-state' }, `No other foods in your list fit ${mealWord} within what is left today.`));
+    else if (!foods.length) fitsBody.append(h('p', { class: 'empty-state' }, `No foods in your list fit ${mealWord} within what is left today. Try a smaller portion of something you like, or plan the rest of the day.`));
+    const other = otherFoods(foods);
+    if (other) fitsBody.append(other);
     const saved = res.saved_meals || [];
     if (saved.length) {
       const hid = uid('g-saved');
@@ -496,6 +503,26 @@
     const n = notes(res.notes);
     if (n) fitsBody.append(n);
     fitsStatus.textContent = `${foods.length} ${foods.length === 1 ? 'food fits' : 'foods fit'} ${mealWord}${saved.length ? `, and ${saved.length} ${saved.length === 1 ? 'meal' : 'meals'}` : ''}. ${res.room_text}`;
+  }
+  // "Show other foods": ask again without the foods on the list now, and keep going until none are left.
+  function otherFoods(foods) {
+    const row = h('p', { class: 'settings-actions g-other' });
+    if (foods.length) {
+      row.append(btn('Show other foods', 'secondary', () => {
+        const next = [...fits.exclude, ...foods.map((f) => f.food_id)];
+        fits.exclude = next.length > MAX_EXCLUDE ? foods.map((f) => f.food_id) : next;
+        fits.focusOther = true;
+        loadFits();
+      }, { id: 'g-fits-other' }));
+    }
+    if (fits.exclude.length) {
+      row.append(linkBtn('Back to the first choices', () => { fits.exclude = []; fits.focusOther = true; loadFits(); }, { id: 'g-fits-first' }));
+    }
+    if (fits.focusOther) {
+      fits.focusOther = false;
+      setTimeout(() => { const b = $('#g-fits-other') || $('#g-fits-first'); if (b) b.focus(); }, 0);
+    }
+    return row.childElementCount ? row : null;
   }
   function tipTitle(tip) {
     const page = GE && GE.T && GE.T.TOPIC_PAGES[tip.handbook];

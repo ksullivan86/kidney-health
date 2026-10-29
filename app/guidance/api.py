@@ -15,6 +15,7 @@ is never switched off.
 from __future__ import annotations
 
 import logging
+import re
 import sqlite3
 from datetime import date as _date, datetime
 from pathlib import Path
@@ -101,6 +102,20 @@ def parse_day(value: str | None, name: str = "date") -> str:
         raise HTTPException(status_code=400, detail=f"{name}: {exc}") from exc
 
 
+MAX_EXCLUDE = 60  # food ids in "exclude": two or three rounds of "Show other foods"
+EXCLUDE_ERROR = f"exclude: a comma list of at most {MAX_EXCLUDE} food ids"
+
+
+def parse_exclude(value: str | None) -> frozenset[int]:
+    """``exclude=12,40,7``: the food ids already shown, so the next answer finds others."""
+    if value is None or value == "":
+        return frozenset()
+    parts = value.split(",")
+    if len(value) > 13 * MAX_EXCLUDE or len(parts) > MAX_EXCLUDE or not all(re.fullmatch(r"[0-9]{1,12}", p) for p in parts):
+        raise HTTPException(status_code=400, detail=EXCLUDE_ERROR)
+    return frozenset(int(p) for p in parts)
+
+
 RECIPE_UNAVAILABLE = "A food in this recipe is no longer in your food list. Edit the recipe first."
 
 
@@ -146,10 +161,13 @@ def next_meal(
     date: str | None = None,
     limit: Annotated[int, Query(ge=1, le=R.MAX_LIMIT)] = R.DEFAULT_LIMIT,
     explain: bool = False,
+    exclude: str | None = None,
     conn: sqlite3.Connection = Depends(get_db),
 ) -> dict[str, Any]:
-    """What fits now (§4.5): foods, saved and usual meals that fit ``meal`` on ``date``."""
+    """What fits now (§4.5): foods, saved and usual meals that fit ``meal`` on ``date``; ``exclude`` leaves out foods
+    already shown."""
     day = parse_day(date)
+    skip = parse_exclude(exclude)
     store = settings_store(request)
     off = gate(conn, store, user.id)
     if off is not None:
@@ -157,7 +175,7 @@ def next_meal(
     ctx = load_ctx(request, conn, user.id, day)
     if not C.has_targets(ctx.profile):
         return unavailable("no_targets", M.NO_TARGETS)
-    result = what_fits(ctx, meal, limit=limit, explain=explain)
+    result = what_fits(ctx, meal, limit=limit, explain=explain, exclude=skip)
     result["ai"] = ai_status(conn, user.id)
     result["targets"] = targets_used(ctx)
     return result

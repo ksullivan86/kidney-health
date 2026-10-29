@@ -327,7 +327,7 @@ function guidanceVectors(GE, file = GUIDANCE_VECTORS) {
       return { open_meals: [...room.open_meals], room: GE.roomJson(room), meal_has: { ...room.meal_has }, meal_high_k: room.meal_high_k,
         day_high_k: room.day_high_k, usage_weight: { ...room.usage_weight }, day_left: dayLeft };
     }
-    if (fn === 'what_fits') return GE.whatFits(ctx, spec.meal, spec.limit == null ? GE.R.DEFAULT_LIMIT : spec.limit, !!spec.explain);
+    if (fn === 'what_fits') return GE.whatFits(ctx, spec.meal, spec.limit == null ? GE.R.DEFAULT_LIMIT : spec.limit, !!spec.explain, null, new Set(spec.exclude || []));
     if (fn === 'find_swaps') return GE.findSwaps(ctx, spec.meal, ctx.foods.get(spec.food_id), spec.servings, spec.purpose || null, GE.R.SWAP_MAX, !!spec.explain);
     if (fn === 'hypo_options') return GE.hypoOptions(ctx);
     if (fn === 'plan_day') {

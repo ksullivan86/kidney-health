@@ -187,7 +187,9 @@ Where the data goes depends on the provider your admin chose (the consent sheet 
   card lists the foods with their warnings, the totals, what is left today after it, up to two
   handbook links, the label "AI idea · provider · model · checked against your targets · not medical
   advice", how many AI ideas the rules left out and why, and **Add to plan** (planned entries through
-  the ordinary log). If every idea is left out, the app's own ideas are shown instead.
+  the ordinary log). If every idea is left out, the app's own ideas are shown instead. **Other ideas** sends
+  `exclude_food_ids` (the foods of the ideas shown so far, at most 60), so the candidates are new foods; AI recipes have
+  **Other recipes** the same way (ingredients such as oil and flour stay).
 * **Turning it on.** Settings → **AI ideas** → **Use AI ideas** (off by default). The section says when
   AI is off on the server. Choose the provider your admin offers, or your own key when allowed.
 * **Where each feature runs.** Once your admin has set up routing, Settings → AI ideas lists one line per

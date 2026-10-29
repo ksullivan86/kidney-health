@@ -14,6 +14,7 @@ from app.ai import presets as P
 from app.ai import recipes as AR
 from app.config import AiEnv
 from app.guidance.messages import BANNED_PATTERN
+from app.guidance.rules import INGREDIENT_FLAG
 from app.main import create_app
 
 DAY = "2026-10-05"
@@ -112,6 +113,34 @@ def test_a_bad_body_is_refused(c, body):
 # --------------------------------------------------------------------------- #
 # What is sent
 # --------------------------------------------------------------------------- #
+
+
+def test_other_recipes_leave_out_the_main_foods_already_shown_but_keep_ingredients(tmp_path):
+    from pathlib import Path
+
+    real = Path(__file__).resolve().parents[1] / "data" / "foods.json"
+    settings = make_settings(tmp_path, real, ai=AiEnv(provider="openai", api_key=KEY, model="gpt-6-luna"))
+    with TestClient(create_app(settings), base_url=HTTPS_URL) as c:
+        sign_in(c)
+        on(c)
+        ready(c)
+        check_other_recipes(c)
+
+
+def check_other_recipes(c: TestClient) -> None:
+    body = {"mode": "suggest", "dish": "salad", "makes": 2, "meal": "lunch", "date": DAY}
+
+    def candidates(**extra: Any) -> list[dict[str, Any]]:
+        dry = c.post("/api/ai/recipes?dry_run=true", json={**body, **extra}).json()
+        return json.loads(dry["body"]["messages"][-1]["content"].split("<data>\n", 1)[1].split("\n</data>", 1)[0])["candidates"]
+
+    with attach(c.app, FakeProvider([])) as provider:
+        shown = [f["id"] for f in candidates()]
+        again = {f["id"] for f in candidates(exclude_food_ids=shown)}
+        assert provider.calls == 0
+    ingredients = {fid for fid in shown if INGREDIENT_FLAG in c.get(f"/api/foods/{fid}").json()["flags"]}
+    assert ingredients and ingredients <= again  # oil, flour and the like stay: nearly every recipe needs them
+    assert again - ingredients and not (again - ingredients) & set(shown)  # the main foods are new ones
 
 
 @pytest.mark.safety
