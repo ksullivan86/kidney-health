@@ -17,7 +17,7 @@ recovery trustworthy before more AI or native-app features.
    `tools/e2e/profile_reliability.py`. `tools/e2e/health_save_retry.py` checks weight, blood pressure and Labs on phone
    and desktop layouts. The saved-meal editor's failed save and retry are checked by `reliability.py`.
    Recipe apply also checks the preview against the stored servings, plus a failed apply and its retry.
-   Still to test the same way: Plan's day-copy action.
+   Day copy checks that failure keeps the date, meal choices and status; retry copies the selected entries once and leaves the source unchanged.
 2. **Unknown, zero and partial, the same on every screen.** Today, Trends, saved meals and the Add tab's shortcuts say "not listed"
    and "≥". So do the "Add a saved meal" sheet, the meals in What fits now and the day plan, and AI meal ideas (`unknown` next
    to each meal's `totals`). The New/Edit saved-meal preview marks them as ingredients or Makes change.

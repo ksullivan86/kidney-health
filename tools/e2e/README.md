@@ -56,6 +56,9 @@ its outbound proxy pointing nowhere, so nothing can leave the machine.
 
 ## Running
 
+`reliability.py` checks Copy day's server failure and retry too: dates, meal choices and status stay
+selected; the retry sends the same body, copies the selected entries once and leaves the source unchanged.
+
 The recipe-serving checks in `reliability.py` compare the Add-to-a-day preview, API scale and stored
 entries for one and two recipe servings. A failed apply keeps the count and date; retry sends the
 same body and logs one serving once.

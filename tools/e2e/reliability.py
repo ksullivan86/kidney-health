@@ -345,6 +345,51 @@ def walk_apply_servings(page: Any, person: Any, recipe_id: int) -> None:
         page.remove_listener("request", request_sent)
 
 
+def walk_copy_retry(page: Any, person: Any) -> None:
+    source = date.today().isoformat()
+    target = (date.today() + timedelta(days=5)).isoformat()
+    before = person.json("GET", "/api/log", params={"date": source})["entries"]
+    chosen = [entry for entry in before if entry["meal"] == "breakfast"]
+    path = "/api/log/copy-day"
+    pattern = f"**{path}"
+    sent: list[dict[str, Any]] = []
+
+    def request_sent(request: Any) -> None:
+        if request.method == "POST" and urlsplit(request.url).path == path:
+            sent.append(json.loads(request.post_data))
+
+    page.on("request", request_sent)
+    try:
+        page.evaluate("([from, to]) => KH.views.plan.openCopySheet({from, to})", [source, target])
+        for meal in ("lunch", "dinner", "snack"):
+            page.uncheck(f"#copy-m-{meal}")
+        page.route(pattern, lambda route: route.fulfill(status=500, content_type="application/json", body=json.dumps({"detail": "Test copy failure"})))
+        with page.expect_response(lambda response: response.request.method == "POST" and urlsplit(response.url).path == path) as response:
+            page.click("#copy-save")
+        page.wait_for_function("() => !document.querySelector('#copy-save').disabled")
+        check("Copy day: the first save reached the injected 500", response.value.status == 500)
+        check("Copy day: failure keeps dates, selected meal and status for retry",
+              page.is_visible("#sheet-copy") and page.input_value("#copy-from") == source and page.input_value("#copy-to") == target
+              and page.is_checked("#copy-m-breakfast") and not any(page.is_checked(f"#copy-m-{meal}") for meal in ("lunch", "dinner", "snack"))
+              and page.is_checked("#cstatus-planned"))
+        check("Copy day: nothing is stored after the refused copy", person.json("GET", "/api/log", params={"date": target})["entries"] == [])
+        page.unroute(pattern)
+        with page.expect_response(lambda response: response.request.method == "POST" and urlsplit(response.url).path == path) as response:
+            page.click("#copy-save")
+        page.wait_for_selector("#sheet-copy", state="hidden")
+        check("Copy day: retry sends the same selected-meal body", response.value.status == 201 and len(sent) == 2 and sent[0] == sent[1]
+              and sent[-1].get("meals") == ["breakfast"])
+        copied = person.json("GET", "/api/log", params={"date": target})["entries"]
+        fields = ("food_id", "servings", "grams", "note", "purpose", "meal")
+        check("Copy day: retry copies exactly the selected entries once as planned",
+              bool(chosen) and len(copied) == len(chosen) and all(entry["status"] == "planned" for entry in copied)
+              and sorted(tuple(entry.get(field) for field in fields) for entry in copied) == sorted(tuple(entry.get(field) for field in fields) for entry in chosen))
+        check("Copy day: the source day is unchanged", person.json("GET", "/api/log", params={"date": source})["entries"] == before)
+    finally:
+        page.unroute(pattern)
+        page.remove_listener("request", request_sent)
+
+
 def walk_lab_cache(page: Any) -> None:
     """Deferred list/function replies reproduce a save invalidating an older read, without writes."""
     result = page.evaluate("""async () => {
@@ -458,7 +503,8 @@ def main(argv: list[str] | None = None) -> int:
                                    ("Shared cache", lambda: walk_shared_state_cache(page)), ("Saved meals", lambda: walk_saved_meals(page)),
                                    ("Fit data gaps", lambda: walk_fit_unknown(page)),
                                    ("Meal editor", lambda: walk_meal_editor(page)), ("Recipe", lambda: walk_recipe(page, recipe)),
-                                   ("Recipe servings", lambda: walk_apply_servings(page, ana, four))):
+                                   ("Recipe servings", lambda: walk_apply_servings(page, ana, four)),
+                                   ("Copy retry", lambda: walk_copy_retry(page, ana))):
                     try:  # each step on its own, so one bug does not hide the others
                         walk()
                     except Exception:
