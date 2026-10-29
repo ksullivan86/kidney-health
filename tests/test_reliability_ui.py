@@ -33,6 +33,7 @@ def test_saved_meals_never_show_an_unknown_value_as_zero():
     assert "unknownOf(t.unknown, k)" in rows or "unknownOf(t.unknown,k)" in rows
     assert "t.per_serving[k] == null" in rows and "'not listed'" in rows
     assert "atLeast(" in rows and "atLeastWords(" in rows
+    assert "` (${notListed(unk)})`" in rows  # "K ≥ 55 (+ 1 not listed)", as on Today's meal lines
     chips = ADD[ADD.index("saved-shortcuts-list"):]
     assert "'not listed'" in ADD and "atLeast(" in chips and "atLeastWords(" in chips
     assert "unknownOf, atLeast, atLeastWords" in ADD

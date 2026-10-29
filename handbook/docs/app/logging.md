@@ -61,7 +61,7 @@ Use **Add → Quick add** for a packaged food that is not in the list.
    bar on **Today** shows "≥ 55 / 3,500 mg" or "not listed" with **Not complete** (never a green
    **OK**) and "1 food does not list potassium, so the total may be higher", the meal line reads
    "K ≥ 55 (+ 1 not listed)", and **Trends**, **Plan** and the 7-day averages mark those days
-   "not complete". A saved meal with that food shows "K ≥" or "K not listed" the same way, on **Plan**, in the
+   "not complete". A saved meal with that food shows "K ≥ 55 (+ 1 not listed)" or "K not listed" the same way, on **Plan**, in the
    shortcuts on **Add**, in **What fits now**, in a day plan and in AI meal ideas.
 4. Copy the ingredient list into **Ingredients** (optional, but worth it). The app checks it as you
    type and shows "Phosphate additives" or "Potassium additives" when it finds one (for example sodium

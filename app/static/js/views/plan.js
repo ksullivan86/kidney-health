@@ -7,7 +7,7 @@
   const { h, $, $$, clear, api, state, toast, toastError, router, sheets, confirm } = KH;
   const { NUT, NUTRIENTS, MEALS, MEAL_LABEL, fmtNum, fmtServings, pct } = KH.rules;
   const { KEY_NUMBERS, ROW_NUMBERS, PLAN_CHIPS, WEEKDAYS, LEVEL_TEXT, ratingIcon, plusIcon, dashedIcon, checkIcon, closeIcon,
-    selectedMeal, setMeal, selectedStatus, setStatus, isPlanned, scaledNutrients, impactOn, unknownOf, foodsNotListing, atLeast, atLeastWords } = KH.ui;
+    selectedMeal, setMeal, selectedStatus, setStatus, isPlanned, scaledNutrients, impactOn, unknownOf, notListed, foodsNotListing, atLeast, atLeastWords } = KH.ui;
   const { todayStr, parseDate, addDays, fmtDateLong, fmtMonthDay, fmtRange, weekdayMon, weekStartOf, defaultStatusFor, defaultMealForNow, debounce } = KH.util;
   const { SHOP_KEY } = KH.keys;
 
@@ -155,8 +155,10 @@
         const none = !!t.per_serving && t.per_serving[k] == null; // the server sends null when no food in it lists the value
         nums.append(none
           ? h('span', { class: 'n', title: foodsNotListing(unk, k) }, `${NUT[k].short} `, h('b', {}, 'not listed'))
-          : h('span', { class: 'n', title: unk ? foodsNotListing(unk, k) : null, 'aria-label': `${NUT[k].label} ${atLeastWords(fmtNum(shown[k], k), unk)} ${NUT[k].unit}` },
-            `${NUT[k].short} `, h('b', {}, atLeast(fmtNum(shown[k], k), unk)), ` ${NUT[k].unit}`));
+          : h('span', { class: 'n', title: unk ? foodsNotListing(unk, k) : null,
+            'aria-label': `${NUT[k].label} ${atLeastWords(fmtNum(shown[k], k), unk)} ${NUT[k].unit}${unk ? `; ${foodsNotListing(unk, k)}` : ''}` },
+            `${NUT[k].short} `, h('b', {}, atLeast(fmtNum(shown[k], k), unk)), ` ${NUT[k].unit}`,
+            unk ? h('span', { class: 'not-listed' }, ` (${notListed(unk)})`) : null)); // as on Today's meal lines: "K ≥ 55 (+ 1 not listed)"
       }
       li.append(h('div', { class: 'saved-meal-main' },
         ratingIcon(t.kidney_rating),

@@ -139,7 +139,8 @@ def walk_saved_meals(page: Any) -> None:
     mixed = next((r for r in rows if "Crackers and banana" in r), "")
     check("Plan: a saved meal whose food lists no potassium or phosphorus says 'not listed', never 0",
           "K not listed" in only and "not listed" in only.split("P", 1)[-1] and " 0 mg" not in only, only)
-    check("Plan: a saved meal where only some foods list potassium shows '≥'", "K ≥" in mixed, mixed)
+    check("Plan: a saved meal where only some foods list potassium shows '≥' and how many do not",
+          "K ≥" in mixed and "(+ 1 not listed)" in mixed, mixed)
     page.click("#tab-add")
     page.wait_for_selector("#saved-shortcuts-list .meal-chip", timeout=15000)
     chips = text_of(page, "#saved-shortcuts-list")
