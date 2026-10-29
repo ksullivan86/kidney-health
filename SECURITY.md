@@ -33,11 +33,11 @@ If you find a way to make it do either, report it as a security issue.
 
 | Version | Supported |
 |---|---|
-| 0.9.x (latest minor) | Yes: security fixes are released as 0.9.x patch versions |
-| 0.8.x and older | No: upgrade to 0.9 ([`docs/deployment.md`](docs/deployment.md#from-v08-to-v09), [`CHANGELOG.md`](CHANGELOG.md#090--2026-10-29)) |
+| 0.10.x (latest minor) | Yes: security fixes are released as 0.10.x patch versions |
+| 0.9.x and older | No: upgrade to 0.10 ([`docs/deployment.md`](docs/deployment.md#from-v09-to-v010), [`CHANGELOG.md`](CHANGELOG.md#0100--2026-10-29)) |
 | `:edge` (builds from `main`) | Best effort; for testing only |
 
-Track the minor tag (`ghcr.io/ksullivan86/kidney-health:0.9`) or a digest you verified, not
+Track the minor tag (`ghcr.io/ksullivan86/kidney-health:0.10`) or a digest you verified, not
 `:latest` or `:edge`.
 
 ## Verifying the image before you run it
@@ -52,7 +52,7 @@ commands below succeed only for images released after it went public.
 The script does all of it and prints the digest to pin:
 
 ```bash
-scripts/verify-image.sh 0.9.0      # a release; or 0.9, edge, or sha256:<digest>
+scripts/verify-image.sh 0.10.0     # a release; or 0.10, edge, or sha256:<digest>
 ```
 
 By hand (**cosign 3.0 or later**, a current `gh` with the `attestation` command, and `crane` or
@@ -62,7 +62,7 @@ attached to the image as an OCI 1.1 referrer; cosign 2.4 and 2.5 cannot find suc
 signatures found" even for a genuine image:
 
 ```bash
-D=$(crane digest ghcr.io/ksullivan86/kidney-health:0.9.0)
+D=$(crane digest ghcr.io/ksullivan86/kidney-health:0.10.0)
 
 # 1. Signature: made by this repository's release workflow, for a v* tag, via GitHub's OIDC issuer.
 cosign verify "ghcr.io/ksullivan86/kidney-health@$D" \
@@ -77,7 +77,7 @@ gh attestation verify "oci://ghcr.io/ksullivan86/kidney-health@$D" --repo ksulli
   --predicate-type https://spdx.dev/Document/v2.3
 ```
 
-Then deploy **by digest** (`ghcr.io/ksullivan86/kidney-health:0.9.0@sha256:…`), or track `:0.9`
+Then deploy **by digest** (`ghcr.io/ksullivan86/kidney-health:0.10.0@sha256:…`), or track `:0.10`
 with auto-update. Podman cannot enforce these signatures at pull time (its `policy.json` needs a
 `subjectEmail`, and GitHub's certificates carry a workflow URI instead), so verify before you pin.
 For `:edge` images, the certificate identity ends in `@refs/heads/main`.
