@@ -14,8 +14,9 @@ reading and Scan, which opens without a camera). On each:
 2. **Names.** Every button, link, field, tab and image has an accessible name (Chromium's accessibility tree,
    through the DevTools protocol). Every field has a label, not only a placeholder. The places where the app
    announces things are live regions.
-3. **Large text.** With the root font size at 200 % (also at 320 px wide), the page does not scroll sideways,
-   no text is cut off or spills out of a box, and buttons stay at least 44×44 px.
+3. **Large text.** With the root font size at 200 % (also at 320 px wide), all text grows, the page does not
+   scroll sideways, no text is cut off, spills out of its box or button or off the window, and buttons stay at
+   least 44×44 px (24 px with a mouse, where 44 px is an open question).
 4. **Contrast.** Visible text against what is behind it, and placeholders: at least 4.5:1, or 3:1 for large text
    (WCAG AA), in both themes.
 
@@ -25,6 +26,7 @@ report and do not fail the run. Everything else does.
     python3 tools/e2e/a11y.py                       # a real server on 127.0.0.1:8099, Chromium; exit 1 on any failed check
     python3 tools/e2e/a11y.py --only 375-light      # one configuration (375-light, 375-dark, 1280-light, 1280-dark, 320-large)
     python3 tools/e2e/a11y.py --parts keyboard,names   # some of: keyboard, names, large, contrast
+    python3 tools/e2e/a11y.py --shots               # also save a screenshot of each screen at 200 % text
 """
 from __future__ import annotations
 
