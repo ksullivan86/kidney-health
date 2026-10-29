@@ -13,7 +13,7 @@
 .chip[aria-pressed="true"] { background: var(--accent-tint); color: var(--accent); border-color: transparent; }
 #category-chips { min-height: 44px; } /* reserve the row while categories load: no layout jump */
 .add-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.add-actions .btn { flex: 1 1 0; min-width: max-content; } /* equal widths; wrap when both do not fit (320 px) */
+.add-actions .btn { flex: 1 1 0; min-width: min(100%, max-content); } /* equal widths; wrap when both do not fit (320 px); a label longer than the row wraps */
 .results-head { margin: 4px 0 -4px; }
 .food-list { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 2px 12px; box-shadow: var(--shadow); }
 .food-list .empty-state { padding: 14px 4px; }
@@ -24,7 +24,7 @@
 .meal-chips { padding: 2px 0 8px; }
 .meal-chip-item { flex: none; display: flex; } /* the list item wrapper around each chip button */
 .meal-chip {
-  flex: none; display: flex; align-items: center; gap: 10px; min-height: var(--tap); max-width: 260px; padding: 8px 14px 8px 10px;
+  flex: none; display: flex; align-items: center; gap: 10px; min-height: var(--tap); max-width: 16.25rem; padding: 8px 14px 8px 10px;
   border: 1px solid var(--border); border-radius: var(--radius-sm); background: var(--surface); color: var(--text); text-align: left; box-shadow: var(--shadow);
 }
 .meal-chip:hover { background: var(--surface-2); }

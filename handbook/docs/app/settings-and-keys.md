@@ -32,6 +32,9 @@ can be shared by your admin or added by you ([design note 07][NOTE07]).
 | **Admin** (admins only) | a button that opens **Server administration** (below) |
 | **About & privacy** | what is stored, who can see it, disclaimers, **Learn** (this handbook), data sources and licences ([Privacy and your data](privacy.md)) |
 
+**Bigger text.** The app has no text size setting of its own. It follows the text size you choose in your browser's settings,
+and zoom works too. At twice the normal size, the screens still fit without scrolling sideways.
+
 ## Server administration (admins only)
 
 Admins see a **shield button** next to the gear. It opens **Server administration**, a page of its own
