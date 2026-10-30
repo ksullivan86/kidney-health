@@ -308,11 +308,11 @@ def test_every_server_setting_has_a_named_group() -> None:
     assert editable - set(grouped) == set(), f"not in any group (would show under 'Other'): {sorted(editable - set(grouped))}"
     assert set(grouped) - set(settings_registry.REGISTRY) == set(), "GROUPS names a key the registry does not have"
     ai = _server_setting_groups()["Optional AI"]
-    assert ai[0] == "ai.enabled", "the AI master switch comes first (Settings → AI ideas sends admins to it)"
+    assert ai[0] == "ai.enabled", "the AI master switch comes first (Settings → AI features sends admins to it)"
 
 
 def test_an_ai_switch_change_refreshes_the_ai_panel_and_buttons() -> None:
-    """v0.3.0 review: after an admin switched "Optional AI ideas", Settings → AI ideas kept the old text until the
+    """v0.3.0 review: after an admin switched "Optional AI features", Settings → AI features kept the old text until the
     view was opened again. The save handler now asks js/views/ai.js to draw again (status cache dropped), and that
     render keeps only its newest copy when two overlap."""
     assert "if (key.startsWith('ai.') && KH.ai) {" in SETTINGS_JS
@@ -359,7 +359,7 @@ def test_this_device_says_once_whether_the_app_is_installed_and_works_offline() 
 
 
 def test_the_assistant_card_waits_for_the_server_and_never_keeps_a_token() -> None:
-    """Settings → Assistant access (app/auth/api_tokens.py): hidden until GET /api/me/tokens says the switch is on
+    """Settings → Outside AI apps (app/auth/api_tokens.py): hidden until GET /api/me/tokens says the switch is on
     (or the person still has tokens, or is an admin); the demo makes no request; a new token lives only in the
     one box that shows it."""
     settings = _section('<section id="view-settings"', '<section id="view-admin"')

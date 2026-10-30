@@ -11,7 +11,7 @@ they get; the local one can be told to answer with something that is not JSON. T
 
 * the admin table offers "Local, then cloud" for photos, meal ideas and describe a meal with the one-line rule, and for Ask and
   lab report photos shows that it is not offered;
-* Settings → AI ideas reads "Runs on your local AI (host); if its answer fails the app's checks, on the cloud AI (host)." for
+* Settings → AI features reads "Runs on your local AI (host); if its answer fails the app's checks, on the cloud AI (host)." for
   the three features and the plain local line for Ask;
 * the first AI meal ideas request opens the consent sheet, which names both hosts, says the cloud one is used only if the local
   AI's answer fails the app's checks and has its own tick box; nothing reaches either AI before "Agree and send";

@@ -768,7 +768,7 @@
     if (ev.action === 'login.succeeded' && d.via === 'passkey') return 'Signed in with a passkey';
     return ACTION_LABEL[ev.action] || ev.action;
   }
-  // The choices of Settings → AI ideas (js/views/ai.js): the activity list names them the way the choice does.
+  // The choices of Settings → AI features (js/views/ai.js): the activity list names them the way the choice does.
   // The words of Settings → Meal guidance → Your food preferences (a food group's "Not for me" is "Never suggest" there).
   const TASTE_WORD = { none: 'nothing saved', like: 'more like this', less: 'less often', not_for_me: 'not for me', neutral: 'stop learning' };
   const tasteWord = (value, kind) => (kind === 'group' && value === 'not_for_me' ? 'never suggest' : TASTE_WORD[value] || value);
@@ -1868,7 +1868,7 @@
     ['Personalised targets and lab results', ['targets.lab_rules_enabled', 'targets.default_activity', 'targets.lab_fresh_days.potassium',
       'targets.lab_fresh_days.phosphate', 'targets.lab_fresh_days.albumin', 'targets.lab_fresh_days.bicarbonate']],
     ['Meal guidance', ['guidance.enabled', 'guidance.pool_per_role', 'guidance.beam_width', 'guidance.plan_days_max', 'guidance.plan_days_ai_max']],
-    // The master switch first: Settings → AI ideas sends admins here to turn it on.
+    // The master switch first: Settings → AI features sends admins here to turn it on.
     ['Optional AI', ['ai.enabled', 'ai.user_keys_allowed', 'ai.allow_user_base_url', 'ai.shared_daily_limit', 'ai.max_concurrency',
       'ai.vision_plate_enabled', 'ai.vision_allow_agent', 'ai.chat_enabled', 'ai.voice_enabled', 'ai.allow_trusted_saves', 'ai.recipe_steps', 'ai.audit_retention_days', 'assistant.enabled']],
     // Drawn by js/views/ai_routing.js in Server administration → AI providers (a provider must be private to be local, so these
@@ -1940,7 +1940,7 @@
         toast(value === null ? `${def.label}: back to the default` : `${def.label}: saved`, 'ok');
         renderServerSettings(control ? control.id : id);
         renderFood();
-        // An AI switch changes Settings → AI ideas, the AI providers below and the Add view's AI buttons: ask again, now.
+        // An AI switch changes Settings → AI features, the AI providers below and the Add view's AI buttons: ask again, now.
         if (key.startsWith('ai.') && KH.ai) {
           if (typeof KH.ai.forget === 'function') KH.ai.forget();
           KH.ai.renderSettings().catch((e2) => console.warn('AI settings:', e2));

@@ -1,4 +1,4 @@
-"""Settings → AI ideas opens with "How AI help is set up: three questions" (docs/ROADMAP.md, "Explain the AI setup in
+"""Settings → AI features opens with "How AI help is set up: three questions" (docs/ROADMAP.md, "Explain the AI setup in
 plain words"; the same three questions as docs/ai.md "The setup in three questions" and the handbook's AI page).
 
 Shown only when AI is on for this server (with AI off there is nothing to set up), never in the demo, closed by
@@ -26,7 +26,7 @@ def test_the_intro_asks_the_three_questions():
         assert question in intro, question
     # what the docs promise, in the person's words
     for words in ("a model that runs at home, or a company\\'s AI service", "your own key", "checked again",
-                  "answering a short question in Ask", "It cannot give insulin or medicine doses. ", "by default nothing is saved until you press Save", "trust it to save without asking if your admin allows that", "your admin can read what is sent",
+                  "answering a short question in the AI assistant", "It cannot give insulin or medicine doses. ", "by default nothing is saved until you press Save", "trust it to save without asking if your admin allows that", "your admin can read what is sent",
                   "the consent step says where requests go", "“What will be sent?” shows each request before it leaves"):
         assert words in intro, words
     assert "KH.learn.link('pages', 'ai'" in intro

@@ -14,7 +14,7 @@ local, meal ideas, describe a meal and Ask in the cloud). The two fakes remember
   line "Goes through your admin's LiteLLM proxy to Anthropic ...", and the local one with the line it always had;
 * the roles in "Which AI does each feature use?" are fixed: both selects are disabled, the cloud one says it is set by
   ``AI_CLOUD_PROVIDER``, every route is locked by its ``AI_ROUTE_*`` variable, and the lab report row offers local or off only;
-* Settings → AI ideas reads "Runs on your local AI (host)" for photos and lab reports and "Runs on LiteLLM proxy (host), a cloud AI
+* Settings → AI features reads "Runs on your local AI (host)" for photos and lab reports and "Runs on LiteLLM proxy (host), a cloud AI
   outside your network" for meal ideas, describe a meal and Ask;
 * the first AI meal ideas request opens a consent sheet that carries the proxy line, nothing reaches either fake before "Agree and
   send", then the cloud fake gets exactly one request, with the cloud key, and the local fake none;

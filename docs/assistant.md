@@ -42,7 +42,7 @@ text). Not built: recipe pages read by `check_meal` ([ROADMAP](ROADMAP.md), "An 
 1. **The admin** turns on **Server administration → Server settings → Optional AI → Assistant access (personal
    tokens for a chat assistant)**, or sets `ASSISTANT_ENABLED=true` (which locks it). It is off by default; while
    it is off, `/mcp` answers `404` and no token works.
-2. **Each person** who wants an assistant makes a token in **Settings → Assistant access** and copies it
+2. **Each person** who wants an assistant makes a token in **Settings → Outside AI apps** and copies it
    ([below](#for-people-using-the-app)). One token per chat client or device makes it easy to revoke one.
 3. **In the chat client**, add an MCP server: Streamable HTTP, URL `https://<your server>/mcp`, and the token as a
    bearer header (`Authorization: Bearer kha_…`). Then give the chat model the
@@ -71,7 +71,7 @@ neither gives the other, and both are off by default. It never sees anyone else'
 
 ### For people using the app
 
-**Settings → Assistant access** (it shows once your admin has turned assistant access on):
+**Settings → Outside AI apps** (it shows once your admin has turned assistant access on):
 
 1. Under **New token**, give the token a **name** (for example the app or device it is for, so you know which one
    to revoke later) and choose when it **expires**: after 30 days, 90 days (the default) or 1 year. Tick **Can also
@@ -248,7 +248,7 @@ servers), then:
 
 * **Type:** MCP (Streamable HTTP). **URL:** `https://<your server>/mcp`, or the app's address on the private
   network both containers share, for example `http://kidney-health:8000/mcp`.
-* **Authentication:** a bearer token: the `kha_…` token from Settings → Assistant access.
+* **Authentication:** a bearer token: the `kha_…` token from Settings → Outside AI apps.
 * Use a model that supports tool calling, and give it the [system prompt](#system-prompt-template) (Open WebUI
   keeps a system prompt per model).
 * The connection must come from the Open WebUI **server**. A connection made from the browser on another site
@@ -387,7 +387,7 @@ the page only: reloading or signing out forgets it, and the server keeps no tran
 
 **Saving from Ask, and how much you trust the assistant.** Ask the assistant to log, plan or save something ("log a banana
 for breakfast", "save my soup recipe, it makes 4 servings") and it may ask the app to save it. You decide how much it may do
-without asking, in **Settings → AI ideas → How much do you trust the assistant?** (the Ask screen has a short line about
+without asking, in **Settings → AI features → How much do you trust the assistant?** (the Ask screen has a short line about
 it and a link to it):
 
 | Your choice | What happens when the assistant asks to save |

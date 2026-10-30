@@ -197,7 +197,7 @@ you wait, the question is about the newer link.
 
 ## Assistant access
 
-When your admin turns assistant access on, **Settings → Assistant access** makes personal **tokens** for a chat
+When your admin turns assistant access on, **Settings → Outside AI apps** makes personal **tokens** for a chat
 assistant you connect. A token lets that assistant read your own food log and targets; it cannot change
 anything, and it never sees anyone else's data, unless you tick **Can also save food and recipes** when you make
 it. Then the assistant can also add food to your log and save recipes as saved meals (it still cannot edit or

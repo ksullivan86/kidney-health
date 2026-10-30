@@ -16,7 +16,7 @@
      save something. By default (the person's choice "Ask me before every save") the answer is a card: what the app
      found, the app's totals, and Save as eaten / Save as planned / Cancel. Nothing is saved until Save is pressed, and
      then this page posts the card's body to the app's normal save route (POST /api/log/batch or /api/meals) like any
-     other save: the model is not involved in the write. If the person trusted the assistant (Settings → AI ideas) and
+     other save: the model is not involved in the write. If the person trusted the assistant (Settings → AI features) and
      the admin allows it, the server saves at once and the answer shows what was saved with Undo, which deletes
      exactly those rows through the normal DELETE routes. Trust "for this conversation" lives in this page only: it
      ends with New conversation, a reload, or after 12 hours.
@@ -37,8 +37,8 @@
 
   const MAX_SENT = 20; // the server's limit on the messages of one request
   const MAX_CHARS = 2000;
-  const NOTE_LINE = 'Answers come from an AI model; every number is the app\'s own. Not medical advice.';
-  const DEMO_TEXT = 'Ask works in the installed app, with an AI provider your admin sets up. This preview has no assistant, so there is nothing to ask here.';
+  const NOTE_LINE = 'Answers are written by an AI language model and can be wrong. Every number is the app\'s own. Not medical advice.';
+  const DEMO_TEXT = 'The AI assistant works in the installed app, with an AI your admin sets up. This preview has no AI, so there is nothing to ask here.';
   const LEARN_PATH = /\/learn\/[A-Za-z0-9_\-/#]*[A-Za-z0-9_\-/#]/g;
 
   const thread = []; // what the server gets back as `messages`: { role: 'user' | 'assistant', text }
@@ -58,10 +58,16 @@
     if (!tab) return false;
     if (MOCK) { tab.hidden = false; return true; }
     let available = false;
+    let where = '';
     try {
       const st = await KH.ai.status();
       available = !!(st && st.features && st.features.chat);
+      // Where the AI assistant runs, in the server's words (GET /api/ai/status → routes.chat.text): "Runs on your local AI (…)"
+      // or "Runs on … a cloud AI outside your network."
+      where = (st && st.routes && st.routes.chat && st.routes.chat.text) || '';
     } catch (err) { /* the tab stays out of the way when the status cannot be read */ }
+    const whereEl = $('#ask-where');
+    if (whereEl) { whereEl.textContent = available && where ? where : ''; whereEl.hidden = !(available && where); }
     tab.hidden = !available;
     if (KH.askVoice) KH.askVoice.sync(available); // js/views/ask-voice.js: the microphone and read aloud follow the same answer
     if (!available && state.view === 'ask') router.show('today');
@@ -86,7 +92,7 @@
     return out;
   }
 
-  function who(role) { return h('span', { class: 'sr-only' }, role === 'user' ? 'You: ' : 'Assistant: '); }
+  function who(role) { return h('span', { class: 'sr-only' }, role === 'user' ? 'You: ' : 'AI assistant: '); }
 
   function userBubble(text) {
     return h('div', { class: 'ask-msg user' }, h('p', { class: 'ask-text' }, who('user'), text));
@@ -183,7 +189,7 @@
       els.list.lastElementChild.remove();
       const typed = els.input.value.trim();
       els.input.value = typed ? `${text}\n\n${typed}` : text;
-      els.list.append(failure ? problemBubble(failure) : problemBubble({ message: 'Nothing was sent. Ask works only after you agree to send your messages to the AI provider.' }));
+      els.list.append(failure ? problemBubble(failure) : problemBubble({ message: 'Nothing was sent. The AI assistant works only after you agree to send your messages to the AI.' }));
     } else {
       const entry = { role: 'assistant', text: answer.text || '' }; // a card may update this once it is used
       els.list.append(answerBubble(answer, entry));
@@ -285,15 +291,15 @@
     const chosen = t.setting === 'conversation' || t.setting === 'always';
     const trusted = t.allowed && t.setting === 'conversation' && conversationTrusted();
     if (t.allowed && t.setting === 'always') {
-      line.textContent = 'Trusted always: Ask saves food and recipes without asking you. It can pick the wrong food or amount; every save has Undo.';
+      line.textContent = 'Trusted always: the AI assistant saves food and recipes without asking you. It can pick the wrong food or amount; every save has Undo.';
     } else if (trusted) {
-      line.textContent = 'Trusted for this conversation: Ask saves food and recipes without asking you. It can pick the wrong food or amount; every save has Undo.';
+      line.textContent = 'Trusted for this conversation: the AI assistant saves food and recipes without asking you. It can pick the wrong food or amount; every save has Undo.';
     } else if (t.allowed && t.setting === 'conversation') {
-      line.textContent = 'Ask asks you before it saves. You can trust it for this conversation.';
+      line.textContent = 'The AI assistant asks you before it saves. You can trust it for this conversation.';
     } else if (chosen) {
-      line.textContent = 'Your admin turned trusted saves off, so Ask asks you before it saves.';
+      line.textContent = 'Your admin turned trusted saves off, so the AI assistant asks you before it saves.';
     } else {
-      line.textContent = 'Ask asks you before it saves. Nothing is saved until you press Save.';
+      line.textContent = 'The AI assistant asks you before it saves. Nothing is saved until you press Save.';
     }
     if (t.allowed && t.setting === 'conversation') {
       if (trusted) {

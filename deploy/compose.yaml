@@ -92,7 +92,7 @@ services:
       # everything that contacts the internet is OFF until switched on, and outbound HTTPS starts only for
       # what you switch on (docs/network-allowlist.md): api.nal.usda.gov (a USDA key),
       # world.openfoodfacts.org (Open Food Facts on AND the scanning person agreed), your AI provider
-      # (AI_PROVIDER... AND "Optional AI ideas" on), api.pwnedpasswords.com (PASSWORD_BREACH_CHECK).
+      # (AI_PROVIDER... AND "Optional AI features" on), api.pwnedpasswords.com (PASSWORD_BREACH_CHECK).
       # A value set here LOCKS that setting in Settings → Admin; leave it empty to let an admin choose.
       # Names listed in SETTINGS_INITIAL_ONLY (or * for all) are first values instead: written once, then
       # changeable in the app (docs/deployment.md, "Set it up by code"). Add a line like these for any

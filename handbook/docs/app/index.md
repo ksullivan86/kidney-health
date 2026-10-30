@@ -129,7 +129,7 @@ The app is a logging aid. It is **not a medical device** and it gives no medical
 - Starting targets that use your age, sex, activity and lab results, and a **Lab results** screen with
   your eGFR ([First setup](first-setup.md); [Targets and warnings](targets-and-warnings.md)).
 - Meal guidance: "what fits now", swaps, "plan the rest of my day" and insights ([Meal guidance](guidance.md)).
-- Optional AI ideas, off unless your admin and you both switch them on ([Optional AI](ai.md)).
+- Optional AI features, off unless your admin and you both switch them on ([Optional AI](ai.md)).
 - This handbook, opened from **Learn** in the app.
 
 ## If something goes wrong

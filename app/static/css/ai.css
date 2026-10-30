@@ -1,5 +1,5 @@
 /* Optional AI (js/views/ai.js): the Add view's AI buttons, the AI sheets (meal ideas, describe a meal,
-   read a label, plate photo), consent and "What will be sent?", and Settings → AI ideas; plus which AI each feature uses (ai_routing.js). */
+   read a label, plate photo), consent and "What will be sent?", and Settings → AI features; plus which AI each feature uses (ai_routing.js). */
 
 /* Add view */
 .ai-add { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }

@@ -228,7 +228,7 @@ const out = {};
   out.noFallbackColumn = find(R.adminPart(data(), null), (e) => e.tag === 'th' && e.attrs.scope === 'col').map(text);
 }
 
-// 8. Settings → AI ideas: a person who has not agreed to the cloud AI of a "local, then cloud" feature can agree later.
+// 8. Settings → AI features: a person who has not agreed to the cloud AI of a "local, then cloud" feature can agree later.
 {
   const request = { provider_id: 1, provider_label: 'OpenAI', host: 'api.openai.com', purpose: 'text', as_fallback: true, rule: 'The cloud AI is asked only if ...' };
   const fallback = (given) => ({ runs_on: { host: 'api.openai.com' }, rule: 'x', given, request });

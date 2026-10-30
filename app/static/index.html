@@ -74,7 +74,7 @@
         <!-- Ask (js/views/ask.js): hidden until the server says the chat is available; always shown in the demo. -->
         <button role="tab" class="tab" id="tab-ask" aria-controls="view-ask" aria-selected="false" tabindex="-1" data-view="ask" hidden>
           <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H11l-4.5 4v-4h0A2.5 2.5 0 0 1 4 13.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8.5 8.5h7M8.5 11.5h4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-          <span>Ask</span>
+          <span>Ask AI</span>
         </button>
         <button role="tab" class="tab" id="tab-profile" aria-controls="view-profile" aria-selected="false" tabindex="-1" data-view="profile">
           <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 20c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -624,10 +624,11 @@
        notices come from the server's checked answer (POST /api/ai/chat). -->
   <section id="view-ask" class="view ask-view" role="tabpanel" aria-labelledby="tab-ask" hidden>
     <div class="ask-head">
-      <h2 class="card-title" id="ask-title">Ask</h2>
+      <h2 class="card-title" id="ask-title">AI assistant</h2>
       <button class="btn secondary" type="button" id="ask-new" hidden>New conversation</button>
     </div>
-    <p class="muted small" id="ask-intro">Ask about today's numbers, a food, or what fits in the rest of your day. You can also ask it to log or plan a food, or to save a recipe. The assistant looks up your own targets and food log, and the app checks its answer before you see it.</p>
+    <p class="muted small" id="ask-intro">This is an AI language model, a computer program that writes text. It can be wrong and it is not medical advice. It is not allowed to give insulin or medicine doses. Ask about today's numbers, a food, or what fits in the rest of your day, or ask it to log or plan a food or save a recipe. It looks up your own targets and food log, and the app checks its answer before you see it.</p>
+    <p class="hint ask-where" id="ask-where" hidden></p>
     <div class="settings-note caution" id="ask-demo" role="note" hidden></div>
     <!-- Saving from the chat (js/views/ask.js): what the person chose, and the way to change it. -->
     <div class="ask-trust" id="ask-trust" hidden>
@@ -1207,15 +1208,15 @@
       <div id="set-food-body" class="settings-body"></div>
     </section>
 
-    <section class="card settings-section" id="set-ai" data-title="AI ideas" aria-labelledby="set-ai-h">
-      <h2 class="card-title" id="set-ai-h">AI ideas</h2>
+    <section class="card settings-section" id="set-ai" data-title="AI features" aria-labelledby="set-ai-h">
+      <h2 class="card-title" id="set-ai-h">AI features</h2>
       <div id="set-ai-body" class="settings-body"></div>
     </section>
 
-    <!-- Assistant access tokens (app/auth/api_tokens.py): shown by settings.js while the admin switch is on, and
-         while it is off to admins and to a person who still has active tokens. -->
-    <section class="card settings-section" id="set-assistant" data-title="Assistant access" aria-labelledby="set-assistant-h" hidden>
-      <h2 class="card-title" id="set-assistant-h">Assistant access</h2>
+    <!-- Outside AI apps: assistant access tokens (app/auth/api_tokens.py) for an AI chat app the person runs elsewhere, over MCP.
+         Shown by settings.js while the admin switch is on, and while it is off to admins and to a person who still has active tokens. -->
+    <section class="card settings-section" id="set-assistant" data-title="Outside AI apps" aria-labelledby="set-assistant-h" hidden>
+      <h2 class="card-title" id="set-assistant-h">Outside AI apps</h2>
       <div id="set-assistant-body" class="settings-body"></div>
     </section>
 
@@ -2263,13 +2264,13 @@
     <div class="sheet-foot"></div>
   </form>
 </dialog>
-<!-- The warning before the assistant is trusted to save without asking (js/views/ai.js confirmTrust): Settings → AI ideas
-     and the Ask screen's "Trust it for this conversation". -->
+<!-- The warning before the assistant is trusted to save without asking (js/views/ai.js confirmTrust): Settings → AI features
+     and the Ask AI screen's "Trust it for this conversation". -->
 <dialog id="sheet-ai-trust" class="sheet" aria-labelledby="sheet-ai-trust-title">
   <form method="dialog" class="sheet-form" novalidate>
     <div class="sheet-head">
       <div>
-        <h2 id="sheet-ai-trust-title" class="sheet-title">Trust the assistant to save for you?</h2>
+        <h2 id="sheet-ai-trust-title" class="sheet-title">Trust the AI assistant to save for you?</h2>
         <div class="sheet-sub"></div>
       </div>
       <button class="icon-btn" type="button" data-close aria-label="Close">

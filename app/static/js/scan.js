@@ -594,7 +594,7 @@
     if (!st.available || !(st.features && st.features.label)) {
       if (st.reason === 'not_opted_in') {
         aiBox.append(h('p', { class: 'hint' }, 'AI can read the label for you. ',
-          h('button', { class: 'link-btn', type: 'button', onclick: () => { quickDlg.close(); KH.router.show('settings'); } }, 'Turn on AI ideas in Settings')));
+          h('button', { class: 'link-btn', type: 'button', onclick: () => { quickDlg.close(); KH.router.show('settings'); } }, 'Turn on AI features in Settings')));
         aiBox.hidden = false;
       }
       return;

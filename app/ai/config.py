@@ -644,7 +644,7 @@ class Resolved:
 
 MESSAGES = {
     "disabled": "AI is switched off on this server.",
-    "not_opted_in": "Turn on AI ideas in Settings → AI ideas first.",
+    "not_opted_in": "Turn on AI features in Settings → AI features first.",
     "not_configured": "No AI provider is set up on this server.",
     "not_allowed": "Your admin has not shared an AI provider with your account.",
     "own_unavailable": "Your own AI provider is switched off or not allowed on this server; it is never replaced by the shared one.",

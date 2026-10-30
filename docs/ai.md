@@ -25,7 +25,7 @@ ideas asks the same three in a person's words at the top ("How AI help is set up
 
 | Question | Who decides, and where | The choices |
 |---|---|---|
-| **1. Which model answers?** (the *provider*) | The admin: `AI_PROVIDER`, `AI_BASE_URL`, `AI_MODEL` and `AI_VISION_MODEL` in the environment (the server's shared provider), or more providers in Settings → AI ideas → AI providers. A person may add **their own** key in Settings → AI ideas → My own AI provider, if the admin allows it. An admin can also keep **two shared providers at once**, a *local* one (on your network) and a *cloud* one, and pin each feature to one of them ([Which AI does each feature use?](#which-ai-does-each-feature-use)). **Both can come from the environment**: `AI_PROVIDER` with `AI_PROVIDER_ROLE=local`, and `AI_CLOUD_PROVIDER` with the `AI_CLOUD_*` variables, so nothing has to be set by hand in the app ([the recipe](#a-local-ai-and-a-cloud-ai-both-from-the-environment)). | A model at home (Ollama, LM Studio, llama.cpp, vLLM, or LiteLLM in front of them); a cloud API with a key (OpenAI, OpenRouter, Nous Portal); a dedicated, tool-free Hermes Agent profile. Photos need a **vision** model (`AI_VISION_MODEL`). |
+| **1. Which model answers?** (the *provider*) | The admin: `AI_PROVIDER`, `AI_BASE_URL`, `AI_MODEL` and `AI_VISION_MODEL` in the environment (the server's shared provider), or more providers in Settings → AI features → AI providers. A person may add **their own** key in Settings → AI features → My own AI provider, if the admin allows it. An admin can also keep **two shared providers at once**, a *local* one (on your network) and a *cloud* one, and pin each feature to one of them ([Which AI does each feature use?](#which-ai-does-each-feature-use)). **Both can come from the environment**: `AI_PROVIDER` with `AI_PROVIDER_ROLE=local`, and `AI_CLOUD_PROVIDER` with the `AI_CLOUD_*` variables, so nothing has to be set by hand in the app ([the recipe](#a-local-ai-and-a-cloud-ai-both-from-the-environment)). | A model at home (Ollama, LM Studio, llama.cpp, vLLM, or LiteLLM in front of them); a cloud API with a key (OpenAI, OpenRouter, Nous Portal); a dedicated, tool-free Hermes Agent profile. Photos need a **vision** model (`AI_VISION_MODEL`). |
 | **2. What may it do?** (the *features*) | The admin switches AI on (`ai.enabled`) and decides on plate photos (`ai.vision_plate_enabled`) and photos to Hermes (`ai.vision_allow_agent`); then each person opts in (Use AI ideas, and a separate consent for photos). | Meal ideas, swaps and day plans (always chosen from foods the rules allowed, and checked again); describe a meal (search words only); read a label (a draft you check); plate photos (names and a rough weight only; off by default). Nothing can chat, give doses or save on its own. |
 | **3. Whose key pays, and who can read the request?** | Follows from question 1; the consent sheet shows the provider's data line ([table below](#what-is-sent-and-what-never-is)). | A shared provider uses the server's key, and the admin can read what is sent; an own key uses the person's account at that provider. "What will be sent?" shows each request byte for byte before it goes. |
 
@@ -104,7 +104,7 @@ covered by the offline golden set (`tests/ai_golden/`, 118 cases).
 | G13 | **Labelled**: "AI idea · provider · model · checked against your targets · not medical advice", plus how many ideas were dropped and why | Every idea carries the label |
 | G14 | **One person per call**: only the requesting person's data; shared quotas per person | Every query takes the person's id |
 | G15 | **The Ask chat's answer is checked in code before it is shown**: a low or an emergency is answered by the app's cards without a model call; no insulin or medicine dose talk (withheld); every number with a nutrient or energy unit is one the tools returned or you typed (withheld otherwise); no links except the app's own `/learn/...` pages; at most 1200 characters; lab words add "Lab results are for your care team to interpret."; the tools' own figures are shown under every answer | `app/ai/chat.py` (`check_answer`, `safety_outcome`), `tests/test_ai_chat_checks.py`, `tests/test_ai_chat.py` |
-| G16 | **Saving from Ask is your choice, least trust first**: by default the assistant's request to save is a card (the foods the app found, the app's totals) and nothing is saved until you press Save, which posts to the ordinary route. "Trust it for this conversation" or "Trust it always" (Settings → AI ideas, behind a warning, and only while your admin has allowed it) lets it save at once, all or nothing, with Undo on every save. Either way the app's numbers, the low and emergency rules and the dose checks stay on, a message about a low or an emergency never saves, and a food eaten to treat a low is saved and never warned about. Photo and label readings are always shown to you to check | `app/ai/chat_save.py`, `tests/test_ai_chat_save.py`, `tests/test_ask_ui.py` |
+| G16 | **Saving from Ask is your choice, least trust first**: by default the assistant's request to save is a card (the foods the app found, the app's totals) and nothing is saved until you press Save, which posts to the ordinary route. "Trust it for this conversation" or "Trust it always" (Settings → AI features, behind a warning, and only while your admin has allowed it) lets it save at once, all or nothing, with Undo on every save. Either way the app's numbers, the low and emergency rules and the dose checks stay on, a message about a low or an emergency never saves, and a food eaten to treat a low is saved and never warned about. Photo and label readings are always shown to you to check | `app/ai/chat_save.py`, `tests/test_ai_chat_save.py`, `tests/test_ask_ui.py` |
 | G17 | **A lab report photo stays on your network and is only copied**: it is read only by the **local** AI (never a cloud AI, never a person's own provider, whatever the routing or the environment says); the model returns `{analyte, value, unit, taken_on}` lines and nothing else; the app drops every test and unit it does not know (counted), applies the checks of `POST /api/labs` and never keeps a future date; the review table starts with **every row unticked** and the line "Read by AI from your photo. Check each value against the report before you tick it."; nothing is saved without your tick, and then through the ordinary import; the AI activity row holds the photo's fingerprint, not the photo and not what the AI copied | `app/ai/lab_report.py`, `app/ai/routing.py` (`LOCAL_ONLY`), `app/vision.py`, `tests/test_lab_photo.py`, `tests/test_lab_photo_ui.py` |
 | A3 | Text typed by people or read from packages cannot close the data block or hide instructions | `<`, `>`, `&` escaped in the data block; invisible and control characters removed; 80 characters per name |
 | A4 | Photos cannot attack the model server or carry location data | JPEG only, size and dimension limits, metadata removed by the server ([Photos](#photos)) |
@@ -195,7 +195,7 @@ Where the data goes depends on the provider your admin chose (the consent sheet 
   an answer checked for breakfast is never relabelled as dinner. A request already sent may still use an AI call.
 * **Turning it on.** Settings → **AI ideas** → **Use AI ideas** (off by default). The section says when
   AI is off on the server. Choose the provider your admin offers, or your own key when allowed.
-* **Where each feature runs.** Once your admin has set up routing, Settings → AI ideas lists one line per
+* **Where each feature runs.** Once your admin has set up routing, Settings → AI features lists one line per
   feature: *Runs on your local AI (ollama.lan:11434)*, *Runs on OpenAI (api.openai.com), a cloud AI outside your
   network*, or *Switched off by your admin* (or that it needs a local or cloud AI that is not set up yet). Your
   admin decides this per feature; you choose between the server's AI and your own provider. A feature that moves to
@@ -210,10 +210,10 @@ Where the data goes depends on the provider your admin chose (the consent sheet 
 * **Consent.** The first time a feature sends something to a provider, a sheet names the provider, the
   **destination host**, its policy line and shows the **exact request**; nothing is sent until you
   agree. Meal data, photos and Ask conversations are agreed separately. You are asked again when the provider's host or
-  the policy text changes. Settings → AI ideas lists what you agreed to, with **Withdraw**. For a feature that is
+  the policy text changes. Settings → AI features lists what you agreed to, with **Withdraw**. For a feature that is
   *local first, then cloud*, the sheet names both hosts, says that the cloud one is used only if the local AI's answer
   fails the app's checks, and has its own tick box, **Also allow the cloud AI (host) as the fallback**: leave it off and
-  the cloud AI is never asked. You can agree later, from Settings → AI ideas (the feature's line has **Allow the cloud AI
+  the cloud AI is never asked. You can agree later, from Settings → AI features (the feature's line has **Allow the cloud AI
   (host) as the fallback**) or from the answer that says the cloud AI was not asked; **Withdraw** in the same Settings
   list takes it back.
 * **Ask.** When your admin has switched Ask on and you use AI ideas, a sixth tab, **Ask**, appears. Type a
@@ -227,7 +227,7 @@ Where the data goes depends on the provider your admin chose (the consent sheet 
   sent?" lists your messages and the numbers it looks up), and one question can use several AI calls (up to
   7), each counted in your daily limit.
 * **Saving from Ask.** Ask a question like "log a banana for breakfast" and the assistant may ask the app to save it.
-  What happens depends on **Settings → AI ideas → How much do you trust the assistant?**:
+  What happens depends on **Settings → AI features → How much do you trust the assistant?**:
   * **Ask me before every save** (the default, recommended): you get a card with the foods the app found, the amounts
     and the app's totals, and "Nothing has been saved yet". **Save as eaten**, **Save as planned** or **Cancel**. Only
     your press saves, through the same route as any other save in the app; the assistant is not involved in the write.
@@ -272,7 +272,7 @@ Where the data goes depends on the provider your admin chose (the consent sheet 
   on port 443 with a public address). The key is encrypted on the server and never shown again: you see
   "Set · ends in 9xQz" with **Replace** and **Remove**. Changing it asks for your password again. If
   your own provider fails, the app **never** sends your data to the shared one instead.
-* **AI activity.** Settings → AI ideas → **AI activity** lists each call: when, which feature, which
+* **AI activity.** Settings → AI features → **AI activity** lists each call: when, which feature, which
   host, the outcome, and (while it is kept, 30 days by default) what was sent and what came back.
   The answer that came back is the provider's, before the app's checks: it is captioned so, and words the
   guard never shows (its blocklist: insulin, doses, medicines and the like) read `[hidden]` in that copy
@@ -360,7 +360,7 @@ Instance settings (Server administration → Server settings; each can be locked
 | `ai.vision_plate_enabled` (`AI_VISION_PLATE_ENABLED`) | `false` | Plate photos |
 | `ai.vision_allow_agent` (`AI_VISION_ALLOW_AGENT`) | `false` | Photos may go to a Hermes agent (the tool check still runs before every photo) |
 | `ai.voice_enabled` (`AI_VOICE_ENABLED`) | `false` | The Ask microphone. Needs `ai.chat_enabled` and a transcription server (`STT_BASE_URL`, below). While off, `POST /api/ai/transcribe` answers 404 and nobody sees the microphone. |
-| `ai.allow_trusted_saves` (`AI_ALLOW_TRUSTED_SAVES`) | `false` | Lets people choose, in Settings → AI ideas, to trust Ask to save food and recipes without asking (for one conversation, or always), after a warning. Off: Ask always shows a card and saves only when the person presses Save, whatever a person chose earlier. Needs `ai.chat_enabled`. Every save is undoable, and the number, low-and-emergency and dose checks stay on |
+| `ai.allow_trusted_saves` (`AI_ALLOW_TRUSTED_SAVES`) | `false` | Lets people choose, in Settings → AI features, to trust Ask to save food and recipes without asking (for one conversation, or always), after a warning. Off: Ask always shows a card and saves only when the person presses Save, whatever a person chose earlier. Needs `ai.chat_enabled`. Every save is undoable, and the number, low-and-emergency and dose checks stay on |
 | `ai.chat_enabled` (`AI_CHAT_ENABLED`) | `false` | The Ask screen (chat). Needs `ai.enabled`. While off, `POST /api/ai/chat` answers 404 and nobody sees the Ask tab. Each question can use up to 7 model calls, so `ai.shared_daily_limit` (30) goes faster than with the other features |
 | `ai.route.photos`, `ai.route.meal_ideas`, `ai.route.describe`, `ai.route.chat` (`AI_ROUTE_PHOTOS`, `AI_ROUTE_MEAL_IDEAS`, `AI_ROUTE_DESCRIBE`, `AI_ROUTE_CHAT`) | `local` | Which shared AI the feature uses: `local`, `cloud`, `off` or `any` (the rule from before routing); `photos`, `meal_ideas` and `describe` also `local_then_cloud` (the local AI first, the cloud AI only when the local answer fails the app's checks; **not** `chat`). Set in Server administration → AI providers → Which AI does each feature use? ([below](#which-ai-does-each-feature-use)) |
 | `ai.route.recipes` (`AI_ROUTE_RECIPES`) | `local` | AI recipes: `local`, `cloud`, `off`, `any` or `local_then_cloud`, like meal ideas |
@@ -415,7 +415,7 @@ Environment only (never editable at run time; a bad value stops the start with a
 ### Providers and presets
 
 The server's providers come from `AI_PROVIDER` and, for the cloud AI, `AI_CLOUD_PROVIDER`; admins can add more in
-Settings → AI ideas (admin part) or with `POST /api/admin/ai-providers`. A preset fixes each backend's quirks; you fill in
+Settings → AI features (admin part) or with `POST /api/admin/ai-providers`. A preset fixes each backend's quirks; you fill in
 the address, the model and the key.
 
 | Preset | Default address | JSON mode | Notes |
@@ -480,7 +480,7 @@ Each is `local`, `cloud`, `off` or `any`, except `labs`, which is `local` or `of
 * **The default is the least-trusting one: `local`.** With no local provider the feature is **off** until an
   admin pins it to `cloud` (and chooses the cloud provider). A cloud provider is never contacted for a feature
   that was not pinned to it, however it was added.
-* **`any` is the rule from before routing:** the shared provider the person chose (Settings → AI ideas), else the
+* **`any` is the rule from before routing:** the shared provider the person chose (Settings → AI features), else the
   first usable one. It is what an upgraded server keeps (below); the table offers it only while it is the current
   value, and warns that it may send to a cloud AI.
 * **`off` is off for everyone**, including people with their own provider. Ask `off` answers 404, like Ask switched
@@ -584,7 +584,7 @@ and warns when a feature is set to it: *Meal ideas: local first. If the local AI
 the table and chooses; a database with none (a new server) starts on the defaults above. The table says "Routing is
 not set up yet" while any feature is on `any`. No schema change is involved.
 
-**People's own provider.** Routing does not move a person's own key (Settings → AI ideas → My own AI provider, if
+**People's own provider.** Routing does not move a person's own key (Settings → AI features → My own AI provider, if
 you allow it): it is their choice, counts as a *cloud* provider (people can only point at public addresses) and is
 never replaced; `off` still applies. The one exception is the other way round: lab report photos never use a person's
 own provider. To keep everything on your network, set `AI_ALLOW_USER_KEYS=false`. When the
@@ -1095,7 +1095,7 @@ A provider's address is configurable, so it is treated as untrusted (`app/ai/net
   withdraws consent (note 06 §4.13, `app/ai/cache.py`).
 * Each call allows at most one extra request: a retry after a 429 (honouring `Retry-After` up to 10 s),
   a 5xx or a connection error (after 1 s), or one repair turn after an answer that was not valid JSON.
-* Settings → AI ideas → **AI usage** (admins; `GET /api/admin/ai-usage`) shows requests and tokens per person and
+* Settings → AI features → **AI usage** (admins; `GET /api/admin/ai-usage`) shows requests and tokens per person and
   provider. Admins never see what was sent.
 
 ### Retention and backups

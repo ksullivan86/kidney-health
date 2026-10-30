@@ -230,7 +230,7 @@ Chromium by `tools/e2e/prefs.py`.
   are not an allergy filter: the app cannot tell whether a food contains an allergen, so check labels." No other text calls a
   preference an allergy.
 * **The text for AI ideas** (setting `ai.preferences`, up to 200 characters) is at the end of this section when the server
-  offers AI, and saves through the same call as before (`PATCH /api/me/ai`). Settings → AI ideas keeps one line that points
+  offers AI, and saves through the same call as before (`PATCH /api/me/ai`). Settings → AI features keeps one line that points
   here. The app's own suggestions never read it.
 * **Offline.** Settings are online-only by decision, so nothing is queued: a save says "Your server cannot be reached, so this
   change was not saved: it needs a connection…" and changes nothing; where the lists would be, the screen says "Guidance needs a

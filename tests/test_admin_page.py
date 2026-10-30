@@ -53,7 +53,7 @@ def test_a_member_on_the_admin_view_gets_a_note_and_no_request():
     # Settings no longer draws the admin blocks
     load = _between(SETTINGS_JS, "  async function load() {", "\n  }\n")
     assert "renderAdminFrame()" not in load
-    # the AI providers moved too: Settings → AI ideas only points to them
+    # the AI providers moved too: Settings → AI features only points to them
     settings_render = _between(AI_JS, "async function renderSettings()", "// Server administration → AI providers")
     assert "adminPart" not in settings_render
     admin_render = _between(AI_JS, "async function renderAdmin()", "\n  }\n")

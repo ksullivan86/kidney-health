@@ -25,7 +25,7 @@ from test_mcp import TARGETS, call, call_raw, rpc, set_targets, tool_error
 
 WRITE_TOOLS = {"log_food", "save_recipe"}
 READ_TOOLS = {"get_today", "search_foods", "check_meal", "safety_check"}
-READ_ONLY = "This token can only read. The person can make a token that can also save in Settings → Assistant access."
+READ_ONLY = "This token can only read. The person can make a token that can also save in Settings → Outside AI apps."
 NOTE = "Numbers come from the app; fetch them again after any change."
 
 

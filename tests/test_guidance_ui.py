@@ -441,7 +441,7 @@ def test_preferences_are_saved_online_only() -> None:
 
 def test_the_text_for_ai_ideas_moved_but_keeps_its_setting() -> None:
     """Settings → Meal guidance shows "Food preferences for AI ideas" when the server offers AI, saved through the same call
-    (PATCH /api/me/ai {preferences}, setting ai.preferences, 200 characters); Settings → AI ideas has one line pointing there."""
+    (PATCH /api/me/ai {preferences}, setting ai.preferences, 200 characters); Settings → AI features has one line pointing there."""
     field = _fn(AI_VIEW, "preferencesField")
     assert "'Food preferences for AI ideas'" in field and "api.updateMe({ preferences: pref.value.trim() })" in field
     assert "maxlength: '200'" in field and "if (MOCK) return null;" in field and "!me.enabled" in field
