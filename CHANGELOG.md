@@ -95,6 +95,9 @@ nothing new is switched on. If you use AI, run `scripts/ai_eval.py` again: the p
 * New routes: `GET /api/guidance/repeat-ok`, `PUT` and `DELETE /api/guidance/repeat-ok/{foods|meals}/{id}`.
   `POST /api/guidance/plan-days` takes `repeat_meals`, `snack` and `skip_first_day`, and answers with `limits` and `choices`.
   `RULES_VERSION` is `2026-10-30.2`.
+* **Security: CVE-2026-114613 (High) in the pip wheel** that ships inside the Chainguard Python base image. The app
+  never runs pip, but the image scan counts it. The runtime base image digest moved to the fixed build
+  (`py3-pip-wheel 26.2.2-r2`).
 
 ## 0.12.0 — 2026-10-30
 
