@@ -357,7 +357,6 @@
     if (hasLocalPassword() && KH.twoStep) body.append(KH.twoStep.block()); // js/views/two_step.js (design note 17)
     if (hasLocalPassword() && KH.passkeys) body.append(KH.passkeys.block()); // js/views/passkeys.js (design note 18)
     if (hasLocalPassword() && KH.oidc) body.append(KH.oidc.block()); // js/views/oidc.js (design note 24): hidden without a provider
-    if (authMode() !== 'none' && KH.sharing) body.append(KH.sharing.block()); // js/views/sharing.js (design note 19)
 
     body.append(subtitle('Signed-in devices', 'set-devices-h'), h('div', { id: 'set-devices', 'aria-labelledby': 'set-devices-h', role: 'region' }, loading()));
     body.append(subtitle('Your data', 'set-data-h'), dataBlock(me));
@@ -752,8 +751,10 @@
     'totp.enabled': 'Two-step sign-in turned on', 'totp.disabled': 'Two-step sign-in turned off', 'totp.recovery_codes_renewed': 'New recovery codes made',
     'totp.recovery_code_used': 'Signed in with a recovery code',
     'passkey.added': 'Passkey added', 'passkey.removed': 'Passkey removed', 'passkey.counter_went_back': 'Copied passkey refused',
-    'share.code_created': 'Share link made', 'share.code_cancelled': 'Share link cancelled', 'share.accepted': 'Someone accepted your share link',
-    'share.ended': 'Sharing stopped', 'share.viewed': 'Someone looked at what you share',
+    'share.code_created': 'Care team link made', 'share.code_cancelled': 'Care team link cancelled', 'share.accepted': 'Someone joined your Care team with a link',
+    'share.ended': 'Someone left your Care team', 'share.viewed': 'Someone on your Care team looked at what you share',
+    'care.invited': 'Care team invite sent', 'care.invite_cancelled': 'Care team invite cancelled', 'care.invite_answered': 'Someone answered your Care team invite',
+    'care.role_changed': 'Care team role changed', 'care.plan_changed': 'Your Care helper changed your plan',
     'oidc.linked': 'Sign-in provider linked', 'oidc.unlinked': 'Sign-in provider link removed',
   };
   // The row's label. Tokens come in two families and the details say which one made or lost a token (phone shortcut tokens: family
@@ -809,7 +810,9 @@
     if (ev.action === 'login.succeeded' && d.via === 'oidc') return 'with the sign-in provider';
     if (ev.action === 'passkey.counter_went_back') return 'a passkey answered like an old copy of itself, so the sign-in was refused';
     if ((ev.action === 'share.code_created' || ev.action === 'share.accepted') && KH.sharing && d.areas) return KH.sharing.areasText(d.areas);
-    if (ev.action === 'share.ended') return { owner: 'by you', grantee: 'by the person you shared with', admin: 'by an admin', time: 'on the end date you chose' }[d.by] || '';
+    if (ev.action === 'share.ended') return { owner: 'you removed them', grantee: 'they left', admin: 'an admin ended it', time: 'on the end date you chose' }[d.by] || '';
+    if (ev.action === 'care.invite_answered') return d.answer === 'declined' ? 'declined' : `accepted, as a ${KH.sharing ? KH.sharing.roleText(d.role) : d.role}`;
+    if (ev.action === 'care.role_changed' || ev.action === 'care.invited') return KH.sharing ? `as a ${KH.sharing.roleText(d.role)}` : '';
     if (d.links_revoked) return d.links_revoked === 1 ? '1 open link revoked' : `${d.links_revoked} open links revoked`;
     return '';
   }
@@ -1530,7 +1533,7 @@
     if (u.two_step) badges.push(h('span', { class: 'badge two-step-on' }, 'Two-step sign-in'));
     if (u.passkeys) badges.push(h('span', { class: 'badge passkeys-on' }, u.passkeys === 1 ? '1 passkey' : `${u.passkeys} passkeys`));
     if (u.oidc_links) badges.push(h('span', { class: 'badge passkeys-on' }, 'Linked sign-in'));
-    if (u.shares) badges.push(h('span', { class: 'badge shares-on' }, `Sharing: ${u.shares}`));
+    if (u.shares) badges.push(h('span', { class: 'badge shares-on' }, `Care team: ${u.shares}`));
     if (self) badges.push(h('span', { class: 'badge this-device' }, 'You'));
     const sub = [u.last_login_at ? `Last signed in ${relTime(u.last_login_at)}` : 'Never signed in', `joined ${fmtDate(u.created_at)}`,
       u.auth_source === 'proxy' ? 'signs in through the proxy' : null].filter(Boolean).join(' · ');
@@ -1675,16 +1678,16 @@
       }));
       actions.append(rm);
     }
-    // Sharing (design note 19 §5): when a caregiver relationship has ended badly.
+    // The Care team (design notes 19 §5 and 25): when a caregiver relationship has ended badly.
     if (u.shares) {
-      const end = h('button', { class: 'btn secondary', type: 'button' }, 'End sharing');
+      const end = h('button', { class: 'btn secondary', type: 'button' }, 'End Care team');
       end.addEventListener('click', () => confirm.inline(actions, end, {
-        message: self ? 'End every share and share link of yours, both what you share and what is shared with you?'
-          : `End every share and share link of ${name}, both what they share and what is shared with them?`,
-        confirmText: 'End sharing',
+        message: self ? 'End your whole Care team, its links and invites, and every Care team you are on?'
+          : `End ${name}'s whole Care team, its links and invites, and every Care team they are on?`,
+        confirmText: 'End Care team',
         onConfirm: async () => {
           await A.endUserShares(u.id);
-          await done(self ? 'Your sharing was ended' : `Sharing ended for ${name}`);
+          await done(self ? 'Your Care team was ended' : `Care team ended for ${name}`);
           return true;
         },
       }));
@@ -1876,7 +1879,7 @@
     ['Which AI each feature uses', ['ai.route.photos', 'ai.route.meal_ideas', 'ai.route.describe', 'ai.route.chat', 'ai.route.labs',
       'ai.route.recipes', 'ai.route.local_provider', 'ai.route.cloud_provider']],
     ['Phone shortcuts', ['push.enabled']],
-    ['Sharing', ['sharing.enabled']],
+    ['Care team', ['sharing.enabled']],
     ['Activity log', ['audit.retention_days']],
   ];
   const ROUTING_GROUP = 'Which AI each feature uses';
@@ -2215,6 +2218,13 @@
     const me = state.me;
     $('#settings-who').textContent = me ? `Signed in as ${me.display_name ? `${me.display_name} (${me.username})` : me.username}${me.role === 'admin' ? ' · admin' : ''}` : '';
   }
+  // Settings → Care team (js/views/sharing.js, design note 25): its own section, near the top. Without sign-in there is one person.
+  function renderCare() {
+    const sec = $('#set-care');
+    if (!sec) return;
+    sec.hidden = authMode() === 'none' || !KH.sharing;
+    if (!sec.hidden) clear($('#set-care-body')).append(KH.sharing.block());
+  }
   function renderNav() {
     const nav = $('#settings-nav');
     clear(nav);
@@ -2264,6 +2274,7 @@
     if (!state.me) return;
     renderWho();
     syncAdminEntry();
+    renderCare();
     renderNav();
     renderAccount();
     renderPrefs();
@@ -2310,5 +2321,16 @@
     loadAdmin().catch(toastError);
     setTimeout(() => { const t = $('#admin-title'); if (t && state.view === 'admin') t.focus({ preventScroll: true }); }, 0);
   });
-  KH.views.settings = { load, loadAdmin, onSignedIn, keyWidget, APP_VERSION };
+  /** Open Settings at one section (Profile → Care team uses it). */
+  function openSection(id) {
+    router.show('settings');
+    setTimeout(() => {
+      const sec = $(`#${id}`);
+      if (!sec || sec.hidden || state.view !== 'settings') return;
+      sec.scrollIntoView({ block: 'start' });
+      const head = $('h2', sec);
+      if (head) { head.setAttribute('tabindex', '-1'); head.focus({ preventScroll: true }); }
+    }, 50);
+  }
+  KH.views.settings = { load, loadAdmin, onSignedIn, keyWidget, openSection, APP_VERSION };
 })();

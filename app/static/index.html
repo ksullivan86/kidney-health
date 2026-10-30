@@ -489,6 +489,12 @@
 
   <!-- ===================== PLAN ===================== -->
   <section id="view-plan" class="view" role="tabpanel" aria-labelledby="tab-plan" hidden>
+    <!-- js/views/careplan.js (design note 25): shown only to a Care helper. Choosing a person hides your own plan below. -->
+    <div id="care-for" class="care-for" hidden>
+      <label for="care-for-select" class="label">Planning for</label>
+      <select id="care-for-select"></select>
+    </div>
+    <div id="care-plan" class="care-plan" hidden></div>
     <div class="date-nav week-nav">
       <button class="icon-btn" type="button" id="week-prev" aria-label="Previous week">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -893,6 +899,12 @@
       <div id="profile-form-error" class="form-error" role="alert"></div>
     </form>
 
+    <section class="card profile-care" id="profile-care" aria-labelledby="profile-care-heading" hidden>
+      <h2 class="card-title" id="profile-care-heading">Care team</h2>
+      <p class="hint">Let family, a caregiver or a dietitian with an account here see your log, or help plan your meals and shopping.</p>
+      <button class="btn secondary" type="button" id="profile-open-care">Open Care team</button>
+    </section>
+
     <section class="card profile-settings" aria-labelledby="profile-settings-heading">
       <div class="card-head">
         <h2 class="card-title" id="profile-settings-heading">Settings</h2>
@@ -1155,6 +1167,11 @@
     <section class="card settings-section" id="set-account" data-title="Account" aria-labelledby="set-account-h">
       <h2 class="card-title" id="set-account-h">Account</h2>
       <div id="set-account-body" class="settings-body"></div>
+    </section>
+
+    <section class="card settings-section" id="set-care" data-title="Care team" aria-labelledby="set-care-h" hidden>
+      <h2 class="card-title" id="set-care-h">Care team</h2>
+      <div id="set-care-body" class="settings-body"></div>
     </section>
 
     <section class="card settings-section" id="set-prefs" data-title="Preferences" aria-labelledby="set-prefs-h">
@@ -2354,6 +2371,7 @@
 <script src="js/mock/guidance.js"></script>
 <script src="js/mock/auth.js"></script>
 <script src="js/mock/settings.js"></script>
+<script src="js/mock/care.js"></script>
 <script src="js/mock/handbook.js"></script>
 <script src="js/mock/meta.js"></script>
 <script src="js/mock/ai.js"></script>
@@ -2387,6 +2405,7 @@
 <script src="js/views/ai_quality.js"></script>
 <script src="js/views/guidance.js"></script>
 <script src="js/views/plandays.js"></script>
+<script src="js/views/careplan.js"></script>
 <script src="js/views/ask.js"></script>
 <script src="js/views/ask-voice.js"></script>
 <script src="js/views/demo_local.js"></script>

@@ -754,7 +754,8 @@
     } catch (err) { toastError(err); }
   }
 
-  router.register('plan', () => loadPlan());
+  // Planning for someone as their Care helper (js/views/careplan.js) shows their plan instead; your own does not load then.
+  router.register('plan', () => { if (KH.carePlan && KH.carePlan.onShow()) return; loadPlan(); });
   KH.views.plan = { loadPlan, afterLogChange, openCopySheet, openApplySheet, openSaveMealSheet, openMealEditor, openFitSheet,
     shoppingText, copyShopping, weekStartPref };
 })();

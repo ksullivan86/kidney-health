@@ -394,12 +394,7 @@
     route(m, p, function () { fail(404, 'Not Found'); });
   }
 
-  // Sharing (app/sharing.py, design note 19): a server where the admin has not turned it on.
-  route('GET', '/api/me/shares', function () { this._currentUser(); return { enabled: false, areas: ['food', 'labs', 'body', 'symptoms'], max: 10, sharing: [], codes: [] }; });
-  for (const [m, p] of [['POST', '/api/me/shares'], ['DELETE', /^\/api\/me\/shares\/(\d+)$/], ['GET', '/api/shared'], ['POST', '/api/shared/info'],
-    ['POST', '/api/shared/accept'], ['DELETE', /^\/api\/shared\/(\d+)$/], ['GET', /^\/api\/shared\/(\d+)\/.+$/]]) {
-    route(m, p, function () { this._currentUser(); fail(404, 'Not Found'); });
-  }
+  // The Care team (app/sharing.py, design notes 19 and 25): a sample Care team in js/mock/care.js.
 
   // ---------------------------------------------------------------------------
   // /api/admin: accounts, invites, usage, audit, about (settings and keys: js/mock/settings.js)

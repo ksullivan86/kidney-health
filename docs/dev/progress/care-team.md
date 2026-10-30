@@ -19,8 +19,15 @@ Branch: worktree-agent-a0c4dba93435a1585, fast-forwarded to next-8 (897538c, has
   (the AI naming WIP renamed it to "Outside AI apps"). Fix the test's string at the end.
 - Note: do not pass `-p no:logging` to pytest (caplog tests then error).
 
+- UI: Settings → Care team section `#set-care` (index.html, settings.js renderCare/openSection, sharing.js rewritten for
+  roles, invites, role select, Leave, Plan meals); Profile card `#profile-care`; Today "Added by"; Plan tab "Planning for"
+  (`js/views/careplan.js`, plan.js hands over via `KH.carePlan.onShow()`); CSS in plan.css. Activity labels for care.*.
+- Demo: `js/mock/care.js` (sample Care team; Ana's days as a swapped world), old sharing-off routes removed from mock/auth.js.
+- Tests: `tests/test_care_team_ui.py` (+ `tests/js/care_demo.mjs`), test_sharing_ui.py and sharing_list_loading.test.mjs
+  updated; test_settings_ui.py's stale "Assistant access" title fixed to "Outside AI apps". All pass.
+
 ## Next
-3. UI (in progress: sharing.js Care team section, settings.js #set-care, today.js "Added by", index.html section): Settings → Care team section (`js/views/sharing.js`), Profile link, Today "Added by", Plan "Planning for" (`js/views/careplan.js`).
+4. (done above) 5. e2e `tools/e2e/sharing.py`: Care helper plans a day.: Settings → Care team section (`js/views/sharing.js`), Profile link, Today "Added by", Plan "Planning for" (`js/views/careplan.js`).
 4. Mock twin (sample Care team), Node UI tests.
 5. e2e `tools/e2e/sharing.py` extended.
 6. Docs (accounts.md, handbook caregivers + app pages, ARCHITECTURE.md, CHANGELOG).

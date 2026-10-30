@@ -107,3 +107,16 @@
 .fit-checks .muted { color: inherit; opacity: 0.8; }
 .fit-over-word { font-weight: 600; }
 .fit-changes li { padding-left: 12px; border-left: 3px solid var(--border); }
+
+/* Planning for someone as their Care helper (js/views/careplan.js, design note 25). */
+.care-for { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 0 0 10px; }
+.care-for select { min-width: 10rem; }
+.care-banner { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 0 0 10px;
+  padding: 0.6rem 0.75rem; border-left: 4px solid var(--accent, currentColor); background: var(--surface-2, transparent); border-radius: 6px; }
+.care-banner p { margin: 0; font-weight: 600; min-width: 0; overflow-wrap: anywhere; }
+.care-day-btn { width: 100%; text-align: left; }
+.care-day-btn.selected { outline: 3px solid var(--accent, currentColor); outline-offset: -3px; }
+.care-entries .device { flex-wrap: wrap; }
+.care-amount { width: 5.5rem; }
+.care-results { margin: 4px 0; }
+.entry-added-by { color: var(--text-2); }

@@ -1,15 +1,17 @@
-/* Kidney Diet Log — read-only sharing (design note 19; app/sharing.py).
+/* Kidney Diet Log — the Care team (design notes 19 and 25; app/sharing.py).
 
-   * KH.sharing.block(): Settings → Account → Sharing. Who can see your data (Stop sharing), your links nobody has used yet
-     (Cancel), Share with someone (four boxes, then the link once with Copy link), and who shares with you (Open, Stop seeing).
+   * KH.sharing.block(): Settings → Care team. Invites for you (Accept, Decline), your Care team (the role, Remove), what waits
+     for an answer (user name invites and links nobody has used, Cancel), Add someone (by user name, or a link shown once with
+     Copy link), and the Care teams you are on (Open, Trends, Plan meals for a Care helper, Leave).
    * A link #/share/<code> is taken out of the address bar into memory when the page opens (so a sign-in screen does not lose
      it and it does not stay in the history), and once someone is signed in the share sheet asks "Accept?" before anything is
      saved. Nothing about the link is stored in the browser.
    * KH.sharing.reads(id): the read routes of one share, in the shape js/views/visit.js calls, so the Visit prep page shows the
      other person's summary. KH.sharing.renderDay() draws one day of their food log for the same page.
 
-   Every request is a read except making or ending a share and accepting a link; nothing here can write to anyone's log. All
-   text goes in with h() children (textContent), never as HTML. In the demo the server answers that sharing is off. */
+   Every request is a read except making, changing or ending a share, inviting, and answering an invite or a link; nothing
+   here writes to anyone's log (a Care helper plans in js/views/careplan.js). All text goes in with h() children
+   (textContent), never as HTML. The demo shows a sample Care team (js/mock/care.js). */
 (() => {
   'use strict';
   const KH = window.KH;
@@ -18,22 +20,34 @@
 
   const AREAS = ['food', 'labs', 'body', 'symptoms'];
   const AREA_LABEL = { food: 'food log', labs: 'lab results', body: 'weight and blood pressure', symptoms: 'symptoms' };
+  const ROLES = ['viewer', 'care_helper'];
+  const ROLE_LABEL = { viewer: 'Viewer', care_helper: 'Care helper' };
+  const ROLE_HINT = { viewer: 'can look at what you choose, and never change anything',
+    care_helper: 'can also plan your meals and use your shopping list. They never change what you ate, your targets or your profile' };
   // How long a share lasts once accepted (POST /api/me/shares `days`; the server takes 1 to 365).
   const DAY_CHOICES = [['', 'Until I stop it'], ['7', '1 week'], ['30', '30 days'], ['90', '90 days'], ['365', '1 year']];
   const LINK_RE = /^#\/share\/([0-9a-f]{16}\.[A-Za-z0-9_-]{43})$/;
-  const INTRO = 'Let a family member, caregiver or dietitian who has an account on this server see parts of your log. '
-    + 'They can look, but never change anything. You can stop at any time.';
-  const OFF = 'Your admin has not turned on sharing for this server.';
-  const DEMO = 'The demo has no other people, so there is nobody to share with. On your own server you share from here.';
+  const INTRO = 'Your Care team is family, a caregiver or a dietitian with an account on this server. A Viewer can look at the '
+    + 'parts of your log you choose. A Care helper can also plan your meals and use your shopping list. You can change this or '
+    + 'stop it at any time.';
+  const OFF = 'The Care team is off on this server. Your admin can turn it on.';
+  const OFF_ADMIN = 'The Care team is off on this server. You can turn it on in Server administration → Server settings → Care team, '
+    + 'or with SHARING_ENABLED=true.';
   const BAD_LINK = 'That link does not work. Ask for a new one.';
-  const SWITCHED_OFF = 'Sharing is turned off on this server. Ask your admin.';
+  const SWITCHED_OFF = 'The Care team is turned off on this server. Ask your admin.';
+  const SENT = (name) => `Invite sent to ${name}. If ${name} has an account here, they see it in their Settings → Care team. `
+    + 'Nothing changes until they accept.';
 
   const A = {
     mine: () => request('GET', '/api/me/shares'),
-    make: (areas, days) => request('POST', '/api/me/shares', { areas, days: days || null }),
+    make: (areas, days, role) => request('POST', '/api/me/shares', { areas, days: days || null, role: role || 'viewer' }),
+    invite: (username, areas, days, role) => request('POST', '/api/me/shares/invite', { username, areas, days: days || null, role }),
+    cancelInvite: (id) => request('DELETE', `/api/me/shares/invites/${id}`),
+    role: (id, role) => request('PUT', `/api/me/shares/${id}/role`, { role }),
     end: (id) => request('DELETE', `/api/me/shares/${id}`),
     people: () => request('GET', '/api/shared'),
     stop: (id) => request('DELETE', `/api/shared/${id}`),
+    answer: (id, yes) => request('POST', `/api/shared/invites/${id}/${yes ? 'accept' : 'decline'}`),
     info: (code) => request('POST', '/api/shared/info', { code }),
     accept: (code) => request('POST', '/api/shared/accept', { code }),
   };
@@ -77,24 +91,38 @@
   /** How long a share lasts, in words: "for 30 days" (a link's `days`) or "until Nov 28, 2026" (an accepted share's `until`). */
   function lastsText(days) { return days ? `for ${days} ${days === 1 ? 'day' : 'days'}` : 'until one of you stops it'; }
   function untilText(until) { return until ? `until ${fmtDay(until)}` : null; }
+  function roleText(role) { return ROLE_LABEL[role] || ROLE_LABEL.viewer; }
+  /** A Care helper's changes on the latest day: "changed your plan today: 3 added, 1 removed" (null when none). */
+  function changesText(c, today) {
+    if (!c) return null;
+    const parts = [['added', c.added], ['changed', c.changed], ['removed', c.removed]].filter(([, n]) => n > 0).map(([w, n]) => `${n} ${w}`);
+    if (!parts.length) return null;
+    return `changed your plan ${String(c.day) === today ? 'today' : `on ${fmtDay(c.day)}`}: ${parts.join(', ')}`;
+  }
   function sharingLine(s, today) {
-    const parts = [areasText(s.areas), `since ${fmtDay(s.since)}`, untilText(s.until), lastLooked(s.last_viewed_at, today)].filter(Boolean);
+    const parts = [roleText(s.role), areasText(s.areas), `since ${fmtDay(s.since)}`, untilText(s.until), lastLooked(s.last_viewed_at, today),
+      changesText(s.helper_changes, today)].filter(Boolean);
     if (s.active === false) parts.push('their account is turned off');
     return parts.join(' · ');
   }
-  function personLine(p) { return [areasText(p.areas), `since ${fmtDay(p.since)}`, untilText(p.until)].filter(Boolean).join(' · '); }
+  function personLine(p) { return [roleText(p.role), areasText(p.areas), `since ${fmtDay(p.since)}`, untilText(p.until)].filter(Boolean).join(' · '); }
   function whoText(p) { return p.name && p.name !== p.username ? `${p.name} (${p.username})` : p.username || p.name || ''; }
+  /** What joining someone's Care team means, for a link or an invite. */
   function questionText(info) {
     const who = whoText(info);
     const lasts = info.days ? ` It ends by itself after ${info.days} ${info.days === 1 ? 'day' : 'days'}.` : '';
-    return `${who} wants to share their ${areasText(info.areas)} with you. You can look, but not change anything. `
+    const what = info.role === 'care_helper'
+      ? 'as a Care helper. You can see this and plan their meals and use their shopping list, but not change what they ate, their targets or their profile. '
+      : 'You can look, but not change anything. ';
+    return `${who} wants to add you to their Care team and share their ${areasText(info.areas)} with you${info.role === 'care_helper' ? ', ' : '. '}${what}`
       + `${who} can stop this at any time, and so can you.${lasts}`;
   }
-  /** One entry of a shared day as a line: "Banana, 1 serving (planned)". */
+  /** One entry of a shared day as a line: "Banana, 1 serving (planned, added by Sam)". */
   function entryLine(e) {
     const n = Number(e.servings);
     const amount = e.grams != null ? `${Math.round(Number(e.grams))} g` : `${Number.isFinite(n) ? n : e.servings} ${n === 1 ? 'serving' : 'servings'}`;
-    const tags = [e.status === 'planned' ? 'planned' : null, e.purpose === 'hypo' ? 'to treat a low' : null].filter(Boolean);
+    const tags = [e.status === 'planned' ? 'planned' : null, e.purpose === 'hypo' ? 'to treat a low' : null,
+      e.added_by ? `added by ${e.added_by}` : null].filter(Boolean);
     return `${e.food_name}, ${amount}${tags.length ? ` (${tags.join(', ')})` : ''}`;
   }
 
@@ -112,10 +140,11 @@
   }
   const today = () => new Date().toISOString().slice(0, 10);
 
+  /** Settings → Care team: the section's body (index.html #set-care holds the heading). */
   function block() {
-    const body = h('div', { id: 'set-sharing', role: 'region', 'aria-labelledby': 'set-sharing-h' }, h('p', { class: 'muted small' }, 'Loading…'));
+    const body = h('div', { id: 'set-sharing', role: 'region', 'aria-labelledby': 'set-care-h' }, h('p', { class: 'muted small' }, 'Loading…'));
     load(body);
-    return h('div', { class: 'sharing' }, h('h3', { class: 'settings-subtitle', id: 'set-sharing-h' }, 'Sharing'), body);
+    return h('div', { class: 'sharing' }, body);
   }
 
   // Each Sharing block remembers its newest load and the link made there. Only the newest load draws. The new link stays on
@@ -128,9 +157,10 @@
     if (made) st.made = made;
     let mine;
     let people = [];
+    let invites = [];
     try {
       mine = await A.mine();
-      if (mine.enabled) people = (await A.people()).people || [];
+      if (mine.enabled) { const got = await A.people(); people = got.people || []; invites = got.invites || []; }
     } catch (err) {
       if (req !== st.request) return;
       clear(body).append(h('p', { class: 'form-error' }, `Could not load this: ${(err && (err.detail || err.message)) || 'unknown error'}`));
@@ -139,30 +169,59 @@
     }
     if (req !== st.request) return;
     if (st.made && mine.enabled && !mine.codes.some((c) => c.id === st.made.code.id)) st.made = null; // used or cancelled
-    render(body, mine, people, st.made, !!made);
+    render(body, mine, people, invites, st.made, !!made);
     if (focusSel) { const el = $(focusSel, body); if (el) el.focus(); }
   }
 
-  function render(body, mine, people, made, fresh) {
+  /** The switch is off: a person reads that their admin can turn it on; an admin reads where. */
+  function offNote() {
+    const admin = state.me && state.me.role === 'admin';
+    const p = h('p', { class: 'hint', id: 'set-sharing-off' }, admin ? OFF_ADMIN : OFF);
+    if (!admin || !KH.router) return p;
+    const open = h('button', { class: 'btn secondary', type: 'button', id: 'set-care-open-admin' }, 'Open Server administration');
+    open.addEventListener('click', () => KH.router.show('admin'));
+    return h('div', {}, p, h('div', { class: 'settings-actions' }, open));
+  }
+
+  function render(body, mine, people, invites, made, fresh) {
     clear(body);
-    if (!mine.enabled) { body.append(h('p', { class: 'hint', id: 'set-sharing-off' }, MOCK ? DEMO : OFF)); return; }
+    if (!mine.enabled) { body.append(offNote()); return; }
     body.append(h('p', {}, INTRO));
 
-    body.append(h('h4', { class: 'settings-minor' }, 'Who can see your data'));
+    if (invites.length) body.append(invitesForMe(body, invites));
+
+    body.append(h('h4', { class: 'settings-minor', id: 'set-care-team-h' }, 'Your Care team'));
     if (!mine.sharing.length) body.append(h('p', { class: 'muted small', id: 'set-sharing-none' }, 'Nobody yet.'));
     else {
-      const ul = h('ul', { class: 'list device-list', id: 'set-sharing-list', 'aria-label': 'People who can see your data' });
+      const ul = h('ul', { class: 'list device-list', id: 'set-sharing-list', 'aria-labelledby': 'set-care-team-h' });
       for (const s of mine.sharing) {
         const actions = h('div', { class: 'token-actions' });
-        const stop = h('button', { class: 'btn secondary', type: 'button', 'aria-label': `Stop sharing with ${whoText(s)}` }, 'Stop sharing');
+        actions.append(roleSelect(body, s, actions));
+        const stop = h('button', { class: 'btn secondary', type: 'button', 'aria-label': `Remove ${whoText(s)} from your Care team` }, 'Remove');
         stop.addEventListener('click', () => confirm.inline(actions, stop, {
-          message: `Stop sharing with ${whoText(s)}? They can no longer see any of your data.`,
-          confirmText: 'Stop sharing',
-          onConfirm: async () => { await A.end(s.id); toast(`Stopped sharing with ${s.name || s.username}`, 'ok'); await load(body, null, '#set-sharing-make'); return true; },
+          message: `Remove ${whoText(s)} from your Care team? They can no longer see any of your data or plan your meals.`,
+          confirmText: 'Remove',
+          onConfirm: async () => { await A.end(s.id); toast(`${s.name || s.username} is no longer on your Care team`, 'ok'); await load(body, null, '#set-care-invite-name'); return true; },
         }));
         actions.append(stop);
         ul.append(h('li', { class: 'device' }, h('div', { class: 'device-main' }, h('span', { class: 'row-title' }, whoText(s)),
           h('span', { class: 'row-sub' }, sharingLine(s, today()))), actions));
+      }
+      body.append(ul);
+    }
+
+    if ((mine.invites || []).length) {
+      body.append(h('h4', { class: 'settings-minor', id: 'set-care-waiting-h' }, 'Waiting for an answer'));
+      const ul = h('ul', { class: 'list device-list', id: 'set-care-invites', 'aria-labelledby': 'set-care-waiting-h' });
+      for (const inv of mine.invites) {
+        const cancel = button('Cancel', 'secondary', async () => {
+          await A.cancelInvite(inv.id);
+          toast('Invite cancelled', 'ok');
+          await load(body, null, '#set-care-invite-name');
+        }, { 'aria-label': `Cancel the invite to ${inv.username}` });
+        ul.append(h('li', { class: 'device' }, h('div', { class: 'device-main' }, h('span', { class: 'row-title' }, inv.username),
+          h('span', { class: 'row-sub' }, `${roleText(inv.role)} · ${areasText(inv.areas)} · ${lastsText(inv.days)} · the invite lapses ${fmtDay(inv.expires_at)}`)),
+        h('div', { class: 'token-actions' }, cancel)));
       }
       body.append(ul);
     }
@@ -177,30 +236,37 @@
           await load(body, null, '#set-sharing-make');
         }, { 'aria-label': `Cancel the link for your ${areasText(c.areas)}` });
         ul.append(h('li', { class: 'device' }, h('div', { class: 'device-main' }, h('span', { class: 'row-title' }, areasText(c.areas)),
-          h('span', { class: 'row-sub' }, `shares ${lastsText(c.days)} · the link works until ${fmtDay(c.expires_at)}`)), h('div', { class: 'token-actions' }, cancel)));
+          h('span', { class: 'row-sub' }, `${roleText(c.role)} · shares ${lastsText(c.days)} · the link works until ${fmtDay(c.expires_at)}`)), h('div', { class: 'token-actions' }, cancel)));
       }
       body.append(ul);
     }
 
-    body.append(shareForm(body, mine));
-    if (made) body.append(linkBox(made, fresh));
+    if (mine.sharing.length >= mine.max) {
+      body.append(h('p', { class: 'hint' }, `Your Care team has ${mine.max} people, the most allowed. Remove someone to add another.`));
+    } else {
+      body.append(inviteForm(body), shareForm(body));
+      if (made) body.append(linkBox(made, fresh));
+    }
 
-    body.append(h('h4', { class: 'settings-minor', id: 'set-shared-h' }, 'Shared with you'));
+    body.append(h('h4', { class: 'settings-minor', id: 'set-shared-h' }, 'Care teams you are on'));
     if (!people.length) {
-      body.append(h('p', { class: 'muted small', id: 'set-shared-none' }, 'Nobody shares with you yet. When someone sends you a link, open it while you are signed in.'));
+      body.append(h('p', { class: 'muted small', id: 'set-shared-none' }, 'You are not on anyone\'s Care team yet. When someone invites you, the invite shows here. '
+        + 'When someone sends you a link, open it while you are signed in.'));
     } else {
       const ul = h('ul', { class: 'list device-list', id: 'set-shared-list', 'aria-labelledby': 'set-shared-h' });
       for (const p of people) {
         const actions = h('div', { class: 'token-actions' });
         const open = button('Open', 'primary', () => openShared(p), { 'aria-label': `Open what ${whoText(p)} shares with you` });
         const trends = button('Trends', 'secondary', () => openTrends(p), { 'aria-label': `Open ${whoText(p)}'s trends` });
-        const stop = h('button', { class: 'btn secondary', type: 'button', 'aria-label': `Stop seeing what ${whoText(p)} shares` }, 'Stop seeing');
+        const plan = p.role === 'care_helper' && KH.carePlan
+          ? button('Plan meals', 'secondary', () => KH.carePlan.open(p), { 'aria-label': `Plan meals for ${whoText(p)}` }) : null;
+        const stop = h('button', { class: 'btn secondary', type: 'button', 'aria-label': `Leave ${whoText(p)}'s Care team` }, 'Leave');
         stop.addEventListener('click', () => confirm.inline(actions, stop, {
-          message: `Stop seeing what ${whoText(p)} shares? They would have to send you a new link.`,
-          confirmText: 'Stop seeing',
-          onConfirm: async () => { await A.stop(p.id); toast(`You no longer see ${p.name || p.username}'s data`, 'ok'); await load(body, null, '#set-shared-h'); return true; },
+          message: `Leave ${whoText(p)}'s Care team? They would have to invite you again.`,
+          confirmText: 'Leave',
+          onConfirm: async () => { await A.stop(p.id); toast(`You left ${p.name || p.username}'s Care team`, 'ok'); await load(body, null, '#set-shared-h'); return true; },
         }));
-        actions.append(open, trends, stop);
+        actions.append(open, trends, plan, stop);
         ul.append(h('li', { class: 'device' }, h('div', { class: 'device-main' }, h('span', { class: 'row-title' }, whoText(p)),
           h('span', { class: 'row-sub' }, personLine(p))), actions));
       }
@@ -208,33 +274,136 @@
     }
   }
 
-  function shareForm(body, mine) {
-    const err = h('div', { class: 'form-error', role: 'alert' });
-    if (mine.sharing.length >= mine.max) {
-      return h('p', { class: 'hint' }, `You share with ${mine.max} people, the most allowed. Stop sharing with someone to add another.`);
+  /** Invites for the signed-in person, each with Accept and Decline. */
+  function invitesForMe(body, invites) {
+    const box = h('div', { class: 'care-invites-for-me' }, h('h4', { class: 'settings-minor', id: 'set-care-for-me-h' }, 'Invites for you'));
+    const ul = h('ul', { class: 'list device-list', id: 'set-care-for-me', 'aria-labelledby': 'set-care-for-me-h' });
+    for (const inv of invites) {
+      const yes = button('Accept', 'primary', async () => {
+        const person = await A.answer(inv.id, true);
+        toast(`You joined ${person.name || person.username}'s Care team`, 'ok');
+        await load(body, null, '#set-shared-h');
+      }, { 'aria-label': `Accept the invite from ${whoText(inv)}` });
+      const no = button('Decline', 'secondary', async () => {
+        await A.answer(inv.id, false);
+        toast('Invite declined', 'ok');
+        await load(body, null, '#set-care-team-h');
+      }, { 'aria-label': `Decline the invite from ${whoText(inv)}` });
+      ul.append(h('li', { class: 'device' }, h('div', { class: 'device-main' }, h('span', { class: 'row-title' }, whoText(inv)),
+        h('span', { class: 'row-sub' }, questionText(inv))), h('div', { class: 'token-actions' }, yes, no)));
     }
+    box.append(ul);
+    return box;
+  }
+
+  /** The role of someone on your Care team, changed in place. A Care helper always sees the food log, so it is added (said first). */
+  function roleSelect(body, s, actions) {
+    const id = `set-care-role-${s.id}`;
+    const select = h('select', { id, 'aria-label': `Role of ${whoText(s)}` }, ...ROLES.map((r) => h('option', { value: r }, ROLE_LABEL[r])));
+    select.value = s.role || 'viewer';
+    const apply = async (role) => {
+      select.disabled = true;
+      try {
+        const got = await A.role(s.id, role);
+        toast(`${s.name || s.username} is now a ${roleText(got.role)}`, 'ok');
+        await load(body, null, `#${id}`);
+      } catch (err) { select.value = s.role || 'viewer'; if (!err.handled) toastError(err); } finally { if (document.contains(select)) select.disabled = false; }
+      return true;
+    };
+    select.addEventListener('change', () => {
+      const role = select.value;
+      if (role === 'care_helper' && !(s.areas || []).includes('food')) {
+        confirm.inline(actions, select, {
+          message: `A Care helper sees your food log so they can plan meals. Share your food log with ${whoText(s)} and make them a Care helper?`,
+          confirmText: 'Make Care helper',
+          onConfirm: () => apply(role),
+          onCancel: () => { select.value = s.role || 'viewer'; },
+        });
+        return;
+      }
+      apply(role);
+    });
+    return select;
+  }
+
+  /** The parts of the form both ways of adding someone use: the role, what they see, how long. `prefix` keeps the ids apart. */
+  function choices(prefix) {
+    const roleName = `${prefix}-role`;
+    const roles = ROLES.map((r) => {
+      const radio = h('input', { type: 'radio', name: roleName, id: `${prefix}-role-${r}`, value: r });
+      radio.checked = r === 'viewer';
+      return h('label', { class: 'check', for: `${prefix}-role-${r}` }, radio, ` ${ROLE_LABEL[r]}: ${ROLE_HINT[r]}`);
+    });
     const boxes = AREAS.map((a) => {
-      const id = `set-share-${a}`;
+      const id = `${prefix}-${a}`;
       const box = h('input', { type: 'checkbox', id, value: a });
       box.checked = true;
       return h('label', { class: 'check', for: id }, box, ` My ${AREA_LABEL[a]}`);
     });
-    const lasts = h('select', { id: 'set-share-days' }, ...DAY_CHOICES.map(([v, label]) => h('option', { value: v }, label)));
-    const make = h('button', { class: 'btn primary', type: 'submit', id: 'set-sharing-make' }, 'Make a link');
-    const form = h('form', { class: 'settings-form sharing-form', novalidate: true },
-      h('fieldset', {}, h('legend', {}, 'Share with someone'), boxes),
-      h('label', { class: 'label', for: 'set-share-days' }, 'For how long'), lasts,
-      h('span', { class: 'hint' }, 'You get a link to send them. It works once, for 7 days. They need their own account on this server.'),
-      h('div', { class: 'settings-actions' }, make), err);
+    const lasts = h('select', { id: `${prefix}-days` }, ...DAY_CHOICES.map(([v, label]) => h('option', { value: v }, label)));
+    const nodes = [h('fieldset', {}, h('legend', {}, 'Role'), roles), h('fieldset', {}, h('legend', {}, 'What they can see'), boxes),
+      h('label', { class: 'label', for: `${prefix}-days` }, 'For how long'), lasts];
+    const read = (form) => {
+      const role = (ROLES.find((r) => $(`#${prefix}-role-${r}`, form).checked)) || 'viewer';
+      const areas = AREAS.filter((a) => $(`#${prefix}-${a}`, form).checked);
+      return { role, areas: role === 'care_helper' && !areas.includes('food') ? ['food', ...areas] : areas, days: Number(lasts.value) || null };
+    };
+    return { nodes, read };
+  }
+
+  /** Add someone who already has an account here, by user name. The answer is the same whether or not the name is an account. */
+  function inviteForm(body) {
+    const err = h('div', { class: 'form-error', role: 'alert' });
+    const done = h('p', { class: 'hint', id: 'set-care-sent', role: 'status' });
+    const name = h('input', { id: 'set-care-invite-name', type: 'text', autocomplete: 'off', autocapitalize: 'none', spellcheck: 'false', maxlength: 255 });
+    const c = choices('set-care');
+    const send = h('button', { class: 'btn primary', type: 'submit', id: 'set-care-invite' }, 'Send invite');
+    const form = h('form', { class: 'settings-form sharing-form', id: 'set-care-invite-form', novalidate: true },
+      h('h4', { class: 'settings-minor' }, 'Add someone'),
+      h('label', { class: 'label', for: 'set-care-invite-name' }, 'Their user name on this server'), name, ...c.nodes,
+      h('span', { class: 'hint' }, 'They see your invite in their Settings → Care team. Nothing changes until they accept.'),
+      h('div', { class: 'settings-actions' }, send), done, err);
+    sheets.onSubmit(form, async (e) => {
+      e.preventDefault();
+      if (send.disabled) return;
+      clear(err); done.textContent = '';
+      const username = name.value.trim();
+      const { role, areas, days } = c.read(form);
+      if (!username) { err.append(h('p', {}, 'Type their user name.')); return; }
+      if (!areas.length) { err.append(h('p', {}, 'Tick at least one thing they can see.')); return; }
+      send.disabled = true;
+      try {
+        const inv = await A.invite(username, areas, days, role);
+        await load(body, null, '#set-care-invite-name');
+        const again = $('#set-care-sent', body);
+        if (again) again.textContent = SENT(inv.username);
+      } catch (e2) {
+        if (e2.cancelled || e2.handled) return;
+        err.append(h('p', {}, e2.detail || e2.message || 'No invite was sent. Try again.'));
+      } finally { if (document.contains(send)) send.disabled = false; }
+    });
+    return form;
+  }
+
+  /** For someone without a user name you know: a link shown once. */
+  function shareForm(body) {
+    const err = h('div', { class: 'form-error', role: 'alert' });
+    const c = choices('set-share');
+    const make = h('button', { class: 'btn secondary', type: 'submit', id: 'set-sharing-make' }, 'Make a link');
+    const form = h('form', { class: 'settings-form sharing-form', id: 'set-share-form', novalidate: true },
+      h('details', { class: 'care-link' }, h('summary', {}, 'Make a link instead'),
+        ...c.nodes,
+        h('span', { class: 'hint' }, 'You get a link to send them. It works once, for 7 days. They need their own account on this server.'),
+        h('div', { class: 'settings-actions' }, make), err));
     sheets.onSubmit(form, async (e) => {
       e.preventDefault();
       if (make.disabled) return;
       clear(err);
-      const areas = AREAS.filter((a) => $(`#set-share-${a}`, form).checked);
+      const { role, areas, days } = c.read(form);
       if (!areas.length) { err.append(h('p', {}, 'Tick at least one thing to share.')); return; }
       make.disabled = true;
       try {
-        const made = await A.make(areas, Number(lasts.value) || null);
+        const made = await A.make(areas, days, role);
         await load(body, made);
       } catch (e2) {
         if (e2.cancelled || e2.handled) return;
@@ -372,7 +541,7 @@
         if (!current()) return;
         delete accept.dataset.code;
         dlg.close();
-        toast(`You can now see ${person.name || person.username}'s ${areasText(person.areas)}`, 'ok');
+        toast(`You joined ${person.name || person.username}'s Care team as a ${roleText(person.role)}`, 'ok');
         openShared(person);
       } catch (err) {
         if (!current() || err.handled) return;
@@ -398,5 +567,5 @@
   setupSheet();
 
   KH.sharing = { block, reads, renderDay, openShared, openPending, takeLink, areasText, lastLooked, lastsText, sharingLine, personLine, whoText,
-    questionText, entryLine, AREAS, AREA_LABEL };
+    questionText, entryLine, roleText, changesText, people: A.people, AREAS, AREA_LABEL, ROLES, ROLE_LABEL };
 })();
