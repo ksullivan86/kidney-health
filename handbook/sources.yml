@@ -1994,6 +1994,22 @@ DOCKER-ROOTLESS:
   checked: 2026-10-06
   kind: tool
   note: "docker run -p does not propagate source IP addresses by default (RootlessKit 3.0+ needs userland-proxy disabled); --cpus, --memory and --pids-limit are ignored without cgroup v2; ports below 1024 need extra configuration."
+NETBIRD-CLI:
+  cite: "NetBird documentation. NetBird agent command line interface (CLI)."
+  short: "NetBird: command line"
+  url: https://docs.netbird.io/get-started/cli
+  licence: "© NetBird: link and paraphrase"
+  checked: 2026-10-30
+  kind: tool
+  note: "netbird up --mtu: 'Set MTU (Maximum Transmission Unit) for the WireGuard interface (default 1280)'. Peer DNS names end in netbird.cloud on NetBird's own service."
+NETBIRD-ROUTES:
+  cite: "NetBird documentation. How routing peers work."
+  short: "NetBird: routing peers"
+  url: https://docs.netbird.io/manage/networks/how-routing-peers-work
+  licence: "© NetBird: link and paraphrase"
+  checked: 2026-10-30
+  kind: tool
+  note: "Forwarded packets traverse the routing peer's firewall forward chain; masquerade is on by default (traffic leaves with the routing peer's LAN address)."
 K8S-PSS:
   cite: "Kubernetes documentation. Pod Security Standards."
   short: "Kubernetes: Pod Security Standards"

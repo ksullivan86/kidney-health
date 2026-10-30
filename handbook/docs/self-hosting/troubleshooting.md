@@ -7,9 +7,9 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-06
-fact_checked: 2026-10-05
-sources: [DEPLOY, SECDOC, HTTPSDOC, NOTE01, NOTE02, NOTE07, DOCKER-ROOTLESS, K8S-NETPOL]
+last_checked: 2026-10-30
+fact_checked: 2026-10-30
+sources: [DEPLOY, SECDOC, HTTPSDOC, NOTE01, NOTE02, NOTE07, DOCKER-ROOTLESS, K8S-NETPOL, NETBIRD-CLI, NETBIRD-ROUTES]
 ---
 
 # Troubleshooting
@@ -57,6 +57,37 @@ The commands for each engine, and the fixes below in more detail, are in the dep
 | The camera shows black | use the photo or type-in options for barcodes |
 | Asked to sign in again | an installed app keeps its own sign-in, separate from the browser's |
 
+## Only the header shows over a VPN
+
+The app opens on the home Wi-Fi. Over a VPN such as NetBird, Tailscale or WireGuard, only the header shows, and after
+about 8 seconds the page says "The app did not start". The page arrived, but the app's script files did not.
+
+**The likely cause** is packets that are too big for the tunnel. A VPN wraps each packet in another one, so packets
+inside it must be smaller. Small answers get through, but large files stall when the big packets are dropped and the
+"too big" messages never come back. This is called a path MTU black hole. It is likely when the server sits behind a
+NetBird routing peer, which passes traffic between the tunnel and your home network
+([NetBird: routing peers][NETBIRD-ROUTES]), instead of running NetBird itself.
+
+**To check**, download the largest script file once over the VPN and once on the home Wi-Fi. On Wi-Fi it arrives at
+once. Over a black hole it stops after a few kilobytes, while a small address such as `/healthz` still answers.
+
+**To fix it**, do one of these, then check again:
+
+- clamp the TCP segment size (MSS clamping) on the NetBird routing peer, so connections through it use packets that fit;
+- lower the MTU of the NetBird interface on both ends. NetBird's default is 1280 ([NetBird: command line][NETBIRD-CLI]);
+- run NetBird on the server itself, so it is a peer and no route is involved.
+
+**Also rule out:**
+
+- `400 Unknown host` in the browser or the log: add the NetBird name you use (for example one ending in
+  `.netbird.cloud`) to `ALLOWED_HOSTS`, or set `PUBLIC_URL` to it ([Configuration](configuration.md));
+- an old copy of the app on the device: where the app works, use **Settings → This device → Clear offline data on this
+  device**, after waiting entries have synced, or clear the site's data in the browser;
+- a content blocker, or a filtering proxy or DNS on the VPN, that blocks script files.
+
+The commands for each step are in the deployment guide's section
+[Only the header shows over a VPN](https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md#only-the-header-shows-over-a-vpn).
+
 ## Accounts
 
 | Problem | Fix |
@@ -91,3 +122,4 @@ problems privately ([Security](security.md)).
 - [Deployment guide: troubleshooting](https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md#troubleshooting); [operator security guide][SECDOC]; [HTTPS guide][HTTPSDOC].
 - [Design note 01][NOTE01]; [design note 02][NOTE02]; [design note 07][NOTE07].
 - [Docker: rootless mode limitations][DOCKER-ROOTLESS]; [Kubernetes: Network Policies][K8S-NETPOL].
+- [NetBird: command line][NETBIRD-CLI]; [NetBird: routing peers][NETBIRD-ROUTES].

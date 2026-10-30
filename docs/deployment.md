@@ -925,3 +925,57 @@ RuntimeDefault`.
 
 **Which version is running?** `podman inspect kidney-health --format '{{.ImageDigest}}'` or
 `kubectl -n kidney-health get deploy kidney-health -o jsonpath='{.spec.template.spec.containers[0].image}'`.
+
+### Only the header shows over a VPN
+
+The address opens, but only the header shows. After about 8 seconds the page says "The app did not start". On the
+home Wi-Fi the same address works. The page arrived, but the app's script files did not.
+
+**The likely cause: packets too big for the tunnel.** A VPN such as NetBird, Tailscale or WireGuard wraps each packet
+in another one, so packets inside the tunnel must be smaller than on the network underneath. Small answers, such as the
+page and the API, fit and get through. Large files need full-size packets. If those are dropped and the "too big"
+messages (ICMP) never reach the sender, the download stalls. This is a path MTU black hole. It is likely when the
+server sits behind a NetBird routing peer (a network route) rather than running NetBird itself.
+
+**Check it.** Download the largest script, once over the VPN and once on the home Wi-Fi, and compare:
+
+```bash
+curl -so /dev/null --max-time 30 -w '%{size_download} %{time_total}\n' https://<address>/js/views/settings.js
+curl -so /dev/null --max-time 30 -w '%{size_download} %{time_total}\n' https://<address>/healthz
+```
+
+On Wi-Fi the first line prints the whole file, about 150 KB, in well under a second. Over a black hole it stops at a few
+kilobytes and waits until `--max-time` ends it, while `/healthz`, which is small, still answers at once.
+
+**Fix it.** Any one of these, then check again:
+
+* **Clamp the TCP segment size on the NetBird routing peer** (Linux), so connections routed through it use packets
+  that fit the tunnel:
+
+  ```bash
+  # iptables
+  sudo iptables -t mangle -A FORWARD -p tcp --tcp-flags SYN,RST SYN -j TCPMSS --clamp-mss-to-pmtu
+  # or nftables
+  sudo nft add table inet mssfix
+  sudo nft add chain inet mssfix forward '{ type filter hook forward priority mangle; }'
+  sudo nft add rule inet mssfix forward tcp flags syn tcp option maxseg size set rt mtu
+  ```
+
+  These rules end at the next reboot. Keep them with your system's firewall tool (for example `/etc/nftables.conf`, or
+  `iptables-save` with `netfilter-persistent`).
+* **Lower the NetBird interface MTU** on the phone or laptop and on the routing peer, for example
+  `netbird up --mtu 1200`. NetBird's default is 1280. This helps when the network under the tunnel is itself smaller,
+  such as some mobile or PPPoE links.
+* **Run NetBird on the server itself**, so the server is a peer and no route is involved. Its own TCP then picks a
+  packet size that fits the tunnel.
+
+**Other things to rule out:**
+
+* **`400 Unknown host`**, and a log line saying the app refused an unknown host: you opened the app by its NetBird name
+  (for example `server.netbird.cloud`, or a name in your own NetBird domain). Add that name to `ALLOWED_HOSTS`, or set
+  `PUBLIC_URL` to it ([Configuration](#configuration)).
+* **An old copy of the app on the device.** The installed app keeps its files for offline use. To start fresh, open
+  the app where it works and use **Settings → This device → Clear offline data on this device**. Let waiting entries
+  sync first: clearing removes the ones not yet sent. Or clear this site's data in the browser's settings.
+* **A blocked script.** A content blocker, or a filtering proxy or DNS on the VPN, can block `.js` files. The browser's
+  developer tools (the Network tab) show which file failed.

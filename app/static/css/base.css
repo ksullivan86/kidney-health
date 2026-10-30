@@ -220,6 +220,21 @@ svg { display: inline-block; vertical-align: middle; }
 }
 .view { display: flex; flex-direction: column; gap: 12px; }
 
+/* ---------- the app did not start (index.html #boot-fail) ----------
+   Shown with no script at all: invisible at first, visible after 8 seconds. It is a step, not a fade, so it stays on with reduced
+   motion: the class's !important outranks the reduced-motion rule's `*`. js/main.js sets [hidden] once a screen is showing, and
+   adds .boot-fail-now to show it at once when boot fails. */
+.boot-fail {
+  margin: 12px 0; padding: 4px 18px 16px; background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: var(--radius); line-height: 1.5;
+  visibility: hidden; animation: kh-boot-fail-show 0s linear 8s forwards !important;
+}
+.boot-fail.boot-fail-now { visibility: visible; animation: none !important; }
+.boot-fail h2 { font-size: 1.15rem; margin: 14px 0 6px; }
+.boot-fail p { margin: 8px 0; }
+.boot-fail-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+@keyframes kh-boot-fail-show { to { visibility: visible; } }
+
 /* ---------- tabs ---------- */
 .tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20;
   background: var(--surface); border-top: 1px solid var(--border);
