@@ -55,7 +55,7 @@ def read_totp(request: Request, user: CurrentUser, conn: sqlite3.Connection = De
     if not available(request, user):
         return {"available": False, "enabled": False, "enabled_at": None, "recovery_codes_left": 0, "required": False}
     # required: this person is an admin and the server asks admins to use it (auth.require_two_step_admins).
-    required = user.role == "admin" and two_step_required(auth_context(request), conn, user)
+    required = user.role == "admin" and two_step_required(auth_context(request), conn, user, request)
     return {"available": True, **status(conn, user.id), "required": required}
 
 

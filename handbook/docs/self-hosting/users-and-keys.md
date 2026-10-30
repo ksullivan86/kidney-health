@@ -7,9 +7,9 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-06
+last_checked: 2026-10-30
 fact_checked: 2026-10-05
-sources: [NOTE07, NOTE04, DEPLOY, SECDOC, NIST-63B4, FDC-API]
+sources: [NOTE07, NOTE04, DEPLOY, SECDOC, NIST-63B4, FDC-API, NOTE24]
 ---
 
 # Users and keys
@@ -140,6 +140,37 @@ header. It needs `TRUSTED_PROXY_USER_HEADER`, a matching `TRUSTED_PROXIES`, and
 refuses to start. Set-up details: [Configuration](configuration.md#proxy-sign-in-auth_modeproxy) and the
 [deployment guide][DEPLOY].
 
+## Sign in with Authentik or Google
+
+You can add a button to the sign-in page that signs people in with an account they already have: your own Authentik, or Google, or
+another provider that speaks OpenID Connect ([design note 24][NOTE24]). It is off until you set it up, and it sits next to the
+password form: passwords and passkeys keep working.
+
+At the provider you make a client for this app and give it one return address: your public address followed by
+`/api/auth/oidc/callback`. The server needs the provider's issuer address, the client ID, and the client secret as a file, never as
+a plain setting. A home Authentik on your own network also needs the setting that allows a private address. Then **Server
+administration → About this server** says whether the server reached the provider. The exact steps for Authentik and for Google are
+in the operator guide, [accounts.md](https://github.com/ksullivan86/kidney-health/blob/main/docs/accounts.md#sign-in-with-authentik-google-or-another-provider).
+
+Then choose who may get in, under **Server administration → Server settings → Single sign-on**:
+
+- **The words on the button**, for example "Sign in with Authentik".
+- **New accounts at the first sign-in**: off by default. Then only people who linked their account in **Settings → Account →
+  Linked sign-in**, or who have an invite link, get in. Keep it off with Google, where anyone in the world has an account, unless
+  you also list the email domains allowed in.
+- **Linking by email**: gives someone the account you made for them in **People** with their email address as the username, at
+  their first sign-in, if nobody has used that account yet and the provider says the email is verified. Off by default. Never an
+  account someone registered themselves, and never an admin account.
+- **Admin groups**: members of these provider groups are admins here, and the role follows the groups at each sign-in. The last
+  admin is never demoted.
+
+Someone who signs in through the provider is not asked for this app's two-step code, admins included: the provider does its own
+checks. So make the provider ask for a second factor, especially for admins. If someone loses their provider account, remove their
+link under **Server administration → People** and send them a reset link.
+
+A sign-in proxy in front of the app (the section below) is the other way to use Authentik. Use the proxy when nobody should see
+the app before signing in; use the button for Google, for a VPN or LAN address, or when some people keep a password.
+
 ## If something goes wrong
 
 - **No `FIRST-RUN SETUP` line**: an admin already exists, or `ADMIN_PASSWORD_FILE` was used. Check
@@ -159,3 +190,4 @@ refuses to start. Set-up details: [Configuration](configuration.md#proxy-sign-in
 - [Design note 07: accounts, settings and secrets][NOTE07], sections 4.3–4.5, 4.12 and the security review.
 - [Design note 04][NOTE04] (AI providers); [deployment guide][DEPLOY]; [operator security guide][SECDOC].
 - [NIST SP 800-63B-4][NIST-63B4]; [USDA FoodData Central API guide][FDC-API].
+- [Design note 24: sign in with another account][NOTE24].

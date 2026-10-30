@@ -12,6 +12,7 @@ API is in `ARCHITECTURE.md` ("M1 API").
 |---|---|---|
 | `local` (default) | Most homes and small groups | Username and password, a session cookie, invites from the admin |
 | `proxy` | You already run Authelia, authentik or `tailscale serve` and want its sign-in (and MFA) | The proxy tells the app who is signed in through a header; the app has no passwords |
+| `local` with `OIDC_ENABLED=true` | You want "Sign in with Authentik" or "Sign in with Google" next to passwords | A button on the sign-in page; see [Sign in with Authentik, Google or another provider](#sign-in-with-authentik-google-or-another-provider) |
 | `none` | One person on a trusted network who wants the v0.2 behaviour | No sign-in at all; everything belongs to user 1; the app shows a red banner |
 
 `none` means anyone who can open the page can read and change all data. Do not expose it beyond
@@ -119,6 +120,78 @@ phished or reused from a leak.
 * The server stores public keys only. Nothing about them is secret, and they are not in the data export.
 
 How it works, and why: [design note 18](dev/research/18-passkeys.md).
+
+## Sign in with Authentik, Google or another provider
+
+With `AUTH_MODE=local` you can add a button to the sign-in page that signs people in with an account they already have: your own
+Authentik (or Authelia, Keycloak, Kanidm, Pocket ID), or Google. The standard is OpenID Connect. It is **off** until you set it up,
+and no company is involved unless you choose one: a home Authentik involves nobody else.
+
+How it works for people:
+
+* **Sign in with Authentik** (your words) on the sign-in page. They sign in there, and the browser comes back signed in here. The
+  app's own two-step code is not asked: the provider did its own checks.
+* Someone with a password links their provider account in **Settings → Account → Linked sign-in → Link**. After that either way
+  works. The password and passkeys keep working.
+* An invite link offers **Create the account with Authentik**, with no username or password to choose.
+* With **Make an account for someone new** on, the first sign-in of someone the server does not know makes an account. Off by
+  default: then only linked accounts and invite links get in, and anyone else is told "There is no account here for that sign-in".
+
+Set it up:
+
+1. At the provider, make a client (below). Give it this exact return address, with your `PUBLIC_URL`:
+   `https://kidney.example.org/api/auth/oidc/callback`.
+2. Put the client secret in a file (`deploy/secrets/oidc_client_secret`, a Podman secret or a Kubernetes Secret) and set
+   `OIDC_CLIENT_SECRET_FILE` to it. The secret is never an environment variable: `OIDC_CLIENT_SECRET` stops the start.
+3. Set `OIDC_ENABLED=true`, `OIDC_ISSUER`, `OIDC_CLIENT_ID` and `PUBLIC_URL`, and restart. **Server administration → About this
+   server** shows "Single sign-on: On", the return address, and whether the server reached the provider. The secret is never
+   shown.
+4. Choose who may get in under **Server administration → Server settings → Single sign-on**: the button's words, new accounts,
+   linking by email, allowed email domains, and admin groups. Each has a variable too (`deployment.md`).
+5. Sign in with your password, link your own provider account in Settings, sign out, and try the button.
+
+**Authentik.** Applications → Create with provider → OAuth2/OpenID Provider. Client type: Confidential. Redirect URI (strict):
+`https://kidney.example.org/api/auth/oidc/callback`. Signing key: any certificate (RS256) or an EC key (ES256); not "no key"
+(that would be HS256, which this app refuses). Scopes: `openid`, `email`, `profile`. Copy the client ID, the client secret and the
+**OpenID Configuration Issuer** from the provider's page, for example `https://auth.example.org/application/o/kidney-health/`
+with the slash at the end. A home Authentik on a LAN or VPN address also needs `OIDC_ALLOW_PRIVATE_ISSUER=true`. To make members of
+a group admins here, set **Provider groups that make someone an admin** to the group's name (Authentik's own is `authentik Admins`).
+
+**Google.** In the Google Cloud console: APIs & Services → OAuth consent screen (External for personal Google accounts, Internal for
+a Workspace domain), with only the `openid`, email and profile scopes, so no review by Google is needed. Then Credentials → Create
+credentials → OAuth client ID → Web application, with the authorised redirect URI
+`https://kidney.example.org/api/auth/oidc/callback`. Set `OIDC_ISSUER=https://accounts.google.com`. While the consent screen is in
+Testing, only the test users you list there can sign in. **Anyone in the world has a Google account**, so keep **Make an account for
+someone new** off, or set **Only let in email addresses from these domains** (Google's `hd` claim must
+match as well, so only Workspace accounts of a listed domain get in, not a personal Google account that uses a work address). Google needs a host name in the redirect URI, not an IP address.
+
+Good to know:
+
+* **Two-step for admins.** "Admins must use two-step sign-in" applies to password sign-ins. An admin who signs in through the
+  provider is not asked for the app's code, so make the provider ask for a second factor: an MFA stage in the Authentik flow, or
+  2-Step Verification on the Google account.
+* **Linking by email** gives someone the account you made for them. Make the account in **Server administration → People** with
+  their email address as the username, and do not send the setup link. At their first sign-in through the provider, if the
+  provider says the email is verified and it matches exactly, in plain letters, they get that account. It is off by default and
+  never links an account someone registered themselves, one with a password, passkey or link, an admin account, or an
+  unverified email. Their provider groups count from their next sign-in.
+* **Too many sign-ins started.** At most 10 sign-ins can wait at the provider for one address, and 10,000 in all; beyond that the
+  page says "Too many sign-ins started. Try again soon."
+* **Admin groups.** When set, the role follows the provider's `groups` claim at each sign-in. The last admin is never demoted.
+* **Lost provider account.** The person removes the link in Settings (not their last way in), or you remove it in **Server
+  administration → People → Remove linked sign-in** and send a reset link if they have no password.
+* **No password.** Someone who signed up through the provider has no password here. When an action asks for the password again,
+  **Confirm with Authentik** answers it. They can add a passkey, or you can send a reset link to set a password.
+* Signing out of the app does not sign out at the provider.
+* The activity log records sign-ins through the provider and every link and unlink. Tokens are never stored or logged, and the
+  server's access log shows the one-time code and state as `[redacted]`.
+
+**Provider or sign-in proxy?** `AUTH_MODE=proxy` (an Authentik proxy outpost or Authelia in front of the app, see
+[Proxy mode](#proxy-mode)) already works and keeps the app's page hidden until the proxy has signed someone in. Pick the proxy when
+everything already sits behind forward auth. Pick the provider for Google, when the app is reached directly (a VPN such as NetBird,
+a LAN name), or when some people should keep a password.
+
+The design and its reasoning: [design note 24](dev/research/24-oidc-sign-in.md).
 
 ## Sharing with a caregiver
 

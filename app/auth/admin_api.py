@@ -17,7 +17,7 @@ from .. import account, credentials, sharing
 from ..audit import audit, list_events
 from ..crypto import secret_report
 from ..db import database_file, get_db, get_meta, get_schema_version, utcnow
-from . import api_tokens, clock, passkeys, sessions, tokens, totp
+from . import api_tokens, clock, oidc_api, passkeys, sessions, tokens, totp
 from .accounts import (
     begin_immediate,
     check_local_username,
@@ -59,14 +59,14 @@ def _user_or_404(conn: sqlite3.Connection, user_id: int) -> sqlite3.Row:
 def _user_view(conn: sqlite3.Connection, row: sqlite3.Row, links: dict[int, dict[str, Any]] | None = None,
                assistant: dict[int, int] | None = None, device: dict[int, int] | None = None,
                two_step: set[int] | None = None, keys: dict[int, int] | None = None,
-               shared: dict[int, int] | None = None) -> dict[str, Any]:
+               shared: dict[int, int] | None = None, oidc_links: dict[int, int] | None = None) -> dict[str, Any]:
     """``user_admin_dict`` plus ``reset_link``: the open reset or account-setup link for the account
     (``{id, created_by, created_at, expires_at}``, never the token), so an admin can see and revoke a
     link that someone else issued, including one for their own account; and ``assistant_tokens`` and ``device_tokens``,
     how many active tokens of each family (assistant tokens, phone-shortcut tokens) the person has (numbers only, never a
     token) for "Revoke tokens", which ends both families; ``two_step``, whether two-step sign-in is on (note 17); ``passkeys``,
     how many passkeys the person has (note 18); and ``shares``, how many shares and unused share links the person is on either
-    side of (note 19)."""
+    side of (note 19); and ``oidc_links``, how many provider accounts are linked to it (note 24)."""
     if links is None:
         links = tokens.open_reset_links(conn)
     if assistant is None:
@@ -79,9 +79,12 @@ def _user_view(conn: sqlite3.Connection, row: sqlite3.Row, links: dict[int, dict
         keys = passkeys.counts(conn)
     if shared is None:
         shared = sharing.counts(conn)
+    if oidc_links is None:
+        oidc_links = oidc_api.counts(conn)
     return {**user_admin_dict(row), "reset_link": links.get(int(row["id"])),
             "assistant_tokens": assistant.get(int(row["id"]), 0), "device_tokens": device.get(int(row["id"]), 0),
-            "two_step": int(row["id"]) in two_step, "passkeys": keys.get(int(row["id"]), 0), "shares": shared.get(int(row["id"]), 0)}
+            "two_step": int(row["id"]) in two_step, "passkeys": keys.get(int(row["id"]), 0), "shares": shared.get(int(row["id"]), 0),
+            "oidc_links": oidc_links.get(int(row["id"]), 0)}
 
 
 def _void_admin_links(conn: sqlite3.Connection, uid: int) -> dict[str, int]:
@@ -105,7 +108,8 @@ def list_users(request: Request, admin: AdminUser, conn: sqlite3.Connection = De
     two_step = totp.enabled_ids(conn)
     keys = passkeys.counts(conn)
     shared = sharing.counts(conn)
-    return {"users": [_user_view(conn, r, links, assistant, device, two_step, keys, shared) for r in rows]}
+    linked = oidc_api.counts(conn)
+    return {"users": [_user_view(conn, r, links, assistant, device, two_step, keys, shared, linked) for r in rows]}
 
 
 @router.post("/users", status_code=201)
@@ -293,6 +297,19 @@ def remove_user_passkeys(user_id: int, request: Request, admin: RecentAdmin, con
     removed = passkeys.remove_all(conn, int(row["id"]))
     if removed:
         audit(conn, admin.id, "passkey.removed", "user", int(row["id"]), ip=request_ip(request), via="admin", count=removed)
+    conn.commit()
+    return {"removed": removed}
+
+
+@router.delete("/users/{user_id}/oidc")
+def remove_user_oidc_links(user_id: int, request: Request, admin: RecentAdmin, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Remove all of another person's links to a sign-in provider, for a lost or taken-over provider account (note 24 §6). They
+    sign in another way, or with a new link. ``{"removed": 0}`` when there were none."""
+    _no_accounts_in_none_mode(auth_context(request))
+    row = _user_or_404(conn, user_id)
+    removed = oidc_api.remove_all(conn, int(row["id"]))
+    if removed:
+        audit(conn, admin.id, "oidc.unlinked", "user", int(row["id"]), ip=request_ip(request), via="admin", count=removed)
     conn.commit()
     return {"removed": removed}
 
@@ -517,4 +534,5 @@ def about(request: Request, admin: AdminUser, conn: sqlite3.Connection = Depends
         "pre_v3_backup": pre_v3_backup(conn),
         "last_backup_at": last_backup["at"] if last_backup else None,
         "backup_reminder_days": s.backup_reminder_days,
+        "oidc": oidc_api.about_view(request),
     }

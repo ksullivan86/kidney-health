@@ -3,7 +3,7 @@
 One line per item, with the specification that defers it (the design notes are in
 [`docs/dev/research/`](dev/research/)). Items leave this list when they ship (move them to
 [CHANGELOG.md](../CHANGELOG.md)) or when the owner drops them. Each feature owner appends to its own
-section. Last reviewed for the v0.12.1 release (2026-10-30).
+section. Last reviewed for the v0.13.0 release (2026-10-30).
 
 ## First: daily logging you can trust (the owner, 2026-10-29)
 
@@ -59,7 +59,7 @@ insulin or medicines.
 
 ## Accounts, sign-in and secrets (note 07)
 
-* OIDC sign-in (Authelia, Authentik, Keycloak, Kanidm, Pocket ID), choosing between Authlib 1.8 + itsdangerous and the project's own PKCE code (a new runtime dependency needs a contract decision) — note 07 F7, §3.1 and §6 "Later (v0.4)".
+* ~~OIDC sign-in (Authelia, Authentik, Keycloak, Kanidm, Pocket ID)~~ — built, not yet released ([note 24](dev/research/24-oidc-sign-in.md), [`accounts.md`](accounts.md#sign-in-with-authentik-google-or-another-provider)): one provider per server (setup steps for Authentik and Google; tested with a fake provider, not yet with a real one), the project's own PKCE and ID token code on `cryptography` (no new dependency), off until the admin sets it. Still later: several providers at once, hiding the password form (`OIDC_ONLY`), signing out at the provider too, and asking the provider for a second factor (`amr`/`acr`) — note 24 §12.
 * A second factor for local sign-in: one-time codes (TOTP) shipped in 0.9.0 ([note 17](dev/research/17-two-step-sign-in.md)), and so did requiring them for admins. Passkeys shipped in 0.9.0 as an extra way in, with the password kept ([note 18](dev/research/18-passkeys.md)). Using a passkey instead of retyping the password is built too. Still later: accounts with passkeys only; with a second factor the 8-character password minimum becomes acceptable — note 07 §3.1, §6 "Later (v0.4)" and §8 risk R3.
 * Optional SMTP for self-service password resets (today an admin makes a reset link or uses `python -m app.admin reset-password`) — note 07 §6 "Later (v0.4)".
 * ~~Read-only sharing with a caregiver or dietitian~~ — shipped in 0.10.0 ([note 19](dev/research/19-sharing.md), [`accounts.md`](accounts.md#sharing-with-a-caregiver)): share links, four areas, the Visit prep page read-only, off until the admin turns it on. An end date for a share and shared Trends charts are built too (schema step 25).

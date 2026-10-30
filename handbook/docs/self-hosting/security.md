@@ -44,7 +44,7 @@ Sources: [design note 01][NOTE01], [design note 07][NOTE07], [operator security 
 - [ ] Set **`TRUSTED_PROXIES`** from the address the app actually sees (below).
 - [ ] Mount **`SECRET_KEY_FILE`** from your engine's secret store, and keep a copy elsewhere.
 - [ ] **Encrypt backups** and test a restore ([Backups](backups.md)).
-- [ ] Track `:0.12` or a **verified digest**, never `:latest` or `:edge` ([Upgrades](upgrades.md)).
+- [ ] Track `:0.13` or a **verified digest**, never `:latest` or `:edge` ([Upgrades](upgrades.md)).
 - [ ] **Never mount** `podman.sock` or `docker.sock` into any container.
 - [ ] On Kubernetes, prove that NetworkPolicy is **enforced**; a policy without an enforcing plugin does
       nothing ([Kubernetes: Network Policies][K8S-NETPOL]; [Kubernetes](kubernetes.md)).

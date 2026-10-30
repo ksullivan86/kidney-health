@@ -47,7 +47,7 @@ spec:
       containers:
         - name: app
           # The tag and digest are set in kustomization.yaml (`images:`).
-          image: ghcr.io/ksullivan86/kidney-health:0.12
+          image: ghcr.io/ksullivan86/kidney-health:0.13
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -105,6 +105,10 @@ spec:
             #   value: "SHARING_ENABLED"          # then changeable in the app (docs/deployment.md); * for all
             # - name: AUTH_REQUIRE_TWO_STEP_ADMINS  # admins must use two-step sign-in to open Server
             #   value: "true"                     # administration (docs/accounts.md)
+            # - name: OIDC_ENABLED                # sign in with Authentik, Google or another OpenID Connect provider
+            #   value: "true"                     # (docs/accounts.md); needs PUBLIC_URL, OIDC_ISSUER, OIDC_CLIENT_ID
+            # - name: OIDC_CLIENT_SECRET_FILE     # the client secret, from the Secret (add oidc_client_secret there)
+            #   value: /run/secrets/kidney-health/oidc_client_secret
           volumeMounts:
             - name: data
               mountPath: /data

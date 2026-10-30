@@ -28,6 +28,10 @@ Keys (defaults in brackets):
   ``TRUSTED_PROXY_GROUPS_HEADER``, ``TRUSTED_PROXY_NAME_HEADER``, ``TRUSTED_PROXY_ADMIN_GROUP``,
   ``TRUSTED_PROXY_SECRET[_FILE]``, ``TRUSTED_PROXY_SECRET_OPTIONAL`` [false]
 * ``ALLOW_INSECURE_HTTP`` [automatic: allowed while one account exists]
+* Sign-in with an OpenID Connect provider (design note 24; :class:`OidcEnv`, ``Settings.oidc``): ``OIDC_ENABLED`` [false],
+  ``OIDC_ISSUER``, ``OIDC_CLIENT_ID``, ``OIDC_CLIENT_SECRET_FILE`` (only as a file: ``OIDC_CLIENT_SECRET`` is refused),
+  ``OIDC_SCOPES`` [``openid email profile``], ``OIDC_ALLOW_PRIVATE_ISSUER`` [false]. Env only: what the server connects to is never
+  changed at run time. Who may sign in is in the settings registry (``auth.oidc.*``). On needs ``AUTH_MODE=local`` and ``PUBLIC_URL``.
 * ``SECRET_KEY[_FILE]`` [auto-generated ``$DATA_DIR/secret.key``, mode 0600, with a warning]
 * ``ENABLE_API_DOCS`` (alias ``DOCS_ENABLED``) [false], ``MAX_BODY_BYTES`` [1 MiB],
   ``MAX_IMAGE_BYTES`` [4 MiB], ``MAX_IMPORT_BYTES`` [16 MiB: only ``POST /api/me/import``],
@@ -295,6 +299,85 @@ def load_ai_env(env: Mapping[str, str]) -> AiEnv:
     )
 
 
+OIDC_DEFAULT_SCOPES = "openid email profile"
+_SCOPE_TOKEN = re.compile(r"^[\x21\x23-\x5b\x5d-\x7e]{1,64}$")  # RFC 6749 §3.3 scope-token
+
+
+@dataclass(frozen=True)
+class OidcEnv:
+    """Sign-in with an OpenID Connect provider (design note 24 §4): the connection, from the environment only."""
+
+    enabled: bool = False  # OIDC_ENABLED
+    issuer: str | None = None  # OIDC_ISSUER, exactly as the provider names it (a trailing / is kept)
+    client_id: str | None = None  # OIDC_CLIENT_ID
+    client_secret: str | None = field(default=None, repr=False)  # OIDC_CLIENT_SECRET_FILE; None: a public client (PKCE only)
+    scopes: str = OIDC_DEFAULT_SCOPES  # OIDC_SCOPES, space-separated, always with openid
+    allow_private_issuer: bool = False  # OIDC_ALLOW_PRIVATE_ISSUER: the provider may be on a private address (a home Authentik)
+
+    @property
+    def secret_set(self) -> bool:
+        return bool(self.client_secret)
+
+
+def check_oidc_issuer(raw: str) -> str:
+    """``OIDC_ISSUER``: ``https://`` with a host (plain ``http://`` only for a loopback host, for tests), no query, no fragment."""
+    try:
+        parts = urlsplit(raw)
+        _ = parts.port
+    except ValueError:
+        raise ConfigError(f"OIDC_ISSUER is not a valid URL: {raw!r}.") from None
+    scheme = parts.scheme.lower()
+    host = (parts.hostname or "").lower()
+    if scheme not in ("https", "http") or not host:
+        raise ConfigError(f"OIDC_ISSUER must look like https://accounts.google.com, not {raw!r}.")
+    if scheme == "http" and host not in ("localhost", "127.0.0.1", "::1"):
+        raise ConfigError("OIDC_ISSUER must use https:// (plain http:// only for localhost).")
+    if parts.username is not None or parts.password is not None or parts.query or parts.fragment:
+        raise ConfigError("OIDC_ISSUER must not contain a user name, a password, a ?query or a #fragment.")
+    return raw
+
+
+def load_oidc_env(env: Mapping[str, str]) -> OidcEnv:
+    if env.get("OIDC_CLIENT_SECRET"):
+        raise ConfigError("Give the OIDC client secret as a file: put it in a file and set OIDC_CLIENT_SECRET_FILE to its path. "
+                          "Remove OIDC_CLIENT_SECRET.")
+    secret, _, _ = read_secret({k: v for k, v in env.items() if k == "OIDC_CLIENT_SECRET_FILE"}, "OIDC_CLIENT_SECRET")
+    scopes = " ".join((_raw(env, "OIDC_SCOPES") or OIDC_DEFAULT_SCOPES).split())
+    return OidcEnv(
+        enabled=parse_bool(env, "OIDC_ENABLED", False),
+        issuer=_raw(env, "OIDC_ISSUER"),
+        client_id=_raw(env, "OIDC_CLIENT_ID"),
+        client_secret=(secret or "").strip() or None,
+        scopes=scopes,
+        allow_private_issuer=parse_bool(env, "OIDC_ALLOW_PRIVATE_ISSUER", False),
+    )
+
+
+def _validate_oidc(s: "Settings") -> list[str]:
+    o = s.oidc
+    if not o.enabled:
+        stray = [n for n, v in (("OIDC_ISSUER", o.issuer), ("OIDC_CLIENT_ID", o.client_id)) if v]
+        return [f"{', '.join(stray)} set without OIDC_ENABLED=true: sign-in with a provider stays off."] if stray else []
+    if s.auth_mode != "local":
+        raise ConfigError("OIDC_ENABLED=true needs AUTH_MODE=local (with AUTH_MODE=proxy your proxy signs people in).")
+    if not o.issuer:
+        raise ConfigError("OIDC_ENABLED=true needs OIDC_ISSUER, for example https://accounts.google.com.")
+    check_oidc_issuer(o.issuer)
+    if not o.client_id:
+        raise ConfigError("OIDC_ENABLED=true needs OIDC_CLIENT_ID: the client ID your provider gave you.")
+    if len(o.client_id) > 255 or any(ord(c) < 0x21 or ord(c) > 0x7E for c in o.client_id):
+        raise ConfigError("OIDC_CLIENT_ID must be printable characters without spaces, at most 255.")
+    if not s.public_url:
+        raise ConfigError("OIDC_ENABLED=true needs PUBLIC_URL: the provider sends people back to <PUBLIC_URL>/api/auth/oidc/callback.")
+    scopes = o.scopes.split()
+    if "openid" not in scopes or len(scopes) > 20 or not all(_SCOPE_TOKEN.match(t) for t in scopes):
+        raise ConfigError(f"OIDC_SCOPES must be a space-separated list that includes openid (the default is {OIDC_DEFAULT_SCOPES!r}).")
+    warnings: list[str] = []
+    if not o.secret_set:
+        warnings.append("OIDC_ENABLED=true without OIDC_CLIENT_SECRET_FILE: the server signs in as a public client (PKCE only).")
+    return warnings
+
+
 @dataclass(frozen=True)
 class Settings:
     """Validated runtime configuration. Secret fields are kept out of ``repr()``."""
@@ -338,6 +421,9 @@ class Settings:
     trusted_proxy_secret: str | None = field(default=None, repr=False)
     trusted_proxy_secret_optional: bool = False
     allow_insecure_http: bool | None = None  # None = automatic (note 07 §4.3)
+
+    # Sign-in with an OpenID Connect provider (design note 24); off for Settings built in code.
+    oidc: OidcEnv = field(default_factory=OidcEnv, repr=False)
 
     # Secrets at rest (note 07 §4.12). ``secret_key`` holds the raw SECRET_KEY text (one key per
     # line); None means "use or create $DATA_DIR/secret.key" (see app.crypto.load_keyring).
@@ -401,7 +487,7 @@ class Settings:
     def secret_values(self) -> list[str]:
         """Every secret value loaded from the environment, for the log-redaction filter."""
         values = [self.usda_api_key, self.app_password, self.admin_password, self.trusted_proxy_secret, self.ai.api_key,
-                  self.ai.cloud.api_key, self.ai.stt_api_key]
+                  self.ai.cloud.api_key, self.ai.stt_api_key, self.oidc.client_secret]
         return [v for v in values if v] + self.secret_key_lines()
 
     def validate(self) -> tuple[str, ...]:
@@ -713,6 +799,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         pwa_enabled=parse_bool(env, "PWA_ENABLED", True),
         log_level=_choice(env, "LOG_LEVEL", "INFO", LOG_LEVELS, upper=True),
         ai=load_ai_env(env),
+        oidc=load_oidc_env(env),
     )
     extra: list[str] = []
     if env.get("FORWARDED_ALLOW_IPS"):
@@ -805,6 +892,7 @@ def _validate(s: Settings) -> list[str]:
                 "AUTH_MODE=none with host names in ALLOWED_HOSTS and no PUBLIC_URL: anyone who can reach this server "
                 "can read and change all data. Set PUBLIC_URL and use HTTPS, or switch to AUTH_MODE=local."
             )
+    warnings += _validate_oidc(s)
     if "*" in s.allowed_hosts:
         warnings.append("ALLOWED_HOSTS contains '*': the Host check (DNS-rebinding defence) is switched off.")
     if s.docs_enabled:

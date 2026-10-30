@@ -7,6 +7,54 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+## 0.13.0 — 2026-10-30
+
+Version 0.13 lets people sign in with Authentik, Google or another OpenID Connect provider. It is off until the admin sets
+it up, and nothing changes for anyone until then.
+
+**Before you upgrade, read [Upgrading from 0.12](#upgrading-from-012-read-this-first).** One schema step runs at the first
+start. Nothing new is switched on.
+
+### Upgrading from 0.12 (read this first)
+
+1. **Back up first** (`podman exec kidney-health python -m app.admin backup /data/before-0.13.0.db`). Schema step 26 runs at
+   the first start. It adds a table for linked sign-ins and a column on sessions, and changes nothing that is there.
+2. **Coming from 0.11 or 0.10**, read [Upgrading from 0.11](#upgrading-from-011-read-this-first) too.
+3. **Change the tag** to `:0.13`, or pin a digest from the release notes. The shipped files already say `:0.13`.
+4. **Nothing new is switched on.** To use a provider, follow
+   [Sign in with Authentik, Google or another provider](docs/accounts.md#sign-in-with-authentik-google-or-another-provider).
+   Make the provider ask for a second factor: a sign-in through it skips the app's own two-step code.
+
+### Known limitations
+
+* One provider per server.
+* Signing out of the app does not sign you out of the provider.
+* The sign-in code has been tested against a fake provider and reviewed for security, not yet against a real Authentik or
+  Google.
+
+### Sign in with Authentik, Google or another provider
+
+* **A "Sign in with Authentik" (or Google) button**, next to the password form. It uses OpenID Connect and is **off** until you
+  set `OIDC_ENABLED`, `OIDC_ISSUER`, `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET_FILE` (the secret only as a file). `PUBLIC_URL` is
+  needed: the provider's return address is `<PUBLIC_URL>/api/auth/oidc/callback`. A home Authentik on a private address also needs
+  `OIDC_ALLOW_PRIVATE_ISSUER=true`. Setup for Authentik and Google: [accounts.md](docs/accounts.md#sign-in-with-authentik-google-or-another-provider).
+* **Who gets in** is set in Server administration → Server settings → Single sign-on, or with variables: the button's words
+  (`OIDC_BUTTON_LABEL`), new accounts at the first sign-in (`OIDC_ALLOW_SIGNUP`, off), giving someone the account you made for
+  their verified email in People, if nobody has used it yet (`OIDC_LINK_BY_EMAIL`, off; never a self-registered or admin account),
+  allowed email domains (`OIDC_ALLOWED_DOMAINS`; with Google only Workspace accounts of a listed domain) and admin groups
+  (`OIDC_ADMIN_GROUPS`). With signing up off, only linked accounts and invite links get in.
+* **The last way to sign in stays.** Removing a passkey is refused when it is the account's only way in (no password and no
+  linked sign-in), as removing a link already was.
+* **Settings → Account → Linked sign-in** links or removes a provider account, after the password or a passkey. The last way to
+  sign in cannot be removed. An invite link can make the account with the provider. When an action asks for the password again,
+  **Confirm with …** answers it for someone who has no password. Admins can remove a person's link in People.
+* A sign-in through the provider is not asked for the app's two-step code, and "Admins must use two-step sign-in" applies to
+  password sign-ins only: make the provider ask for a second factor. Sign-ins through the provider and every link and unlink are
+  in the activity log; tokens are never stored or logged.
+* Schema step 26 adds the table of links and marks which sessions the provider started. Nothing changes for anyone until you
+  switch it on. No new dependency: the signature checks use `cryptography`, which the app already uses.
+* Design note: [24 · Sign in with another account](docs/dev/research/24-oidc-sign-in.md).
+
 ## 0.12.1 — 2026-10-30
 
 Plans of several days now go up to 60 days, for easier shopping and ordering. You choose which meals may repeat, whether to

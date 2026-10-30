@@ -49,6 +49,7 @@ class SessionInfo:
     reauth_at: str | None
     user_agent: str | None
     ip_prefix: str | None
+    signed_in_with: str | None = None  # "oidc": started by the sign-in provider (schema step 26); None: password or passkey
 
 
 def _hash(verifier: str) -> bytes:
@@ -65,6 +66,7 @@ def _info(row: sqlite3.Row) -> SessionInfo:
         reauth_at=row["reauth_at"],
         user_agent=row["user_agent"],
         ip_prefix=row["ip_prefix"],
+        signed_in_with=row["signed_in_with"] if "signed_in_with" in row.keys() else None,
     )
 
 
@@ -84,6 +86,7 @@ def create_session(
     user_agent: str | None = None,
     ip: str | None = None,
     reauth: bool = True,
+    signed_in_with: str | None = None,
 ) -> tuple[str, SessionInfo]:
     """Insert a new session; returns ``(cookie value, info)``. Never reuses an id."""
     now = clock.now()
@@ -94,11 +97,12 @@ def create_session(
     agent = (user_agent or "")[:USER_AGENT_LIMIT] or None
     prefix = ip_prefix(ip)
     conn.execute(
-        """INSERT INTO sessions (id, user_id, verifier_hash, created_at, last_seen_at, expires_at, reauth_at, user_agent, ip_prefix)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-        (sid, int(user_id), _hash(verifier), stamp, stamp, expires, stamp if reauth else None, agent, prefix),
+        """INSERT INTO sessions (id, user_id, verifier_hash, created_at, last_seen_at, expires_at, reauth_at, user_agent, ip_prefix,
+                                 signed_in_with)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+        (sid, int(user_id), _hash(verifier), stamp, stamp, expires, stamp if reauth else None, agent, prefix, signed_in_with),
     )
-    info = SessionInfo(sid, int(user_id), stamp, stamp, expires, stamp if reauth else None, agent, prefix)
+    info = SessionInfo(sid, int(user_id), stamp, stamp, expires, stamp if reauth else None, agent, prefix, signed_in_with)
     return f"{sid}.{verifier}", info
 
 
