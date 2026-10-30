@@ -21,12 +21,18 @@ Owner's request: "for the planning it should be able to plan the whole day - wee
 
 ## Done
 
-* Design note `docs/dev/research/23-multi-day-planning.md`.
+* Design note `docs/dev/research/23-multi-day-planning.md` (9c4d39f).
+* 1-2. Engine `plan_days`, routes `POST /api/guidance/plan-days` and `POST /api/log/clear-planned`, models, OpenAPI, tests
+  `tests/guidance/test_plan_days.py`, `tests/guidance/test_plan_days_api.py` (f02db7e).
+* 3. JS twin `planDays`, vectors in `tests/data/guidance_vectors.json` (d8d2c52).
+* 4. Mock routes in `js/mock/guidance.js` and `js/mock/log.js`; `tests/test_plan_days_demo.py` checks the server's 400 texts
+  for both routes, the answer shape (keys by path, merged over list items, since the demo log differs from the server's) and
+  that clearing keeps eaten food and a planned low treatment. The demo test plans 30 days after today because the demo's sample
+  log covers today-N to today+3 (`js/mock/seed.js`).
 
 ## Next
 
-1. Engine + unit tests. 2. Routes + models + OpenAPI + API tests. 3. JS twin + vectors. 4. Mock routes. 5. Screens + UI tests.
-6. Chromium walk (`tools/e2e/`). 7. Docs, handbook, CHANGELOG.
+5. Screens + UI tests. 6. Chromium walk (`tools/e2e/`). 7. Docs, handbook, CHANGELOG, OpenAPI check.
 
 ## Commands
 
