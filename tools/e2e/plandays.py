@@ -296,6 +296,12 @@ def remembered(api: Any) -> dict[str, Any]:
     return api.json("GET", "/api/me/settings")["settings"]["guidance"]["value"]
 
 
+def saved(page: Any, action: Any) -> None:
+    """Run ``action`` (a tick or an untick) and wait until the sheet has remembered it (``PATCH /api/me/settings``)."""
+    with page.expect_response(lambda r: r.request.method == "PATCH" and urlsplit(r.url).path == "/api/me/settings", timeout=60000):
+        action()
+
+
 def choices(browser: Any, admin: Any, base: str, days: list[str]) -> None:
     """The snack and "Meals that may repeat" (note 23 §12.2, §12.5), remembered on the server; 30 days added and undone."""
     tag = "375-choices"
@@ -309,13 +315,13 @@ def choices(browser: Any, admin: Any, base: str, days: list[str]) -> None:
     snacks = meal_foods(page, "Snack")
     check(f"[{tag}] the snack is off at first: no day plans one", not page.is_checked("#g-days-snack") and snacks == [None] * 7,
           str(snacks))
-    page.check("#g-days-snack")
+    saved(page, lambda: page.check("#g-days-snack"))
     page.wait_for_function("() => document.querySelectorAll('#g-days-out .g-plan-meal').length > 21", timeout=60000)
     snacks = meal_foods(page, "Snack")
     check(f"[{tag}] Plan a snack too plans one on every day and is remembered",
           all(s for s in snacks) and remembered(admin)["plan_snack"] is True
           and watch.bodies["/api/guidance/plan-days"][-1]["snack"] is True, str(snacks))
-    page.uncheck("#g-days-snack")
+    saved(page, lambda: page.uncheck("#g-days-snack"))
     page.wait_for_function("() => !document.querySelector('#g-days-out[aria-busy]') && document.querySelectorAll('#g-days-out .g-days-day').length === 7"
                            " && ![...document.querySelectorAll('#g-days-out .g-plan-title')].some((t) => t.textContent.startsWith('Snack'))",
                            timeout=60000)
@@ -323,7 +329,7 @@ def choices(browser: Any, admin: Any, base: str, days: list[str]) -> None:
     rotating = meal_foods(page, "Breakfast")
     check(f"[{tag}] without the choice, breakfast changes from day to day", len({tuple(b) for b in rotating if b}) > 1, str(rotating))
     with page.expect_response(lambda r: urlsplit(r.url).path == "/api/guidance/plan-days", timeout=60000):
-        page.check("#g-days-repeat-breakfast")
+        saved(page, lambda: page.check("#g-days-repeat-breakfast"))
     page.wait_for_function("() => !document.querySelector('#g-days-out[aria-busy]')", timeout=60000)
     wait_days(page, 7)
     same = meal_foods(page, "Breakfast")
@@ -332,7 +338,7 @@ def choices(browser: Any, admin: Any, base: str, days: list[str]) -> None:
           last["repeat_meals"] == ["breakfast"] and len({tuple(b) for b in same if b}) < len({tuple(b) for b in rotating if b})
           and max(same.count(b) for b in same) >= 3 and remembered(admin)["plan_repeat_meals"] == ["breakfast"],
           f"before {rotating} after {same}")
-    page.uncheck("#g-days-repeat-breakfast")
+    saved(page, lambda: page.uncheck("#g-days-repeat-breakfast"))
     wait_days(page, 7)
     check(f"[{tag}] unticking it is remembered too", remembered(admin)["plan_repeat_meals"] == [])
     span = [(date.fromisoformat(start) + timedelta(days=i)).isoformat() for i in range(30)]

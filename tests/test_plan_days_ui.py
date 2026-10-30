@@ -99,6 +99,8 @@ def test_the_snack_and_the_repeat_choices_are_remembered_on_the_server() -> None
     assert "await G.savePrefs(patch);" in _body("remember")
     save = GUIDANCE[GUIDANCE.index("  async function savePrefs(patch)"):GUIDANCE.index("  function prefValue(")]
     assert "KH.api.updateMySettings({ guidance: { ...base, ...patch } })" in save
+    # The whole object is read fresh first (a mark set a moment ago stays), and nothing is sent when it cannot be read.
+    assert "const item = await loadPrefs(true);" in save and "throw new Error('your settings could not be read')" in save
     assert "'Plan a snack too'" in opened and "'Meals that may repeat'" in opened
     for m in ("breakfast", "lunch", "dinner"):
         assert m in VIEW

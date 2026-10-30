@@ -127,11 +127,14 @@
     return prefsCache.item;
   }
   // Change some fields of the person's guidance object (PATCH /api/me/settings takes the whole object): the plan sheet's
-  // remembered choices (design note 23 §12). Returns true when saved.
+  // remembered choices (design note 23 §12). Returns true when saved. The object is read again first, so a change made
+  // elsewhere a moment ago (an "OK to repeat" mark, another tab) is kept; without it nothing is sent, so no choice of the
+  // person's is ever overwritten with a default.
   async function savePrefs(patch) {
-    const item = prefsCache && prefsCache.item;
+    const item = await loadPrefs(true);
+    if (!item || !item.value || prefsError) throw new Error('your settings could not be read');
     const base = { ...((KH.settings && KH.settings.BY_KEY && KH.settings.BY_KEY.guidance) ? KH.settings.BY_KEY.guidance.default : {}),
-      ...((item && item.value) || {}) };
+      ...item.value };
     const res = await KH.api.updateMySettings({ guidance: { ...base, ...patch } });
     prefsCache = { item: res.settings.guidance };
     return true;
