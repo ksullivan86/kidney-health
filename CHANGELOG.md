@@ -24,7 +24,7 @@ the API. Security fixes are released as patch versions of the newest minor versi
   log entries. See [accounts.md](docs/accounts.md#care-team) and [design note 25](docs/dev/research/25-care-team.md).
 * The demo shows a sample Care team, and planning for a sample person.
 
-### For people using the app
+### AI features
 
 * **The AI features say they are AI.** The **Ask** tab is now **Ask AI**, and its screen is the **AI assistant**. Settings →
   **AI ideas** is now **AI features**, and **Assistant access** (tokens for an AI chat app you run elsewhere) is now **Outside
