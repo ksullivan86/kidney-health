@@ -279,7 +279,7 @@ def _security_schemes() -> dict[str, Any]:
             "scheme": "bearer",
             "bearerFormat": f"{brand.ASSISTANT_TOKEN_PREFIX} followed by 43 characters",
             "description": (
-                f"An assistant access token (`Authorization: Bearer {brand.ASSISTANT_TOKEN_PREFIX}...`), made in Settings, Assistant access, with the scope `assistant:read` and "
+                f"An assistant access token (`Authorization: Bearer {brand.ASSISTANT_TOKEN_PREFIX}...`), made in Settings, Outside AI apps, with the scope `assistant:read` and "
                 "optionally `assistant:log`. It works only at `/mcp`, and only while the instance switch `assistant.enabled` is on. No cookie is "
                 "read there, and the cookie checks of `/api` do not apply."
             ),

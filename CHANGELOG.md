@@ -7,6 +7,14 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+### For people using the app
+
+* **The AI features say they are AI.** The **Ask** tab is now **Ask AI**, and its screen is the **AI assistant**. Settings →
+  **AI ideas** is now **AI features**, and **Assistant access** (tokens for an AI chat app you run elsewhere) is now **Outside
+  AI apps**. Both screens say plainly that this is an AI language model, that it can be wrong, that it is not medical advice
+  and that it never gives insulin or medicine doses. The AI assistant also says whether it runs on your own server or at a
+  cloud AI company.
+
 ## 0.13.0 — 2026-10-30
 
 Version 0.13 lets people sign in with Authentik, Google or another OpenID Connect provider. It is off until the admin sets

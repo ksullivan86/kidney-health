@@ -11020,7 +11020,7 @@
     "securitySchemes": {
       "assistantToken": {
         "bearerFormat": "kha_ followed by 43 characters",
-        "description": "An assistant access token (`Authorization: Bearer kha_...`), made in Settings, Assistant access, with the scope `assistant:read` and optionally `assistant:log`. It works only at `/mcp`, and only while the instance switch `assistant.enabled` is on. No cookie is read there, and the cookie checks of `/api` do not apply.",
+        "description": "An assistant access token (`Authorization: Bearer kha_...`), made in Settings, Outside AI apps, with the scope `assistant:read` and optionally `assistant:log`. It works only at `/mcp`, and only while the instance switch `assistant.enabled` is on. No cookie is read there, and the cookie checks of `/api` do not apply.",
         "scheme": "bearer",
         "type": "http"
       },

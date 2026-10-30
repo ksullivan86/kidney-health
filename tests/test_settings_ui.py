@@ -363,7 +363,7 @@ def test_the_assistant_card_waits_for_the_server_and_never_keeps_a_token() -> No
     (or the person still has tokens, or is an admin); the demo makes no request; a new token lives only in the
     one box that shows it."""
     settings = _section('<section id="view-settings"', '<section id="view-admin"')
-    assert ('<section class="card settings-section" id="set-assistant" data-title="Assistant access" '
+    assert ('<section class="card settings-section" id="set-assistant" data-title="Outside AI apps" '
             'aria-labelledby="set-assistant-h" hidden>') in settings
     block = SETTINGS_JS[SETTINGS_JS.index("// Section: Assistant access"):SETTINGS_JS.index("// Section: This device")]
     assert block.index("if (MOCK) {") < block.index("await A.tokens()")  # the demo never asks the server

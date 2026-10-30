@@ -1364,7 +1364,7 @@
     if (!res.enabled) {
       parts.push(h('p', { class: 'setting-status' }, h('span', { class: 'state-pill off' }, 'Turned off on this server')));
       if (active) parts.push(h('p', { class: 'hint' }, 'Your tokens do not work while assistant access is off. You can still revoke them.'));
-      if (isAdmin()) parts.push(h('p', { class: 'hint' }, 'Admins: switch "Assistant access" on in Server administration → Server settings (or ASSISTANT_ENABLED). See docs/assistant.md.'));
+      if (isAdmin()) parts.push(h('p', { class: 'hint' }, 'Admins: switch "Outside AI apps" on in Server administration → Server settings (or ASSISTANT_ENABLED). See docs/assistant.md.'));
     }
     parts.push(subtitle('Your tokens'), tokenList(tokens));
     const fresh = takeUnshownToken();

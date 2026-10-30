@@ -84,7 +84,7 @@ def test_the_keys_the_words_and_the_states():
     assert "e.key === 'Enter' && !e.shiftKey && !e.isComposing" in ASK_JS  # Enter sends, Shift+Enter is a new line
     for text in ("Thinking…", "New conversation", "From the app", "Not medical advice."):
         assert text in ASK_JS or text in ask_section(), text
-    assert "Answers come from an AI model; every number is the app\\'s own. Not medical advice." in ASK_JS
+    assert "Answers are written by an AI language model and can be wrong. Every number is the app\\'s own. Not medical advice." in ASK_JS
     for kind in ("treat_low", "get_help_now", "withheld", "unfinished", "error", "confirm_save"):
         assert kind in ASK_JS, kind
     assert 'maxlength="2000"' in ask_section() and 'rows="2"' in ask_section()
@@ -92,7 +92,7 @@ def test_the_keys_the_words_and_the_states():
 
 def test_the_demo_shows_the_tab_with_a_note_and_never_a_mock_answer():
     assert "if (MOCK) { tab.hidden = false; return true; }" in ASK_JS
-    assert "Ask works in the installed app, with an AI provider your admin sets up." in ASK_JS
+    assert "The AI assistant works in the installed app, with an AI your admin sets up." in ASK_JS
     assert "els.composer.hidden = true;" in ASK_JS  # no input in the demo
     assert "chat_enabled: false" in MOCK_AI  # the demo is a server with the chat off (and no trusted saves)
     assert "chat" not in MOCK_AI.replace("chat_enabled: false", "")  # js/mock/ai.js still answers every /api/ai/* route 404, like a server with AI off
@@ -108,8 +108,8 @@ def test_the_consent_sheet_says_what_the_chat_sends_and_what_it_never_does():
                    "never gives insulin doses or medicine advice", "checks every number in an answer"):
         assert phrase in never, phrase
     assert "NEVER_SENT_TEXT[consent.purpose]" in AI_JS
-    assert "chat: 'Ask conversations'" in AI_JS and "chat: 'your Ask conversations'" in AI_JS  # Settings lists and withdraws it
-    assert "chat: 'Ask'" in AI_JS  # the AI activity list names the feature
+    assert "chat: 'AI assistant conversations'" in AI_JS and "chat: 'your AI assistant conversations'" in AI_JS  # Settings lists and withdraws it
+    assert "chat: 'AI assistant'" in AI_JS  # the AI activity list names the feature
 
 
 def test_the_layout_rules_keep_a_phone_free_of_sideways_scroll():
@@ -144,7 +144,7 @@ def test_the_warning_sheet_is_a_dialog_with_no_inline_script_or_style():
 
 
 def test_the_warning_says_what_it_must_and_the_safe_button_has_the_focus():
-    for words in ("The assistant will save food and recipes without asking you first.",
+    for words in ("The AI assistant will save food and recipes without asking you first.",
                   "It can pick the wrong food or the wrong amount.",
                   "Every number still comes from the app. The low and emergency rules and the dose checks always stay on.",
                   "You can undo each save, from the chat or from Today.",
@@ -162,12 +162,12 @@ def test_the_warning_says_what_it_must_and_the_safe_button_has_the_focus():
 def test_the_choice_in_settings_has_three_options_the_default_marked_and_a_warning_before_trust():
     for label in ("Ask me before every save (recommended)", "Trust it for this conversation", "Trust it always"):
         assert label in TRUST_JS, label
-    assert "How much do you trust the assistant?" in TRUST_JS
+    assert "How much do you trust the AI assistant?" in TRUST_JS
     assert "disabled: value !== 'ask' && !allowed" in TRUST_JS  # the admin switch off: only "ask" can be chosen
     # conversation and always open the warning first and change nothing unless it is confirmed
     assert "if (value !== 'ask' && !(await confirmTrust(value, radio))) { show(); return; }" in TRUST_JS
     assert TRUST_JS.index("confirmTrust(value, radio)") < TRUST_JS.index("await save({ trust: value }")
-    assert "Your admin turned trusted saves off, so Ask asks you before every save for now." in TRUST_JS
+    assert "Your admin turned trusted saves off, so the AI assistant asks you before every save for now." in TRUST_JS
     assert "if (me.chat_enabled) wrap.append(trustPart(me, save));" in AI_JS  # only while the Ask chat is on
     assert "KH.ai = { status, forget, cardEl, confirmTrust," in AI_JS
     assert "'ai.allow_trusted_saves'" in SETTINGS_JS  # shown with the other AI switches in Server administration
