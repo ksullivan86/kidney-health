@@ -1075,7 +1075,8 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
 
-**v0.12.1 (2026-10-30)** adds the owner's answers to note 23 (§12): plans of up to 60 days (`PLAN_DAYS_MAX`,
+**Status (2026-10-30): v0.13.0 is prepared.** It adds sign-in through an OpenID Connect provider such as Authentik or
+Google (note 24, schema step 26, `/api/auth/oidc/*`, off until `OIDC_ENABLED`); CHANGELOG.md 0.13.0. **v0.12.1 (2026-10-30)** adds the owner's answers to note 23 (§12): plans of up to 60 days (`PLAN_DAYS_MAX`,
 `PLAN_DAYS_AI_MAX`), meals and items that may repeat (`repeat_meals`, `/api/guidance/repeat-ok`), an optional snack, today's
 past meals (`skip_first_day`), one set of targets on dialysis days, and `repeat_ok` in the meal prompts (`PROMPT_VERSION`
 2026-10-30.1); `RULES_VERSION` 2026-10-30.2; no schema step.
@@ -4495,7 +4496,7 @@ Signed in only (`current_user`; an anonymous caller gets the generic `401`, so a
 (`no-store` like every `/api` answer). The answer:
 
 ```json
-{"app_version": "0.12.1", "api_version": 1,
+{"app_version": "0.13.0", "api_version": 1,
  "capabilities": {"ai": false, "ai_next_meal": false, "ai_parse_meal": false, "ai_label": false, "ai_plate": false, "ai_lab_report": false,
                   "chat": false, "voice": false, "assistant": false, "push": false,
                   "barcode": false, "barcode_off": false, "barcode_usda": false, "handbook": false},

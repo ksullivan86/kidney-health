@@ -241,6 +241,9 @@ A repository variable (Settings → Secrets and variables → Actions → Variab
   again for the new prompt version.
 * **v0.12.1: not held.** A patch with new planning choices and no schema step; `:0.12` and `:latest` move as usual.
   CHANGELOG.md says to run `scripts/ai_eval.py` again for the new prompt version.
+* **v0.13.0: not held.** The release runs schema step 26 at start without an automatic copy (it only adds a table and a
+  column), and moves the shipped files from `:0.12` to `:0.13`. A host that tracks `:0.12` stays on 0.12.x. CHANGELOG.md,
+  "Upgrading from 0.12", says to take a backup first.
 * Use it for patch tags of an older minor version (above), and only with the owner's say-so for anything else. Remove it again (or set it
   to anything but `true`) when the hold should end; the next `v*` tag then moves `:latest`, or move it
   by hand: `docker buildx imagetools create --tag ghcr.io/ksullivan86/kidney-health:latest

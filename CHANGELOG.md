@@ -7,6 +7,31 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+## 0.13.0 — 2026-10-30
+
+Version 0.13 lets people sign in with Authentik, Google or another OpenID Connect provider. It is off until the admin sets
+it up, and nothing changes for anyone until then.
+
+**Before you upgrade, read [Upgrading from 0.12](#upgrading-from-012-read-this-first).** One schema step runs at the first
+start. Nothing new is switched on.
+
+### Upgrading from 0.12 (read this first)
+
+1. **Back up first** (`podman exec kidney-health python -m app.admin backup /data/before-0.13.0.db`). Schema step 26 runs at
+   the first start. It adds a table for linked sign-ins and a column on sessions, and changes nothing that is there.
+2. **Coming from 0.11 or 0.10**, read [Upgrading from 0.11](#upgrading-from-011-read-this-first) too.
+3. **Change the tag** to `:0.13`, or pin a digest from the release notes. The shipped files already say `:0.13`.
+4. **Nothing new is switched on.** To use a provider, follow
+   [Sign in with Authentik, Google or another provider](docs/accounts.md#sign-in-with-authentik-google-or-another-provider).
+   Make the provider ask for a second factor: a sign-in through it skips the app's own two-step code.
+
+### Known limitations
+
+* One provider per server.
+* Signing out of the app does not sign you out of the provider.
+* The sign-in code has been tested against a fake provider and reviewed for security, not yet against a real Authentik or
+  Google.
+
 ### Sign in with Authentik, Google or another provider
 
 * **A "Sign in with Authentik" (or Google) button**, next to the password form. It uses OpenID Connect and is **off** until you

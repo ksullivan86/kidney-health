@@ -26,7 +26,7 @@
   const REG = KH.settings;
 
   // Kept equal to APP_VERSION in app/main.py (tests/test_settings_ui.py).
-  const APP_VERSION = '0.12.1';
+  const APP_VERSION = '0.13.0';
 
   const A = {
     sessions: () => request('GET', '/api/me/sessions'),
