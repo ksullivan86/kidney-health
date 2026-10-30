@@ -147,19 +147,38 @@ def test_unknown_subject_with_signup_off_is_refused_and_nothing_is_made(anon, ad
         assert conn.execute("SELECT COUNT(*) FROM oidc_links").fetchone()[0] == 0
 
 
+class _FromNow:
+    def __init__(self, offset: int) -> None:
+        self.offset = offset
+
+    def __add__(self, seconds: int) -> "_FromNow":
+        return _FromNow(self.offset + seconds)
+
+    def __sub__(self, seconds: int) -> "_FromNow":
+        return _FromNow(self.offset - seconds)
+
+    def __repr__(self) -> str:
+        return f"now{self.offset:+d}"
+
+
+NOW = _FromNow(0)
+
+
 @pytest.mark.parametrize("change, word", [
     ({"nonce": "not-the-nonce"}, "failed"),
     ({"aud": "someone-else"}, "failed"),
     ({"aud": [CLIENT_ID, "other"]}, "failed"),  # two audiences and no azp
     ({"azp": "other"}, "failed"),
     ({"iss": "https://evil.example/"}, "failed"),
-    ({"exp": int(time.time()) - 120}, "failed"),
-    ({"iat": int(time.time()) + 600}, "failed"),
-    ({"iat": int(time.time()) - 3600}, "failed"),
+    ({"exp": NOW - 120}, "failed"),
+    ({"iat": NOW + 600}, "failed"),
+    ({"iat": NOW - 3600}, "failed"),
     ({"sub": ""}, "failed"),
     ({"exp": ...}, "failed"),
 ])
 def test_bad_claims_are_refused(admin, anon, provider, change, word):
+    # Times are offsets from when the test runs, not from collection: a long run would let "600 s ahead" pass.
+    change = {k: int(time.time()) + v.offset if isinstance(v, _FromNow) else v for k, v in change.items()}
     link_admin(admin, provider)
     r = sign_in_with_provider(anon, provider, claims={"sub": "admin-sub", **change})
     assert r.headers["location"] == f"/#/oidc/{word}"
