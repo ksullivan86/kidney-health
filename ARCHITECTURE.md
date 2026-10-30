@@ -43,7 +43,7 @@ app/openapi_doc.py          the OpenAPI document made honest: operation ids, 400
 app/api_version.py          API_VERSION, the integer that is raised on a breaking change ("The API document and GET /api/meta")
 app/meta.py                 GET /api/meta: versions, what the signed-in person can use now, the nutrient registry, the meals
 app/brand.py                the brand strings in one place: names, cookie names, token prefixes, CSRF value, DB filename, export format, user agents, HKDF labels ("Brand strings")
-app/sharing.py              read-only sharing with a caregiver or dietitian: share links, /api/me/shares, /api/shared and the read routes ("Sharing")
+app/sharing.py              the Care team: share links, user name invites, roles, /api/me/shares, /api/shared, the reads and a Care helper's planned food ("Sharing", "Care team")
 app/pairing.py              the iPhone app's pairing link in the QR code of a new device token: link() and the reference parse() ("Pairing the iPhone app")
 scripts/gen_openapi.py      writes / --check docs/api/openapi.json, the checked-in OpenAPI document (docs/api/README.md)
 app/config.py               settings from env and *_FILE secrets (v0.3: the full list is at its top; deploy/.env.example)
@@ -839,6 +839,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 24 | `m024_shares.py` | read-only sharing (note 19) | `shares`: a share link until it is accepted (`code_id`, the SHA-256 `verifier_hash`, `expires_at`), then a share (`grantee_user_id`, `accepted_at`; the link's fields cleared); `owner_user_id`, `areas` (a JSON list of `food`, `labs`, `body`, `symptoms`), `ended_at` and `ended_by` (`owner`, `grantee`, `admin`, `replaced`), `last_viewed_at`. `CHECK`s keep the two states apart and forbid sharing with yourself. `ON DELETE CASCADE` on both accounts. Nobody shares anything after the upgrade. |
 | 25 | `m025_share_time_limit.py` | a share can end on a date (note 19 §11) | `shares.lasts_days` (1 to 365, or NULL: until stopped) and `shares.ends_at` (set on accept). Existing rows get NULL in both and last until stopped, as before. |
 | 26 | `m026_oidc.py` | sign-in with a provider (note 24) | `oidc_links` (`user_id` `ON DELETE CASCADE`, `issuer`, `subject` (the `sub` claim, 1 to 255 characters), `email`, `created_at`, `last_used_at`; `UNIQUE (issuer, subject)` and `UNIQUE (user_id, issuer)`; no token is ever stored) and `sessions.signed_in_with` (`oidc` or NULL; NULL for every earlier session). Nobody is linked after the upgrade. |
+| 27 | `m027_care_team.py` | the Care team (note 25 §4) | `shares.role` (`viewer` or `care_helper`, default `viewer`: every existing share becomes a Viewer), `shares.helper_changes` (JSON `{day, added, changed, removed}` or NULL), `log_entries.added_by_user_id` (`ON DELETE SET NULL`; set only when a Care helper adds a planned entry) and a new table `care_invites` (`owner_user_id`, `invitee_user_id` NULL when no active account had the name, `username` as typed, `areas`, `role`, `lasts_days`, `created_at`, `expires_at`, `answered_at`, `answer` (`accepted`, `declined`, `cancelled`, `replaced`), `share_id`; `ON DELETE CASCADE` on both accounts; never yourself). Nothing else changes. |
 | 23 | `m023_passkeys.py` | passkeys (note 18) | `passkeys` (one row per passkey: `credential_id` BLOB, unique, 1 to 1,023 bytes; `public_key`, the COSE key as sent; `alg`; `user_handle`, 32 random bytes shared by one person's passkeys; `sign_count`; `name`; `backed_up`; `created_at`; `last_used_at`). `ON DELETE CASCADE`. Nothing is sealed: a public key is not a secret. Nobody has a passkey after the upgrade. |
 
 ## Backend file ownership
@@ -862,6 +863,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | Phone push (design note 12) | `app/push.py` (`POST /push/v1/body`, `DELETE /api/me/tokens/{id}/body-rows`), the device family in `app/auth/api_tokens.py`, `TokenCreate.family` in `app/auth/schemas.py`, the `push.enabled` key (`app/settings_registry.py`, `js/engine/settings.js`, the "Phone shortcuts" group of `js/views/settings.js`), `app/migrations/m019_body_token.py`, `context_for`, `is_watch_source`, `known_weight_marks` / `known_reading_marks` and `via` in `app/body.py`, `shortcut` in `BodySourceKey`, `security.BEARER_PATHS`, `docs/push.md`, `tests/test_push.py`, `tests/test_device_tokens.py`, `tests/test_migration_m019.py`, `context_cases` / `watch_cases` in `tests/data/body_vectors.json` |
 | iPhone app pairing (design note 15 §4.3) | `app/pairing.py`, `pair_url` in `create_my_token` (`app/auth/api_tokens.py`), `brand.PAIRING_SCHEME`, `pushPairBox` in `js/views/settings.js` with `KH.twoStep.qrSvg`, `ios/KidneyHealthCore/Sources/KidneyHealthCore/Pairing.swift`, `ios/KidneyHealthSync-Info.plist`, `.onOpenURL` and the pairing alert in `ios/KidneyHealthSync/ContentView.swift`; tests `tests/test_pairing.py`, `tests/data/pairing_vectors.json`, `PairingVectorTests.swift` |
 | Read-only sharing (design note 19) | `app/sharing.py` (`/api/me/shares`, `/api/shared`, the `shared_owner(area)` check), `app/migrations/m024_shares.py`, `app/migrations/m025_share_time_limit.py`, `sharing.enabled` (`app/settings_registry.py`, `js/engine/settings.js`), the `share.*` audit actions, `shares` and `DELETE /api/admin/users/{id}/shares` in `app/auth/admin_api.py`; screens: `js/views/sharing.js` (Settings block, the `#/share/<code>` sheet, `KH.sharing.reads`), the shared mode of `js/views/visit.js`, the People badge and End sharing in `js/views/settings.js`, the demo's answers in `js/mock/auth.js`; tests `tests/test_sharing.py`, `tests/test_migration_m024.py`, `tests/test_migration_m025.py`, `tests/test_sharing_ui.py`, `tools/e2e/sharing.py` |
+| The Care team (design note 25) | `app/sharing.py` (`role`, `POST /api/me/shares/invite`, `DELETE /api/me/shares/invites/{id}`, `PUT /api/me/shares/{id}/role`, `POST /api/shared/invites/{id}/accept\|decline`, the `care_helper` check and the Care helper routes), `app/migrations/m027_care_team.py`, `added_by` in `app/log.py` and `Entry`, the `care.*` audit actions; screens: Settings → Care team (`#set-care`, `js/views/sharing.js`), Profile → Open Care team, "Added by" in `js/views/today.js`, Planning for on the Plan tab (`js/views/careplan.js`), the demo's sample Care team in `js/mock/care.js`; tests `tests/test_care_team.py`, `tests/test_care_team_ui.py`, `tests/js/care_demo.mjs`, `tools/e2e/sharing.py` |
 | Two-step sign-in (design note 17) | `app/auth/totp.py` (RFC 6238, recovery codes, storage), `app/auth/totp_api.py` (`/api/me/totp*`), `_second_step` and the reset-link rule in `app/auth/routes.py`, `LoginBody.code` and `TotpCodeBody` in `app/auth/schemas.py`, `DELETE /api/admin/users/{id}/totp` and `two_step` in `app/auth/admin_api.py`, `remove-two-step` in `app/admin.py`, the `totp.*` audit actions, `totp_factors.secret_enc` in `crypto.ENCRYPTED_COLUMNS`, `app/migrations/m022_totp.py`; screens: `js/views/two_step.js` (Settings block, QR code from the vendored `qrcode-generator`), the code field of `#form-login` and the totp_required answers in `js/views/auth.js`, the People badge and removal in `js/views/settings.js`, the demo's answers in `js/mock/auth.js`; tests `tests/test_totp.py`, `tests/test_migration_m022.py`, `tests/test_two_step_ui.py`, `tools/e2e/two_step.py` |
 | Passkeys (design note 18) | `app/auth/webauthn.py` (the WebAuthn checks for a Relying Party, a CBOR reader and COSE keys, on `cryptography` only), `app/auth/passkeys.py` (storage, the in-memory challenges), `app/auth/passkeys_api.py` (`/api/me/passkeys*`, `/api/auth/passkey*`), `passkey_challenges` in `app/auth/context.py`, `passkeys` in `GET /api/auth/status`, `DELETE /api/admin/users/{id}/passkeys` and `passkeys` in `app/auth/admin_api.py`, `remove-passkeys` in `app/admin.py`, the `passkey.*` audit actions, `app/migrations/m023_passkeys.py`; screens: `js/views/passkeys.js` (Settings block, `KH.passkeys.signIn`), the passkey button of `#form-login` in `index.html` and `js/views/auth.js`, the People badge and removal in `js/views/settings.js`, the demo's answers in `js/mock/auth.js`; tests `tests/test_webauthn.py` (with `tests/data/webauthn_w3c_vectors.json`), `tests/webauthn_support.py`, `tests/test_passkeys.py`, `tests/test_migration_m023.py`, `tests/test_passkeys_ui.py`, `tools/e2e/passkeys.py` |
 | Sign-in with a provider (design note 24) | `app/auth/oidc.py` (discovery, the JWKS cache, PKCE, the token exchange through `app/egress.py`, the JWS and claim checks on `cryptography` only, the in-memory `FlowStore`), `app/auth/oidc_api.py` (`/api/auth/oidc/*`, `/api/auth/reauth/oidc`, `/api/me/oidc*`, the account rules, `status_view`, `about_view`), `OidcEnv` in `app/config.py`, the `auth.oidc.*` keys (`app/settings_registry.py`, `js/engine/settings.js`), `app/migrations/m026_oidc.py`, `signed_in_with` in `app/auth/sessions.py`, the OIDC exemption in `deps.two_step_required`, `security.PROVIDER_RETURN_PATHS`, `brand.OIDC_COOKIE*` and `USER_AGENT_OIDC`, `DELETE /api/admin/users/{id}/oidc`, `oidc_links` and `oidc` in `app/auth/admin_api.py`, the `oidc.*` audit actions; screens: `js/views/oidc.js` (`KH.oidc`: the buttons, Settings → Linked sign-in, the result sentences), the `#login-oidc`, `#register-oidc` and `#reauth-oidc` blocks of `index.html`, the People badge and removal and About lines in `js/views/settings.js`, the demo's answers in `js/mock/auth.js`; tests `tests/oidc_support.py` (a fake provider), `tests/test_oidc.py`, `tests/test_oidc_ui.py`, `tests/test_migration_m026.py`, `tools/e2e/oidc.py` |
@@ -1022,8 +1024,8 @@ The demo's state is in memory unless the person turns on **Keep my data in this 
 * **Sign-out** warns about unsynced offline entries when `KH.offline` exists (M2), calls
   `POST /api/auth/logout`, follows `redirect` (proxy `PROXY_LOGOUT_URL`), else reloads the page.
 * **Settings view** (`#settings`, no tab; header gear and Profile → Open Settings;
-  `js/views/settings.js`): Account (name, password, two-step sign-in from `js/views/two_step.js` (note 17), passkeys from `js/views/passkeys.js` (note 18), sharing from `js/views/sharing.js` (note 19), signed-in devices, export zip, delete account,
-  recent activity, sign out), Preferences (theme saved as `ui.theme`, week start saved with the
+  `js/views/settings.js`): Account (name, password, two-step sign-in from `js/views/two_step.js` (note 17), passkeys from `js/views/passkeys.js` (note 18), signed-in devices, export zip, delete account,
+  recent activity, sign out), Care team (its own section after Account, from `js/views/sharing.js`, notes 19 and 25), Preferences (theme saved as `ui.theme`, week start saved with the
   profile, units for lab results), Food data (own USDA key, shared-key status, Open Food Facts
   consent), AI ideas (placeholder `#set-ai-slot` for M2), This device (install, offline, storage,
   connection, version, clear offline data; `js/pwa.js` supplies the device state), Admin (admins
@@ -1229,9 +1231,12 @@ optional HIBP check (`PASSWORD_BREACH_CHECK`, off by default; the k-anonymity ra
 | `GET /api/me/oidc` | user | → `{available, enabled, label, links: [{id, provider (the issuer's host), email, created_at, last_used_at, current}], can_link, has_password, passkeys}` (never a subject or a token); works while sign-in with a provider is off, for a link left from before |
 | `POST /api/me/oidc/link` | user (local) *(re-auth)* | → `{url}` (and the flow cookie); the callback links only when this same session comes back and that provider account is not linked to someone else (`taken`); audit `oidc.linked` (`via: settings`). 409 when already linked to this issuer; 404 unless it is on |
 | `DELETE /api/me/oidc/{id}` | user (local) *(re-auth)* | → 204; audit `oidc.unlinked` (`via: self`). 409 when it is the last way in (no password, no passkey, no other link); 404 if not yours |
-| `GET /api/me/shares` | user | → `{enabled, areas, max: 10, sharing: [{id, name, username, areas, since, until, last_viewed_at, active}], codes: [{id, areas, days, created_at, expires_at}]}` (never a link); `enabled` false while `sharing.enabled` is off; 404 in `AUTH_MODE=none` |
-| `POST /api/me/shares` | user *(re-auth)* | `{areas, days?}` (1 to 4 of `food`, `labs`, `body`, `symptoms`; `days` 1 to 365 makes the share end that long after it is accepted, absent or null: until stopped) → 201 `{code, link}`: `/#/share/<id>.<verifier>`, shown only here, works once for 7 days; 409 at 5 unused links or 10 shares; audit `share.code_created` |
+| `GET /api/me/shares` | user | → `{enabled, areas, roles, max: 10, sharing: [{id, name, username, areas, since, until, last_viewed_at, active, role, helper_changes}], codes: [{id, areas, days, created_at, expires_at, role}], invites: [{id, username, areas, role, days, created_at, expires_at}]}` (never a link); `enabled` false while `sharing.enabled` is off; 404 in `AUTH_MODE=none` |
+| `POST /api/me/shares` | user *(re-auth)* | `{areas, days?, role?}` (`role` `viewer` by default; `care_helper` adds `food`) (1 to 4 of `food`, `labs`, `body`, `symptoms`; `days` 1 to 365 makes the share end that long after it is accepted, absent or null: until stopped) → 201 `{code, link}`: `/#/share/<id>.<verifier>`, shown only here, works once for 7 days; 409 at 5 unused links or 10 shares; audit `share.code_created` |
 | `DELETE /api/me/shares/{id}` | user | → 204: stops a share (audit `share.ended`, `by: owner`) or cancels a link (`share.code_cancelled`); 404 if not yours or already ended |
+| `POST /api/me/shares/invite` | user *(re-auth)* | `{username, areas, days?, role?}` → 201 `{id, username, areas, role, days, created_at, expires_at}`, the **same answer whether or not the name is an active account** (note 25 §3); a second invite to the same name replaces the first; 400 your own name; 409 at 5 waiting invites or 10 shares; 20 tries an hour per account and address (`care_invite`); audit `care.invited` (no name) |
+| `DELETE /api/me/shares/invites/{id}` | user | → 204: cancels a waiting invite; audit `care.invite_cancelled`; 404 if not yours, answered or lapsed |
+| `PUT /api/me/shares/{id}/role` | user | `{role}` → the share as `GET /api/me/shares` lists it; `care_helper` adds `food`; audit `care.role_changed`; 404 if not yours or ended |
 | `GET /api/me/sessions` | user | → `{sessions: [{id, created_at, last_seen_at, expires_at, user_agent, ip_prefix, current}]}` |
 | `DELETE /api/me/sessions/{id}` | user | → 204 (404 if not one of yours) |
 | `POST /api/me/sessions/revoke-others` | user *(re-auth)* | → `{revoked: n}` |
@@ -4239,13 +4244,15 @@ stores nothing but the token's `last_used_at`, and names nothing of the person. 
 
 ### Sharing (`app/sharing.py`, design note 19)
 
-A person (the owner) makes a link in Settings → Account → Sharing; someone with an account on the same server (the grantee) accepts
+A person (the owner) makes a link in Settings → Care team; someone with an account on the same server (the grantee) accepts
 it, then reads the areas the owner ticked. Every route needs a session and answers 404 while `sharing.enabled` (instance, default
 **off**, env `SHARING_ENABLED`) is off and in `AUTH_MODE=none`.
 
 | Method and path | Auth | Body → response |
 |---|---|---|
-| `GET /api/shared` | user | → `{people: [{id, name, username, areas, since, until}]}`: who shares with you, while their account is active |
+| `GET /api/shared` | user | → `{people: [{id, name, username, areas, since, until, role}], invites: [{id, name, username, areas, role, days, expires_at}]}`: the Care teams you are on and the invites waiting for your answer, while the other account is active |
+| `POST /api/shared/invites/{id}/accept` | user | → 201 the item of `GET /api/shared`; a newer invite from someone whose team you are on replaces the share; 409 at 10 shares; audit `care.invite_answered` (`answer: accepted`) in the owner's activity |
+| `POST /api/shared/invites/{id}/decline` | user | → 204; audit `care.invite_answered` (`answer: declined`) in the owner's activity; 404 if not yours, answered or lapsed |
 | `DELETE /api/shared/{id}` | user | → 204: stop seeing it; audit `share.ended` (`by: grantee`) in the owner's activity; 404 if not yours |
 | `POST /api/shared/info` | user | `{code}` → `{name, username, areas, days, expires_at}` without using the link up; a wrong, used, cancelled or expired link (or one from a turned-off account) is the generic 404 "That link does not work. Ask for a new one."; your own link is 400; 20 tries an hour per account and per address (`share_link`) |
 | `POST /api/shared/accept` | user | `{code}` → 201 the item of `GET /api/shared`; a newer link from someone who already shares with you ends the old share (`ended_by: replaced`); 409 when the owner already shares with 10 people; audit `share.accepted` in the owner's activity |
@@ -4258,7 +4265,8 @@ it, then reads the areas the owner ticked. Every route needs a session and answe
 * **One check.** Every `/api/shared/{id}/…` read goes through `shared_owner(area)`: the row is the signed-in person's share, active,
   both accounts active, and the area was shared. It returns the owner's `User`, and the handler calls the owner's own route function
   with it, so the answer is exactly the owner's and no query is written twice. Anything else is one 404 `"Not shared with you."`.
-  There is no write route under `/api/shared` (`tests/test_sharing.py` lists the methods).
+  The only writes on someone's data are the Care helper routes below (`tests/test_sharing.py` lists the methods and
+  `tests/test_care_team.py` checks each goes through `care_helper`).
 * **The link** is in the URL fragment, like invites: 16 hex characters of id and a 256-bit verifier, only the SHA-256 of which is
   stored (`hmac.compare_digest`). Accepting clears the link's fields, so it works once.
 * **Activity.** The first read of a share each UTC day sets `last_viewed_at` and writes `share.viewed`. Rows that concern the owner
@@ -4291,6 +4299,42 @@ it, then reads the areas the owner ticked. Every route needs a session and answe
   A new Trends food request clears the old charts, tooltip and period summary
   before loading, including when changing people or periods. Failure shows an unavailable message and Retry; an older
   request may not replace the latest loading, error or completed state.
+
+### Care team (`app/sharing.py`, design note 25)
+
+The screens call sharing the **Care team** (Settings → Care team, its own section after Account). Each share has a `role`:
+`viewer` (the read-only share above) or `care_helper` (also plans meals for the owner and uses their shopping list). The owner
+changes it in place (`PUT /api/me/shares/{id}/role`). Someone with an account can be invited by user name; the invite waits in
+`care_invites` until they accept or decline in their own Settings → Care team. Links stay for everyone else.
+
+| Method and path | Auth | Body → response |
+|---|---|---|
+| `GET /api/shared/{id}/foods?q=&limit=` | Care helper | the food search as the owner sees it (their own foods too) |
+| `GET /api/shared/{id}/plan/shopping?start=&end=` | Care helper | as `GET /api/plan/shopping` answers the owner |
+| `POST /api/shared/{id}/log`, `/log/batch` | Care helper | as `POST /api/log` and `/log/batch` on the owner's log, always `planned` (`eaten` is 400), `client_id` ignored; each entry records the helper (`added_by`) |
+| `PUT /api/shared/{id}/log/{entry_id}` | Care helper | `{date?, meal?, servings?, grams?, note?}` (no `status`, no `purpose`) on a planned entry that is not a low treatment; `If-Match` as the owner's route; eaten or low treatment: 404 |
+| `DELETE /api/shared/{id}/log/{entry_id}` | Care helper | the same entries only → 204 |
+| `POST /api/shared/{id}/log/clear-planned` | Care helper | as the owner's route: eaten food and planned low treatments stay |
+| `POST /api/shared/{id}/guidance/plan-days` | Care helper | as `POST /api/guidance/plan-days` for the owner, with `use_saved_meals` forced off |
+
+* **One check, on every request.** `care_helper` runs `shared_owner`'s check with the `food` area and adds that the role is
+  `care_helper` now. A Viewer, a stopped, replaced or expired share, a turned-off account on either side and the switch off are
+  all the same 404 `"Not shared with you."`. Entries are looked up in the owner's log only. The write itself runs the owner's own
+  function with an `If-Match` of the version just checked, so an entry the owner marks eaten in between is a 412, never changed.
+* **Added by.** `log_entries.added_by_user_id` is set on a helper's insert; `Entry.added_by` is that person's name (display name,
+  else user name) and null otherwise. It is not part of `version` and not in the export.
+* **Activity.** `care.invited`, `care.invite_cancelled` and `care.role_changed` target the invite or the share (the owner's own
+  actions); `care.invite_answered` and `care.plan_changed` target the owner. `care.plan_changed` is written at the helper's first
+  change each UTC day; `shares.helper_changes` keeps that day's counts for the owner's list (audit rows cannot be updated).
+* **The same answer.** `POST /api/me/shares/invite` stores the invite with `invitee_user_id` NULL when no active account has the
+  name, and answers the same either way. The owner's list shows the name as typed.
+* **Saved meals** are never shared, listed or used for a helper (note 25 §7).
+* **Screens.** `js/views/careplan.js`: "Planning for" on the Plan tab (shown when `GET /api/shared` has a `care_helper` share),
+  a banner and Back to my own plan; the helper's own Plan parts are hidden, not reloaded. Requests go to `/api/shared/{id}/…` only;
+  `js/offline.js` matches the owner's own routes by exact path, so these are never queued or saved for offline use. Ticks of the
+  person's list are kept under `kdl-shop:care:<share id>:<week>`. A 404 "Not shared with you." goes back to the helper's own plan.
+  `js/views/today.js` shows "Added by <name>". The demo (`js/mock/care.js`) has a sample Care team and Ana's days as a second set
+  of entries with the demo's own twins swapped in.
 
 ### Pairing the iPhone app (`app/pairing.py`, note 15 §4.3)
 

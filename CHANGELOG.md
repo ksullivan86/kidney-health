@@ -7,6 +7,23 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+### Care team
+
+* **Settings → Care team** is now its own section near the top of Settings, and Profile links to it. It replaces "Sharing" on
+  every screen. When the admin has not turned it on, people see a line saying so, and admins see where to turn it on.
+* **Invite someone who already has an account here by user name.** They accept or decline in their own Settings → Care team.
+  The screen answers the same whether or not the name is an account. Links still work for everyone else.
+* **Two roles**, changed at any time: a **Viewer** looks, as before; a **Care helper** can also plan meals for the person and
+  use their shopping list. Existing shares become Viewers. A Care helper never changes eaten food, targets, the profile, labs,
+  weight, symptoms or settings, and never changes or removes a planned low treatment. Saved meals are not shared.
+* **Planning for someone**: on the Plan tab a Care helper picks "Planning for", sees a banner with whose plan it is, adds and
+  changes planned food, plans several days, clears planned days and uses the person's shopping list. Food a helper adds shows
+  "Added by" and their name on the person's Today. The person's activity shows invites, answers, role changes and, once a
+  day, that a helper changed the plan.
+* Schema step 27 runs at the first start: it adds a role to shares (all become Viewer), user name invites, and "added by" on
+  log entries. See [accounts.md](docs/accounts.md#care-team) and [design note 25](docs/dev/research/25-care-team.md).
+* The demo shows a sample Care team, and planning for a sample person.
+
 ### For people using the app
 
 * **The AI features say they are AI.** The **Ask** tab is now **Ask AI**, and its screen is the **AI assistant**. Settings →

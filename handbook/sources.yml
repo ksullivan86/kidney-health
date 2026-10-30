@@ -1639,6 +1639,13 @@ NOTE24:
   licence: "PolyForm Noncommercial 1.0.0 (project)"
   checked: 2026-10-30
   kind: project
+NOTE25:
+  cite: "kidney-health design note 25: the Care team, invites by user name and a Care helper who plans meals."
+  short: "Design note 25"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/25-care-team.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-30
+  kind: project
 APPLE-SHORTCUTS:
   cite: "Apple Support. Shortcuts User Guide (Health actions, Format Date, Dictionary, Get Contents of URL, personal automations)."
   short: "Apple: Shortcuts User Guide"

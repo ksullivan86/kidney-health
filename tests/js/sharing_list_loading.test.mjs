@@ -1,5 +1,5 @@
-// Runs the real js/views/sharing.js on a fake page: Settings → Account → Sharing. Two loads of the list that overlap (Stop
-// sharing, then Make a link at once) must draw only the newest answer, and a link just made must stay on screen while it is
+// Runs the real js/views/sharing.js on a fake page: Settings → Care team. Two loads of the list that overlap (Remove
+// someone, then Make a link at once) must draw only the newest answer, and a link just made must stay on screen while it is
 // still unused, through later loads of the list.
 import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
@@ -39,15 +39,15 @@ function setup() {
   const answerList = async (m, people = []) => { next('GET', '/api/me/shares').resolve(m); await settle(); next('GET', '/api/shared').resolve({ people }); await settle(); };
   const link = () => { const el = page.find(body, (e) => e.id === 'set-share-link')[0]; return el ? { value: el.value || el.attrs.value } : null; };
   const button = (label) => page.find(body, (e) => e.tag === 'button' && (e.attrs['aria-label'] || page.text(e)) === label)[0];
-  const makeLink = async () => { page.find(body, (e) => e.tag === 'form')[0].fire('submit'); await settle(); };
+  const makeLink = async () => { page.find(body, (e) => e.tag === 'form' && e.id === 'set-share-form')[0].fire('submit'); await settle(); };
   return { page, body, requests, next, answerList, link, button, makeLink };
 }
 
 for (const order of ['newest first', 'oldest first']) {
-  test(`Stop sharing, then Make a link at once: the new link stays when the lists answer ${order}`, async () => {
+  test(`Remove someone, then Make a link at once: the new link stays when the lists answer ${order}`, async () => {
     const s = setup();
     await s.answerList(mine([bo], []));
-    s.button('Stop sharing with Bo (bo)').click();
+    s.button('Remove Bo (bo) from your Care team').click();
     await settle();
     s.next('DELETE', '/api/me/shares/7').resolve(null);
     await settle(); // load 1 waits for the list
@@ -132,7 +132,7 @@ test('the link goes away once it is cancelled', async () => {
 test('an older load that fails after a newer one drew does not replace the list', async () => {
   const s = setup();
   await s.answerList(mine([bo], []));
-  s.button('Stop sharing with Bo (bo)').click();
+  s.button('Remove Bo (bo) from your Care team').click();
   await settle();
   s.next('DELETE', '/api/me/shares/7').resolve(null);
   await settle();

@@ -104,6 +104,14 @@ parent with a serious health condition, which can be taken in short blocks
 - If you feel hopeless or think about harming yourself, call or text **988** (US)
   ([Mood and stress](mental-health.md)).
 
+## Helping plan meals in the app
+
+If you have your own account on the same server, the person can add you to their **Care team** in **Settings → Care team**
+([how it works](../app/settings-and-keys.md#sharing)). As a **Viewer** you can look at what they choose to share. As a
+**Care helper** you can also plan their meals and use their shopping list: on the Plan tab, choose their name under
+**Planning for**. Food you plan shows "Added by" and your name on their day. You never change what they ate, their targets or
+their settings, and a planned low treatment stays as it is.
+
 ## What to do
 
 - [ ] Learn to use their glucose meter or CGM app, and where the glucose tablets and glucagon are.
@@ -155,8 +163,8 @@ peer mentor ([NKF][NKF-PEERS]).
 - [Dialysis access](../prepare/dialysis-access.md) · [Appointments](appointments.md) ·
   [Mood and stress](mental-health.md) · [Advance care planning](../prepare/advance-care-planning.md)
 - In the app: [Logging food](../app/logging.md) (you can log a low treatment for them; the app never
-  warns against it) · [Sharing with a caregiver](../app/settings-and-keys.md#sharing) (they can let you look at their log
-  from your own account)
+  warns against it) · [Care team](../app/settings-and-keys.md#sharing) (they can let you look at their log, or help plan their
+  meals, from your own account)
 
 ## Sources
 

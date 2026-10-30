@@ -353,13 +353,16 @@
     // change waits too; one that needs review or was not saved opens Settings → This device instead.
     const waiting = e.pending ? (e.conflict ? 'needs review' : e.failed ? 'not saved' : 'waiting to sync') : null;
     const label = needsReview(e) ? `${e.food_name}, ${amount}, ${waiting}: open This device`
-      : `Edit ${planned ? 'planned ' : ''}${e.food_name}, ${amount}${waiting ? `, ${waiting}` : ''}${e.purpose === 'hypo' ? ', used to treat a low' : ''}`;
+      : `Edit ${planned ? 'planned ' : ''}${e.food_name}, ${amount}${waiting ? `, ${waiting}` : ''}${e.purpose === 'hypo' ? ', used to treat a low' : ''}`
+        + `${e.added_by ? `, added by ${e.added_by}` : ''}`;
     const btn = h('button', { class: `row-btn${planned ? ' planned' : ''}`, type: 'button', 'aria-label': label },
       ratingIcon(e.kidney_rating),
       h('div', { class: 'row-main' },
         h('div', { class: 'row-title' }, e.food_name, planned ? h('span', { class: 'badge planned' }, 'planned') : null,
           waiting ? h('span', { class: `badge ${e.failed || e.conflict ? 'failed' : 'pending'}` }, waiting) : null, KH.guidance ? KH.guidance.lowBadge(e) : null),
-        h('div', { class: 'row-sub' }, h('span', { class: 'entry-servings' }, amount), e.note ? h('span', { class: 'entry-note' }, ` · ${e.note}`) : null)),
+        h('div', { class: 'row-sub' }, h('span', { class: 'entry-servings' }, amount), e.note ? h('span', { class: 'entry-note' }, ` · ${e.note}`) : null,
+          // Planned by someone on the person's Care team (design note 25).
+          e.added_by ? h('span', { class: 'entry-added-by' }, ` · Added by ${e.added_by}`) : null)),
       nums);
     btn.addEventListener('click', () => {
       if (!needsReview(e)) { views().add.openEntrySheet('edit', { entry: e, trigger: btn }); return; }

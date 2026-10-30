@@ -1,21 +1,25 @@
 #!/usr/bin/env python3
-"""Read-only sharing (design note 19) in Chromium, against a real server and the demo.
+"""The Care team (design notes 19 and 25) in Chromium, against a real server and the demo.
 
     python tools/e2e/sharing.py                     # port 8096
     python tools/e2e/sharing.py --port 8096 --out /tmp/kh-sharing
 
-Starts ``uvicorn app.main:app`` on a fresh ``DATA_DIR``, finishes first-run setup, turns sharing on and invites Ana and Sam. Ana
-logs a banana and a potassium result. Walks:
+Starts ``uvicorn app.main:app`` on a fresh ``DATA_DIR``, finishes first-run setup, turns sharing on and invites Ana, Sam and Kim.
+Ana logs a banana and a potassium result. Walks:
 
-* Ana at 375x812 light: Settings → Account → Sharing says what it is; she unticks symptoms and makes a link, shown once with
-  Copy link and the words that it works once;
+* Ana at 375x812 light: Settings → Care team is its own section after Account and says what each role may do; under "Make a
+  link instead" she unticks symptoms and makes a link, shown once with Copy link and the words that it works once;
 * Sam at 1280x800 dark opens the link: the sheet names Ana and what she shares, and nothing is saved until Accept; Accept opens
   Ana's summary, read-only: her name, the banner, her lab result, "has not shared their symptoms", and the banana in the day view;
   the page has no control that changes data;
-* the admin: People shows "Sharing: 1" on Ana's row;
-* Ana: her list names Sam and says he looked today; Stop sharing asks first, then the list is empty;
-* Sam: Settings says nobody shares with him, and the shared routes answer 404;
-* the demo (``/?mock=1``): the block says the demo has nobody to share with and asks the network for no shared route;
+* the admin: People shows "Care team: 1" on Ana's row;
+* Ana: her list names Sam as a Viewer and says he looked today; Remove asks first, then the list is empty;
+* Sam: Settings says he is on nobody's Care team, and the shared routes answer 404;
+* Ana invites "nobody-here" and "kim" by user name as a Care helper: the screen says the same for both;
+* Kim at 375x812 dark accepts in her own Settings, presses Plan meals, sees whose plan she is changing, adds apple to Ana's
+  tomorrow (planned, "added by kim", on Ana's shopping list, never in Kim's own log; every write to /api/shared), and goes back to
+  her own plan; Ana's Today then says "Added by kim";
+* the demo (``/?mock=1``): a sample Care team, and planning for Ana, with no shared route asked over the network;
 * no console error, no CSP violation, no browser dialog, no sideways scroll at 375, no other host.
 
 Nothing leaves the machine. Prints PASS / FAIL lines, writes ``<out>/report.json`` and screenshots in ``<out>/shots/``; exit status 1 on
@@ -28,7 +32,7 @@ import json
 import sys
 import tempfile
 import traceback
-from datetime import date
+from datetime import date, timedelta
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -146,9 +150,13 @@ def open_sharing(page: Any) -> None:
 def walk_ana_shares(p: Pass) -> str:
     page = p.page
     open_sharing(page)
-    check(f"[{p.tag}] the block says who it is for and that they cannot change anything",
-          "caregiver or dietitian" in text_of(page, "#set-sharing") and "never change anything" in text_of(page, "#set-sharing")
-          and "Nobody yet." in text_of(page, "#set-sharing"))
+    check(f"[{p.tag}] Settings → Care team says who it is for and what each role may do",
+          "caregiver or a dietitian" in text_of(page, "#set-sharing") and "never change anything" in text_of(page, "#set-sharing")
+          and "Care helper can also plan your meals" in text_of(page, "#set-sharing") and "Nobody yet." in text_of(page, "#set-sharing"))
+    check(f"[{p.tag}] the Care team is its own Settings section, after Account",
+          page.evaluate("() => { const s = [...document.querySelectorAll('#view-settings .settings-section')].filter((x) => !x.hidden);"
+                        " return s.indexOf(document.querySelector('#set-care')) === 1; }"))
+    page.click("#set-share-form summary")  # Make a link instead
     page.uncheck("#set-share-symptoms")
     page.select_option("#set-share-days", "30")
     page.click("#set-sharing-make")
@@ -173,10 +181,11 @@ def walk_sam_accepts(p: Pass, link: str) -> None:
     page.wait_for_selector("#settings-open", state="visible", timeout=30000)
     page.goto(link.replace(urlsplit(link).netloc, urlsplit(p.base).netloc))
     page.wait_for_selector("#sheet-share[open]", timeout=20000)
-    wait_text(page, "#share-question", "wants to share")
+    wait_text(page, "#share-question", "wants to add you")
     q = text_of(page, "#share-question")
     check(f"[{p.tag}] the sheet names Ana and what she shares, and says he cannot change anything",
-          "ana wants to share their food log, lab results and weight and blood pressure with you" in q and "not change anything" in q, q)
+          "ana wants to add you to their Care team and share their food log, lab results and weight and blood pressure with you" in q
+          and "not change anything" in q, q)
     check(f"[{p.tag}] the sheet says it ends by itself after 30 days", "ends by itself after 30 days" in q, q)
     check(f"[{p.tag}] the link left the address bar", "/share/" not in page.url, page.url)
     p.shot("question", "#sheet-share")
@@ -240,7 +249,7 @@ def walk_admin(p: Pass, admin: Any) -> None:
     ana_id = next(u["id"] for u in admin.json("GET", "/api/admin/users")["users"] if u["username"] == "ana")
     page.goto("/#admin")
     page.wait_for_selector(f"#user-{ana_id}", timeout=30000)
-    check(f"[{p.tag}] People shows Sharing: 1 on Ana's row", "sharing: 1" in text_of(page, f"#user-{ana_id}").lower(), text_of(page, f"#user-{ana_id}")[:200])
+    check(f"[{p.tag}] People shows Care team: 1 on Ana's row", "care team: 1" in text_of(page, f"#user-{ana_id}").lower(), text_of(page, f"#user-{ana_id}")[:200])
     p.finish()
 
 
@@ -251,20 +260,95 @@ def walk_ana_stops(p: Pass) -> None:
     line = text_of(page, "#set-sharing-list")
     check(f"[{p.tag}] her list names Sam and says he looked today", "looked today" in line and "food log" in line, line)
     check(f"[{p.tag}] and when the share ends", " · until " in line, line)
-    page.get_by_role("button", name="Stop sharing with sam").click()
-    check(f"[{p.tag}] Stop sharing asks first", "can no longer see any of your data" in text_of(page, "#set-sharing-list"))
-    page.locator("#set-sharing-list").get_by_role("button", name="Stop sharing", exact=True).click()
+    check(f"[{p.tag}] the role is shown and can be changed in place", "Viewer" in line and page.is_visible("#set-sharing-list select"), line)
+    page.get_by_role("button", name="Remove sam from your Care team").click()
+    check(f"[{p.tag}] Remove asks first", "can no longer see any of your data" in text_of(page, "#set-sharing-list"))
+    page.locator("#set-sharing-list").get_by_role("button", name="Remove", exact=True).click()
     page.wait_for_selector("#set-sharing-none", timeout=15000)
     check(f"[{p.tag}] then nobody can see her data", "Nobody yet." in text_of(page, "#set-sharing"))
-    p.finish()
 
 
 def walk_sam_after(p: Pass, sam: Any, share_id: int) -> None:
     page = p.page
     open_sharing(page)
     page.wait_for_selector("#set-shared-none", timeout=15000)
-    check(f"[{p.tag}] Settings says nobody shares with him", "Nobody shares with you yet." in text_of(page, "#set-sharing"))
+    check(f"[{p.tag}] Settings says he is on nobody's Care team", "You are not on anyone's Care team yet." in text_of(page, "#set-sharing"))
     check(f"[{p.tag}] the shared routes answer 404", sam.call("GET", f"/api/shared/{share_id}/labs").status_code == 404)
+    p.finish()
+
+
+def walk_ana_invites(p: Pass) -> None:
+    """Ana invites Kim by user name as a Care helper, and a name nobody has: the screen answers the same way."""
+    page = p.page
+    open_sharing(page)
+    sent = []
+    for name in ("nobody-here", "kim"):
+        page.fill("#set-care-invite-name", name)
+        page.check("#set-care-role-care_helper")
+        page.click("#set-care-invite")
+        answer_reauth(page)
+        wait_text(page, "#set-care-sent", "Invite sent to")
+        sent.append(text_of(page, "#set-care-sent").replace(name, "<name>"))
+    check(f"[{p.tag}] an invite says the same thing whether or not the name is an account", sent[0] == sent[1], " | ".join(sent))
+    waiting = text_of(page, "#set-care-invites")
+    check(f"[{p.tag}] both wait for an answer, as Care helper with the food log", "nobody-here" in waiting and "kim" in waiting
+          and "Care helper" in waiting and "food log" in waiting, waiting)
+    p.shot("invites", "#set-sharing")
+    p.no_overflow("invites")
+
+
+def walk_kim_plans(p: Pass, kim: Any, ana: Any) -> None:
+    """Kim accepts in her own Settings, then plans a food on Ana's tomorrow from the Plan tab, and goes back to her own plan."""
+    page = p.page
+    tomorrow = (date.today() + timedelta(days=1)).isoformat()
+    open_sharing(page)
+    wait_text(page, "#set-care-for-me", "ana")
+    check(f"[{p.tag}] the invite waits in her Settings → Care team with what it means",
+          "as a Care helper" in text_of(page, "#set-care-for-me"), text_of(page, "#set-care-for-me"))
+    p.shot("invite-for-me", "#set-sharing")
+    page.get_by_role("button", name="Accept the invite from ana").click()
+    wait_text(page, "#set-shared-list", "Care helper")
+    page.get_by_role("button", name="Plan meals for ana").click()
+    page.wait_for_selector("#care-banner", timeout=20000)
+    banner = text_of(page, "#care-banner")
+    check(f"[{p.tag}] the Plan tab says whose plan she is changing", "You are planning for ana. Changes go to ana's plan, not yours." in banner, banner)
+    check(f"[{p.tag}] her own plan is hidden while she plans for Ana", not page.is_visible("#plan-grid") and page.is_visible("#care-for-select"))
+    page.wait_for_selector("#care-add-q", timeout=20000)
+    page.fill("#care-add-q", "apple")
+    page.wait_for_selector("#care-add-results button", timeout=20000)
+    page.locator("#care-add-results button").first.click()
+    page.select_option("#care-add-meal", "lunch")
+    page.fill("#care-add-servings", "2")
+    page.click("#care-add")
+    wait_text(page, "#care-day", "added by kim")
+    day = text_of(page, "#care-day")
+    check(f"[{p.tag}] the food is on Ana's day, planned, with who added it", "Apple" in day and "planned" in day and "added by kim" in day, day[:300])
+    wait_text(page, "#care-shopping", "Apple")
+    check(f"[{p.tag}] Ana's shopping list has it, with Copy list", page.is_visible("#care-shopping-copy"))
+    p.shot("care-plan")
+    p.no_overflow("care-plan")
+    anas = ana.json("GET", "/api/log", params={"date": tomorrow})["entries"]
+    kims = kim.json("GET", "/api/log", params={"date": tomorrow})["entries"]
+    check(f"[{p.tag}] the entry is in Ana's log as planned and added by kim, and never in Kim's own",
+          [(e["status"], e["added_by"]) for e in anas] == [("planned", "kim")] and kims == [], f"{anas} | {kims}")
+    writes = [r for r in p.watch.requests if r.split(" ", 1)[0] in ("POST", "PUT", "DELETE") and "/api/" in r]
+    check(f"[{p.tag}] every write went to the shared routes or her Settings", all("/api/shared" in r for r in writes), str(writes))
+    page.click("#care-back")
+    page.wait_for_selector("#care-plan", state="hidden", timeout=15000)
+    page.wait_for_selector("#plan-grid", state="visible", timeout=15000)
+    check(f"[{p.tag}] Back to my own plan shows her own week again", page.input_value("#care-for-select") == "")
+    p.finish()
+
+
+def walk_ana_sees_who(p: Pass) -> None:
+    """Ana's Today shows the planned food with "Added by kim"."""
+    page = p.page
+    page.goto("/")
+    page.wait_for_selector("#date-next", state="visible", timeout=30000)
+    page.click("#date-next")
+    wait_text(page, "#view-today", "Added by kim")
+    check(f"[{p.tag}] Today says who planned it", "Added by kim" in text_of(page, "#view-today"))
+    p.shot("added-by")
     p.finish()
 
 
@@ -278,8 +362,14 @@ def walk_demo(p: Pass) -> None:
         page.click("#login-submit")
     page.wait_for_selector("#settings-open", state="visible", timeout=30000)
     page.click("#settings-open")
-    page.wait_for_selector("#set-sharing-off", timeout=20000)
-    check(f"[{p.tag}] the demo says it has nobody to share with", "nobody to share with" in text_of(page, "#set-sharing"))
+    page.wait_for_selector("#set-sharing-list", timeout=20000)
+    text = text_of(page, "#set-sharing")
+    check(f"[{p.tag}] the demo shows a sample Care team", "Jordan" in text and "invites for you" in text.lower() and "Ana" in text, text[:300])
+    page.click("#tab-plan")
+    page.wait_for_selector("#care-for:not([hidden])", timeout=20000)
+    page.select_option("#care-for-select", label="Ana")
+    page.wait_for_selector("#care-banner", timeout=20000)
+    check(f"[{p.tag}] the demo can plan for Ana", "You are planning for Ana" in text_of(page, "#care-banner"))
     p.no_overflow("demo")
     p.finish(demo=True)
 
@@ -366,6 +456,7 @@ def main(argv: list[str] | None = None) -> int:
         admin.json("PATCH", "/api/admin/settings", {"sharing.enabled": True})
         ana = invite_user(server, admin, "ana")
         sam = invite_user(server, admin, "sam")
+        kim = invite_user(server, admin, "kim")
         banana = ana.json("GET", "/api/foods", params={"q": "banana"})["foods"][0]["id"]
         ana.json("POST", "/api/log", {"date": date.today().isoformat(), "meal": "breakfast", "food_id": banana, "servings": 1})
         ana.json("POST", "/api/labs", {"analyte": "potassium", "value": 4.8, "unit": "mmol/L", "taken_on": date.today().isoformat()})
@@ -383,6 +474,9 @@ def main(argv: list[str] | None = None) -> int:
                 walk_admin(Pass(browser, base, out, 1280, 800, "dark", "admin-1280-dark", admin.cookies()), admin)
                 walk_ana_stops(ana_pass)
                 walk_sam_after(sam_pass, sam, share_id)
+                walk_ana_invites(ana_pass)
+                walk_kim_plans(Pass(browser, base, out, 375, 812, "dark", "kim-375-dark", kim.cookies()), kim, ana)
+                walk_ana_sees_who(ana_pass)
                 walk_demo(Pass(browser, base, out, 375, 812, "light", "demo-375-light"))
             finally:
                 browser.close()

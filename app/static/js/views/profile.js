@@ -621,8 +621,11 @@
   }
   $('#pf-open-labs').addEventListener('click', () => router.show('labs'));
   $('#profile-open-settings').addEventListener('click', () => router.show('settings'));
+  // Settings → Care team (design note 25): shown wherever people sign in (without sign-in there is one person).
+  $('#profile-open-care').addEventListener('click', () => KH.views.settings.openSection('set-care'));
 
   router.register('profile', () => {
+    $('#profile-care').hidden = ((state.authStatus || {}).auth_mode || 'local') === 'none';
     loadBodyHints();
     KH.loadProfile().then(() => {
       renderProfile();
