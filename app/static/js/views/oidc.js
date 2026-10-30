@@ -20,6 +20,7 @@
     cancelled: { text: 'Sign-in was cancelled at {label}. Nothing was changed.' },
     unavailable: { text: 'The server could not reach {label}. Try again later, or sign in with your password.' },
     busy: { text: 'Too many sign-in attempts from here. Wait a few minutes and try again.' },
+    full: { text: 'Too many sign-ins started. Try again soon.' },
     no_account: { text: 'There is no account here for that sign-in. Ask your admin for an invite link, or sign in with your password and link {label} in Settings.' },
     domain: { text: 'This server does not let in accounts with that email address. Ask your admin which address to use.' },
     disabled: { text: 'This account is turned off. Ask your admin.' },

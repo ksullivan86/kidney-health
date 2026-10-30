@@ -13385,7 +13385,7 @@
     },
     "/api/auth/oidc/callback": {
       "get": {
-        "description": "Where the provider sends the browser back. Never reflects what the provider sent.",
+        "description": "Where the provider sends the browser back. Never reflects what the provider sent.\n\nAny web page can send a browser here with a made-up state, so an unknown state or a cookie that does not match counts as\nnothing: not a failed sign-in for the address, and the browser's cookie (perhaps for its own waiting sign-in) stays. Only a\nflow this browser really started, once taken, counts as a failure when it is refused, and only then is the cookie cleared.",
         "operationId": "auth_callback",
         "parameters": [
           {
@@ -18385,6 +18385,7 @@
     },
     "/api/me/passkeys/{passkey_id}": {
       "delete": {
+        "description": "Remove one of the person's passkeys, never their last way in (a password, a passkey or a linked sign-in; note 24 §6).",
         "operationId": "me_remove_passkey",
         "parameters": [
           {

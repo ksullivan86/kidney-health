@@ -42,7 +42,9 @@ Pick **proxy** when everything already sits behind Authentik forward auth and no
    failure is retried at the next sign-in, never in a loop.
 2. **Start** (`GET /api/auth/oidc/start`, public). The server makes `state` and `nonce` (32 random bytes each), a PKCE
    `code_verifier` (32 random bytes, base64url) and its S256 challenge, and keeps them in memory for 10 minutes under the state's
-   hash, single use (like the passkey challenges; at most 10,000 waiting, the oldest dropped first). It sets a short cookie,
+   hash, single use (like the passkey challenges). At most 10,000 wait in all and 10 per address (or per person, for linking and
+   re-entry), and at most 300 starts a minute in all; beyond that a start is refused ("Too many sign-ins started. Try again soon.",
+   result `full`) and nothing waiting is dropped. It sets a short cookie,
    `__Host-kh_oidc` (`kh_oidc` on plain HTTP; `HttpOnly`, `SameSite=Lax`, `Path=/`, 10 minutes), holding a random value whose hash is
    stored with the flow. Then it answers `303` to the provider's authorization endpoint with `response_type=code`, `client_id`,
    `redirect_uri`, `scope`, `state`, `nonce`, `code_challenge`, `code_challenge_method=S256`.
@@ -51,8 +53,10 @@ Pick **proxy** when everything already sits behind Authentik forward auth and no
    `same-site` for a provider on a sibling host), which the app's cross-site read guard refuses for every other `/api` path; this
    one path is let through only as a top-level `GET` navigation (`security.PROVIDER_RETURN_PATHS`). The Chromium walk found this.
 4. **Callback** (public). The flow is taken by `state` (once); the cookie must match the flow (this stops another browser from
-   finishing someone else's flow, the classic login CSRF of OAuth); `iss`, when the provider sends it (RFC 9207), must equal the
-   issuer. An `error` from the provider is not shown as given: the person sees a fixed message.
+   finishing someone else's flow, the classic login CSRF of OAuth). A state that is not waiting, or a cookie that does not match,
+   changes nothing: the flow stays for its own browser, the browser's cookie stays, and it is not counted as a failed sign-in
+   (any web page can send a browser here, so counting it would let a page lock a visitor's address out). `iss`, when the provider
+   sends it (RFC 9207), must equal the issuer. An `error` from the provider is not shown as given: the person sees a fixed message.
 5. **Token exchange.** `POST token_endpoint` with `grant_type=authorization_code`, `code`, `redirect_uri`, `code_verifier`, through
    the SSRF-checked transport, no redirects followed, 10-second timeout, at most 256 KiB read. The client authenticates with
    `client_secret_basic` (the OIDC default), or `client_secret_post` when the provider lists only that; a public client (no secret
@@ -87,8 +91,8 @@ administration → Server settings, and each has a variable that locks it (they 
 |---|---|---|
 | `auth.oidc.button_label` (`OIDC_BUTTON_LABEL`) | `Sign in with single sign-on` | The button on the sign-in page, for example "Sign in with Authentik" or "Sign in with Google". |
 | `auth.oidc.allow_signup` (`OIDC_ALLOW_SIGNUP`) | `false` | Create an account at the first sign-in of someone the server does not know. Off: only accounts that exist, are linked, or come from an invite link. |
-| `auth.oidc.link_by_email` (`OIDC_LINK_BY_EMAIL`) | `false` | Link an unknown provider account to the existing account whose username is the same email address, when the provider says the email is verified. Never for an admin account. |
-| `auth.oidc.allowed_domains` (`OIDC_ALLOWED_DOMAINS`) | empty | Comma list of email domains. When set, every sign-in needs a verified email in one of them (with Google, the `hd` claim must match too). Important with Google, where anyone in the world has an account. |
+| `auth.oidc.link_by_email` (`OIDC_LINK_BY_EMAIL`) | `false` | Give an unknown provider account with a verified email the account an admin made for that address in People, if nobody has used it yet (§6 step 3). Never an admin account or a self-registered one. |
+| `auth.oidc.allowed_domains` (`OIDC_ALLOWED_DOMAINS`) | empty | Comma list of email domains. When set, every sign-in needs a verified email in one of them, and an `hd` claim, when sent, in them too. With Google as the issuer `hd` is required: a personal Google account can carry a work address as its email. Important with Google, where anyone in the world has an account. |
 | `auth.oidc.admin_groups` (`OIDC_ADMIN_GROUPS`) | empty | Comma list of group names. When set and the ID token carries a `groups` claim, the role follows it at each sign-in: in a group → admin, else user (never the last admin; audited). No claim: the role is left alone. |
 
 **`OIDC_ONLY` (hide the password form) is not in scope now.** Hiding the form while the server still takes passwords would only look
@@ -110,6 +114,7 @@ OIDC Core §3.1.3.7, in order; any failure refuses the sign-in with one plain me
 * `iss` equals `OIDC_ISSUER` exactly. `aud` is `OIDC_CLIENT_ID` or a list holding it; with more than one audience, `azp` must be
   the client ID, and `azp`, when present, must be the client ID.
 * `exp` is in the future and `iat` not in the future, each with **60 seconds** of clock skew; `iat` no more than 10 minutes old.
+  Both must be finite numbers: JSON parsers read `Infinity` and `NaN`, which would pass every comparison.
 * `nonce` equals the flow's nonce (constant-time compare).
 * `sub` is a string of 1 to 255 characters.
 * For a re-entry (§8), `auth_time` must be present and not older than the flow's start (minus the skew): the server asked for
@@ -143,9 +148,14 @@ At the callback, after the checks, in this order:
 1. **Allowed domains.** With `auth.oidc.allowed_domains` set, the email must be verified and its domain listed, and when the token
    has `hd` (Google Workspace) it must be listed too. Otherwise refused: "This server only lets in accounts from …".
 2. **A known link** `(issuer, sub)`: that account signs in, if it is active ("This account is turned off. Ask your admin." otherwise).
-3. **Link by email** (only with `auth.oidc.link_by_email` on and `email_verified` true): an active account whose username is that
-   email, that is not an admin and has no link to this issuer yet, is linked and signed in (audit `oidc.linked`, `via: email`).
-   Never by an unverified email: anyone can type any address at many providers.
+3. **Link by email** (only with `auth.oidc.link_by_email` on and `email_verified` true). *Narrowed after the security review of
+   2026-10-30*, which showed account pre-hijacking: an invited person could register the username `victim@example.org` with their
+   own password and receive the real owner's provider sign-in (and, with admin groups, an admin role). Now the only account that
+   can be linked this way is one **an admin made in People** that **nobody has used yet**: `pending_setup`, not an admin, no
+   password, no passkey, no link. It is activated, its setup link voided, and linked (audit `oidc.linked`, `via: email`). The
+   email, as the provider sent it, must be plain ASCII and equal the username in lower case: Unicode folding would merge
+   different mailboxes (`straße` and `strasse`, the Kelvin sign, fullwidth letters). The plain-HTTP rule applies as for a new
+   account. The admin groups are not applied on that sign-in; the next one follows them. Never by an unverified email.
 4. **An invite** (§3 with an invite, below): a new account with the invite's role, linked.
 5. **Sign-up** (only with `auth.oidc.allow_signup` on): a new account with role `user`, linked. The username is the verified email,
    else `preferred_username`, cut to the local rules; when taken, `-2` to `-9` is added; failing that, the sign-in is refused with a
@@ -167,8 +177,9 @@ links (`DELETE /api/admin/users/{id}/oidc`, for a lost provider account), and th
 ## 7. Sessions and throttles
 
 The same session cookie, lifetime and idle limit as a password sign-in, a new session id each time, the remembered-device cookie, and
-`last_login_at`. The per-address checks of the sign-in apply to both routes: blocked addresses wait; every failed callback (bad state,
-cookie, token, claims, no account) counts as a failure for the address; `GET /start` counts toward the 30 sign-in attempts a minute.
+`last_login_at`. The per-address checks of the sign-in apply to both routes: blocked addresses wait; a failed callback of a flow this
+browser started (token, claims, no account) counts as a failure for the address, while an unknown state or a missing cookie does
+not (§3 step 4); `GET /start` counts toward the 30 sign-in attempts a minute.
 There is no password, so the per-name delay and the hashing budget do not apply. The plain-HTTP rule is the same as for sign-in
 (allowed on a LAN while the server has one account; HTTPS needed beyond it).
 
@@ -198,7 +209,9 @@ refused for an admin who has no app two-step code, as today.
 Audit actions: `login.succeeded` with `via: oidc`; `login.failed` with `via: oidc` and a short `reason` word (no claim values) when an
 account is known; `oidc.linked` (`via: settings | email | invite | signup`), `oidc.unlinked` (`via: self | admin`, `count`),
 `user.registered` with `via: oidc_invite | oidc_signup`, `user.role_changed` with `via: oidc_groups`. The person's activity list shows
-the link events. **Tokens, codes, the state, the nonce and the client secret are never logged or stored**; the issuer and the email
+the link events. **Tokens, the nonce and the client secret are never logged or stored**; the one-time code and the state appear
+in the callback's query string, so the log redaction (`app/security.py`) shows them as `code=[redacted]` and `state=[redacted]` in
+uvicorn's access line; the issuer and the email
 are stored for the person's own Settings list. The export (`export.json`) does not carry the links: a link means nothing on another
 server, and the person links again there. Deleting an account deletes its links.
 
@@ -226,7 +239,8 @@ application, authorised redirect URI `https://kidney.example.org/api/auth/oidc/c
 While the consent screen is in "Testing", only the test users listed there can sign in; "In production"
 lets any Google account reach the app's own checks. **Any of the world's Google accounts can then reach those checks**,
 so keep `auth.oidc.allow_signup` off or set `auth.oidc.allowed_domains`. Google sets `email_verified` and, for Workspace accounts,
-`hd`. Google needs a public `PUBLIC_URL` host name for the redirect URI (an IP address is refused by Google; `localhost` is allowed
+`hd`. With allowed domains set and Google as the issuer, `hd` is required: a personal Google account can use a work address as its
+email, and only `hd` shows the account belongs to the Workspace domain. Google needs a public `PUBLIC_URL` host name for the redirect URI (an IP address is refused by Google; `localhost` is allowed
 for testing).
 
 ## 12. Risks and the owner's open questions
@@ -237,8 +251,8 @@ for testing).
   is the person's Google security; at home it is the Authentik admin. Two-step at the provider matters most for admins (§9).
 * **Signup with a public provider.** Google plus `allow_signup` and no allowed domains lets any Google account make an account. The
   docs and the setting's help say so; the default is off.
-* **Email linking** is the riskiest rule, so it is off by default, needs `email_verified`, matches only usernames, and never links an
-  admin.
+* **Email linking** is the riskiest rule, so it is off by default, needs `email_verified`, matches only plain ASCII usernames
+  exactly, links only an admin-made account nobody has used, never an admin, and never promotes on that sign-in (§6 step 3).
 * **Group mapping** makes the provider the source of truth for admin rights. A wrong group name can demote admins at their next sign-in
   (never the last one).
 * **State in memory.** A restart during the minute someone is at the provider loses their flow; they press the button again. One

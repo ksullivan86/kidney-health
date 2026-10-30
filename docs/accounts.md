@@ -162,23 +162,29 @@ a Workspace domain), with only the `openid`, email and profile scopes, so no rev
 credentials → OAuth client ID → Web application, with the authorised redirect URI
 `https://kidney.example.org/api/auth/oidc/callback`. Set `OIDC_ISSUER=https://accounts.google.com`. While the consent screen is in
 Testing, only the test users you list there can sign in. **Anyone in the world has a Google account**, so keep **Make an account for
-someone new** off, or set **Only let in email addresses from these domains** (for a Workspace domain, Google's `hd` claim must
-match as well). Google needs a host name in the redirect URI, not an IP address.
+someone new** off, or set **Only let in email addresses from these domains** (Google's `hd` claim must
+match as well, so only Workspace accounts of a listed domain get in, not a personal Google account that uses a work address). Google needs a host name in the redirect URI, not an IP address.
 
 Good to know:
 
 * **Two-step for admins.** "Admins must use two-step sign-in" applies to password sign-ins. An admin who signs in through the
   provider is not asked for the app's code, so make the provider ask for a second factor: an MFA stage in the Authentik flow, or
   2-Step Verification on the Google account.
-* **Linking by email** links someone the provider calls verified to the account whose username is that same email. It is off by
-  default, never links an unverified email, and never links an admin account.
+* **Linking by email** gives someone the account you made for them. Make the account in **Server administration → People** with
+  their email address as the username, and do not send the setup link. At their first sign-in through the provider, if the
+  provider says the email is verified and it matches exactly, in plain letters, they get that account. It is off by default and
+  never links an account someone registered themselves, one with a password, passkey or link, an admin account, or an
+  unverified email. Their provider groups count from their next sign-in.
+* **Too many sign-ins started.** At most 10 sign-ins can wait at the provider for one address, and 10,000 in all; beyond that the
+  page says "Too many sign-ins started. Try again soon."
 * **Admin groups.** When set, the role follows the provider's `groups` claim at each sign-in. The last admin is never demoted.
 * **Lost provider account.** The person removes the link in Settings (not their last way in), or you remove it in **Server
   administration → People → Remove linked sign-in** and send a reset link if they have no password.
 * **No password.** Someone who signed up through the provider has no password here. When an action asks for the password again,
   **Confirm with Authentik** answers it. They can add a passkey, or you can send a reset link to set a password.
 * Signing out of the app does not sign out at the provider.
-* The activity log records sign-ins through the provider and every link and unlink. Tokens are never stored or logged.
+* The activity log records sign-ins through the provider and every link and unlink. Tokens are never stored or logged, and the
+  server's access log shows the one-time code and state as `[redacted]`.
 
 **Provider or sign-in proxy?** `AUTH_MODE=proxy` (an Authentik proxy outpost or Authelia in front of the app, see
 [Proxy mode](#proxy-mode)) already works and keeps the app's page hidden until the proxy has signed someone in. Pick the proxy when

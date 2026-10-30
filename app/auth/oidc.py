@@ -7,7 +7,9 @@ private one only with ``OIDC_ALLOW_PRIVATE_ISSUER``, redirects are never followe
 
 * :class:`OidcClient` (``app.state.oidc``): the provider's metadata (cached an hour), its keys (cached an hour, fetched again for an
   unknown ``kid`` at most once a minute), the authorization URL, the code exchange and :meth:`OidcClient.verify_id_token`.
-* :class:`FlowStore`: the flows waiting at the provider, in memory, single use, 10 minutes (like the passkey challenges).
+* :class:`FlowStore`: the flows waiting at the provider, in memory, single use, 10 minutes (like the passkey challenges). At most
+  ``MAX_FLOWS`` wait at once and ``FLOWS_PER_KEY`` per address; when either is full a new start is refused (:class:`FlowStoreFull`),
+  so a flood never pushes out someone else's waiting sign-in.
 * :class:`OidcError`: a refusal with one of the short result words of :data:`RESULTS` (what the page shows) and a log reason.
 
 Nothing here logs or keeps a token, a code, the state, the nonce or the client secret.
@@ -19,6 +21,7 @@ import hashlib
 import hmac
 import json
 import logging
+import math
 import secrets
 import threading
 from collections import OrderedDict
@@ -41,6 +44,7 @@ log = logging.getLogger(f"{brand.LOGGER_NAME}.auth.oidc")
 CALLBACK_PATH = "/api/auth/oidc/callback"
 FLOW_TTL_S = 600
 MAX_FLOWS = 10_000
+FLOWS_PER_KEY = 10  # flows one address (or one person, for link and re-auth) may have waiting at once
 METADATA_TTL_S = 3600
 JWKS_TTL_S = 3600
 JWKS_REFRESH_MIN_S = 60
@@ -53,7 +57,7 @@ MAX_SUBJECT = 255
 
 # The result words the callback sends the page to (``/#/oidc/<word>``); js/views/oidc.js has the sentence for each.
 RESULTS = (
-    "failed", "expired", "cancelled", "unavailable", "busy", "no_account", "domain", "disabled", "taken", "name", "invite",
+    "failed", "expired", "cancelled", "unavailable", "busy", "full", "no_account", "domain", "disabled", "taken", "name", "invite",
     "https", "wrong_account", "linked", "confirmed",
 )
 
@@ -131,42 +135,65 @@ class Flow:
     session_id: str | None = None  # link and reauth: the session that started it
     invite_id: str | None = None  # invite: the invite token's id
     expires: float = 0.0
+    key: str = ""  # who started it, for the per-address cap
+
+
+class FlowStoreFull(Exception):
+    """Too many flows are waiting (in all, or for this address): the start is refused, nothing is dropped."""
 
 
 class FlowStore:
-    """Flows by the SHA-256 of their ``state``. :meth:`take` returns one at most once, before it expires. At most ``MAX_FLOWS`` are
-    kept; the oldest go first, so a flood of starts costs bounded memory and only makes the flood's own flows fail."""
+    """Flows by the SHA-256 of their ``state``. :meth:`take` returns one at most once, before it expires, and only to the browser
+    holding its cookie (a wrong or missing cookie leaves the flow waiting for its own browser). At most ``max_items`` wait in all
+    and ``per_key`` per address; beyond that :meth:`issue` raises :class:`FlowStoreFull`. Expired flows are dropped as new ones
+    come; a waiting flow is never pushed out by others."""
 
-    def __init__(self, max_items: int = MAX_FLOWS, ttl_s: float = FLOW_TTL_S) -> None:
+    def __init__(self, max_items: int = MAX_FLOWS, ttl_s: float = FLOW_TTL_S, per_key: int = FLOWS_PER_KEY) -> None:
         self._items: OrderedDict[bytes, Flow] = OrderedDict()
+        self._per_key: dict[str, int] = {}
         self._lock = threading.Lock()
-        self._max, self._ttl = max_items, ttl_s
+        self._max, self._ttl, self._cap = max_items, ttl_s, per_key
 
-    def issue(self, purpose: str, *, user_id: int | None = None, session_id: str | None = None,
+    def _forget(self, flow: Flow) -> None:
+        left = self._per_key.get(flow.key, 0) - 1
+        if left > 0:
+            self._per_key[flow.key] = left
+        else:
+            self._per_key.pop(flow.key, None)
+
+    def issue(self, purpose: str, *, key: str = "", user_id: int | None = None, session_id: str | None = None,
               invite_id: str | None = None) -> tuple[str, str, Flow]:
         """A new flow: ``(state, binder, flow)``. The binder goes into the cookie; only its hash is kept."""
         state = secrets.token_urlsafe(32)
         binder = secrets.token_urlsafe(32)
         now = clock.seconds()
         flow = Flow(purpose, secrets.token_urlsafe(32), secrets.token_urlsafe(32), hashlib.sha256(binder.encode()).digest(), now,
-                    user_id, session_id, invite_id, now + self._ttl)
-        key = hashlib.sha256(state.encode()).digest()
+                    user_id, session_id, invite_id, now + self._ttl, key)
         with self._lock:
-            while self._items and (len(self._items) >= self._max or next(iter(self._items.values())).expires < now):
-                self._items.popitem(last=False)
-            self._items[key] = flow
+            while self._items and next(iter(self._items.values())).expires < now:  # same lifetime for all: oldest first
+                self._forget(self._items.popitem(last=False)[1])
+            if len(self._items) >= self._max or self._per_key.get(key, 0) >= self._cap:
+                raise FlowStoreFull(key)
+            self._items[hashlib.sha256(state.encode()).digest()] = flow
+            self._per_key[key] = self._per_key.get(key, 0) + 1
         return state, binder, flow
 
     def take(self, state: str | None, binder: str | None) -> Flow | None:
-        """The flow for ``state`` if the cookie's ``binder`` matches and it has not expired. The flow is gone afterwards either way."""
-        if not isinstance(state, str) or not state or len(state) > 200:
+        """The flow for ``state`` if the cookie's ``binder`` matches and it has not expired; it is gone afterwards. An unknown state
+        or a cookie that does not match returns None and changes nothing."""
+        if not isinstance(state, str) or not state or len(state) > 200 or not isinstance(binder, str):
             return None
+        digest = hashlib.sha256(state.encode()).digest()
         with self._lock:
-            flow = self._items.pop(hashlib.sha256(state.encode()).digest(), None)
-        if flow is None or flow.expires < clock.seconds():
-            return None
-        if not isinstance(binder, str) or not hmac.compare_digest(hashlib.sha256(binder.encode()).digest(), flow.binder_hash):
-            return None
+            flow = self._items.get(digest)
+            if flow is None:
+                return None
+            if flow.expires < clock.seconds():
+                self._forget(self._items.pop(digest))
+                return None
+            if not hmac.compare_digest(hashlib.sha256(binder.encode()).digest(), flow.binder_hash):
+                return None
+            self._forget(self._items.pop(digest))
         return flow
 
     def __len__(self) -> int:
@@ -496,12 +523,16 @@ class OidcClient:
 
 
 def _number(value: Any) -> bool:
-    return isinstance(value, (int, float)) and not isinstance(value, bool)
+    """A JSON number that is finite (``json.loads`` reads ``Infinity`` and ``NaN``, which would pass every time check)."""
+    return isinstance(value, (int, float)) and not isinstance(value, bool) and math.isfinite(value)
 
 
 # --------------------------------------------------------------------------- #
 # Claims the account rules read
 # --------------------------------------------------------------------------- #
+
+
+GOOGLE_ISSUER = "https://accounts.google.com"
 
 
 def verified_email(claims: dict[str, Any]) -> str | None:
@@ -525,8 +556,10 @@ def groups(claims: dict[str, Any]) -> set[str] | None:
     return {g for g in raw if isinstance(g, str)}
 
 
-def domain_allowed(claims: dict[str, Any], domains: list[str]) -> bool:
-    """With allowed domains set: a verified email in one of them, and Google's ``hd`` (when sent) in them too."""
+def domain_allowed(claims: dict[str, Any], domains: list[str], issuer: str = "") -> bool:
+    """With allowed domains set: a verified email in one of them, and Google's ``hd`` (when sent) in them too. With Google as the
+    issuer ``hd`` is required: a personal Google account can carry any address as its email, and only ``hd`` says the account
+    belongs to that Workspace domain."""
     if not domains:
         return True
     allowed = {d.lower().lstrip("@") for d in domains}
@@ -534,4 +567,6 @@ def domain_allowed(claims: dict[str, Any], domains: list[str]) -> bool:
     if email is None or email.rsplit("@", 1)[1] not in allowed:
         return False
     hd = claims.get("hd")
-    return hd is None or (isinstance(hd, str) and hd.lower() in allowed)
+    if hd is None:
+        return issuer != GOOGLE_ISSUER
+    return isinstance(hd, str) and hd.lower() in allowed

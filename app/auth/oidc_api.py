@@ -7,8 +7,8 @@ sends the browser back) and ``POST /api/auth/oidc/invite`` (an invite link redee
 (listing and unlinking still work while it is off, for a link left from before).
 
 The callback never shows what the provider sent: it answers ``303`` to ``/`` (signed in) or to ``/#/oidc/<word>``, one of
-:data:`app.auth.oidc.RESULTS`, which the page turns into a sentence (``js/views/oidc.js``). Tokens, codes, the state and the nonce
-are never logged or stored.
+:data:`app.auth.oidc.RESULTS`, which the page turns into a sentence (``js/views/oidc.js``). Tokens and the nonce are never logged
+or stored; the code and the state of the callback's query string are redacted in the access log (``security._PATTERNS``).
 """
 from __future__ import annotations
 
@@ -41,11 +41,14 @@ reauth_router = APIRouter(prefix="/api/auth/reauth", tags=["auth"])
 me_router = APIRouter(prefix="/api/me/oidc", tags=["me"], dependencies=[Depends(current_user)])
 
 register_limit("oidc_start", 30, 60, "Too many sign-in attempts. Wait a minute and try again.")
+# Every start of a flow, whoever starts it: with the per-address cap of the flow store, a flood from many addresses cannot fill it.
+register_limit("oidc_start_all", 300, 60, "Too many sign-ins started. Try again soon.")
 
 COOKIE_HTTPS = brand.OIDC_COOKIE_HOST
 COOKIE_HTTP = brand.OIDC_COOKIE
-LAST_WAY_IN = ("This is your only way to sign in. Add a passkey first, or ask your admin for a link to set a password, "
-               "then remove this.")
+LAST_WAY_IN = ("This is your only way to sign in. Add another way first (a passkey, or a linked sign-in), or ask your admin "
+               "for a link to set a password, then remove this.")
+FLOWS_FULL = "Too many sign-ins started. Try again soon."
 ALREADY_LINKED = "Your account is already linked to this provider. Remove that link first to link another account."
 
 
@@ -188,12 +191,18 @@ class _Refused(oidc.OidcError):
         self.user_id = user_id
 
 
-def _begin(request: Request, oc: oidc.OidcClient, purpose: str, response: Response, **flow: Any) -> str:
-    """Make a flow and set its cookie on ``response``; returns the provider's authorization URL."""
+def _begin(request: Request, oc: oidc.OidcClient, purpose: str, response: Response, key: str, **flow: Any) -> str:
+    """Make a flow and set its cookie on ``response``; returns the provider's authorization URL. ``key`` is who started it (the
+    address, or the person) for the flow store's per-key cap; :class:`oidc.FlowStoreFull` when the store or that key is full."""
+    auth_context(request).limits.take("oidc_start_all", "all")
     meta = oc.metadata()
-    state, binder, item = oc.flows.issue(purpose, **flow)
+    state, binder, item = oc.flows.issue(purpose, key=key, **flow)
     _set_binder(response, request, binder)
     return oc.authorization_url(meta, state, item)
+
+
+def _full() -> ApiProblem:
+    return ApiProblem(503, FLOWS_FULL, headers={"Retry-After": "60"})
 
 
 def _unavailable(exc: oidc.OidcError) -> ApiProblem:
@@ -216,8 +225,10 @@ def start(request: Request, conn: sqlite3.Connection = Depends(get_db)) -> Respo
             return _result("busy")
         ctx.limits.take("oidc_start", ip_key(ip))
         response = _go("/")
-        response.headers["Location"] = _begin(request, oc, "signin", response)
+        response.headers["Location"] = _begin(request, oc, "signin", response, f"ip:{ip_key(ip)}")
         return response
+    except oidc.FlowStoreFull:
+        return _result("full")
     except oidc.OidcError as exc:
         return _result(exc.result)
     except ApiProblem as exc:
@@ -244,7 +255,9 @@ def start_with_invite(body: LinkInfoBody, request: Request, response: Response, 
     require_secure_enough(conn, ctx.settings, request, adding_account=True)
     ctx.limits.take("oidc_start", ip_key(ip))
     try:
-        return {"url": _begin(request, oc, "invite", response, invite_id=invite["id"])}
+        return {"url": _begin(request, oc, "invite", response, f"ip:{ip_key(ip)}", invite_id=invite["id"])}
+    except oidc.FlowStoreFull:
+        raise _full() from None
     except oidc.OidcError as exc:
         raise _unavailable(exc) from None
 
@@ -252,10 +265,15 @@ def start_with_invite(body: LinkInfoBody, request: Request, response: Response, 
 @router.get("/callback", response_class=RedirectResponse)
 def callback(request: Request, conn: sqlite3.Connection = Depends(get_db), code: str | None = None, state: str | None = None,
              error: str | None = None, iss: str | None = None) -> Response:
-    """Where the provider sends the browser back. Never reflects what the provider sent."""
+    """Where the provider sends the browser back. Never reflects what the provider sent.
+
+    Any web page can send a browser here with a made-up state, so an unknown state or a cookie that does not match counts as
+    nothing: not a failed sign-in for the address, and the browser's cookie (perhaps for its own waiting sign-in) stays. Only a
+    flow this browser really started, once taken, counts as a failure when it is refused, and only then is the cookie cleared."""
     ctx, oc = _on(request)
     ip = request_ip(request)
     binder = _read_binder(request)
+    flow: oidc.Flow | None = None
     try:
         if ctx.throttle.ip_wait(ip):
             raise oidc.OidcError("busy", "address_blocked")
@@ -275,7 +293,7 @@ def callback(request: Request, conn: sqlite3.Connection = Depends(get_db), code:
         response = _finish(request, conn, ctx, oc, flow, claims, ip)
     except oidc.OidcError as exc:
         conn.rollback()
-        if exc.result != "cancelled":
+        if flow is not None and exc.result != "cancelled":
             ctx.throttle.ip_failure(ip)
         user_id = getattr(exc, "user_id", None)
         if user_id is not None:
@@ -285,9 +303,11 @@ def callback(request: Request, conn: sqlite3.Connection = Depends(get_db), code:
         response = _result(exc.result)
     except ApiProblem as exc:
         conn.rollback()
-        ctx.throttle.ip_failure(ip)
+        if flow is not None:
+            ctx.throttle.ip_failure(ip)
         response = _result(_problem_word(exc))
-    _clear_binder(response, request)
+    if flow is not None:
+        _clear_binder(response, request)
     return response
 
 
@@ -299,7 +319,7 @@ def callback(request: Request, conn: sqlite3.Connection = Depends(get_db), code:
 def _finish(request: Request, conn: sqlite3.Connection, ctx: AuthContext, oc: oidc.OidcClient, flow: oidc.Flow,
             claims: dict[str, Any], ip: str | None) -> Response:
     store = ctx.store
-    if not oidc.domain_allowed(claims, comma_list(store.get(conn, "auth.oidc.allowed_domains"))):
+    if not oidc.domain_allowed(claims, comma_list(store.get(conn, "auth.oidc.allowed_domains")), oc.issuer):
         raise oidc.OidcError("domain", "domain_not_allowed")
     issuer, subject = oc.issuer, claims["sub"]
     email = oidc.any_email(claims)
@@ -307,6 +327,7 @@ def _finish(request: Request, conn: sqlite3.Connection, ctx: AuthContext, oc: oi
         return _finish_signed_in(request, conn, ctx, oc, flow, issuer, subject, email, ip)
 
     link = find_link(conn, issuer, subject)
+    linked_by_email = False
     if link is not None and flow.purpose == "invite":
         raise oidc.OidcError("taken", "invite_for_linked_account")
     if link is not None:
@@ -323,12 +344,15 @@ def _finish(request: Request, conn: sqlite3.Connection, ctx: AuthContext, oc: oi
     elif flow.purpose == "invite":
         user_id = _create_from_invite(request, conn, ctx, flow, claims, issuer, subject, email, ip)
     else:
-        user_id = _link_by_email(conn, ctx, claims, issuer, subject, ip)
+        user_id = _link_by_email(request, conn, ctx, claims, issuer, subject, ip)
+        linked_by_email = user_id is not None
         if user_id is None:
             if not store.get(conn, "auth.oidc.allow_signup"):
                 raise oidc.OidcError("no_account", "unknown_subject")
             user_id = _create_by_signup(request, conn, ctx, claims, issuer, subject, email, ip)
-    _sync_role(conn, ctx, user_id, claims, ip)
+    # Never promote on the sign-in that linked by email (security review 2026-10-30): the next sign-in follows the groups.
+    if not linked_by_email:
+        _sync_role(conn, ctx, user_id, claims, ip)
     response = _go("/")
     from .routes import start_session
 
@@ -364,19 +388,36 @@ def _finish_signed_in(request: Request, conn: sqlite3.Connection, ctx: AuthConte
     return _result("linked")
 
 
-def _link_by_email(conn: sqlite3.Connection, ctx: AuthContext, claims: dict[str, Any], issuer: str, subject: str,
-                   ip: str | None) -> int | None:
-    """Note 24 §6 step 3: only with the switch on, a verified email, and an active non-admin account named by that email."""
+_ASCII_EMAIL = re.compile(r"^[a-z0-9._%+-]+@[a-z0-9.-]+$")
+
+
+def _link_by_email(request: Request, conn: sqlite3.Connection, ctx: AuthContext, claims: dict[str, Any], issuer: str,
+                   subject: str, ip: str | None) -> int | None:
+    """Note 24 §6 step 3, as narrowed by the security review (2026-10-30): only with the switch on and a verified email, and only
+    into an account an admin made in People that nobody has used yet: ``pending_setup``, not an admin, no password, no passkey, no
+    link. Anyone who can register a username could otherwise sit on someone's address and receive their account (pre-hijacking).
+    The email and the username are compared as plain lower-case ASCII, exactly: Unicode folding merges different mailboxes
+    (``straße``/``strasse``, the Kelvin sign, fullwidth letters). The account is activated and its setup link voided."""
     if not ctx.store.get(conn, "auth.oidc.link_by_email"):
         return None
+    raw = claims.get("email")
     email = oidc.verified_email(claims)
-    if email is None:
+    # ASCII is checked on the address as the provider sent it: str.lower() turns the Kelvin sign into a plain "k".
+    if email is None or not isinstance(raw, str) or not raw.strip().isascii() or not _ASCII_EMAIL.match(email):
         return None
-    row = conn.execute(f"SELECT {USER_COLUMNS} FROM users WHERE username_norm = ? AND auth_source = 'local'",
-                       (normalize_username(email),)).fetchone()
-    if row is None or row["status"] != "active" or row["role"] == "admin" or link_for_issuer(conn, int(row["id"]), issuer):
+    row = conn.execute(f"SELECT {USER_COLUMNS} FROM users WHERE username_norm = ? AND auth_source = 'local'", (email,)).fetchone()
+    if (row is None or row["status"] != "pending_setup" or row["role"] == "admin" or row["password_hash"]
+            or not str(row["username"]).isascii() or str(row["username"]).lower() != email):
         return None
     user_id = int(row["id"])
+    if passkeys.count_for(conn, user_id) or links_for(conn, user_id):
+        return None
+    try:
+        require_secure_enough(conn, ctx.settings, request, adding_account=True)
+    except ApiProblem:
+        raise _Refused("https", "https_required", user_id) from None
+    conn.execute("UPDATE users SET status = 'active', updated_at = ? WHERE id = ? AND status = 'pending_setup'", (utcnow(), user_id))
+    tokens.void_reset_links(conn, user_id)  # the admin's setup link for this account stops working
     add_link(conn, user_id, issuer, subject, email)
     audit(conn, user_id, "oidc.linked", "user", user_id, ip=ip, via="email")
     return user_id
@@ -481,7 +522,9 @@ def reauth_start(request: Request, response: Response, user: CurrentUser, conn: 
         raise ApiProblem(409, "Your account is not linked to the sign-in provider.")
     ctx.limits.take("oidc_start", f"user:{user.id}")
     try:
-        return {"url": _begin(request, oc, "reauth", response, user_id=user.id, session_id=info.id)}
+        return {"url": _begin(request, oc, "reauth", response, f"user:{user.id}", user_id=user.id, session_id=info.id)}
+    except oidc.FlowStoreFull:
+        raise _full() from None
     except oidc.OidcError as exc:
         raise _unavailable(exc) from None
 
@@ -521,7 +564,9 @@ def link_start(request: Request, response: Response, user: RecentUser, conn: sql
     info = request.state.auth_session
     ctx.limits.take("oidc_start", f"user:{user.id}")
     try:
-        return {"url": _begin(request, oc, "link", response, user_id=user.id, session_id=info.id)}
+        return {"url": _begin(request, oc, "link", response, f"user:{user.id}", user_id=user.id, session_id=info.id)}
+    except oidc.FlowStoreFull:
+        raise _full() from None
     except oidc.OidcError as exc:
         raise _unavailable(exc) from None
 

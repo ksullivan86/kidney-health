@@ -15,7 +15,8 @@ because the provider is on 127.0.0.1. Walks, at 375x812:
   says "Linked." and lists the link;
 * signed out, the button signs the admin in with no password: the app shows Today;
 * the demo (``/?mock=1``): no button;
-* no console error, no CSP violation, no browser dialog, no sideways scroll, and the browser asked only the app and the provider.
+* no console error, no CSP violation, no browser dialog, no sideways scroll, and the browser asked only the app and the provider;
+* the server's access log shows the callback's ``code`` and ``state`` as ``[redacted]``.
 
 Nothing leaves the machine. Prints PASS / FAIL lines and writes ``<out>/report.json``; exit status 1 on any failure. No screenshots.
 """
@@ -190,6 +191,8 @@ def main() -> int:
         walk(base, provider.issuer, who, args.out)
         check("the server log holds no token and no secret",
               CLIENT_SECRET not in server.log() and "access-token-never-stored" not in server.log())
+        check("the access log shows the callback's code and state redacted",
+              "callback?code=[redacted]&state=[redacted]" in server.log() and "callback?code=[redacted]" in server.log())
     except Exception:
         traceback.print_exc()
         check("the walk ran to the end", False, traceback.format_exc().splitlines()[-1])

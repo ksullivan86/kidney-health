@@ -210,12 +210,15 @@ def test_bad_state_and_a_flow_from_another_browser_are_refused(app, admin, anon,
     # an unknown state
     bad = anon.get("/api/auth/oidc/callback", params={"code": code, "state": "x" * 43}, follow_redirects=False)
     assert bad.headers["location"] == "/#/oidc/expired"
-    # the right state in a browser without the cookie (login CSRF): refused, and the flow is used up
+    # the right state in a browser without the cookie (login CSRF): refused, and nothing is signed in there
     other = TestClient(app, base_url=HTTPS_URL)
     stolen = other.get("/api/auth/oidc/callback", params={"code": code, "state": state}, follow_redirects=False)
     assert stolen.headers["location"] == "/#/oidc/expired" and other.get("/api/me").status_code == 401
+    # the browser that started it still finishes (a forged attempt does not burn the flow), and only once
     again = anon.get("/api/auth/oidc/callback", params={"code": code, "state": state}, follow_redirects=False)
-    assert again.headers["location"] == "/#/oidc/expired"
+    assert again.headers["location"] == "/"
+    replay = anon.get("/api/auth/oidc/callback", params={"code": code, "state": state}, follow_redirects=False)
+    assert replay.headers["location"] == "/#/oidc/expired"
 
 
 def test_provider_errors_and_a_wrong_iss_parameter(admin, anon, provider):
@@ -287,8 +290,7 @@ def test_signup_makes_a_user_account_with_a_free_username(admin, anon, provider)
 
 def test_an_unverified_email_never_links(admin, anon, provider):
     set_setting(admin, **{"auth.oidc.link_by_email": True})
-    sam = add_user(admin, username="sam@example.org")
-    del sam
+    admin_made_account(admin, "sam@example.org")
     for verified in (False, "true", None):
         r = sign_in_with_provider(anon, provider, claims={"sub": "sam-sub", "email": "sam@example.org", "email_verified": verified})
         assert r.headers["location"] == "/#/oidc/no_account", verified
@@ -297,11 +299,11 @@ def test_an_unverified_email_never_links(admin, anon, provider):
 
 
 def test_link_by_email_is_off_by_default_and_never_links_an_admin(admin, anon, provider):
-    add_user(admin, username="kim@example.org")
+    admin_made_account(admin, "kim@example.org")
     r = sign_in_with_provider(anon, provider, claims={"sub": "kim-sub", "email": "kim@example.org"})
     assert r.headers["location"] == "/#/oidc/no_account"
     set_setting(admin, **{"auth.oidc.link_by_email": True})
-    add_user(admin, username="boss@example.org", role="admin")
+    admin_made_account(admin, "boss@example.org", role="admin")
     r = sign_in_with_provider(anon, provider, claims={"sub": "boss-sub", "email": "boss@example.org"})
     assert r.headers["location"] == "/#/oidc/no_account"
 
@@ -607,11 +609,217 @@ def test_config_off_by_default_and_warns_about_stray_values(tmp_path):
 
 def test_flow_store_is_single_use_and_bounded(monkeypatch):
     store = oidc.FlowStore(max_items=3, ttl_s=600)
-    state, binder, _ = store.issue("signin")
-    assert store.take(state, "wrong") is None and store.take(state, binder) is None  # gone after one try
-    issued = [store.issue("signin") for _ in range(5)]
-    assert len(store) == 3 and store.take(issued[0][0], issued[0][1]) is None and store.take(issued[-1][0], issued[-1][1])
-    state, binder, _ = store.issue("signin")
+    state, binder, _ = store.issue("signin", key="a")
+    assert store.take(state, "wrong") is None and store.take(state, None) is None  # a wrong cookie changes nothing
+    assert store.take(state, binder) is not None and store.take(state, binder) is None  # once
+    issued = [store.issue("signin", key=f"k{n}") for n in range(3)]
+    with pytest.raises(oidc.FlowStoreFull):  # full: refused, nothing waiting is dropped
+        store.issue("signin", key="k9")
+    assert len(store) == 3 and store.take(issued[0][0], issued[0][1]) is not None
+    state, binder, _ = store.issue("signin", key="late")
     real = clock.seconds
     monkeypatch.setattr(clock, "seconds", lambda: real() + 601)
     assert store.take(state, binder) is None
+    store.issue("signin", key="after")  # expired flows make room again
+    assert len(store) == 1
+
+
+
+# --------------------------------------------------------------------------- #
+# Security review 2026-10-30 (the reviewer's proofs in scratchpad/oidc-review/test_poc_oidc.py, turned into regressions)
+# --------------------------------------------------------------------------- #
+
+SQUATTER_PASSWORD = "copper-meadow-violin-42"
+
+
+def admin_made_account(admin: TestClient, username: str, role: str = "user") -> int:
+    """An account the admin created in People: pending_setup, no password yet, a one-time setup link."""
+    r = admin.post("/api/admin/users", json={"username": username, "role": role})
+    assert r.status_code == 201, r.text
+    return r.json()["user"]["id"]
+
+
+def test_review1_link_by_email_never_joins_a_self_registered_account(admin, anon, provider):
+    """Pre-hijacking: an invited person registers the username victim@example.org with their own password. The real owner's first
+    sign-in with the provider must not land in that account."""
+    set_setting(admin, **{"auth.oidc.link_by_email": True})
+    squatter = add_user(admin, username="victim@example.org", password=SQUATTER_PASSWORD)
+    squatter_id = squatter.get("/api/me").json()["id"]
+    r = sign_in_with_provider(anon, provider, claims={"sub": "real-victim", "email": "victim@example.org", "email_verified": True})
+    assert r.headers["location"] == "/#/oidc/no_account"
+    with database(admin) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM oidc_links WHERE user_id = ?", (squatter_id,)).fetchone()[0] == 0
+
+
+def test_review1_link_by_email_plus_admin_groups_never_promotes_a_squatter(admin, anon, provider):
+    set_setting(admin, **{"auth.oidc.link_by_email": True, "auth.oidc.admin_groups": "family-admins"})
+    squatter = add_user(admin, username="boss@example.org", password=SQUATTER_PASSWORD)
+    r = sign_in_with_provider(anon, provider, claims={"sub": "real-boss", "email": "boss@example.org", "email_verified": True,
+                                                      "groups": ["family-admins"]})
+    assert r.headers["location"] != "/"
+    later = TestClient(admin.app, base_url=HTTPS_URL)
+    sign_in(later, "boss@example.org", SQUATTER_PASSWORD)
+    assert later.get("/api/me").json()["role"] == "user" and later.get("/api/admin/users").status_code == 403
+    del squatter
+
+
+def test_review1_link_by_email_only_activates_an_account_the_admin_made(admin, anon, provider):
+    set_setting(admin, **{"auth.oidc.link_by_email": True, "auth.oidc.admin_groups": "family-admins"})
+    uid = admin_made_account(admin, "gran@example.org")
+    r = sign_in_with_provider(anon, provider, claims={"sub": "gran-sub", "email": "gran@example.org", "groups": ["family-admins"]})
+    assert r.headers["location"] == "/"
+    me = anon.get("/api/me").json()
+    assert me["id"] == uid and me["username"] == "gran@example.org"
+    assert me["role"] == "user"  # no promotion on the sign-in that linked by email
+    with database(admin) as conn:
+        row = conn.execute("SELECT status, password_hash FROM users WHERE id = ?", (uid,)).fetchone()
+        assert row["status"] == "active" and row["password_hash"] is None
+        # the admin's setup link for that account no longer works
+        assert conn.execute("SELECT COUNT(*) FROM auth_tokens WHERE user_id = ? AND used_at IS NULL", (uid,)).fetchone()[0] == 0
+    # the next sign-in follows the groups
+    sign_in_with_provider(anon, provider, claims={"sub": "gran-sub", "email": "gran@example.org", "groups": ["family-admins"]})
+    assert anon.get("/api/me").json()["role"] == "admin"
+
+
+@pytest.mark.parametrize("username, email", [
+    ("strasse@example.org", "straße@example.org"),  # NFKC/casefold would merge these two mailboxes
+    ("kelvin@example.org", "Kelvin@example.org"),  # KELVIN SIGN
+    ("full@example.org", "ｆull@example.org"),  # fullwidth f
+])
+def test_review1_link_by_email_compares_plain_ascii_only(admin, anon, provider, username, email):
+    set_setting(admin, **{"auth.oidc.link_by_email": True})
+    add_user(admin, username=username)  # a self-registered account (NFKC/casefold merged these before the fix)
+    r = sign_in_with_provider(anon, provider, claims={"sub": f"sub-{username}", "email": email})
+    assert r.headers["location"] == "/#/oidc/no_account"
+    pending = "p-" + username
+    admin_made_account(admin, pending)  # an account the admin made: only the same plain ASCII address links
+    r = sign_in_with_provider(anon, provider, claims={"sub": f"sub2-{username}", "email": "p-" + email})
+    assert r.headers["location"] == "/#/oidc/no_account"
+    r = sign_in_with_provider(anon, provider, claims={"sub": f"sub3-{username}", "email": pending.upper()})
+    assert r.headers["location"] == "/"
+
+
+def test_review1_link_by_email_skips_accounts_with_any_way_in(admin, anon, provider):
+    set_setting(admin, **{"auth.oidc.link_by_email": True})
+    uid = admin_made_account(admin, "has-key@example.org")
+    with database(admin) as conn:  # a pending account that somehow already has a passkey
+        conn.execute("INSERT INTO passkeys (user_id, credential_id, public_key, alg, user_handle, name, created_at) "
+                     "VALUES (?, x'01', x'02', -7, x'03', 'phone', '2026-10-30T00:00:00Z')", (uid,))
+    r = sign_in_with_provider(anon, provider, claims={"sub": "hk", "email": "has-key@example.org"})
+    assert r.headers["location"] == "/#/oidc/no_account"
+    admin_made_account(admin, "boss2@example.org", role="admin")
+    r = sign_in_with_provider(anon, provider, claims={"sub": "b2", "email": "boss2@example.org"})
+    assert r.headers["location"] == "/#/oidc/no_account"
+
+
+def test_review2_made_up_callbacks_never_lock_the_address_out(admin, provider):
+    nav = {"Sec-Fetch-Site": "cross-site", "Sec-Fetch-Mode": "navigate", "Sec-Fetch-Dest": "document"}
+    victim = TestClient(admin.app, base_url=HTTPS_URL)
+    started = victim.get("/api/auth/oidc/start", follow_redirects=False)
+    code, state, _ = provider.authorize(started.headers["location"], claims={"sub": "nobody"})
+    for i in range(25):
+        r = victim.get("/api/auth/oidc/callback", params={"state": f"junk{i}", "code": "x"}, headers=nav, follow_redirects=False)
+        assert r.status_code == 303 and r.headers["location"] == "/#/oidc/expired"
+        assert "kh_oidc" not in r.headers.get("set-cookie", "")  # the visitor's own waiting flow keeps its cookie
+    r = victim.post("/api/auth/login", json={"username": ADMIN_USERNAME, "password": ADMIN_PASSWORD})
+    assert r.status_code == 200, r.text
+    # and the visitor's real flow still finishes
+    back = victim.get("/api/auth/oidc/callback", params={"code": code, "state": state}, headers=nav, follow_redirects=False)
+    assert back.headers["location"] == "/#/oidc/no_account" and "kh_oidc=\"\"" in back.headers.get("set-cookie", "")
+
+
+def test_review3_link_by_email_keeps_the_https_rule(tmp_path, foods_json):
+    provider = FakeProvider()
+    application = create_app(oidc_settings(tmp_path, foods_json))
+    attach(application, provider)
+    with TestClient(application, base_url=HTTPS_URL) as adm:
+        sign_in(adm)
+        set_setting(adm, **{"auth.oidc.link_by_email": True})
+        add_user(adm, username="sam")  # two active accounts: plain HTTP sign-in is refused from other machines
+        admin_made_account(adm, "kim@example.org")
+        plain = TestClient(application, base_url="http://localhost", client=("192.0.2.10", 5000))
+        r = sign_in_with_provider(plain, provider, claims={"sub": "kim-sub", "email": "kim@example.org"})
+        assert r.headers["location"] == "/#/oidc/https"
+        assert plain.get("/api/me").status_code == 401
+
+
+def add_passkey_row(client: TestClient, uid: int) -> int:
+    with database(client) as conn:  # stand-in for a registered passkey (the WebAuthn ceremony is not the point here)
+        conn.execute("INSERT INTO passkeys (user_id, credential_id, public_key, alg, user_handle, name, created_at) "
+                     "VALUES (?, ?, x'02', -7, x'03', 'phone', '2026-10-30T00:00:00Z')", (uid, bytes([uid % 250 + 1, 7])))
+        return conn.execute("SELECT MAX(id) FROM passkeys WHERE user_id = ?", (uid,)).fetchone()[0]
+
+
+def test_review4_the_last_way_in_survives_passkey_removal(admin, anon, provider):
+    set_setting(admin, **{"auth.oidc.allow_signup": True})
+    assert sign_in_with_provider(anon, provider, claims={"sub": "p1", "email": "p1@example.org"}).headers["location"] == "/"
+    uid = anon.get("/api/me").json()["id"]
+    pk = add_passkey_row(admin, uid)
+    link_id = anon.get("/api/me/oidc").json()["links"][0]["id"]
+    assert anon.delete(f"/api/me/oidc/{link_id}").status_code == 204  # two ways in: the link may go
+    r = anon.delete(f"/api/me/passkeys/{pk}")
+    assert r.status_code == 409 and "only way to sign in" in r.json()["detail"]
+    from app.auth.oidc_api import ways_in
+
+    with database(admin) as conn:
+        assert ways_in(conn, uid) == 1
+    # with a password the passkey can still go
+    pk2 = add_passkey_row(admin, 1)
+    assert admin.delete(f"/api/me/passkeys/{pk2}").status_code == 204
+
+
+def test_review5_a_flood_of_starts_never_pushes_out_someone_elses_flow():
+    store = oidc.FlowStore(max_items=3, per_key=2)
+    state, binder, _ = store.issue("signin", key="victim")
+    for n in range(2):
+        store.issue("signin", key=f"flood{n}")
+    with pytest.raises(oidc.FlowStoreFull):
+        store.issue("signin", key="flood9")
+    assert store.take(state, binder) is not None  # still there
+    with pytest.raises(oidc.FlowStoreFull):  # one address cannot hold more than its share
+        for _ in range(3):
+            store.issue("signin", key="flood0")
+
+
+def test_review5_a_full_store_answers_a_plain_message(admin, anon, provider):
+    oc = admin.app.state.oidc
+    oc.flows = oidc.FlowStore(max_items=1)
+    first = anon.get("/api/auth/oidc/start", follow_redirects=False)
+    assert first.headers["location"].startswith(provider.base)
+    second = TestClient(admin.app, base_url=HTTPS_URL).get("/api/auth/oidc/start", follow_redirects=False)
+    assert second.headers["location"] == "/#/oidc/full"
+    r = admin.post("/api/me/oidc/link")
+    assert r.status_code == 503 and "Too many sign-ins started" in r.json()["detail"]
+
+
+def test_review6_google_needs_hd_when_domains_are_set(tmp_path, foods_json):
+    google = "https://accounts.google.com"
+    provider = FakeProvider(issuer=google)
+    application = create_app(oidc_settings(tmp_path, foods_json, oidc=env(issuer=google)))
+    attach(application, provider)
+    with TestClient(application, base_url=HTTPS_URL) as adm:
+        sign_in(adm)
+        set_setting(adm, **{"auth.oidc.allow_signup": True, "auth.oidc.allowed_domains": "corp.example"})
+        other = TestClient(application, base_url=HTTPS_URL)
+        # a personal Google account that uses a corp address: no hd
+        r = sign_in_with_provider(other, provider, claims={"sub": "g-personal", "email": "ann@corp.example"})
+        assert r.headers["location"] == "/#/oidc/domain"
+        r = sign_in_with_provider(other, provider, claims={"sub": "g-work", "email": "ann@corp.example", "hd": "corp.example"})
+        assert r.headers["location"] == "/"
+
+
+def test_review7_code_and_state_are_redacted_in_the_access_log():
+    from app import security
+
+    line = '127.0.0.1:5 - "GET /api/auth/oidc/callback?code=4/0AbCdEf-secret_code&state=Zx9_state-value&iss=https%3A HTTP/1.1" 303'
+    out = security.redact(line)
+    assert "4/0AbCdEf-secret_code" not in out and "Zx9_state-value" not in out
+    assert "code=[redacted]" in out and "state=[redacted]" in out and "iss=https%3A" in out
+    assert security.redact("returncode=1 statement=ok") == "returncode=1 statement=ok"
+
+
+@pytest.mark.parametrize("change", [{"exp": float("inf")}, {"iat": float("nan")}, {"exp": float("nan")}])
+def test_review_non_finite_times_are_refused(admin, anon, provider, change):
+    link_admin(admin, provider)
+    r = sign_in_with_provider(anon, provider, claims={"sub": "admin-sub", **change})
+    assert r.headers["location"] == "/#/oidc/failed"

@@ -872,9 +872,10 @@ register(
         default=False,
         scope="instance",
         env="OIDC_LINK_BY_EMAIL",
-        label="Link a provider account to the account whose username is the same email",
-        help="Off by default. When on, someone the provider says has a verified email signs in to the account here whose username "
-        "is that email address. Never for an admin account, and never when the email is not verified.",
+        label="Give someone the account you made for their email address",
+        help="Off by default. When on, someone the provider says has a verified email gets the account you made for them in People "
+        "with that email as its username, if nobody has used it yet (no password, passkey or link). The address must match exactly, "
+        "in plain letters. Never an admin account, an account someone registered themselves, or an unverified email.",
     ),
     SettingDef(
         key="auth.oidc.allowed_domains",
@@ -884,7 +885,7 @@ register(
         env="OIDC_ALLOWED_DOMAINS",
         label="Only let in email addresses from these domains",
         help="A comma list, for example example.org, family.net. Empty: any address. When set, the provider must say the email is "
-        "verified, and for a Google Workspace account its domain must be listed too.",
+        "verified. With Google, only Workspace accounts of a listed domain get in: a personal Google account with a work address does not.",
     ),
     SettingDef(
         key="auth.oidc.admin_groups",

@@ -719,6 +719,9 @@ _PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
         re.compile(r"(?i)\b(x-api-key|x-proxy-secret|api[_-]?key|password|passwd|secret|token)(\s*[=:]\s*)([^\s&,;\"']+)"),
         r"\1\2" + REDACTED,
     ),
+    # The sign-in provider's one-time code and the flow's state in a query string, as uvicorn's access line shows
+    # GET /api/auth/oidc/callback?code=...&state=... (design note 24 §10).
+    (re.compile(r"(?<=[?&])(code|state)=[^\s&#\"']+"), r"\1=" + REDACTED),
 )
 HTTP_CLIENT_LOGGERS = ("httpx", "httpx2", "httpcore", "httpcore2", "h11")
 

@@ -158,7 +158,9 @@ Then choose who may get in, under **Server administration → Server settings �
 - **New accounts at the first sign-in**: off by default. Then only people who linked their account in **Settings → Account →
   Linked sign-in**, or who have an invite link, get in. Keep it off with Google, where anyone in the world has an account, unless
   you also list the email domains allowed in.
-- **Linking by email**: links someone whose verified email is the username of an account here. Off by default; never for an admin.
+- **Linking by email**: gives someone the account you made for them in **People** with their email address as the username, at
+  their first sign-in, if nobody has used that account yet and the provider says the email is verified. Off by default. Never an
+  account someone registered themselves, and never an admin account.
 - **Admin groups**: members of these provider groups are admins here, and the role follows the groups at each sign-in. The last
   admin is never demoted.
 
