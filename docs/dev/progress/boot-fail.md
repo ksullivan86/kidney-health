@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # "The app did not start" notice and the VPN troubleshooting section
 
@@ -21,10 +21,19 @@ script that never arrives or throws leaves the header and nothing else. Commit l
   (regenerated with `scripts/build_handbook.py --write`). NetBird facts checked on docs.netbird.io 2026-10-30
   (`netbird up --mtu`, default 1280; routing peers: forward chain, masquerade). nftables rule from the nftables wiki.
 
-## Next
-* Tests: static (index + CSS + main.js + preview), e2e harness `tools/e2e/boot_fail.py` (README + test_e2e_tools).
-* CHANGELOG, ARCHITECTURE.
-* Run: frontend shell, layout, security, preview build, deploy, handbook, e2e-tool tests; `node --test tests/js/*.test.mjs`; ruff.
+* Tests: `tests/test_boot_fail.py` (markup, CSS reveal, boot hide, Pages links, docs), `tests/js/boot_fail.test.mjs`
+  (runs main.js with a stub KH), `tools/e2e/boot_fail.py` (listed in tools/e2e/README.md and tests/test_e2e_tools.py).
+* CHANGELOG (Unreleased, for people using the app) and ARCHITECTURE (the js/main.js boot, the Pages link mapping).
+
+## Verified (2026-10-30, after the restart)
+* pytest: test_boot_fail, deploy, e2e_tools, frontend_shell, handbook_content, handbook_serving, layout_ui,
+  preview_build, security, admin_about_security, device_ui, offline_edits_ui, demo_local_ui, pdf_pages: all pass.
+* `node --test tests/js/*.test.mjs` 172 pass; `node tests/js/run_vectors.mjs` passes; ruff clean.
+* `python3 tools/e2e/boot_fail.py` on this tree: 33 passed, 0 failed. Against 95e2097 (before the notice, exported with
+  `git archive` into the scratchpad, `--repo DIR --port 8192`): 0 passed, 14 failed, the page shows only the header.
 
 ## Commands
 * venv: `/tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/venv312/bin/python`
+* `python3 tools/e2e/boot_fail.py --out <scratch>/e2e` (port 8191); before: `git archive 95e2097 | tar -x -C <dir>` then
+  `--repo <dir> --port 8192`.
+* pytest: `<venv>/bin/python -m pytest -q -p no:cacheprovider --basetemp=<scratch>/bt tests/test_boot_fail.py ...`
