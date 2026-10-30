@@ -207,6 +207,7 @@ are marked "expert opinion" and still need review by a renal dietitian
 * [docs/ROADMAP.md](docs/ROADMAP.md): what's planned next.
 * [CHANGELOG.md](CHANGELOG.md): what changed in each version.
 * [docs/demo.md](docs/demo.md): the online demo, and keeping your demo data in your browser.
+* [docs/try-it-for-ckd.md](docs/try-it-for-ckd.md): a 45-minute walk-through of the demo for testers who know CKD, not software.
 
 ## Contributing
 
