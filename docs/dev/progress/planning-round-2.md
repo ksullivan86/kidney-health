@@ -23,7 +23,14 @@ Branch: the worktree branch `worktree-agent-a2107be7cab2fa508` (local commits on
 
 ## Done
 
-(none yet)
+1. Note 23 §12 records the owner's decisions (1995dec).
+2. Settings `guidance.plan_days_max` / `guidance.plan_days_ai_max`, the four `guidance` object fields, the JS settings twin,
+   settings vectors, `.env.example`, compose, quadlet, the admin settings group (500f183). Checked: tests/test_settings*.py,
+   test_compose_env.py, test_deploy.py, run_vectors.
+3. Engine: `planner.day_slots`, `plan_days(repeat_meals, snack, skip_first_day)`, `Prefs.repeat_ok_food_ids/meal_ids`;
+   twin `daySlots`, `planDays`; 9 new vector cases (`DAYS …`); RULES_VERSION 2026-10-30.2 (PLAN_DAYS_MAX 60,
+   PLAN_DAYS_AI_MAX 31, PLAN_DAYS_CEILING 90 in the rules table); docs/guidance.md rules table regenerated; 7 new tests in
+   tests/guidance/test_plan_days.py. `snack=None` keeps the old slots, so the old vectors did not change.
 
 ## Next
 

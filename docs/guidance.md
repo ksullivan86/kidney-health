@@ -512,7 +512,7 @@ Generated from `app/guidance/rules.py` (the same data as `GET /api/guidance/rule
 `python3 scripts/guidance_rules_doc.py`; `tests/guidance/test_docs.py` fails when it is stale.
 
 <!-- rules-table:start -->
-Rules version **2026-10-30.1** (hash `e8b1375066c1c02b`).
+Rules version **2026-10-30.2** (hash `6ea926817a5688ac`).
 
 | Name | Value | Basis |
 |---|---|---|
@@ -617,7 +617,9 @@ Rules version **2026-10-30.1** (hash `e8b1375066c1c02b`).
 | `RECIPE_MAX_ITEMS` | `30` | Most ingredients in a recipe (as save_recipe) |
 | `RECIPE_POT_MAX_SERVINGS` | `40.0` | Most servings of one food in the whole recipe after a swap |
 | `VARIANT_MAX` | `4` | Most "Show another plan" variants |
-| `PLAN_DAYS_MAX` | `14` | Most days one request plans (note 23: targets can change at the next blood test, and fresh food keeps about that long) |
+| `PLAN_DAYS_MAX` | `60` | Most days one request plans by default (note 23 §12.1; the server setting PLAN_DAYS_MAX, 1 to 90) |
+| `PLAN_DAYS_AI_MAX` | `31` | Most days one request plans by default when its ideas come from AI (note 23 §12.1; PLAN_DAYS_AI_MAX) |
+| `PLAN_DAYS_CEILING` | `90` | The most PLAN_DAYS_MAX and PLAN_DAYS_AI_MAX may be set to |
 | `PLAN_REPEAT_DAYS` | `2` | A meal with the same foods is not planned for the same meal on this many days before in the same plan, unless nothing else fits |
 | `PLAN_RECENT_FOOD_PENALTY` | `0.5` | Score cost per earlier day of the same plan a food is on (the weight of a food eaten the day before) |
 | `UNKNOWN_PENALTY` | `1.5` | Score cost of each unknown potassium, phosphorus or sodium value (unknown is never 0, note 03) |

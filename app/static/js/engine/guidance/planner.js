@@ -147,9 +147,12 @@
 
   function familiarOptions(ctx, slot, room, today, counter, useSaved, useUsual, useStarters, pref) {
     let options = [];
+    const okMeals = ctx.prefs.repeat_ok_meal_ids || new Set();
     if (useSaved) {
       for (const [templateId, name, items] of F.savedMealsFor(ctx, slot)) {
-        const opt = F.familiarOption(ctx, room, today, items, { kind: 'saved', name, templateId, counter, detail: false, pref });
+        // A saved meal marked "OK to repeat" (note 23 §12.2) is scored without the plan's food rotation.
+        const seen = okMeals.has(templateId) && today.recent && today.recent.size ? { ...today, recent: new Map() } : today;
+        const opt = F.familiarOption(ctx, room, seen, items, { kind: 'saved', name, templateId, counter, detail: false, pref });
         if (opt != null) options.push(opt);
       }
     }
@@ -203,7 +206,8 @@
     let familiar = familiarOptions(ctx, slot, room, today, counter, useSaved, useUsual, useStarters, pref);
     let repeated = false;
     if (avoid && avoid.size && (familiar.length || builtMeals.length)) {
-      const freshFamiliar = familiar.filter((o) => !avoid.has(foodSet(o._items)));
+      const okMeals = ctx.prefs.repeat_ok_meal_ids || new Set(); // a saved meal marked "OK to repeat" may come back (note 23 §12.2)
+      const freshFamiliar = familiar.filter((o) => !avoid.has(foodSet(o._items)) || (o.source === 'saved' && okMeals.has(o.template_id)));
       const freshBuilt = builtMeals.filter((b) => !avoid.has(foodSet(b.items)));
       if (freshFamiliar.length || freshBuilt.length) { familiar = freshFamiliar; builtMeals = freshBuilt; } else repeated = true;
     }
@@ -389,11 +393,13 @@
 
   // Plan the requested slots (default: every slot with no entries) of ctx.date.
   function planDay(ctx, meals = null, opts = {}) { return planDayWithSlots(ctx, meals, opts)[0]; }
-  // planDay and its slot plans; habit, avoid (slot → Set of foodSet keys) and recent come from planDays.
+  // planDay and its slot plans; habit, avoid (slot → Set of foodSet keys), recent, slots (already decided), free (meals that may
+  // repeat: no avoid, no rotation, habitFree) come from planDays.
   function planDayWithSlots(ctx, meals = null, { useSavedMeals = true, useUsual = true, useStarters = true, variant = 0, counter = null,
-    forced = null, withOptions = false, habit = null, avoid = null, recent = null } = {}) {
+    forced = null, withOptions = false, habit = null, avoid = null, recent = null, slots = null, free = null, habitFree = null } = {}) {
     counter = counter || S.newCounter();
-    const slots = meals && meals.length ? R.SLOT_ORDER.filter((m) => meals.includes(m)) : defaultSlots(ctx);
+    if (slots == null) slots = meals && meals.length ? R.SLOT_ORDER.filter((m) => meals.includes(m)) : defaultSlots(ctx);
+    slots = [...slots];
     variant = Math.max(0, Math.min(Math.trunc(variant), R.VARIANT_MAX));
     const targets = ctx.profile.targets, warn = ctx.profile.warn_fraction;
     const before = engineStatus(dayTotals12(ctx.day), targets, warn);
@@ -404,9 +410,12 @@
     const slotOptions = {};
     slots.forEach((slot, i) => {
       const ctxI = R.withDay(ctx, dayWith(ctx, plans));
-      const [plan, options] = planSlot(ctxI, slot, slots.slice(i), habit, pools, counter, { useSaved: useSavedMeals, useUsual,
-        useStarters, variant, forced: forced && slot in forced ? forced[slot] : null, avoid: avoid ? avoid.get(slot) || null : null, recent });
-      plan.today = withRecent(S.todayStats(ctxI.day), recent);
+      const own = !!(free && free.has(slot)); // a meal that may repeat skips the 2-day rule and the plan's food rotation (note 23 §12.2)
+      const slotRecent = own ? null : recent;
+      const [plan, options] = planSlot(ctxI, slot, slots.slice(i), own ? (habitFree || habit) : habit, pools, counter, { useSaved: useSavedMeals,
+        useUsual, useStarters, variant, forced: forced && slot in forced ? forced[slot] : null,
+        avoid: own ? null : (avoid ? avoid.get(slot) || null : null), recent: slotRecent });
+      plan.today = withRecent(S.todayStats(ctxI.day), slotRecent);
       plans.push(plan);
       slotOptions[slot] = options;
     });
@@ -466,11 +475,26 @@
     return foods.map((f) => ({ food_id: f.id, food_name: f.name, serving_desc: f.serving_desc, servings: R.roundTo(servings.get(f.id), 3),
       grams: R.roundTo(servings.get(f.id) * f.serving_g, 1), days: dates.get(f.id).size }));
   }
+  // The meals to plan on one day of several (planner.day_slots): snack false leaves the snack out unless meals names it, true adds it,
+  // null changes nothing; the meals in skip are not planned.
+  function daySlots(ctx, meals, { snack = null, skip = [] } = {}) {
+    let slots;
+    if (meals && meals.length) {
+      const wanted = new Set(meals);
+      if (snack) wanted.add(R.SNACK);
+      slots = R.SLOT_ORDER.filter((m) => wanted.has(m));
+    } else slots = defaultSlots(ctx).filter((m) => snack !== false || m !== R.SNACK);
+    const skipped = new Set(skip);
+    return slots.filter((m) => !skipped.has(m));
+  }
   // Plan days.length days from ctx.date; days[i] holds the logged entries of ctx.date + i (planner.plan_days).
-  function planDays(ctx, days, meals = null, { useSavedMeals = true, useUsual = true, useStarters = true, variant = 0, counter = null } = {}) {
+  function planDays(ctx, days, meals = null, { useSavedMeals = true, useUsual = true, useStarters = true, variant = 0, counter = null,
+    repeatMeals = [], snack = null, skipFirstDay = [] } = {}) {
     counter = counter || S.newCounter();
     variant = Math.max(0, Math.min(Math.trunc(variant), R.VARIANT_MAX));
     const start = ctx.date;
+    const free = new Set((repeatMeals || []).filter((m) => R.SLOT_ORDER.includes(m)));
+    const okFoods = ctx.prefs.repeat_ok_food_ids || new Set();
     const habit0 = S.habitStats(ctx);
     const carried = [];
     const foodsOn = [];
@@ -483,7 +507,7 @@
       for (let j = Math.max(0, i - R.PLAN_REPEAT_DAYS); j < i; j++) window.push(j);
       const recent = new Map();
       for (const j of window) for (const fid of [...foodsOn[j]].sort((a, b) => a - b)) recent.set(fid, (recent.get(fid) || 0) + 1);
-      let habit = habit0;
+      let habit = habit0, habitFree = habit0;
       if (i) {
         const since = R.addDays(day, -R.PLAN_REPEAT_DAYS);
         const eaten = new Map();
@@ -493,25 +517,30 @@
             eaten.get(h.food_id).add(h.date);
           }
         }
-        const prev2 = new Map();
-        for (const [fid, d] of eaten) prev2.set(fid, d.size);
+        const prevEaten = new Map();
+        for (const [fid, d] of eaten) prevEaten.set(fid, d.size);
+        const prev2 = new Map(prevEaten);
         for (const [fid, n] of recent) prev2.set(fid, (prev2.get(fid) || 0) + n);
         habit = { ...habit0, prev2 };
+        habitFree = { ...habit0, prev2: prevEaten }; // a meal that may repeat: only what was really eaten
       }
       const avoid = new Map();
       for (const slot of R.SLOT_ORDER) {
         const sets = new Set();
-        for (const j of window) if (slotSets[j].has(slot)) sets.add(slotSets[j].get(slot));
+        // A meal made only of foods marked "OK to repeat" may come back (note 23 §12.2).
+        for (const j of window) if (slotSets[j].has(slot) && !slotSets[j].get(slot).ids.every((id) => okFoods.has(id))) sets.add(slotSets[j].get(slot).key);
         if (sets.size) avoid.set(slot, sets);
       }
       const ctxI = { ...ctx, date: day, day: [...logged], history: [...ctx.history, ...carried] };
-      const [result, plans] = planDayWithSlots(ctxI, meals, { useSavedMeals, useUsual, useStarters, variant, counter, habit, avoid, recent });
+      const slots = daySlots(ctxI, meals, { snack, skip: i === 0 ? skipFirstDay || [] : [] });
+      const [result, plans] = planDayWithSlots(ctxI, meals, { useSavedMeals, useUsual, useStarters, variant, counter, habit, avoid, recent,
+        slots, free, habitFree });
       const withPlan = dayWith(ctxI, plans);
       for (const e of withPlan) {
         carried.push(R.historyEntry({ date: day, meal: e.meal, food_id: e.food_id, name: e.name, servings: e.servings, nutrients: e.nutrients,
           purpose: e.purpose, flags: e.flags }));
       }
-      foodsOn.push(new Set(withPlan.filter((e) => !e.hypo).map((e) => e.food_id)));
+      foodsOn.push(new Set(withPlan.filter((e) => !e.hypo && !okFoods.has(e.food_id)).map((e) => e.food_id)));
       const bySlot = new Map();
       for (const e of withPlan) {
         if (e.hypo) continue;
@@ -519,7 +548,7 @@
         bySlot.get(e.meal).add(e.food_id);
       }
       const keys = new Map();
-      for (const [slot, ids] of bySlot) keys.set(slot, [...ids].sort((a, b) => a - b).join(','));
+      for (const [slot, ids] of bySlot) { const sorted = [...ids].sort((a, b) => a - b); keys.set(slot, { key: sorted.join(','), ids: sorted }); }
       slotSets.push(keys);
       result.meals.forEach((item, k) => { item.repeated = plans[k].repeated; });
       const dayAfter = { ...result.day_after, projected_unknown: unknownCounts(withPlan) };
@@ -532,6 +561,6 @@
   }
 
   GE.planner = { buildPools, stepCandidates, beamBuild, fineTune, defaultSlots, dayWith, dayTotals12, planSlot, repair,
-    proteinTopup, energyNote, planJson, planDay, planDays, shoppingItems, unknownCounts, isDialysisDay, foodSet, engineStatus,
+    proteinTopup, energyNote, planJson, planDay, planDays, daySlots, shoppingItems, unknownCounts, isDialysisDay, foodSet, engineStatus,
     projectedAlerts, roundValue };
 })(typeof window !== 'undefined' ? window : globalThis);

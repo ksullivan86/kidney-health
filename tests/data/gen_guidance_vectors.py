@@ -137,7 +137,9 @@ def context_from(inp: Mapping[str, Any], all_foods: Mapping[int, FoodVec]) -> Gu
                     like_categories=frozenset(prefs.get("like_categories", [])),
                     less_categories=frozenset(prefs.get("less_categories", [])),
                     learn_from_log=bool(prefs.get("learn_from_log", True)),
-                    hidden_usual_meals=frozenset(prefs.get("hidden_usual_meals", []))),
+                    hidden_usual_meals=frozenset(prefs.get("hidden_usual_meals", [])),
+                    repeat_ok_food_ids=frozenset(prefs.get("repeat_ok_food_ids", [])),
+                    repeat_ok_meal_ids=frozenset(prefs.get("repeat_ok_meal_ids", []))),
         foods=foods,
         day=tuple(day_entry(e) for e in inp["day"]),
         history=history,
@@ -195,7 +197,8 @@ def call(inp: Mapping[str, Any], spec: Mapping[str, Any], foods: Mapping[int, Fo
         days = [ctx.day] + [tuple(day_entry_of(e, ctx.foods) for e in later) for later in spec["later_days"]]
         return planner.plan_days(ctx, days, spec.get("meals"), use_saved_meals=spec.get("use_saved_meals", True),
                                  use_usual=spec.get("use_usual", True), use_starters=spec.get("use_starters", True),
-                                 variant=spec.get("variant", 0))
+                                 variant=spec.get("variant", 0), repeat_meals=spec.get("repeat_meals", ()),
+                                 snack=spec.get("snack"), skip_first_day=spec.get("skip_first_day", ()))
     if fn == "day_insights":
         return insights.day_insights(ctx)
     if fn == "learned":
@@ -264,7 +267,7 @@ def base_input(**kw: Any) -> dict[str, Any]:
         if key in ("targets", "dialysis", "dialysis_days", "diabetes", "warn_fraction"):
             out["profile"] = {**out["profile"], key: value}
         elif key in ("carb_tolerance_g", "hypo_dose_g", "exclude_food_ids", "exclude_categories", "food_pref", "like_categories",
-                     "less_categories", "learn_from_log", "hidden_usual_meals"):
+                     "less_categories", "learn_from_log", "hidden_usual_meals", "repeat_ok_food_ids", "repeat_ok_meal_ids"):
             out["prefs"] = {**out["prefs"], key: value}
         else:
             out[key] = value
@@ -601,6 +604,24 @@ def plan_days_cases() -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
         ("DAYS real list: hemodialysis, not for me, variant 2", real_input(
             targets=HD, dialysis="hemodialysis", dialysis_days=[1, 3, 5],
             exclude_food_ids=[rid("Egg white"), rid("Rice, white, long-grain, cooked")]), days(5, variant=2)),
+        # The owner's answers (note 23 §12): meals that may repeat, "OK to repeat" foods and saved meals, the optional snack,
+        # the first day's past meals (a low treatment logged that day stays), and a long plan.
+        ("DAYS breakfast may repeat on following days", real_input(), days(5, meals=["breakfast"], repeat_meals=["breakfast"])),
+        ("DAYS lunch and snack may repeat, the rest rotates", real_input(),
+         days(4, repeat_meals=["lunch", "snack"], snack=True)),
+        ("DAYS a saved meal marked OK to repeat comes back every day", base_input(day=[], history=[], repeat_ok_meal_ids=[1]),
+         days(4, meals=["dinner"])),
+        ("DAYS foods marked OK to repeat do not rotate", real_input(repeat_ok_food_ids=[
+            rid("Egg, scrambled"), rid("Bread, white"), rid("Rice, white, long-grain, cooked"), rid("Apple, raw, with skin")]),
+         days(4)),
+        ("DAYS no snack unless asked", base_input(), days(3, snack=False)),
+        ("DAYS the snack added to the ticked meals", base_input(day=[], history=[]), days(2, meals=["dinner"], snack=True)),
+        ("DAYS the first day's past meals are skipped, the low treatment stays",
+         base_input(day=[entry(1, 10, "breakfast", purpose="hypo")], history=[]),
+         days(3, skip_first_day=["breakfast", "lunch"], snack=False)),
+        ("DAYS every meal of the first day skipped", base_input(day=[], history=[]),
+         days(2, skip_first_day=["breakfast", "lunch", "dinner", "snack"])),
+        ("DAYS a long plan: 60 breakfasts", base_input(day=[], history=[]), days(60, meals=["breakfast"], snack=False)),
         ("DAYS real list: likes and history", real_input(
             food_pref=[[rid("Tofu, firm"), "like"], [rid("Pasta, cooked"), "less"]],
             history=[hist("2026-10-04", rid("Chicken breast, roasted, skinless"), "dinner"),

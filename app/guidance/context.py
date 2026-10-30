@@ -126,6 +126,8 @@ def load_prefs(conn: sqlite3.Connection, store: SettingsStore, user_id: int) -> 
         less_categories=frozenset(setting_value(settings, "less_categories", ()) or ()),
         learn_from_log=bool(setting_value(settings, "learn_from_log", True)),
         hidden_usual_meals=frozenset(setting_value(settings, "hidden_usual_meals", ()) or ()),
+        repeat_ok_food_ids=frozenset(int(i) for i in setting_value(settings, "repeat_ok_foods", ()) or ()),
+        repeat_ok_meal_ids=frozenset(int(i) for i in setting_value(settings, "repeat_ok_meals", ()) or ()),
     )
 
 

@@ -173,4 +173,103 @@ def test_a_value_a_food_does_not_list_is_counted_for_the_day():
 def test_variant_and_days_are_bounded():
     r = planner.plan_days(fx.context(day=(), history=()), [()], ["dinner"], variant=9)
     assert r["variant"] == R.VARIANT_MAX
-    assert R.PLAN_DAYS_MAX == 14 and R.PLAN_REPEAT_DAYS == 2
+    assert R.PLAN_DAYS_MAX == 60 and R.PLAN_DAYS_AI_MAX == 31 and R.PLAN_DAYS_CEILING == 90 and R.PLAN_REPEAT_DAYS == 2
+
+
+# --------------------------------------------------------------------------- #
+# The owner's answers (note 23 §12)
+# --------------------------------------------------------------------------- #
+
+
+def meal_of(day: dict, meal: str) -> dict:
+    return next(m for m in day["meals"] if m["meal"] == meal)
+
+
+def test_a_meal_that_may_repeat_is_the_same_every_day(real_foods):
+    ctx = real_ctx(real_foods)
+    rotating = planner.plan_days(ctx, [()] * 5, ["breakfast"])
+    assert len({food_set(d["meals"][0]) for d in rotating["days"]}) > 1  # without the choice, breakfast rotates
+    same = planner.plan_days(ctx, [()] * 5, ["breakfast"], repeat_meals=["breakfast"])
+    breakfasts = [d["meals"][0] for d in same["days"]]
+    assert len({tuple(items(m)) for m in breakfasts}) == 1 and not any(m["repeated"] for m in breakfasts)
+    # Only the ticked meal may repeat: lunch comes back the next day (the rule would forbid it), dinner never does.
+    mixed = planner.plan_days(ctx, [()] * 4, repeat_meals=["lunch"])
+    lunches = [food_set(meal_of(d, "lunch")) for d in mixed["days"]]
+    dinners = [food_set(meal_of(d, "dinner")) for d in mixed["days"]]
+    assert any(lunches[i] == lunches[i - 1] for i in range(1, 4))
+    assert all(dinners[i] not in dinners[max(0, i - 2):i] for i in range(1, 4))
+    # The first day is still "Plan a day…".
+    assert [m["items"] for m in same["days"][0]["meals"]] == [m["items"] for m in planner.plan_day(ctx, ["breakfast"])["meals"]]
+
+
+def test_a_saved_meal_marked_ok_to_repeat_comes_back_every_day():
+    ok = Prefs(repeat_ok_meal_ids=frozenset({fx.SAVED_MEAL.id}))
+    r = planner.plan_days(fx.context(day=(), history=(), prefs=ok), [()] * 4, ["dinner"])
+    dinners = [d["meals"][0] for d in r["days"]]
+    assert all(m["source"] == "saved" and m["name"] == "Usual dinner" for m in dinners)
+    assert not any(m["repeated"] for m in dinners)
+    assert len({m["score"] for m in dinners}) == 1  # no rotation cost: the same score every day
+
+
+def test_a_meal_made_only_of_ok_to_repeat_foods_may_come_back():
+    only_rice = frozenset({2, 3, 4, 5, 6, 7, 8, 11, 13, 14})
+    plain = planner.plan_days(fx.context(day=(), history=(), prefs=Prefs(exclude_food_ids=only_rice), saved=()), [()] * 3,
+                              ["dinner"])
+    assert [m["repeated"] for d in plain["days"] for m in d["meals"]] == [False, True, True]
+    ok = Prefs(exclude_food_ids=only_rice, repeat_ok_food_ids=frozenset({1}))
+    r = planner.plan_days(fx.context(day=(), history=(), prefs=ok, saved=()), [()] * 3, ["dinner"])
+    assert [items(d["meals"][0]) for d in r["days"]] == [[(1, 1.25)]] * 3
+    assert not any(m["repeated"] for d in r["days"] for m in d["meals"])  # not "nothing else fits": it is allowed
+
+
+def test_an_ok_to_repeat_food_does_not_rotate(real_foods):
+    pasta = fx.by_name(real_foods, "Pasta, cooked")
+    plain = planner.plan_days(real_ctx(real_foods), [()] * 6, ["lunch", "dinner"])
+    marked = planner.plan_days(real_ctx(real_foods, prefs=Prefs(repeat_ok_food_ids=frozenset({pasta.id}))), [()] * 6,
+                               ["lunch", "dinner"])
+
+    def days_with_pasta(r: dict) -> int:
+        return sum(1 for d in r["days"] if any(i["food_id"] == pasta.id for m in d["meals"] for i in m["items"]))
+
+    assert days_with_pasta(plain) < 6 and days_with_pasta(marked) == 6
+
+
+def test_the_snack_is_planned_only_when_asked():
+    ctx = fx.context(day=(), history=())
+    off = planner.plan_days(ctx, [()] * 2, snack=False)
+    assert all("snack" not in [m["meal"] for m in d["meals"]] for d in off["days"])
+    on = planner.plan_days(ctx, [()] * 2, snack=True)
+    assert all([m["meal"] for m in d["meals"]] == list(R.SLOT_ORDER) for d in on["days"])
+    ticked = planner.plan_days(ctx, [()] * 2, ["dinner"], snack=True)
+    assert all([m["meal"] for m in d["meals"]] == ["dinner", "snack"] for d in ticked["days"])
+    named = planner.plan_days(ctx, [()] * 2, ["snack"], snack=False)  # a meal list that names the snack plans it
+    assert all([m["meal"] for m in d["meals"]] == ["snack"] for d in named["days"])
+
+
+def test_the_first_days_past_meals_are_skipped_and_a_low_treatment_stays():
+    fs = fx.foods()
+    low = (fx.entry(fs[10], "breakfast", purpose="hypo", entry_id=9),)
+    ctx = fx.context(day=low, history=())
+    r = planner.plan_days(ctx, [low, (), ()], skip_first_day=["lunch", "dinner"], snack=False)
+    assert r["days"][0]["meals"] == []  # breakfast holds the low treatment; lunch and dinner are past
+    assert [m["meal"] for m in r["days"][1]["meals"]] == ["breakfast", "lunch", "dinner"]  # later days are whole
+    assert all(e["food_id"] != 10 and e["purpose"] == "none" for e in r["apply"]["entries"])
+    assert all(e["date"] != fx.DATE for e in r["apply"]["entries"])
+    # Skipping is only for the first day, and only for the meals named.
+    some = planner.plan_days(fx.context(day=(), history=()), [(), ()], skip_first_day=["breakfast"])
+    assert [m["meal"] for m in some["days"][0]["meals"]] == ["lunch", "dinner", "snack"]
+    assert [m["meal"] for m in some["days"][1]["meals"]] == list(R.SLOT_ORDER)
+
+
+def test_sixty_days_plan_in_a_sensible_time(real_foods):
+    import time
+
+    ctx = real_ctx(real_foods)
+    start = time.perf_counter()
+    r = planner.plan_days(ctx, [()] * R.PLAN_DAYS_MAX, snack=True)
+    took = time.perf_counter() - start
+    assert len(r["days"]) == 60 and r["end"] == "2026-12-03"
+    assert took < 20.0, took  # about 2 s on a laptop; generous for a busy CI runner
+    # The shopping list stays short: it sums by food, so 60 days list far fewer lines than foods planned.
+    assert len(r["shopping"]["items"]) < len(r["apply"]["entries"]) / 10
+    assert all(1 <= i["days"] <= 60 for i in r["shopping"]["items"])

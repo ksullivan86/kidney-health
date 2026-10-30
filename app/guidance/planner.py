@@ -235,9 +235,12 @@ def _day_totals12(day: Iterable[DayEntry]) -> dict[str, float]:
 def _familiar_options(ctx: GuidanceContext, slot: str, room: Room, today: TodayStats, counter: Counter,
                       use_saved: bool, use_usual: bool, use_starters: bool, pref: PrefTerms) -> list[dict[str, Any]]:
     options: list[dict[str, Any]] = []
+    ok_meals = ctx.prefs.repeat_ok_meal_ids
     if use_saved:
         for template_id, name, items in saved_meals_for(ctx, slot):
-            opt = familiar_option(ctx, room, today, items, kind="saved", name=name, template_id=template_id, counter=counter,
+            # A saved meal marked "OK to repeat" (note 23 §12.2) is scored without the plan's food rotation.
+            seen = replace(today, recent={}) if template_id in ok_meals and today.recent else today
+            opt = familiar_option(ctx, room, seen, items, kind="saved", name=name, template_id=template_id, counter=counter,
                                   detail=False, pref=pref)
             if opt is not None:
                 options.append(opt)
@@ -310,7 +313,9 @@ def plan_slot(ctx: GuidanceContext, slot: str, open_meals: Sequence[str], habit:
     familiar = _familiar_options(ctx, slot, room, today, counter, use_saved, use_usual, use_starters, pref)
     repeated = False
     if avoid and (familiar or built):
-        fresh_familiar = [o for o in familiar if food_set(o["_items"]) not in avoid]
+        ok_meals = ctx.prefs.repeat_ok_meal_ids  # a saved meal marked "OK to repeat" may come back (note 23 §12.2)
+        fresh_familiar = [o for o in familiar if food_set(o["_items"]) not in avoid
+                          or (o["source"] == "saved" and o["template_id"] in ok_meals)]
         fresh_built = [b for b in built if food_set(b.items) not in avoid]
         if fresh_familiar or fresh_built:
             familiar, built = fresh_familiar, fresh_built
@@ -543,11 +548,15 @@ def _plan_day(ctx: GuidanceContext, meals: Sequence[str] | None = None, *, use_s
               counter: Counter | None = None, forced: Mapping[str, int] | None = None,
               with_options: bool = False, habit: HabitStats | None = None,
               avoid: Mapping[str, frozenset[frozenset[int]]] | None = None,
-              recent: Mapping[int, int] | None = None) -> tuple[dict[str, Any], list[SlotPlan]]:
-    """:func:`plan_day` and its slot plans. ``habit``, ``avoid`` (slot → food sets) and ``recent`` come from
+              recent: Mapping[int, int] | None = None, slots: Sequence[str] | None = None,
+              free: frozenset[str] = frozenset(), habit_free: HabitStats | None = None) -> tuple[dict[str, Any], list[SlotPlan]]:
+    """:func:`plan_day` and its slot plans. ``habit``, ``avoid`` (slot → food sets), ``recent``, ``slots`` (the meals to
+    plan, already decided), ``free`` (meals that may repeat: no avoid, no rotation, ``habit_free``) come from
     :func:`plan_days`; left out, the day is planned on its own."""
     counter = counter if counter is not None else Counter()
-    slots = [m for m in R.SLOT_ORDER if m in set(meals)] if meals else default_slots(ctx)
+    if slots is None:
+        slots = [m for m in R.SLOT_ORDER if m in set(meals)] if meals else default_slots(ctx)
+    slots = list(slots)
     variant = max(0, min(int(variant), R.VARIANT_MAX))
     targets, warn = ctx.profile.targets, ctx.profile.warn_fraction
     before = daily_status(_day_totals12(ctx.day), targets, warn)
@@ -558,13 +567,15 @@ def _plan_day(ctx: GuidanceContext, meals: Sequence[str] | None = None, *, use_s
     slot_options: dict[str, list[SlotPlan]] = {}
     for i, slot in enumerate(slots):
         ctx_i = ctx.with_day(_day_with(ctx, plans))
-        plan, options = plan_slot(ctx_i, slot, slots[i:], habit, pools, counter, use_saved=use_saved_meals,
-                                  use_usual=use_usual, use_starters=use_starters, variant=variant,
-                                  forced=(forced or {}).get(slot), avoid=(avoid or {}).get(slot, frozenset()),
-                                  recent=recent)
+        own = slot in free  # a meal that may repeat skips the 2-day rule and the plan's food rotation (note 23 §12.2)
+        slot_recent = None if own else recent
+        plan, options = plan_slot(ctx_i, slot, slots[i:], (habit_free or habit) if own else habit, pools, counter,
+                                  use_saved=use_saved_meals, use_usual=use_usual, use_starters=use_starters, variant=variant,
+                                  forced=(forced or {}).get(slot),
+                                  avoid=frozenset() if own else (avoid or {}).get(slot, frozenset()), recent=slot_recent)
         plan.today = today_stats(ctx_i.day)
-        if recent:
-            plan.today = replace(plan.today, recent=recent)
+        if slot_recent:
+            plan.today = replace(plan.today, recent=slot_recent)
         plans.append(plan)
         slot_options[slot] = options
     _repair(ctx, plans, before)
@@ -651,9 +662,25 @@ def shopping_items(ctx: GuidanceContext, entries: Iterable[Mapping[str, Any]]) -
              "grams": R.round_to(servings[f.id] * f.serving_g, 1), "days": len(dates[f.id])} for f in foods]
 
 
+def day_slots(ctx: GuidanceContext, meals: Sequence[str] | None, *, snack: bool | None = None,
+              skip: Iterable[str] = ()) -> list[str]:
+    """The meals to plan on one day of several (note 23 §12.5, §12.6): ``meals`` (each planned even when it has food) or every
+    meal with nothing logged. ``snack`` False leaves the snack out unless ``meals`` names it; True adds it to ``meals``; None
+    (one day, as "Plan a day…") changes nothing. The meals in ``skip`` are not planned (the first day's past meals). A logged
+    low treatment is never touched."""
+    if meals:
+        wanted = set(meals) | ({R.SNACK} if snack else set())
+        slots = [m for m in R.SLOT_ORDER if m in wanted]
+    else:
+        slots = [m for m in default_slots(ctx) if snack is not False or m != R.SNACK]
+    skipped = set(skip)
+    return [m for m in slots if m not in skipped]
+
+
 def plan_days(ctx: GuidanceContext, days: Sequence[Sequence[DayEntry]], meals: Sequence[str] | None = None, *,
               use_saved_meals: bool = True, use_usual: bool = True, use_starters: bool = True, variant: int = 0,
-              counter: Counter | None = None) -> dict[str, Any]:
+              counter: Counter | None = None, repeat_meals: Iterable[str] = (), snack: bool | None = None,
+              skip_first_day: Iterable[str] = ()) -> dict[str, Any]:
     """Plan ``len(days)`` days from ``ctx.date`` (note 23); ``days[i]`` holds the logged entries of ``ctx.date + i``.
 
     Each day is :func:`plan_day` of that date with its own logged food. The days are planned in order and see each other:
@@ -665,13 +692,22 @@ def plan_days(ctx: GuidanceContext, days: Sequence[Sequence[DayEntry]], meals: S
     * a meal with the same foods as the same meal on one of the ``PLAN_REPEAT_DAYS`` days before is left out unless
       nothing else fits, and each food on those days costs ``PLAN_RECENT_FOOD_PENALTY`` per day in the meal score.
 
-    The first day is therefore exactly :func:`plan_day` of ``ctx.date``. Computes only."""
+    The owner's choices (note 23 §12): a meal in ``repeat_meals`` skips both rules for that meal, and the plan's days do not
+    count in its "2 days before"; a food marked "OK to repeat" (``prefs.repeat_ok_food_ids``) never counts in the rotation,
+    and a meal made only of such foods may come back; a saved meal marked "OK to repeat" (``prefs.repeat_ok_meal_ids``) may
+    come back and is scored without the rotation. ``snack`` and ``skip_first_day`` choose the meals (:func:`day_slots`).
+
+    With the defaults (``snack`` None, nothing skipped), the first day is exactly :func:`plan_day` of ``ctx.date``.
+    Computes only."""
     counter = counter if counter is not None else Counter()
     variant = max(0, min(int(variant), R.VARIANT_MAX))
     start = ctx.date
+    free = frozenset(m for m in repeat_meals if m in R.SLOT_ORDER)
+    ok_foods = ctx.prefs.repeat_ok_food_ids
+    skip0 = frozenset(skip_first_day)
     habit0 = habit_stats(ctx)
     carried: list[HistoryEntry] = []
-    foods_on: list[frozenset[int]] = []  # per day so far: its foods (logged and planned), low treatments left out
+    foods_on: list[frozenset[int]] = []  # per day so far: its foods (logged and planned), low treatments and OK foods left out
     slot_sets: list[dict[str, frozenset[int]]] = []  # per day so far: meal slot → its foods
     out_days: list[dict[str, Any]] = []
     entries: list[dict[str, Any]] = []
@@ -682,7 +718,7 @@ def plan_days(ctx: GuidanceContext, days: Sequence[Sequence[DayEntry]], meals: S
         for j in window:
             for fid in sorted(foods_on[j]):
                 recent[fid] = recent.get(fid, 0) + 1
-        habit = habit0
+        habit = habit_free = habit0
         if i:
             # "The 2 days before" of the habit term: the eaten days before the plan that are still in it, then the plan's days.
             since = add_days(day, -R.PLAN_REPEAT_DAYS)
@@ -690,13 +726,17 @@ def plan_days(ctx: GuidanceContext, days: Sequence[Sequence[DayEntry]], meals: S
             for h in ctx.history:
                 if not h.hypo and since <= h.date < start:
                     eaten.setdefault(h.food_id, set()).add(h.date)
-            prev2 = {fid: len(dates) for fid, dates in eaten.items()}
+            prev_eaten = {fid: len(dates) for fid, dates in eaten.items()}
+            prev2 = dict(prev_eaten)
             for fid, n in recent.items():
                 prev2[fid] = prev2.get(fid, 0) + n
             habit = replace(habit0, prev2=prev2)
+            habit_free = replace(habit0, prev2=prev_eaten)  # a meal that may repeat: only what was really eaten
         avoid: dict[str, frozenset[frozenset[int]]] = {}
         for slot in R.SLOT_ORDER:
-            sets = frozenset(slot_sets[j][slot] for j in window if slot in slot_sets[j])
+            # A meal made only of foods marked "OK to repeat" may come back (note 23 §12.2).
+            sets = frozenset(slot_sets[j][slot] for j in window
+                             if slot in slot_sets[j] and not slot_sets[j][slot] <= ok_foods)
             if sets:
                 avoid[slot] = sets
         ctx_i = GuidanceContext(
@@ -704,12 +744,13 @@ def plan_days(ctx: GuidanceContext, days: Sequence[Sequence[DayEntry]], meals: S
             history=ctx.history + tuple(carried), history60=ctx.history60, planned30=ctx.planned30, eaten30=ctx.eaten30,
             saved_meals=ctx.saved_meals, combos=ctx.combos, tunables=ctx.tunables,
         )
+        slots = day_slots(ctx_i, meals, snack=snack, skip=skip0 if i == 0 else ())
         result, plans = _plan_day(ctx_i, meals, use_saved_meals=use_saved_meals, use_usual=use_usual,
                                   use_starters=use_starters, variant=variant, counter=counter, habit=habit, avoid=avoid,
-                                  recent=recent)
+                                  recent=recent, slots=slots, free=free, habit_free=habit_free)
         with_plan = _day_with(ctx_i, plans)
         carried.extend(_history_rows(day, with_plan))
-        foods_on.append(frozenset(e.food_id for e in with_plan if not e.hypo))
+        foods_on.append(frozenset(e.food_id for e in with_plan if not e.hypo and e.food_id not in ok_foods))
         sets_now: dict[str, set[int]] = {}
         for e in with_plan:
             if not e.hypo:
