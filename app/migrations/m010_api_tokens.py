@@ -1,6 +1,6 @@
 """Step 10: assistant access tokens (``docs/dev/plans/assistant-step1.md`` part A; ARCHITECTURE "Assistant access").
 
-``api_tokens`` holds the personal tokens a person makes in Settings → Outside AI apps for a chat assistant
+``api_tokens`` holds the personal tokens a person makes in Settings → Assistant access for a chat assistant
 they connect. Only the SHA-256 of the whole token is stored (``token_hash``, 64 hex characters); ``prefix``
 keeps its first 12 characters (``kha_`` and 8 more) so the list can tell tokens apart. ``scopes`` is a
 space-separated list of known scopes (``assistant:read`` in this step). A token works while it is neither
