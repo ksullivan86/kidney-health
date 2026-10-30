@@ -93,7 +93,7 @@ fill in **Profile**, press **Suggest targets**, check them with your care team, 
 invite the rest of the household from **Server administration** (the shield icon).
 
 Put HTTPS in front of the app ([docs/https.md](docs/https.md)) so phones can install it and use the
-camera. You can check that a release image is genuine with `scripts/verify-image.sh 0.12.0`
+camera. You can check that a release image is genuine with `scripts/verify-image.sh 0.12.1`
 ([SECURITY.md](SECURITY.md#verifying-the-image-before-you-run-it)). The full guide, with backups,
 upgrades and troubleshooting, is [docs/deployment.md](docs/deployment.md).
 
@@ -125,7 +125,7 @@ running a local AI model next to the app. See [docs/deployment.md](docs/deployme
 ### Upgrading
 
 **From 0.11 or 0.10:** back up `kidney.db` first
-(`podman exec kidney-health python -m app.admin backup /data/before-0.12.0.db`), change the image tag
+(`podman exec kidney-health python -m app.admin backup /data/before-0.12.1.db`), change the image tag
 to `:0.12`, and start it. Coming from 0.10, the first start updates the database. Nothing new is turned on
 for you. What changed: [CHANGELOG.md](CHANGELOG.md#upgrading-from-011-read-this-first).
 

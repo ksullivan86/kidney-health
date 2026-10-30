@@ -7,8 +7,14 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+## 0.12.1 — 2026-10-30
+
 Plans of several days now go up to 60 days, for easier shopping and ordering. You choose which meals may repeat, whether to
 plan a snack, and what to do with today's meals that are already past.
+
+**Upgrading from 0.12.0:** change nothing if you track `:0.12`; it moves to 0.12.1 by itself. There is no schema step and
+nothing new is switched on. If you use AI, run `scripts/ai_eval.py` again: the prompt changed. From 0.11 or 0.10, follow
+[Upgrading from 0.11](#upgrading-from-011-read-this-first).
 
 ### For people using the app
 
@@ -27,7 +33,7 @@ plan a snack, and what to do with today's meals that are already past.
 * **One set of targets on dialysis days.** The guidelines the app cites give no separate daily potassium, phosphorus or
   sodium targets for dialysis days, so the plan keeps your one set. The gap between sessions is still counted.
 
-### For people running a server
+### For people who run a server
 
 * **`PLAN_DAYS_MAX`** (60, 1 to 90) and **`PLAN_DAYS_AI_MAX`** (31) set the most days of one plan, and of one plan whose
   ideas come from AI. The several-days plan uses no AI yet, so the second one changes nothing today. A 60-day plan takes
