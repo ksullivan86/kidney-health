@@ -153,6 +153,15 @@ Environment=TRUSTED_PROXIES=127.0.0.1,::1
 # Admins must use two-step sign-in before they can open Server administration (docs/accounts.md). Off by default.
 # Environment=AUTH_REQUIRE_TWO_STEP_ADMINS=true
 # Environment=PASSWORD_BREACH_CHECK=true
+# Sign in with Authentik, Google or another OpenID Connect provider (docs/accounts.md). Needs PUBLIC_URL. The provider's return
+# address is <PUBLIC_URL>/api/auth/oidc/callback. The client secret is a Podman secret (podman secret create kidney-oidc-secret FILE).
+# Environment=OIDC_ENABLED=true
+# Environment=OIDC_ISSUER=https://auth.example.org/application/o/kidney-health/
+# Environment=OIDC_CLIENT_ID=your-client-id
+# Secret=kidney-oidc-secret,type=mount,target=oidc_client_secret,uid=10001,gid=10001,mode=0400
+# Environment=OIDC_CLIENT_SECRET_FILE=/run/secrets/oidc_client_secret
+# Environment=OIDC_BUTTON_LABEL=Sign in with Authentik
+# Environment=OIDC_ALLOW_PRIVATE_ISSUER=true
 
 # Health: exec form (JSON array). A plain string would run through /bin/sh, which the image does
 # not have, and the check would always fail.
