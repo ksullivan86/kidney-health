@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Proposed, 2026-10-30. Phase 1 (the rules engine plans 1 to 14 days from the Plan tab) is built. The owner asked: "for the planning it should be able to plan the whole day - week or longer". The choices in §10 are defaults the owner can change. |
+| Status | Phase 1 built in 0.12.0 (1 to 14 days). The owner answered §10 on 2026-10-30 (§12): up to 60 days, meals and items that may repeat, an optional snack, today's past meals, and one set of targets on dialysis days. Built after 0.12.0. |
 | Scope | One request plans every open meal of a run of days, each day against its own room; the person checks the preview, adds it as planned food in one go and can take it off again. A shopping list for the same days. |
 | Out of scope | Insulin or medication of any kind. New targets for dialysis days (the profile has one set of daily targets). Buying food. AI planning whole days. |
 | Builds on | Note 06 §4.7 (`plan-day`: slots, room, familiar meals, beam search, repair, protein top-up, energy note), note 09 (preferences), note 16 (recipes are planned one serving at a time), note 22 (the shopping list), the Running high rules (planned days count from today on). |
@@ -16,15 +16,16 @@ seven times, and each day is planned without knowing the others, so the same din
 
 ## 2. The range
 
-* **1 to 14 days**, starting on any day (today by default; the first day of the week shown when another week is open).
+* **1 to 60 days** (the owner's decision, §12.1; the server setting `PLAN_DAYS_MAX`, 1 to 90), starting on any day (today by
+  default; the first day of the week shown when another week is open). **Start tomorrow** sets the first day to tomorrow.
 * Quick choices: **Rest of this week** (to the last day of the week, using the profile's week start, Monday or Sunday),
-  **7 days** and **14 days**; or any number from 1 to 14.
-* **Why 14 and not 28.** Targets change: a blood test or a clinic visit can lower a potassium or fluid limit, and a plan made
+  **7 days**, **14 days**, **30 days** and **60 days**; or any number up to the cap.
+* **Why 14 at first** (kept for the record; the owner chose 60 in §12.1). Targets change: a blood test or a clinic visit can lower a potassium or fluid limit, and a plan made
   against the old number keeps it. Two weeks is about as far ahead as fresh food keeps and as most people shop. A 14-day plan is
   already about 170 planned foods to read through before adding. The cross-day rules (the phosphorus week and the dialysis
   interval) look back at most 7 days, so 14 days covers two full rounds of both. Asking again after two weeks uses the new
   targets and what was really eaten. 28 is an open question for the owner (§10).
-* The server refuses more than 14 days (400), so a stale or hand-made request cannot ask for more.
+* The server refuses more than its cap (400), so a stale or hand-made request cannot ask for more.
 
 ## 3. Each day's own targets
 
@@ -92,7 +93,7 @@ like `plan-day`, and answers `{status, rules_version, start, end, variant, days:
 day_after, energy_note}], apply: {endpoint, entries}, shopping: {items}, notes, targets}`. Every query is scoped to the signed-in
 person; a food or entry that is not theirs is 404. The browser twin in the demo gives the same answer (parity vectors).
 
-## 10. Open questions for the owner
+## 10. Open questions for the owner (answered in §12)
 
 1. **Is 14 days enough, or should it be 28?** 28 means about 340 planned foods and a plan that can outlast a change of targets.
 2. **Is "not the same meal on either of the 2 days before" right?** Some people like the same breakfast every day. Options: keep
@@ -108,3 +109,36 @@ person; a food or entry that is not theirs is 404. The browser twin in the demo 
    Clear planned days and the range's shopping list.
 2. Edit the preview: swap one meal or drop a day before adding; "Show another" for one day only.
 3. Optional AI for one meal of one day, checked as now (§8).
+
+## 12. The owner's decisions (2026-10-30)
+
+The owner answered §10 on 2026-10-30. These are the owner's decisions; the rest of this note follows them.
+
+1. **Longer plans, for easier shopping and ordering.** Plans from the person's own foods (the rules engine, no AI) go up to
+   **60 days**. Both caps are server settings with an environment variable: `PLAN_DAYS_MAX` (default 60, 1 to 90) and
+   `PLAN_DAYS_AI_MAX` (default 31, 1 to 90), the cap for a plan whose ideas come from AI, because each day costs AI calls.
+   **What "Where ideas come from" does today:** it holds three switches, "Use my saved meals", "Use meals I often have" and
+   "Use starter meals". All three are the rules engine. The several-days plan sends nothing to AI, so `PLAN_DAYS_AI_MAX`
+   has nothing to cap yet; it is ready for phase 3 (§11). The quick choices add **30 days** and **60 days**. Planning 60 days
+   takes about 2 s on a laptop (about 30 ms a day, growing in a straight line). Adding 60 days is about 25 requests of 40
+   foods, each with its own `client_id`. The shopping list sums by food, so 60 days list about as many lines as 14.
+2. **Repeats.** The plan sheet asks which meals may repeat on following days: breakfast, lunch, dinner, snack. A ticked meal
+   skips the 2-day rule of §4 and the food rotation for that meal. A saved meal or a food can be marked **OK to repeat**: such a
+   food never ranks lower for being on the days before, and a saved meal marked OK to repeat, or a meal made only of foods
+   marked OK to repeat, may come back the next day. The choices are remembered for the person on the server (their
+   `guidance` settings: `plan_repeat_meals`, `repeat_ok_foods`, `repeat_ok_meals`). The meal ideas and "Let AI choose"
+   prompts carry the same choices as one short structured field (`repeat_ok`: meal names, candidate ids, saved meal refs),
+   never the person's own words; the guard checks every idea as before.
+3. **Dialysis days: one set of daily targets.** The owner said "pick what's best". The sources the app cites give no separate
+   daily potassium, phosphorus or sodium targets for dialysis days: KDOQI 2020 and KDIGO 2024 give daily targets, DaVita and
+   AKF give fluid as about 1,000 mL a day plus urine, and JBDS 2022 is about glucose and insulin on dialysis days, which the
+   app never doses. The app never invents an uncited number, so it keeps one set of targets. What dialysis changes is already
+   counted: potassium, sodium and fluid are totalled over the gap between sessions against the per-day target × days (§3).
+4. **Clear planned days is a reset.** It takes every planned food off the days, not only what a plan added. Eaten food and
+   planned low treatments stay. **Undo** right after adding takes off only what that plan added. The confirm says both.
+5. **The snack is optional.** "Plan a snack too" is off by default and remembered like the repeat choices (`plan_snack`).
+6. **Today's meals that are already past.** When the first day is today, a meal whose usual time is more than 2 hours past is
+   not planned. A meal past its time by 2 hours or less is asked about in the sheet ("Lunch was at 12:30. Plan it anyway?",
+   **Plan it** or **Skip**). The times are the browser's local time: breakfast 08:00, lunch 12:30, snack 15:30, dinner
+   18:30. The profile has no meal times, and these are times, not targets. The route takes `skip_first_day`, the meals not to
+   plan on the first day, so the server and the demo twin agree. Nothing here touches a low treatment.
