@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # Care team (design note 25)
 
@@ -32,8 +32,15 @@ Branch: worktree-agent-a0c4dba93435a1585, fast-forwarded to next-8 (897538c, has
   planning-and-menus, sources.yml NOTE25 (+ generated includes), ARCHITECTURE.md (module, step 27, routes, Care team section),
   deployment.md, ROADMAP.md, CHANGELOG Unreleased, try-it-for-ckd.md (the demo changed).
 
-## Next
-7. Full pytest once; fix what breaks.: Settings → Care team section (`js/views/sharing.js`), Profile link, Today "Added by", Plan "Planning for" (`js/views/careplan.js`).
+- Full pytest (2026-10-30): everything passes except 7 tests that still expect the wording from before the AI naming change
+  (test_ask_ui.py x5, test_device_tokens.py::test_the_switches_are_independent,
+  test_mcp_write.py::test_a_read_only_token_cannot_save_and_nothing_is_saved: "Assistant access", "Ask conversations" and
+  similar). They belong to the AI naming work and are unrelated to the Care team. Ruff, OpenAPI `--check`, settings and import
+  vectors `--check` and `node tests/js/run_vectors.mjs` pass.
+
+## Left for later (design note 25 §10)
+Per-permission switches, a Caregiver role who logs eaten food, letting a Care helper use saved meals, the person approving
+changes, and a clinician role with notes.: Settings → Care team section (`js/views/sharing.js`), Profile link, Today "Added by", Plan "Planning for" (`js/views/careplan.js`).
 4. Mock twin (sample Care team), Node UI tests.
 5. e2e `tools/e2e/sharing.py` extended.
 6. Docs (accounts.md, handbook caregivers + app pages, ARCHITECTURE.md, CHANGELOG).
