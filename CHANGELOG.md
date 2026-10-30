@@ -83,6 +83,10 @@ nothing new is switched on. If you use AI, run `scripts/ai_eval.py` again: the p
 
 ### For people who run a server
 
+* **The app no longer shows only its header behind some reverse proxies.** The image allowed 64 open connections, and a
+  proxy that opens one per request went over that on a single page load: most script files got "503", and the log said
+  "Exceeded concurrency limit". The limit is now 512 and an environment variable, `UVICORN_LIMIT_CONCURRENCY`. See
+  [Only the header shows](docs/deployment.md#only-the-header-shows-and-the-log-says-exceeded-concurrency-limit).
 * **`PLAN_DAYS_MAX`** (60, 1 to 90) and **`PLAN_DAYS_AI_MAX`** (31) set the most days of one plan, and of one plan whose
   ideas come from AI. The several-days plan uses no AI yet, so the second one changes nothing today. A 60-day plan takes
   about 2 seconds on a laptop. No schema step.
