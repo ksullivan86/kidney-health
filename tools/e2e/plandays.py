@@ -9,16 +9,24 @@ Starts ``uvicorn app.main:app`` on a fresh ``DATA_DIR``, finishes first-run setu
 on the days to plan: an eaten bread breakfast, an eaten soup that lists no potassium, and a planned low treatment (apple
 juice). A second person plans food on the same days. Then, at 375x812 light:
 
-* **Plan several days…** opens the sheet; **7 days**, **14 days** and **Rest of this week** set the count; 15 days is
-  refused in the sheet and never sent; opening and previewing write nothing;
+* **Plan several days…** opens the sheet; **7 days**, **14 days**, **30 days** and **Rest of this week** set the count; 61
+  days is refused in the sheet and never sent (the server's cap is 60); opening and previewing write nothing;
+* the owner's answers (note 23 §12): the snack is off at first, and ticking **Plan a snack too** plans one on every day and is
+  remembered on the server; ticking **Breakfast** under "Meals that may repeat" gives the same breakfast on several days and is
+  remembered; 30 days are added in batches of 40 and Undo takes them all off;
 * the preview has one box per day, the first open, the day's totals read "≥" for potassium on the soup's day, and the
   shopping list for the range has foods;
 * **Add to plan** asks first ("Nothing is marked as eaten"); Cancel sends nothing; confirming sends the foods in batches of at
   most 40, one ``client_id`` each, all planned with purpose "none"; the server then holds them as planned food and the eaten
   food, the low treatment and the other person's food are as they were;
 * **Undo** takes off exactly the foods it added (the ids the batches answered with);
-* **Clear planned days…** asks first and then takes every planned food off the days, never the eaten food, the planned low
-  treatment or the other person's food; another person's entry id sent to ``/api/log/clear-planned`` is 404;
+* **Clear planned days…** asks first, says it is a reset (it also takes off food planned by hand), and then takes every
+  planned food off the days, never the eaten food, the planned low treatment or the other person's food; another person's
+  entry id sent to ``/api/log/clear-planned`` is 404;
+* with the browser's clock frozen at 13:30 on today, breakfast is not planned (its time has passed) and the sheet asks
+  "Lunch was at 12:30. Plan it anyway?" with **Plan it** and **Skip**, in the app's own confirm; Add to plan waits for the
+  answer; Skip sends ``skip_first_day: ["breakfast", "lunch"]`` and Plan it only ``["breakfast"]``; the low treatment logged
+  this morning stays as it was;
 * at 1280x800 dark the sheet previews 14 days; no sideways scroll and no console error anywhere;
 * the Pages demo (``scripts/build_preview.py --pages``, served statically) plans, adds and clears days in its own data and
   sends no request to any ``/api`` route.
@@ -145,11 +153,16 @@ def main(argv: list[str] | None = None) -> int:
         check("setup: the apple juice is a planned low treatment", low["purpose"] == "hypo" and low["status"] == "planned", str(low))
         theirs = sam.json("POST", "/api/log", {"date": days[0], "meal": "dinner", "food_id": food_id(sam, "Bread, white"), "servings": 1,
                                                "status": "planned"})
+        morning_low = admin.json("POST", "/api/log", {"date": date.today().isoformat(), "meal": "breakfast",
+                                                      "food_id": food_id(admin, "Apple juice"), "servings": 1})
+        check("setup: the low treatment this morning is a low treatment", morning_low["purpose"] == "hypo", str(morning_low))
         base = f"http://localhost:{args.port}"
         with sync_playwright() as pw:
             browser = pw.chromium.launch(executable_path=khserver.chromium_executable(), args=["--no-sandbox"])
             try:
                 phone(browser, admin, sam, base, days, theirs)
+                choices(browser, admin, base, days)
+                past_meals(browser, admin, base, morning_low)
                 wide(browser, admin, base, start)
                 if not args.no_demo:
                     demo(browser, out)
@@ -209,11 +222,15 @@ def phone(browser: Any, admin: Any, sam: Any, base: str, days: list[str], theirs
     rest = 7 - date.fromisoformat(days[0]).weekday()
     wait_days(page, rest)
     check(f"[{tag}] Rest of this week counts to Sunday", page.input_value("#g-days-count") == str(rest), page.input_value("#g-days-count"))
-    page.fill("#g-days-count", "15")
+    page.click("#g-days-30")
+    wait_days(page, 30)
+    check(f"[{tag}] 30 days: 30 boxes, and 60 days is offered", page.locator(".g-days-day").count() == 30
+          and page.is_visible("#g-days-60") and page.input_value("#g-days-count") == "30")
+    page.fill("#g-days-count", "61")
     page.wait_for_selector("#g-days-out .empty-state", timeout=20000)
     asked = [b["days"] for b in watch.bodies["/api/guidance/plan-days"]]
-    check(f"[{tag}] 15 days is refused in the sheet and never sent", page.is_disabled("#g-days-add") and max(asked) <= 14
-          and "1 to 14 days" in page.inner_text("#g-days-out"), str(asked))
+    check(f"[{tag}] 61 days is refused in the sheet and never sent", page.is_disabled("#g-days-add") and max(asked) <= 60
+          and "1 to 60 days" in page.inner_text("#g-days-out"), str(asked))
     page.click("#g-days-7")
     wait_days(page, 7)
     page.wait_for_selector("#g-days-add:not([disabled])", timeout=20000)
@@ -236,6 +253,8 @@ def phone(browser: Any, admin: Any, sam: Any, base: str, days: list[str], theirs
     check(f"[{tag}] the server holds them as planned food; eaten food and the low treatment are as they were",
           len(now) == len(sent) and kept(admin, days) == keep, f"{len(now)} vs {len(sent)}")
     check(f"[{tag}] the other person's food is as it was", [e["id"] for e in planned_food(sam, days)] == [theirs["id"]])
+    said = page.inner_text(".g-days-added")
+    check(f"[{tag}] after adding, Undo says it takes off only what this plan added", "Undo takes off only what this plan added." in said, said)
     page.click("#g-days-undo")
     wait_days(page, 7)
     undo = watch.bodies["/api/log/clear-planned"][-1]
@@ -251,7 +270,9 @@ def phone(browser: Any, admin: Any, sam: Any, base: str, days: list[str], theirs
     page.click("#g-days-clear")
     page.wait_for_selector(".confirm-row .btn.danger-solid", timeout=10000)
     msg = page.inner_text(".confirm-row .confirm-msg")
-    check(f"[{tag}] Clear planned days asks first and says what stays", "Eaten food and planned low treatments stay." in msg, msg)
+    check(f"[{tag}] Clear planned days asks first, says it is a reset and what stays",
+          "Eaten food and planned low treatments stay." in msg and "This is a reset" in msg
+          and "also takes off food you planned yourself" in msg, msg)
     page.click(".confirm-row .btn.danger-solid")
     page.wait_for_function("() => !document.querySelector('.confirm-row')", timeout=20000)
     wait_days(page, 7)
@@ -261,6 +282,121 @@ def phone(browser: Any, admin: Any, sam: Any, base: str, days: list[str], theirs
     check(f"[{tag}] no sideways scroll, no console error, no dialog", not overflow(page) and not watch.errors and not watch.dialogs,
           "; ".join(watch.errors))
     ctx.close()
+
+
+def meal_foods(page: Any, meal: str) -> list[list[int]]:
+    """The food ids of ``meal`` on each day of the preview (closed days too: their content is in the page)."""
+    return page.evaluate("""(meal) => [...document.querySelectorAll('#g-days-out .g-days-day')].map((d) => {
+        const sec = [...d.querySelectorAll('.g-plan-meal')].find((s) => s.querySelector('.g-plan-title').textContent.startsWith(meal));
+        return sec ? [...sec.querySelectorAll('li[data-food-id]')].map((li) => Number(li.dataset.foodId)) : null;
+      })""", meal)
+
+
+def remembered(api: Any) -> dict[str, Any]:
+    return api.json("GET", "/api/me/settings")["settings"]["guidance"]["value"]
+
+
+def choices(browser: Any, admin: Any, base: str, days: list[str]) -> None:
+    """The snack and "Meals that may repeat" (note 23 §12.2, §12.5), remembered on the server; 30 days added and undone."""
+    tag = "375-choices"
+    ctx = browser.new_context(viewport={"width": 375, "height": 812}, color_scheme="light", base_url=base)
+    ctx.add_cookies([{"name": k, "value": v, "url": base} for k, v in admin.cookies().items()])
+    page = ctx.new_page()
+    watch = Watch(page)
+    start = (date.fromisoformat(days[0]) + timedelta(days=20)).isoformat()  # days with nothing logged
+    open_sheet(page, start)
+    wait_days(page, 7)
+    snacks = meal_foods(page, "Snack")
+    check(f"[{tag}] the snack is off at first: no day plans one", not page.is_checked("#g-days-snack") and snacks == [None] * 7,
+          str(snacks))
+    page.check("#g-days-snack")
+    page.wait_for_function("() => document.querySelectorAll('#g-days-out .g-plan-meal').length > 21", timeout=60000)
+    snacks = meal_foods(page, "Snack")
+    check(f"[{tag}] Plan a snack too plans one on every day and is remembered",
+          all(s for s in snacks) and remembered(admin)["plan_snack"] is True
+          and watch.bodies["/api/guidance/plan-days"][-1]["snack"] is True, str(snacks))
+    page.uncheck("#g-days-snack")
+    page.wait_for_function("() => !document.querySelector('#g-days-out[aria-busy]') && document.querySelectorAll('#g-days-out .g-days-day').length === 7"
+                           " && ![...document.querySelectorAll('#g-days-out .g-plan-title')].some((t) => t.textContent.startsWith('Snack'))",
+                           timeout=60000)
+    check(f"[{tag}] turning it off again plans no snack and is remembered", remembered(admin)["plan_snack"] is False)
+    rotating = meal_foods(page, "Breakfast")
+    check(f"[{tag}] without the choice, breakfast changes from day to day", len({tuple(b) for b in rotating if b}) > 1, str(rotating))
+    with page.expect_response(lambda r: urlsplit(r.url).path == "/api/guidance/plan-days", timeout=60000):
+        page.check("#g-days-repeat-breakfast")
+    page.wait_for_function("() => !document.querySelector('#g-days-out[aria-busy]')", timeout=60000)
+    wait_days(page, 7)
+    same = meal_foods(page, "Breakfast")
+    last = watch.bodies["/api/guidance/plan-days"][-1]
+    check(f"[{tag}] breakfast may repeat: the same breakfast on several days, and it is remembered",
+          last["repeat_meals"] == ["breakfast"] and len({tuple(b) for b in same if b}) < len({tuple(b) for b in rotating if b})
+          and max(same.count(b) for b in same) >= 3 and remembered(admin)["plan_repeat_meals"] == ["breakfast"],
+          f"before {rotating} after {same}")
+    page.uncheck("#g-days-repeat-breakfast")
+    wait_days(page, 7)
+    check(f"[{tag}] unticking it is remembered too", remembered(admin)["plan_repeat_meals"] == [])
+    span = [(date.fromisoformat(start) + timedelta(days=i)).isoformat() for i in range(30)]
+    page.click("#g-days-30")
+    wait_days(page, 30)
+    page.wait_for_selector("#g-days-add:not([disabled])", timeout=20000)
+    before = len(watch.bodies["/api/log/batch"])
+    page.click("#g-days-add")
+    page.click(".confirm-row .btn.primary")
+    page.wait_for_selector("#g-days-undo", timeout=120000)
+    batches = [b["entries"] for b in watch.bodies["/api/log/batch"][before:]]
+    sent = [e for b in batches for e in b]
+    check(f"[{tag}] 30 days go in batches of at most 40 with one client_id each",
+          len(batches) >= 5 and all(len(b) <= 40 for b in batches) and len({e["client_id"] for e in sent}) == len(sent)
+          and len(planned_food(admin, span)) == len(sent), f"{[len(b) for b in batches]}")
+    page.click("#g-days-undo")
+    wait_days(page, 30)
+    check(f"[{tag}] Undo takes all 30 days' foods off again", not planned_food(admin, span))
+    check(f"[{tag}] no sideways scroll, no console error, no dialog", not overflow(page) and not watch.errors and not watch.dialogs,
+          "; ".join(watch.errors))
+    ctx.close()
+
+
+def past_meals(browser: Any, admin: Any, base: str, low: dict[str, Any]) -> None:
+    """Today's past meals (note 23 §12.6) with the browser's clock frozen at 13:30: breakfast is left out, lunch is asked."""
+    tag = "375-13:30"
+    today = date.today().isoformat()
+    for answer in ("Skip", "Plan it"):
+        ctx = browser.new_context(viewport={"width": 375, "height": 812}, color_scheme="light", base_url=base, timezone_id="UTC")
+        ctx.add_cookies([{"name": k, "value": v, "url": base} for k, v in admin.cookies().items()])
+        page = ctx.new_page()
+        page.clock.set_fixed_time(f"{today}T13:30:00Z")
+        watch = Watch(page)
+        open_sheet(page, today)
+        page.wait_for_selector("#g-days-ask + .confirm-row", timeout=60000)
+        msg = page.inner_text("#g-days-ask + .confirm-row .confirm-msg")
+        buttons = page.locator("#g-days-ask + .confirm-row button").all_inner_texts()
+        check(f"[{tag}] the sheet asks about lunch in its own confirm, and Add to plan waits",
+              msg == "Lunch was at 12:30. Plan it anyway?" and buttons == ["Skip", "Plan it"] and page.is_disabled("#g-days-add")
+              and not watch.dialogs, f"{msg!r} {buttons}")
+        note = page.inner_text("#g-days-past")
+        first = watch.bodies["/api/guidance/plan-days"][-1]
+        check(f"[{tag}] breakfast is more than 2 hours past: not planned, and said",
+              "Breakfast is not planned for today: its time has passed." in note and first["skip_first_day"] == ["breakfast"]
+              and meal_foods(page, "Breakfast")[0] is None, f"{note!r} {first.get('skip_first_day')}")
+        page.click(f"#g-days-ask + .confirm-row button:text-is('{answer}')")
+        if answer == "Skip":
+            page.wait_for_function("() => !document.querySelector('#g-days-out[aria-busy]') && !document.querySelector('#g-days-ask + .confirm-row')",
+                                   timeout=60000)
+            page.wait_for_function("() => document.querySelectorAll('#g-days-out .g-days-day').length === 7", timeout=60000)
+            last = watch.bodies["/api/guidance/plan-days"][-1]
+            check(f"[{tag}] Skip leaves lunch out of today", last["skip_first_day"] == ["breakfast", "lunch"]
+                  and meal_foods(page, "Lunch")[0] is None and meal_foods(page, "Lunch")[1] is not None, str(last["skip_first_day"]))
+        else:
+            page.wait_for_function("() => !document.querySelector('#g-days-ask + .confirm-row')", timeout=20000)
+            check(f"[{tag}] Plan it keeps lunch on today and Add to plan is ready again",
+                  watch.bodies["/api/guidance/plan-days"][-1]["skip_first_day"] == ["breakfast"]
+                  and meal_foods(page, "Lunch")[0] is not None and not page.is_disabled("#g-days-add"))
+        now = next(e for e in admin.json("GET", "/api/log", params={"date": today})["entries"] if e["id"] == low["id"])
+        check(f"[{tag}] {answer}: the low treatment this morning is as it was and nothing was written",
+              (now["purpose"], now["status"], now["servings"]) == ("hypo", "eaten", low["servings"]) and not watch.writes(),
+              str(watch.writes()))
+        check(f"[{tag}] {answer}: no sideways scroll, no console error", not overflow(page) and not watch.errors, "; ".join(watch.errors))
+        ctx.close()
 
 
 def wide(browser: Any, admin: Any, base: str, start: str) -> None:
