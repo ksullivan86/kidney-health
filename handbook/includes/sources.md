@@ -244,6 +244,8 @@
 [PODMAN-QUADLET]: https://docs.podman.io/en/latest/markdown/podman-systemd.unit.5.html "Podman: Quadlet units"
 [PODMAN-ROOTLESS]: https://github.com/containers/podman/blob/main/docs/tutorials/rootless_tutorial.md "Podman: rootless tutorial"
 [DOCKER-ROOTLESS]: https://docs.docker.com/engine/security/rootless/troubleshoot/ "Docker: rootless mode limitations"
+[NETBIRD-CLI]: https://docs.netbird.io/get-started/cli "NetBird: command line"
+[NETBIRD-ROUTES]: https://docs.netbird.io/manage/networks/how-routing-peers-work "NetBird: routing peers"
 [K8S-PSS]: https://kubernetes.io/docs/concepts/security/pod-security-standards/ "Kubernetes: Pod Security Standards"
 [K8S-NETPOL]: https://kubernetes.io/docs/concepts/services-networking/network-policies/ "Kubernetes: Network Policies"
 [K8S-USERNS]: https://kubernetes.io/docs/concepts/workloads/pods/user-namespaces/ "Kubernetes: user namespaces"

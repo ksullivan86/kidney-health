@@ -501,6 +501,10 @@ Pages cite these by id, for example `[KDIGO 2024 CKD guideline][K24]`. The list 
   Licence: Apache-2.0 (Podman documentation). Checked 2026-10-06. *Rootless Podman needs a range of UIDs and GIDs in /etc/subuid and /etc/subgid (for example 100000-165535, set with usermod --add-subuids/--add-subgids) and the newuidmap/newgidmap helpers.*
 - **DOCKER-ROOTLESS**: Docker documentation. Rootless mode: troubleshooting and known limitations. <https://docs.docker.com/engine/security/rootless/troubleshoot/> Also: <https://docs.docker.com/engine/security/rootless/>.  
   Licence: Apache-2.0 (Docker documentation). Checked 2026-10-06. *docker run -p does not propagate source IP addresses by default (RootlessKit 3.0+ needs userland-proxy disabled); --cpus, --memory and --pids-limit are ignored without cgroup v2; ports below 1024 need extra configuration.*
+- **NETBIRD-CLI**: NetBird documentation. NetBird agent command line interface (CLI). <https://docs.netbird.io/get-started/cli>  
+  Licence: © NetBird: link and paraphrase. Checked 2026-10-30. *netbird up --mtu: 'Set MTU (Maximum Transmission Unit) for the WireGuard interface (default 1280)'. Peer DNS names end in netbird.cloud on NetBird's own service.*
+- **NETBIRD-ROUTES**: NetBird documentation. How routing peers work. <https://docs.netbird.io/manage/networks/how-routing-peers-work>  
+  Licence: © NetBird: link and paraphrase. Checked 2026-10-30. *Forwarded packets traverse the routing peer's firewall forward chain; masquerade is on by default (traffic leaves with the routing peer's LAN address).*
 - **K8S-PSS**: Kubernetes documentation. Pod Security Standards. <https://kubernetes.io/docs/concepts/security/pod-security-standards/>  
   Licence: CC BY 4.0 (Kubernetes documentation). Checked 2026-10-06. *Restricted: runAsNonRoot, allowPrivilegeEscalation false, capabilities drop ALL, seccomp RuntimeDefault or Localhost, limited volume types.*
 - **K8S-NETPOL**: Kubernetes documentation. Network Policies. <https://kubernetes.io/docs/concepts/services-networking/network-policies/>  
