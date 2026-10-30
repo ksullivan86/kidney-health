@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-30
 fact_checked: 2026-10-05
-sources: [ARCH, NOTE06, NOTE08, FDC, Q20, A26-5, K24, DG23, JBDS22]
+sources: [ARCH, NOTE06, NOTE08, NOTE25, FDC, Q20, A26-5, K24, DG23, JBDS22]
 ---
 
 # Planning meals and using the menus
@@ -202,6 +202,14 @@ only; **Clear checks** removes them.
 Reminders, Google Keep, Bring!, or a family list app such as KitchenOwl or Grocy. Nothing is sent anywhere until you choose
 where it goes. Where the browser does not allow copying, the list appears as text to select and copy yourself.
 
+## Planning for someone on your Care team
+
+If someone made you a **Care helper** on their Care team, the Plan tab shows **Planning for** at the top. Choose their name to
+see their week, with a banner that says whose plan you are changing. You can add, change and remove their planned food, plan
+several days for them and use their shopping list. Their saved meals are not used, and eaten food and a planned low treatment
+stay as they are. **Back to my own plan** takes you back. Food you add shows "Added by" and your name on their day
+([Care team](settings-and-keys.md#sharing), [design note 25][NOTE25]).
+
 ## Using the handbook's sample menus
 
 The handbook has 7-day sample menus for each stage, built with the same targets and the same food list as
@@ -266,7 +274,8 @@ Your sessions are Monday, Wednesday and Friday. On Sunday evening:
 ## Sources
 
 - [Project architecture contract][ARCH], v0.2: planned entries, saved meals, copy day, shopping list; planning several days.
-- [Design note 08][NOTE08]: the sample menus; [design note 06][NOTE06]: the plan builder (v0.3).
+- [Design note 08][NOTE08]: the sample menus; [design note 06][NOTE06]: the plan builder (v0.3); [design note 25][NOTE25]: the
+  Care team.
 - [USDA FoodData Central][FDC]: the food list behind the app and the menus.
 - [KDOQI 2020 nutrition guideline][Q20]; [ADA Standards of Care 2026, section 5][A26-5], Rec 5.28.
 - [KDIGO 2024 CKD guideline][K24], [DaVita: hemodialysis fluid intake][DG23] and [JBDS 2022][JBDS22]: no separate daily

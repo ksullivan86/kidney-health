@@ -26,8 +26,14 @@ Branch: worktree-agent-a0c4dba93435a1585, fast-forwarded to next-8 (897538c, has
 - Tests: `tests/test_care_team_ui.py` (+ `tests/js/care_demo.mjs`), test_sharing_ui.py and sharing_list_loading.test.mjs
   updated; test_settings_ui.py's stale "Assistant access" title fixed to "Outside AI apps". All pass.
 
+- e2e: `tools/e2e/sharing.py` extended (invites, same answer, Kim plans Ana's day, Added by, demo). Run with system
+  `python3` (it has Playwright): `python3 tools/e2e/sharing.py --port 8196 --out <scratch>/e2e-sharing` → 61 passed, 0 failed.
+- Docs: docs/accounts.md (## Care team, old anchor kept), handbook settings-and-keys (#sharing anchor kept), caregivers,
+  planning-and-menus, sources.yml NOTE25 (+ generated includes), ARCHITECTURE.md (module, step 27, routes, Care team section),
+  deployment.md, ROADMAP.md, CHANGELOG Unreleased, try-it-for-ckd.md (the demo changed).
+
 ## Next
-4. (done above) 5. e2e `tools/e2e/sharing.py`: Care helper plans a day.: Settings → Care team section (`js/views/sharing.js`), Profile link, Today "Added by", Plan "Planning for" (`js/views/careplan.js`).
+7. Full pytest once; fix what breaks.: Settings → Care team section (`js/views/sharing.js`), Profile link, Today "Added by", Plan "Planning for" (`js/views/careplan.js`).
 4. Mock twin (sample Care team), Node UI tests.
 5. e2e `tools/e2e/sharing.py` extended.
 6. Docs (accounts.md, handbook caregivers + app pages, ARCHITECTURE.md, CHANGELOG).
