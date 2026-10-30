@@ -137,6 +137,21 @@
 
 <main id="main" class="main">
 
+  <!-- ===================== THE APP DID NOT START =====================
+       Needs no script to show: css/base.css keeps it invisible, then shows it after 8 seconds. js/main.js hides it
+       (the hidden attribute) once a screen is showing, or shows it at once with the reason when boot fails. Every view
+       below stays hidden until the scripts run, so without this a failed load leaves only the header. -->
+  <section class="boot-fail" id="boot-fail" aria-labelledby="boot-fail-title">
+    <h2 id="boot-fail-title">The app did not start</h2>
+    <p id="boot-fail-reason">The app's files did not finish loading. Try reloading.</p>
+    <p>If you use a VPN such as NetBird, Tailscale or WireGuard and the app works on your home network, the VPN may be
+      dropping large files. The person who runs your server can fix that.</p>
+    <p class="boot-fail-actions">
+      <a class="btn primary" id="boot-fail-reload" href="/">Reload</a>
+      <a href="/learn/self-hosting/troubleshooting/#only-the-header-shows-over-a-vpn">What to change on the server</a>
+    </p>
+  </section>
+
   <!-- ===================== SIGN-IN, FIRST-RUN SETUP, INVITE, RESET, NEW PASSWORD (js/views/auth.js) =====================
        Hash routes #/login, #/setup, #/invite/<token>, #/reset/<token> (tokens travel only in the URL fragment). -->
   <section id="view-auth" class="auth-view" aria-labelledby="auth-title" hidden>

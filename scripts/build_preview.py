@@ -162,9 +162,10 @@ def build_fragment(static_dir: Path = STATIC, foods_json: Path = FOODS_JSON) -> 
 PAGES_FLAG = "preview-flag.js"
 # The demo sits in demo/ of the handbook's Pages site, so the published handbook is one level up.
 PAGES_HANDBOOK = "../"
-# Absolute paths of the served app and what they become in the demo: the in-app handbook (/learn/) is the
-# published handbook; the proxy sign-in link stays in the demo.
-PAGES_LINKS = {"/learn/": PAGES_HANDBOOK, "/?reauth=1": "./?reauth=1"}
+# Absolute paths of the served app and what they become in the demo: the in-app handbook (/learn/ and every page
+# under it) is the published handbook; the proxy sign-in link and the "app did not start" Reload link stay in the demo.
+PAGES_LINKS = {"/?reauth=1": "./?reauth=1", "/": "./"}
+PAGES_PREFIXES = {"/learn/": PAGES_HANDBOOK}
 SECURITY_PY = ROOT / "app" / "security.py"
 
 
@@ -237,6 +238,8 @@ def build_pages(out_dir: Path, static_dir: Path = STATIC, foods_json: Path = FOO
         raise SystemExit("index.html: body still references external files")
     for app_path, pages_path in PAGES_LINKS.items():
         markup = markup.replace(f'href="{app_path}"', f'href="{pages_path}"')
+    for app_prefix, pages_prefix in PAGES_PREFIXES.items():
+        markup = markup.replace(f'href="{app_prefix}', f'href="{pages_prefix}')
     leftover = re.findall(r'(?:href|src)="(/[^"]*)"', markup)
     if leftover:
         raise SystemExit(f"index.html: absolute paths the Pages demo cannot serve: {sorted(set(leftover))}")
