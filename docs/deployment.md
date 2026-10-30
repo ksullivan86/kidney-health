@@ -130,6 +130,7 @@ NetworkPolicy and the compose, Quadlet and `.env.example` comments name the same
 | `PUBLIC_URL` | unset | The URL people type, e.g. `https://food.home.example.net`. Its host passes the Host check, browsers' `Origin` must match it, and invite/reset links and the setup line use it. **Set it whenever you use a host name.** |
 | `ALLOWED_HOSTS` | localhost, IP literals and the `PUBLIC_URL` host | Extra host names (comma list, `*.example.org` wildcards). Any other `Host` gets `400 Unknown host` (DNS-rebinding defence) and one log line naming it. |
 | `TRUSTED_PROXIES` | `127.0.0.1,::1` | Addresses whose `X-Forwarded-For`/`-Proto` are believed. **Depends on your engine**: see [`security.md` §4](security.md#4-proxy-trust-trusted_proxies-per-topology). |
+| `UVICORN_LIMIT_CONCURRENCY` | `512` | Most open connections; beyond it the server answers 503. A page load asks for about 120 files at once, so keep it well above that. Before 0.12.1 the image had 64, which a reverse proxy that opens one connection per request could hit: only the header showed. |
 | `AUTH_MODE` | `local` | `local` (accounts with passwords), `proxy` (identity from Authelia, Authentik or `tailscale serve`), `none` (no sign-in). See [Sign-in modes](#sign-in-modes). |
 | `SECRET_KEY_FILE` | auto-generated `/data/secret.key` with a warning | Encrypts stored API keys. One key per line, ≥ 32 characters. Every shipped profile mounts it from the engine's secret store, **outside** the data volume. |
 | `USDA_API_KEY_FILE` | unset | Enables "Search USDA" (free key: <https://fdc.nal.usda.gov/api-key-signup>; `DEMO_KEY` allows 30 requests per hour). |
@@ -947,6 +948,16 @@ RuntimeDefault`.
 
 **Which version is running?** `podman inspect kidney-health --format '{{.ImageDigest}}'` or
 `kubectl -n kidney-health get deploy kidney-health -o jsonpath='{.spec.template.spec.containers[0].image}'`.
+
+### Only the header shows, and the log says "Exceeded concurrency limit"
+
+The page opens but nothing below the header, on any network, and the server log has many `WARNING:  Exceeded concurrency
+limit.` lines and `503 Service Unavailable` for `/js/…` files. The image before 0.12.1 allowed only 64 open connections, and
+a reverse proxy that opens a new connection for each request goes over that on one page load. Upgrade to 0.12.1 or newer,
+which allows 512 (`UVICORN_LIMIT_CONCURRENCY`). On an older image, set the container's command to the image's own
+arguments with a higher limit, for example Quadlet
+`Exec=--host 0.0.0.0 --port 8000 --no-proxy-headers --no-server-header --timeout-graceful-shutdown 10 --limit-concurrency 512`
+or compose `command: [...]` with the same list. Letting the proxy reuse its connections to the app (keep-alive) helps too.
 
 ### Only the header shows over a VPN
 

@@ -429,7 +429,9 @@ def test_containerfile_hardening(path):
     assert cmd
     args = json.loads(cmd.group(1))
     assert "--no-proxy-headers" in args and "--no-server-header" in args
-    assert args[args.index("--limit-concurrency") + 1] == "64"
+    # The cap comes from the environment so an admin can change it; 64 was too low for one page load behind a proxy.
+    assert "--limit-concurrency" not in args
+    assert re.search(r"^ENV UVICORN_LIMIT_CONCURRENCY=512$", runtime, re.M)
     assert "forwarded-allow-ips" not in text
     # SPDX expression: the code (LICENSE) and the handbook text in /app/learn (handbook/LICENSE).
     # hadolint cannot parse SPDX expressions, so .hadolint.yaml checks it as text and this pins it.
