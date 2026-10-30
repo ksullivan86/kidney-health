@@ -1398,6 +1398,57 @@
         "title": "ChatMessage",
         "type": "object"
       },
+      "ClearPlanned": {
+        "additionalProperties": false,
+        "description": "``POST /api/log/clear-planned`` (design note 23 §5): take the planned food off ``start``…``end`` (at most 14 days).\nWith ``ids``, only those entries. Eaten food and planned low treatments always stay.",
+        "properties": {
+          "end": {
+            "title": "End",
+            "type": "string"
+          },
+          "ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "maximum": 9.223372036854776e+18,
+                  "minimum": 1.0,
+                  "type": "integer"
+                },
+                "maxItems": 1000,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ids"
+          },
+          "start": {
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "ClearPlanned",
+        "type": "object"
+      },
+      "ClearPlannedResult": {
+        "properties": {
+          "deleted": {
+            "title": "Deleted",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "deleted"
+        ],
+        "title": "ClearPlannedResult",
+        "type": "object"
+      },
       "Closest": {
         "additionalProperties": false,
         "properties": {
@@ -6772,6 +6823,439 @@
           "targets"
         ],
         "title": "PlanDayResponse",
+        "type": "object"
+      },
+      "PlanDaysAfter": {
+        "additionalProperties": false,
+        "properties": {
+          "new_alerts": {
+            "items": {
+              "$ref": "#/components/schemas/Alert"
+            },
+            "title": "New Alerts",
+            "type": "array"
+          },
+          "projected_status": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/NutrientStatus"
+            },
+            "title": "Projected Status",
+            "type": "object"
+          },
+          "projected_totals": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Projected Totals",
+            "type": "object"
+          },
+          "projected_unknown": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Projected Unknown",
+            "type": "object"
+          }
+        },
+        "required": [
+          "projected_totals",
+          "projected_status",
+          "new_alerts",
+          "projected_unknown"
+        ],
+        "title": "PlanDaysAfter",
+        "type": "object"
+      },
+      "PlanDaysDay": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "day_after": {
+            "$ref": "#/components/schemas/PlanDaysAfter"
+          },
+          "dialysis_day": {
+            "title": "Dialysis Day",
+            "type": "boolean"
+          },
+          "energy_note": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/EnergyNote"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meals": {
+            "items": {
+              "$ref": "#/components/schemas/PlanDaysMeal"
+            },
+            "title": "Meals",
+            "type": "array"
+          },
+          "protein_topup": {
+            "items": {
+              "enum": [
+                "breakfast",
+                "lunch",
+                "dinner",
+                "snack"
+              ],
+              "type": "string"
+            },
+            "title": "Protein Topup",
+            "type": "array"
+          }
+        },
+        "required": [
+          "date",
+          "dialysis_day",
+          "meals",
+          "protein_topup",
+          "day_after",
+          "energy_note"
+        ],
+        "title": "PlanDaysDay",
+        "type": "object"
+      },
+      "PlanDaysMeal": {
+        "additionalProperties": false,
+        "properties": {
+          "apply_saved": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ApplySaved"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "closest": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Closest"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/FoodPortion"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "meal": {
+            "enum": [
+              "breakfast",
+              "lunch",
+              "dinner",
+              "snack"
+            ],
+            "title": "Meal",
+            "type": "string"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "repeated": {
+            "title": "Repeated",
+            "type": "boolean"
+          },
+          "room": {
+            "$ref": "#/components/schemas/GuidanceRoom"
+          },
+          "scale": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Scale"
+          },
+          "score": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Score"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "enum": [
+                  "saved",
+                  "usual",
+                  "starter",
+                  "built"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "status": {
+            "enum": [
+              "ok",
+              "partial",
+              "no_fit"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id"
+          },
+          "totals": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "anyOf": [
+                    {
+                      "type": "integer"
+                    },
+                    {
+                      "type": "number"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Totals"
+          },
+          "unknown": {
+            "default": [],
+            "items": {
+              "type": "string"
+            },
+            "title": "Unknown",
+            "type": "array"
+          },
+          "why": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Why",
+            "type": "array"
+          }
+        },
+        "required": [
+          "meal",
+          "status",
+          "source",
+          "name",
+          "template_id",
+          "scale",
+          "score",
+          "items",
+          "totals",
+          "why",
+          "room",
+          "reason",
+          "repeated"
+        ],
+        "title": "PlanDaysMeal",
+        "type": "object"
+      },
+      "PlanDaysRequest": {
+        "additionalProperties": false,
+        "description": "``POST /api/guidance/plan-days``: computes only. \"Add to plan\" sends ``apply.entries`` to ``/api/log/batch`` (≤ 40 a\nrequest).",
+        "properties": {
+          "days": {
+            "default": 7,
+            "maximum": 14.0,
+            "minimum": 1.0,
+            "title": "Days",
+            "type": "integer"
+          },
+          "meals": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "breakfast",
+                    "lunch",
+                    "dinner",
+                    "snack"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 4,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meals"
+          },
+          "start": {
+            "title": "Start",
+            "type": "string"
+          },
+          "use_saved_meals": {
+            "default": true,
+            "title": "Use Saved Meals",
+            "type": "boolean"
+          },
+          "use_starters": {
+            "default": true,
+            "title": "Use Starters",
+            "type": "boolean"
+          },
+          "use_usual": {
+            "default": true,
+            "title": "Use Usual",
+            "type": "boolean"
+          },
+          "variant": {
+            "default": 0,
+            "maximum": 4.0,
+            "minimum": 0.0,
+            "title": "Variant",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "start"
+        ],
+        "title": "PlanDaysRequest",
+        "type": "object"
+      },
+      "PlanDaysResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "apply": {
+            "$ref": "#/components/schemas/ApplyBlock"
+          },
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/PlanDaysDay"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "end": {
+            "title": "End",
+            "type": "string"
+          },
+          "notes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "rules_version": {
+            "title": "Rules Version",
+            "type": "string"
+          },
+          "shopping": {
+            "$ref": "#/components/schemas/ShoppingList"
+          },
+          "start": {
+            "title": "Start",
+            "type": "string"
+          },
+          "status": {
+            "const": "ok",
+            "title": "Status",
+            "type": "string"
+          },
+          "targets": {
+            "$ref": "#/components/schemas/TargetsUsed"
+          },
+          "variant": {
+            "title": "Variant",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "status",
+          "rules_version",
+          "start",
+          "end",
+          "variant",
+          "days",
+          "apply",
+          "shopping",
+          "notes",
+          "targets"
+        ],
+        "title": "PlanDaysResponse",
         "type": "object"
       },
       "PlanMeal": {
@@ -15190,6 +15674,66 @@
         ]
       }
     },
+    "/api/guidance/plan-days": {
+      "post": {
+        "description": "Plan 1 to 14 days at once (design note 23): each day against its own room, the days seeing each other (the\nphosphorus week, the dialysis interval, no meal twice in a row). Computes only; \"Add to plan\" sends ``apply.entries`` to\n``POST /api/log/batch``, at most 40 a request.",
+        "operationId": "guidance_plan_several_days",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanDaysRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PlanDaysResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/GuidanceUnavailable"
+                    }
+                  ],
+                  "title": "Response Guidance Plan Several Days"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Plan Several Days",
+        "tags": [
+          "guidance"
+        ]
+      }
+    },
     "/api/guidance/preferences": {
       "get": {
         "description": "The person's food preferences by name, their food-group choices and the \"Learn from my log\" switch.",
@@ -16037,6 +16581,58 @@
           }
         ],
         "summary": "Create Batch",
+        "tags": [
+          "log"
+        ]
+      }
+    },
+    "/api/log/clear-planned": {
+      "post": {
+        "description": "Take the planned food off ``start``…``end`` (design note 23 §5: \"Clear planned days\", and the Undo after \"Add to plan\"\nwith ``ids``). Eaten food is never touched and a planned low treatment stays. An id that is not one of the person's\nentries is 404 and nothing is deleted; one of theirs that is eaten, a low treatment or on another day is left alone.",
+        "operationId": "log_clear_planned",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClearPlanned"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClearPlannedResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Clear Planned",
         "tags": [
           "log"
         ]

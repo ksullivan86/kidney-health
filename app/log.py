@@ -50,6 +50,8 @@ from .foods import (
     weight_known,
 )
 from .models import (
+    ClearPlanned,
+    ClearPlannedResult,
     CopyDay,
     CopyDayResult,
     DaySummary,
@@ -752,6 +754,39 @@ def mark_eaten(body: MarkEaten, user: CurrentUser, conn: sqlite3.Connection = De
     cur = conn.execute(sql, params)
     conn.commit()
     return {"updated": int(cur.rowcount)}
+
+
+@router.post("/clear-planned", response_model=ClearPlannedResult)
+def clear_planned(body: ClearPlanned, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Take the planned food off ``start``…``end`` (design note 23 §5: "Clear planned days", and the Undo after "Add to plan"
+    with ``ids``). Eaten food is never touched and a planned low treatment stays. An id that is not one of the person's
+    entries is 404 and nothing is deleted; one of theirs that is eaten, a low treatment or on another day is left alone."""
+    where = "user_id = ? AND date >= ? AND date <= ? AND status = 'planned' AND (purpose IS NULL OR purpose != 'hypo')"
+    params: list[Any] = [user.id, body.start, body.end]
+    if body.ids is None:
+        cur = conn.execute(f"DELETE FROM log_entries WHERE {where}", params)
+        conn.commit()
+        return {"deleted": int(cur.rowcount)}
+    ids = sorted(set(body.ids))
+    chunks = [ids[i:i + 500] for i in range(0, len(ids), 500)]  # under SQLite's oldest limit of 999 variables
+    mine: set[int] = set()
+    for chunk in chunks:
+        marks = ",".join("?" * len(chunk))
+        mine.update(int(r["id"]) for r in conn.execute(
+            f"SELECT id FROM log_entries WHERE user_id = ? AND id IN ({marks})", [user.id, *chunk]))
+    missing = [i for i in ids if i not in mine]
+    if missing:
+        raise HTTPException(status_code=404, detail=f"log entry {missing[0]} not found")
+    deleted = 0
+    try:
+        for chunk in chunks:
+            marks = ",".join("?" * len(chunk))
+            deleted += conn.execute(f"DELETE FROM log_entries WHERE {where} AND id IN ({marks})", [*params, *chunk]).rowcount
+    except Exception:
+        conn.rollback()
+        raise
+    conn.commit()
+    return {"deleted": int(deleted)}
 
 
 @router.post("/copy-day", response_model=CopyDayResult, status_code=201)

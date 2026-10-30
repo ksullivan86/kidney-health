@@ -26,7 +26,7 @@ import re
 from functools import lru_cache
 from typing import Any, Iterable, Mapping
 
-RULES_VERSION = "2026-10-27.1"
+RULES_VERSION = "2026-10-30.1"
 
 MAIN_MEALS: tuple[str, ...] = ("breakfast", "lunch", "dinner")
 SNACK = "snack"
@@ -151,6 +151,10 @@ RECIPE_SERVING_FRACTIONS: tuple[float, ...] = (0.75, 0.5)
 RECIPE_MAX_ITEMS = 30
 RECIPE_POT_MAX_SERVINGS = 40.0
 VARIANT_MAX = 4
+# Several days at once (note 23): design choices, no clinical numbers.
+PLAN_DAYS_MAX = 14  # §2: targets can change at the next blood test; about as far ahead as fresh food keeps
+PLAN_REPEAT_DAYS = 2  # §4: the same meal is not planned for the same slot on either of the 2 days before
+PLAN_RECENT_FOOD_PENALTY = 0.5  # §4: per earlier plan day a food is on; the weight of a food eaten the day before
 UNKNOWN_PENALTY = 1.5
 FREE_FOOD_CARBS_G = 5.0
 HIGH_GI_PENALTY_MIN_CARBS_G = 15.0
@@ -464,6 +468,9 @@ RULE_DOCS: tuple[tuple[str, str], ...] = (
     ("RECIPE_MAX_ITEMS", "Most ingredients in a recipe (as save_recipe)"),
     ("RECIPE_POT_MAX_SERVINGS", "Most servings of one food in the whole recipe after a swap"),
     ("VARIANT_MAX", "Most \"Show another plan\" variants"),
+    ("PLAN_DAYS_MAX", "Most days one request plans (note 23: targets can change at the next blood test, and fresh food keeps about that long)"),
+    ("PLAN_REPEAT_DAYS", "A meal with the same foods is not planned for the same meal on this many days before in the same plan, unless nothing else fits"),
+    ("PLAN_RECENT_FOOD_PENALTY", "Score cost per earlier day of the same plan a food is on (the weight of a food eaten the day before)"),
     ("UNKNOWN_PENALTY", "Score cost of each unknown potassium, phosphorus or sodium value (unknown is never 0, note 03)"),
     ("FREE_FOOD_CARBS_G", "A food with at most this many carbs is free once the meal's carbs are done"),
     ("HIGH_GI_PENALTY_MIN_CARBS_G", "High-glycaemic foods cost a point from one carb choice"),
