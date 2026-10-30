@@ -67,6 +67,7 @@ in [ARCHITECTURE.md](../ARCHITECTURE.md), "M2 API: guidance". The code is the pa
 | **For your next low**: lower-potassium low treatments and the "Treating a low" card | Entry sheet with "Used to treat a low" ticked | `GET /api/guidance/swaps?purpose=hypo` |
 | **Treating a low**: the card and the person's low treatments at their dose, with "Log it" | Today's Meal ideas card (people with diabetes), even with guidance off; offline from the browser twin of the card | `GET /api/guidance/hypo-options` |
 | **Plan the rest of my day**: one option per open meal, "Show another", "Use this plan" | Today's Meal ideas card; Plan → "Plan a day…" | `POST /api/guidance/plan-day`, then `POST /api/log/batch` |
+| **Plan several days**: 1 to 14 days at once, a preview of each day, the range's shopping list, "Add to plan", "Undo", "Clear planned days" | Plan → "Plan several days…" (`js/views/plandays.js`) | `POST /api/guidance/plan-days`, then `POST /api/log/batch` (40 a request); `POST /api/log/clear-planned` |
 | **Insights**: end of day and weekly, in plain language with numbers | Today (a past day, or once breakfast, lunch and dinner are eaten or after 19:00), Trends (the chosen days ending yesterday) | `GET /api/guidance/insights/day`, `/insights/period` |
 | **Not for me**: foods never suggested again (still searchable and loggable) | "⋯" menu of a suggestion, a swap and a plan item; Settings → Meal guidance lists them | `PUT/DELETE /api/guidance/preferences/{food_id}` (the older `/not-for-me` routes are aliases) |
 | **Food preferences**: *More like this*, *Less often*, *Not for me* and *Stop using what you learned* per food; *Like* and *Less often* per food group | The "⋯" menu of a suggestion, of a swap and of a plan item; Settings → Meal guidance → Your food preferences (see "Your food preferences: the screens" below) | `GET /api/guidance/preferences`, `PUT/DELETE /api/guidance/preferences/{food_id}`, the `guidance` setting |
@@ -349,6 +350,28 @@ people keep meals they know. "Show another" (`variant` 1–4) skips that many bu
   (olive oil, unsalted butter, …) and the diet guide's advice to close the gap with fat or measured
   starch, not more meat — restriction alone drives protein-energy wasting.
 
+### Several days at once
+
+`plan_days` (design note 23) plans 1 to 14 days (`PLAN_DAYS_MAX`) in order. Each day is `plan_day` of that date with the
+food already logged on it, so day 1 is exactly what "Plan a day…" gives. The days see each other:
+
+* **The rules that look back count the plan.** The earlier days of the plan, with what is logged and planned on them, join
+  the history: the phosphorus week (§4.4) and, on hemodialysis, the interval between sessions count them, as Running high
+  counts a plan.
+* **Habits stay as of the first day.** "You often have this", usual meals, likes and "planned but not eaten" come from the
+  log before the first day. A planned food is never counted as eaten. Only the "eaten in the 2 days before" part of the
+  ranking also counts the earlier days of the plan.
+* **Variety.** A meal with the same foods as the same meal on one of the `PLAN_REPEAT_DAYS` (2) days before is left out,
+  unless nothing else fits; it is then marked `repeated` and the screen says "Same as a day before: nothing else fits."
+  Each food on those days costs `PLAN_RECENT_FOOD_PENALTY` (0.5) per day in the meal score.
+* **One set of targets.** The profile has one set of daily targets; the plan uses it on every day and invents none for
+  dialysis days. Each day says whether it is a dialysis day.
+
+The answer adds per day `projected_unknown` (how many foods of the day list no value, per nutrient: the total then reads
+"≥", or "not listed"), and for the whole range `shopping` (the shape of `GET /api/plan/shopping`). Nothing is written.
+"Add to plan" sends `apply.entries` in requests of at most 40, each food with its own `client_id`; Undo and "Clear
+planned days" use `POST /api/log/clear-planned`, which never takes off eaten food or a planned low treatment.
+
 ## Insights
 
 `insights.py` (§4.8), from **eaten** entries only (planned ones are counted in `planned_excluded`).
@@ -489,7 +512,7 @@ Generated from `app/guidance/rules.py` (the same data as `GET /api/guidance/rule
 `python3 scripts/guidance_rules_doc.py`; `tests/guidance/test_docs.py` fails when it is stale.
 
 <!-- rules-table:start -->
-Rules version **2026-10-27.1** (hash `cc53c2250d14fe26`).
+Rules version **2026-10-30.1** (hash `e8b1375066c1c02b`).
 
 | Name | Value | Basis |
 |---|---|---|
@@ -594,6 +617,9 @@ Rules version **2026-10-27.1** (hash `cc53c2250d14fe26`).
 | `RECIPE_MAX_ITEMS` | `30` | Most ingredients in a recipe (as save_recipe) |
 | `RECIPE_POT_MAX_SERVINGS` | `40.0` | Most servings of one food in the whole recipe after a swap |
 | `VARIANT_MAX` | `4` | Most "Show another plan" variants |
+| `PLAN_DAYS_MAX` | `14` | Most days one request plans (note 23: targets can change at the next blood test, and fresh food keeps about that long) |
+| `PLAN_REPEAT_DAYS` | `2` | A meal with the same foods is not planned for the same meal on this many days before in the same plan, unless nothing else fits |
+| `PLAN_RECENT_FOOD_PENALTY` | `0.5` | Score cost per earlier day of the same plan a food is on (the weight of a food eaten the day before) |
 | `UNKNOWN_PENALTY` | `1.5` | Score cost of each unknown potassium, phosphorus or sodium value (unknown is never 0, note 03) |
 | `FREE_FOOD_CARBS_G` | `5.0` | A food with at most this many carbs is free once the meal's carbs are done |
 | `HIGH_GI_PENALTY_MIN_CARBS_G` | `15.0` | High-glycaemic foods cost a point from one carb choice |

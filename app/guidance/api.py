@@ -49,13 +49,15 @@ from .models import (
     PeriodInsightsResponse,
     PlanDayRequest,
     PlanDayResponse,
+    PlanDaysRequest,
+    PlanDaysResponse,
     PreferenceBody,
     PreferenceFood,
     PreferenceList,
     RulesResponse,
     SwapResponse,
 )
-from .planner import plan_day
+from .planner import plan_day, plan_days
 from .recipes import Target, fit_recipe, next_open_meal
 from .score import Counter
 from .state import GuidanceContext
@@ -309,6 +311,26 @@ def plan_the_day(body: PlanDayRequest, request: Request, user: CurrentUser,
     if body.explain:
         result["explain"] = {"evaluations": counter.foods, "meal_evaluations": counter.meals,
                              "pool_per_role": ctx.tunables.pool_per_role, "beam_width": ctx.tunables.beam_width}
+    return result
+
+
+@router.post("/plan-days", response_model=PlanDaysResponse | GuidanceUnavailable)
+def plan_several_days(body: PlanDaysRequest, request: Request, user: CurrentUser,
+                      conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Plan 1 to 14 days at once (design note 23): each day against its own room, the days seeing each other (the
+    phosphorus week, the dialysis interval, no meal twice in a row). Computes only; "Add to plan" sends ``apply.entries`` to
+    ``POST /api/log/batch``, at most 40 a request."""
+    store = settings_store(request)
+    off = gate(conn, store, user.id, "plan")
+    if off is not None:
+        return off
+    ctx = load_ctx(request, conn, user.id, body.start)
+    if not C.has_targets(ctx.profile):
+        return unavailable("no_targets", M.NO_TARGETS)
+    days = C.load_days(conn, user.id, body.start, body.days, ctx.foods, foods_json(request))
+    result = plan_days(ctx, days, body.meals, use_saved_meals=body.use_saved_meals, use_usual=body.use_usual,
+                       use_starters=body.use_starters, variant=body.variant)
+    result["targets"] = targets_used(ctx)
     return result
 
 

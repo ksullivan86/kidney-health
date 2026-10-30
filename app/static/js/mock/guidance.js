@@ -2,7 +2,7 @@
    twin of the engine, js/engine/guidance/*.js).
 
    Routes (ARCHITECTURE.md "M2 API: guidance"): GET /api/guidance/next-meal, /swaps, /hypo-options,
-   /insights/day, /insights/period, /rules, /preferences, /learned, /not-for-me; POST /plan-day; PUT and DELETE
+   /insights/day, /insights/period, /rules, /preferences, /learned, /not-for-me; POST /plan-day, /plan-days; PUT and DELETE
    /preferences/{food_id} and, as aliases of its not_for_me rows, /not-for-me/{food_id}. Query and body validation give the server's 400 texts (FastAPI query
    parameters in signature order, then the route's own checks); the answers are serialised like the
    server's response models (optional fields present as null). The demo person's context is loaded the
@@ -447,6 +447,59 @@
         beam_width: ctx.tunables.beam_width };
     }
     return planModel(result);
+  });
+
+  // Several days at once (design note 23; api.plan_several_days): validated as PlanDaysRequest, then planDays over each day's
+  // logged entries (context.load_days).
+  route('POST', '/api/guidance/plan-days', function ({ body }) {
+    this._currentUser();
+    const c = new Check(body);
+    if (!c.has('start')) c.err('start', 'Field required');
+    else if (typeof body.start !== 'string') c.err('start', 'Input should be a valid string');
+    else { const e = validDate(body.start); if (e) c.err('start', e); else c.out.start = body.start; }
+    c.num('days', { def: 7, ge: 1, le: R.PLAN_DAYS_MAX, int: true, nullable: false });
+    if (c.has('meals') && body.meals != null) {
+      const raw = body.meals;
+      if (!Array.isArray(raw)) c.err('meals', 'Input should be a valid list');
+      else {
+        const n = c.errors.length;
+        raw.forEach((x, i) => { if (!MEAL_KEYS.includes(x)) c.err(`meals.${i}`, MEAL_CHOICE); });
+        if (c.errors.length === n) {
+          if (raw.length < 1) c.err('meals', 'List should have at least 1 item after validation, not 0');
+          else if (raw.length > 4) c.err('meals', `List should have at most 4 items after validation, not ${raw.length}`);
+          else if (new Set(raw).size !== raw.length) c.err('meals', 'each meal may be listed once');
+          else c.out.meals = [...raw];
+        }
+      }
+    } else c.out.meals = null;
+    for (const name of ['use_saved_meals', 'use_usual', 'use_starters']) {
+      if (!c.has(name)) { c.out[name] = true; continue; }
+      const r = KH.settings.validate({ type: 'bool' }, body[name]);
+      if (r.error) c.err(name, r.error); else c.out[name] = r.value;
+    }
+    c.num('variant', { def: 0, ge: 0, le: 4, int: true, nullable: false });
+    const known = ['start', 'days', 'meals', 'use_saved_meals', 'use_usual', 'use_starters', 'variant'];
+    for (const k of Object.keys(c.body)) if (!known.includes(k)) c.err(k, 'Extra inputs are not permitted');
+    const b = c.done();
+    const off = this._guidanceGate('plan');
+    if (off) return off;
+    const ctx = this._guidanceContext(b.start);
+    if (!this._guidanceHasTargets(ctx.profile)) return this._guidanceUnavailable('no_targets', GE.M.NO_TARGETS);
+    const days = [];
+    for (let i = 0; i < b.days; i++) {
+      const day = R.addDays(b.start, i);
+      days.push(this._guidanceRows(day, day, false).map((e) => GE.dayEntry({ id: e.id, meal: e.meal, status: e.status, food: ctx.foods.get(e.food_id),
+        name: e.food_name, servings: e.servings, nutrients: { ...e.nutrients }, purpose: e.purpose || null })));
+    }
+    const result = GE.planDays(ctx, days, b.meals, { useSavedMeals: b.use_saved_meals, useUsual: b.use_usual, useStarters: b.use_starters,
+      variant: b.variant });
+    result.targets = this._guidanceTargets(ctx);
+    for (const day of result.days) {
+      for (const meal of day.meals) withNulls(meal, ['message', 'closest', 'apply_saved']);
+      day.day_after.projected_status = statusModel(day.day_after.projected_status);
+      day.day_after.new_alerts = day.day_after.new_alerts.map((a) => ({ level: a.level, nutrient: a.nutrient, meal: null, message: a.message }));
+    }
+    return result;
   });
 
   route('GET', '/api/guidance/insights/day', function ({ qp }) {

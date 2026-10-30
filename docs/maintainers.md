@@ -236,6 +236,9 @@ A repository variable (Settings → Secrets and variables → Actions → Variab
 * **v0.11.0: not held.** The release runs schema step 25 at start without an automatic copy (it only adds two columns), and
   moves the shipped files from `:0.10` to `:0.11`. A host that auto-updates `:latest` migrates its database at the next pull; one
   that tracks `:0.10` stays on 0.10.x. CHANGELOG.md, "Upgrading from 0.10", says to take a backup first.
+* **v0.12.0: not held.** No schema step. The release moves the shipped files from `:0.11` to `:0.12`. A host that tracks
+  `:0.11` stays on 0.11.x. CHANGELOG.md, "Upgrading from 0.11", says to take a backup first and to run `scripts/ai_eval.py`
+  again for the new prompt version.
 * Use it for patch tags of an older minor version (above), and only with the owner's say-so for anything else. Remove it again (or set it
   to anything but `true`) when the hold should end; the next `v*` tag then moves `:latest`, or move it
   by hand: `docker buildx imagetools create --tag ghcr.io/ksullivan86/kidney-health:latest

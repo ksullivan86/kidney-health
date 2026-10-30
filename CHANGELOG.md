@@ -7,8 +7,52 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+## 0.12.0 — 2026-10-30
+
+Version 0.12 plans several days at once. On the Plan tab you can plan up to 14 days from your own foods, see each day and
+a shopping list first, and add it as planned food. AI meal ideas and recipes are made smaller or changed instead of left
+out, and the app says so when it does not start, for example over a VPN.
+
+**Before you upgrade, read [Upgrading from 0.11](#upgrading-from-011-read-this-first).** There is no schema step. Nothing
+new is switched on.
+
+### Highlights
+
+* **Plan several days at once**, up to 14, with a preview, a shopping list for those days, **Undo** and **Clear planned
+  days…**. Food you ate and planned low treatments always stay.
+* **Fewer "The AI ideas did not fit your targets today"**: an idea or recipe that is only too big is made smaller.
+* **A message when the app does not start**, with what to change when it happens over a VPN.
+* **Changes made while an entry syncs are kept**, and an entry you discard while it syncs is gone from the server too.
+* **Easier to use with bigger text, the keyboard and in the dark theme.** Field edges stand out.
+
+### Upgrading from 0.11 (read this first)
+
+1. **Back up first** (`podman exec kidney-health python -m app.admin backup /data/before-0.12.0.db`). There is no schema
+   step in 0.12.
+2. **Coming from 0.10**, read [Upgrading from 0.10](#upgrading-from-010-read-this-first) too. Schema step 25 runs at the
+   first start.
+3. **Change the tag** to `:0.12`, or pin a digest from the release notes. The shipped files already say `:0.12`.
+4. **Nothing new is switched on.** Planning several days uses the app's own rules and needs no setting.
+5. **If you use AI**, run `scripts/ai_eval.py` again for each model: `PROMPT_VERSION` is now `2026-10-29.1`.
+6. **If you reach the server over a VPN** such as NetBird, see [Only the header shows over a VPN](docs/deployment.md#only-the-header-shows-over-a-vpn).
+   The fix is in the network, not the app.
+
+### Known limitations
+
+* A plan covers at most 14 days, and every day uses the same targets; dialysis days are marked but not given their own.
+* The same meal is not planned on either of the 2 days before, unless nothing else fits. You cannot choose to repeat a
+  breakfast every day yet.
+* Every account still needs a password.
+* The iPhone app is built and tested in CI, but putting it on a phone needs the owner's Apple Developer account.
+
 ### For people using the app
 
+* **Plan several days at once.** On the Plan tab, **Plan several days…** plans up to 14 days from your own foods. Choose the
+  first day and how many days, or tap **Rest of this week**, **7 days** or **14 days**. You see each day's meals and totals and a
+  shopping list for those days before anything is saved. **Add to plan** asks first and adds the food as planned, never as
+  eaten. **Undo** takes it off again, and **Clear planned days…** takes the planned food off those days. Food you ate and planned
+  low treatments always stay. The same meal is not planned two days in a row unless nothing else fits. See
+  [Planning meals](handbook/docs/app/planning-and-menus.md).
 * **A message when the app does not start.** If the app's files do not finish loading, the page no longer shows only the
   header. After about 8 seconds it says "The app did not start", with **Reload** and a link to what to change on the server.
   If a script fails, it says so at once. Over a VPN such as NetBird this is often packets too big for the tunnel: see
@@ -51,6 +95,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people who run a server
 
+* **Two new routes.** `POST /api/guidance/plan-days` plans 1 to 14 days and writes nothing. `POST /api/log/clear-planned` takes the
+  planned food off up to 14 days, or only the entries you name; it never deletes eaten food or a planned low treatment. The
+  guidance rules version is now `2026-10-30.1`. The Chromium check is `python tools/e2e/plandays.py`.
 * **New `PROMPT_VERSION` (`2026-10-29.1`).** Each meal candidate now tells the AI the most of it the app accepts. Run
   `scripts/ai_eval.py` again for each model you use. The report also counts `ideas_lowered`, the ideas the app made smaller.
 * **An automated accessibility check.** `python tools/e2e/a11y.py` tabs through the main screens and sheets at phone and desktop

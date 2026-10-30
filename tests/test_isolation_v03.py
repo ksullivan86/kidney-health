@@ -214,6 +214,7 @@ def test_food_preferences_the_learned_list_and_the_group_choices_never_cross_bet
     def b_view() -> dict[str, Any]:
         return {"fits": b.get("/api/guidance/next-meal", params=q).json(),
                 "plan": b.post("/api/guidance/plan-day", json={"date": DAY}).json(),
+                "plan_days": b.post("/api/guidance/plan-days", json={"start": DAY, "days": 3}).json(),
                 "low": b.get("/api/guidance/hypo-options").json(), "prefs": b.get("/api/guidance/preferences").json(),
                 "learned": b.get("/api/guidance/learned").json(), "not_for_me": b.get("/api/guidance/not-for-me").json(),
                 "settings": b.get("/api/me/settings").json()["settings"]["guidance"]}

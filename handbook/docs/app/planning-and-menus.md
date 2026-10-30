@@ -1,13 +1,13 @@
 ---
 title: Planning meals and using the menus
-description: "Plan meals ahead, reuse saved meals, copy a day, make a shopping list, and put the handbook's sample menus into the app."
+description: "Plan meals ahead, plan several days at once, reuse saved meals, copy a day, make a shopping list, and put the handbook's sample menus into the app."
 slug: planning-and-menus
 audience: [app-user, patient, caregiver]
 applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-07
+last_checked: 2026-10-30
 fact_checked: 2026-10-05
 sources: [ARCH, NOTE06, NOTE08, FDC, Q20, A26-5]
 ---
@@ -134,6 +134,32 @@ See [Optional AI](ai.md) for what is sent and where.
 everything, only what was eaten, or only what was planned. The copies arrive as **Planned**, with
 numbers worked out again from the foods. A good habit: copy a day that went well onto a day next week.
 
+## Plan several days
+
+**Plan → Plan several days…** plans up to 14 days at once from your own foods
+([architecture contract][ARCH]; [design note 06][NOTE06]).
+
+1. Choose the **First day** and how many **Days**, or tap **Rest of this week**, **7 days** or **14 days**.
+2. The app plans every meal that has nothing logged yet. Tick meals if you want only those, on every day.
+3. Check the preview. Each day shows its meals and what the day adds up to with the plan. A food that does
+   not list a value shows **not listed**, and a total that misses some shows **≥**. It is never shown as 0.
+4. Below the days is a **shopping list** for those days, with **Copy list** and **Share list**.
+5. Tap **Add to plan**. The app asks first, then adds the foods as **planned**. Nothing is marked as eaten.
+
+Each day is planned against your own targets, with the food you already logged that day. The days are
+planned in order and see each other: phosphorus counts on the week's average, and on hemodialysis the days
+between sessions add up. The same meal is not planned two days in a row unless nothing else fits; the
+preview then says "Same as a day before: nothing else fits."
+
+The app has one set of daily targets, the same on every day. Dialysis days are marked in the preview. If
+your care team gives you other limits for those days, check them against the preview.
+
+**Undo**, right after adding, takes off exactly what was added. **Clear planned days…** takes every
+planned food off the days you chose. It never takes off food you ate, or a planned low treatment.
+
+Two weeks is the most because targets can change after a blood test or a clinic visit. Plan again after
+that, so the plan uses your new targets.
+
 ## Shopping list
 
 **Plan** → **Shopping list** adds up every **planned** food in the week you are looking at: how many
@@ -194,6 +220,8 @@ Your sessions are Monday, Wednesday and Friday. On Sunday evening:
 - **Planned food is counted as eaten.** It is not: eaten totals and alerts use eaten entries only; the
   gray "if you eat what's planned" line and the lighter bar show the plan.
 - **The shopping list is empty.** It lists **planned** entries only, for the week on screen.
+- **I added a plan by mistake.** Tap **Undo** in the sheet, or use **Plan several days… → Clear planned days…**
+  for those days. Food you ate and planned low treatments stay.
 - **A saved meal shows a hidden food.** You deleted that food; the meal still works with the stored
   numbers.
 
@@ -205,7 +233,7 @@ Your sessions are Monday, Wednesday and Friday. On Sunday evening:
 
 ## Sources
 
-- [Project architecture contract][ARCH], v0.2: planned entries, saved meals, copy day, shopping list.
+- [Project architecture contract][ARCH], v0.2: planned entries, saved meals, copy day, shopping list; planning several days.
 - [Design note 08][NOTE08]: the sample menus; [design note 06][NOTE06]: the plan builder (v0.3).
 - [USDA FoodData Central][FDC]: the food list behind the app and the menus.
 - [KDOQI 2020 nutrition guideline][Q20]; [ADA Standards of Care 2026, section 5][A26-5], Rec 5.28.

@@ -338,6 +338,12 @@ function guidanceVectors(GE, file = GUIDANCE_VECTORS) {
       return GE.planDay(ctx, spec.meals || null, { useSavedMeals: spec.use_saved_meals !== false, useUsual: spec.use_usual !== false,
         useStarters: spec.use_starters !== false, variant: spec.variant || 0 });
     }
+    if (fn === 'plan_days') {
+      const days = [ctx.day, ...spec.later_days.map((list) => list.map((e) => GE.dayEntry({ id: e.id, meal: e.meal, status: e.status,
+        food: ctx.foods.get(e.food_id), name: e.name, servings: e.servings, nutrients: { ...e.nutrients }, purpose: e.purpose })))];
+      return GE.planDays(ctx, days, spec.meals || null, { useSavedMeals: spec.use_saved_meals !== false, useUsual: spec.use_usual !== false,
+        useStarters: spec.use_starters !== false, variant: spec.variant || 0 });
+    }
     if (fn === 'day_insights') return GE.dayInsights(ctx);
     if (fn === 'learned') return GE.learned(ctx);
     if (fn === 'fit_recipe') {

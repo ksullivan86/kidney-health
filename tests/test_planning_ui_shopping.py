@@ -29,5 +29,5 @@ def test_the_text_is_what_is_not_ticked_yet():
 def test_share_falls_back_to_copy_and_copy_to_the_text_box():
     assert "navigator.share({ title: 'Shopping list', text })" in PLAN and "e.name === 'AbortError'" in PLAN
     copy = PLAN[PLAN.index("async function copyShopping"):PLAN.index("$('#shopping-copy')")]
-    assert "allowsFeature('clipboard-write')" in copy and "showShoppingText(text);" in copy
+    assert "allowsFeature('clipboard-write')" in copy and "showShoppingText(text, box);" in copy
     assert "$('#shopping-share').hidden = !items.length || typeof navigator.share !== 'function';" in PLAN

@@ -17,7 +17,8 @@ that is too low in calories (R2: restriction-only ranking drives under-eating).
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from datetime import date as _date, timedelta
 from typing import Any, Iterable, Mapping, Sequence
 
 from ..nutrients import NUTRIENT_KEYS, build_projected_alerts, daily_status, round_nutrients
@@ -42,7 +43,7 @@ from .score import (
     static_term,
     today_stats,
 )
-from .state import DayEntry, GuidanceContext, virtual_entry
+from .state import DayEntry, GuidanceContext, HistoryEntry, virtual_entry
 from .vectors import FoodVec
 
 _LEVEL_RANK = {"green": 0, "yellow": 1, "red": 2}
@@ -204,6 +205,7 @@ class SlotPlan:
     closest: dict[str, Any] | None = None
     today: TodayStats | None = None  # the day as it was when this slot was planned (for re-scoring)
     modified: bool = False  # changed by the whole-day repair or the protein top-up
+    repeated: bool = False  # several days (note 23 §4): the same foods as this meal on a day before, as nothing else fits
 
     @property
     def built(self) -> bool:
@@ -265,17 +267,28 @@ def _option_from_familiar(slot: str, room: Room, opt: Mapping[str, Any]) -> Slot
                     scale=opt["scale"], score=opt["score"], items=list(opt["_items"]))
 
 
+def food_set(items: Iterable[MealItem]) -> frozenset[int]:
+    """The foods of a meal, whatever the amounts: "the same meal" for the repeat rule (note 23 §4)."""
+    return frozenset(f.id for f, _ in items)
+
+
 def plan_slot(ctx: GuidanceContext, slot: str, open_meals: Sequence[str], habit: HabitStats,
               pools: Mapping[str, list[FoodVec]], counter: Counter, *, use_saved: bool, use_usual: bool,
-              use_starters: bool, variant: int, forced: int | None = None) -> tuple[SlotPlan, list[SlotPlan]]:
+              use_starters: bool, variant: int, forced: int | None = None,
+              avoid: frozenset[frozenset[int]] = frozenset(), recent: Mapping[int, int] | None = None,
+              ) -> tuple[SlotPlan, list[SlotPlan]]:
     """``(chosen plan, up to AI_PLAN_OPTIONS_MAX options)`` for one slot; the rule's choice is option 0.
 
     ``forced`` picks another option by index (the AI layer's ``plan`` mode, note 06 §4.13); an index
-    out of range keeps the rule's choice.
+    out of range keeps the rule's choice. ``avoid`` and ``recent`` serve several days at once (note 23 §4):
+    meals whose food set is in ``avoid`` are left out unless nothing else fits, and ``recent`` joins the
+    day's :class:`TodayStats` so the meal score sees the foods of the days before.
     """
     totals = day_totals(ctx.day)
     room = meal_room(ctx, slot, open_meals=open_meals, totals=totals)
     today = today_stats(ctx.day)
+    if recent:
+        today = replace(today, recent=recent)
     scorer = Scorer(room, habit, today, counter)
     dialysis = ctx.profile.dialysis != "none"
     snack = slot == R.SNACK
@@ -295,6 +308,14 @@ def plan_slot(ctx: GuidanceContext, slot: str, open_meals: Sequence[str], habit:
     built = beam_build(room, scorer, today, dialysis, steps, width, counter, snack=snack)
     pref = habit.pref
     familiar = _familiar_options(ctx, slot, room, today, counter, use_saved, use_usual, use_starters, pref)
+    repeated = False
+    if avoid and (familiar or built):
+        fresh_familiar = [o for o in familiar if food_set(o["_items"]) not in avoid]
+        fresh_built = [b for b in built if food_set(b.items) not in avoid]
+        if fresh_familiar or fresh_built:
+            familiar, built = fresh_familiar, fresh_built
+        else:
+            repeated = True  # nothing else fits: the meal of a day before may come back
 
     # "Show me another plan": variant n skips the first n built options.
     built_choices = built[min(variant, len(built) - 1):] if built else []
@@ -320,6 +341,7 @@ def plan_slot(ctx: GuidanceContext, slot: str, open_meals: Sequence[str], habit:
                 break
         if forced is not None and 0 <= forced < len(options):
             chosen = options[forced]
+        chosen.repeated = repeated
         return chosen, options
     # Nothing fits: the closest built meal (no room check) at its best scale.
     relaxed = beam_build(room, scorer, today, dialysis, steps, width, counter, snack=snack, relaxed=True)
@@ -512,12 +534,24 @@ def plan_day(ctx: GuidanceContext, meals: Sequence[str] | None = None, *, use_sa
     ``forced`` (slot → option index) and ``with_options`` serve the AI layer's ``plan`` mode
     (:mod:`app.guidance.ai_bridge`): the whole-day check and repair always run on the chosen options.
     """
+    return _plan_day(ctx, meals, use_saved_meals=use_saved_meals, use_usual=use_usual, use_starters=use_starters,
+                     variant=variant, counter=counter, forced=forced, with_options=with_options)[0]
+
+
+def _plan_day(ctx: GuidanceContext, meals: Sequence[str] | None = None, *, use_saved_meals: bool = True,
+              use_usual: bool = True, use_starters: bool = True, variant: int = 0,
+              counter: Counter | None = None, forced: Mapping[str, int] | None = None,
+              with_options: bool = False, habit: HabitStats | None = None,
+              avoid: Mapping[str, frozenset[frozenset[int]]] | None = None,
+              recent: Mapping[int, int] | None = None) -> tuple[dict[str, Any], list[SlotPlan]]:
+    """:func:`plan_day` and its slot plans. ``habit``, ``avoid`` (slot → food sets) and ``recent`` come from
+    :func:`plan_days`; left out, the day is planned on its own."""
     counter = counter if counter is not None else Counter()
     slots = [m for m in R.SLOT_ORDER if m in set(meals)] if meals else default_slots(ctx)
     variant = max(0, min(int(variant), R.VARIANT_MAX))
     targets, warn = ctx.profile.targets, ctx.profile.warn_fraction
     before = daily_status(_day_totals12(ctx.day), targets, warn)
-    habit = habit_stats(ctx)
+    habit = habit if habit is not None else habit_stats(ctx)
     pool_size = max(R.POOL_PER_ROLE_RANGE[0], min(int(ctx.tunables.pool_per_role), R.POOL_PER_ROLE_RANGE[1]))
     pools = build_pools(ctx, habit, today_stats(ctx.day), pool_size)
     plans: list[SlotPlan] = []
@@ -526,8 +560,11 @@ def plan_day(ctx: GuidanceContext, meals: Sequence[str] | None = None, *, use_sa
         ctx_i = ctx.with_day(_day_with(ctx, plans))
         plan, options = plan_slot(ctx_i, slot, slots[i:], habit, pools, counter, use_saved=use_saved_meals,
                                   use_usual=use_usual, use_starters=use_starters, variant=variant,
-                                  forced=(forced or {}).get(slot))
+                                  forced=(forced or {}).get(slot), avoid=(avoid or {}).get(slot, frozenset()),
+                                  recent=recent)
         plan.today = today_stats(ctx_i.day)
+        if recent:
+            plan.today = replace(plan.today, recent=recent)
         plans.append(plan)
         slot_options[slot] = options
     _repair(ctx, plans, before)
@@ -569,4 +606,131 @@ def plan_day(ctx: GuidanceContext, meals: Sequence[str] | None = None, *, use_sa
     }
     if with_options:
         result["options"] = {slot: [plan_json(ctx, o) for o in opts] for slot, opts in slot_options.items()}
-    return result
+    return result, plans
+
+
+# --------------------------------------------------------------------------- #
+# Several days at once (note 23)
+# --------------------------------------------------------------------------- #
+
+
+def add_days(day: str, n: int) -> str:
+    return (_date.fromisoformat(day) + timedelta(days=n)).isoformat()
+
+
+def is_dialysis_day(ctx: GuidanceContext, day: str) -> bool:
+    """A hemodialysis day of the profile (``dialysis_days``: 0 = Monday … 6 = Sunday), as the Plan week marks it."""
+    return ctx.profile.dialysis == "hemodialysis" and _date.fromisoformat(day).weekday() in set(ctx.profile.dialysis_days)
+
+
+def _history_rows(day: str, entries: Iterable[DayEntry]) -> list[HistoryEntry]:
+    return [HistoryEntry(date=day, meal=e.meal, food_id=e.food_id, name=e.name, servings=e.servings,
+                         nutrients=e.nutrients, purpose=e.purpose, flags=e.flags) for e in entries]
+
+
+def unknown_counts(day: Iterable[DayEntry]) -> dict[str, int]:
+    """Entries (and planned items) of a day without a value, per nutrient: the day's total is then "at least"."""
+    out: dict[str, int] = {}
+    for e in day:
+        for k in NUTRIENT_KEYS:
+            if e.nutrients.get(k) is None:
+                out[k] = out.get(k, 0) + 1
+    return {k: out[k] for k in NUTRIENT_KEYS if k in out}
+
+
+def shopping_items(ctx: GuidanceContext, entries: Iterable[Mapping[str, Any]]) -> list[dict[str, Any]]:
+    """What a plan adds, by food: servings summed, grams, on how many days (``GET /api/plan/shopping``'s shape), by name."""
+    servings: dict[int, float] = {}
+    dates: dict[int, set[str]] = {}
+    for e in entries:
+        fid = int(e["food_id"])
+        servings[fid] = servings.get(fid, 0.0) + float(e["servings"])
+        dates.setdefault(fid, set()).add(e["date"])
+    foods = sorted((ctx.foods[fid] for fid in servings), key=lambda f: (f.name_fold, f.id))
+    return [{"food_id": f.id, "food_name": f.name, "serving_desc": f.serving_desc, "servings": R.round_to(servings[f.id], 3),
+             "grams": R.round_to(servings[f.id] * f.serving_g, 1), "days": len(dates[f.id])} for f in foods]
+
+
+def plan_days(ctx: GuidanceContext, days: Sequence[Sequence[DayEntry]], meals: Sequence[str] | None = None, *,
+              use_saved_meals: bool = True, use_usual: bool = True, use_starters: bool = True, variant: int = 0,
+              counter: Counter | None = None) -> dict[str, Any]:
+    """Plan ``len(days)`` days from ``ctx.date`` (note 23); ``days[i]`` holds the logged entries of ``ctx.date + i``.
+
+    Each day is :func:`plan_day` of that date with its own logged food. The days are planned in order and see each other:
+
+    * the earlier days of the plan (what is logged on them and what the plan adds) join the history the room reads, so the
+      phosphorus week and the dialysis interval count them (as Running high counts plans);
+    * the habit term is the first day's (a planned food is never counted as eaten); only its "the 2 days before" part also
+      counts the earlier plan days;
+    * a meal with the same foods as the same meal on one of the ``PLAN_REPEAT_DAYS`` days before is left out unless
+      nothing else fits, and each food on those days costs ``PLAN_RECENT_FOOD_PENALTY`` per day in the meal score.
+
+    The first day is therefore exactly :func:`plan_day` of ``ctx.date``. Computes only."""
+    counter = counter if counter is not None else Counter()
+    variant = max(0, min(int(variant), R.VARIANT_MAX))
+    start = ctx.date
+    habit0 = habit_stats(ctx)
+    carried: list[HistoryEntry] = []
+    foods_on: list[frozenset[int]] = []  # per day so far: its foods (logged and planned), low treatments left out
+    slot_sets: list[dict[str, frozenset[int]]] = []  # per day so far: meal slot → its foods
+    out_days: list[dict[str, Any]] = []
+    entries: list[dict[str, Any]] = []
+    for i, logged in enumerate(days):
+        day = add_days(start, i)
+        window = range(max(0, i - R.PLAN_REPEAT_DAYS), i)
+        recent: dict[int, int] = {}
+        for j in window:
+            for fid in sorted(foods_on[j]):
+                recent[fid] = recent.get(fid, 0) + 1
+        habit = habit0
+        if i:
+            # "The 2 days before" of the habit term: the eaten days before the plan that are still in it, then the plan's days.
+            since = add_days(day, -R.PLAN_REPEAT_DAYS)
+            eaten: dict[int, set[str]] = {}
+            for h in ctx.history:
+                if not h.hypo and since <= h.date < start:
+                    eaten.setdefault(h.food_id, set()).add(h.date)
+            prev2 = {fid: len(dates) for fid, dates in eaten.items()}
+            for fid, n in recent.items():
+                prev2[fid] = prev2.get(fid, 0) + n
+            habit = replace(habit0, prev2=prev2)
+        avoid: dict[str, frozenset[frozenset[int]]] = {}
+        for slot in R.SLOT_ORDER:
+            sets = frozenset(slot_sets[j][slot] for j in window if slot in slot_sets[j])
+            if sets:
+                avoid[slot] = sets
+        ctx_i = GuidanceContext(
+            date=day, profile=ctx.profile, prefs=ctx.prefs, foods=ctx.foods, day=tuple(logged),
+            history=ctx.history + tuple(carried), history60=ctx.history60, planned30=ctx.planned30, eaten30=ctx.eaten30,
+            saved_meals=ctx.saved_meals, combos=ctx.combos, tunables=ctx.tunables,
+        )
+        result, plans = _plan_day(ctx_i, meals, use_saved_meals=use_saved_meals, use_usual=use_usual,
+                                  use_starters=use_starters, variant=variant, counter=counter, habit=habit, avoid=avoid,
+                                  recent=recent)
+        with_plan = _day_with(ctx_i, plans)
+        carried.extend(_history_rows(day, with_plan))
+        foods_on.append(frozenset(e.food_id for e in with_plan if not e.hypo))
+        sets_now: dict[str, set[int]] = {}
+        for e in with_plan:
+            if not e.hypo:
+                sets_now.setdefault(e.meal, set()).add(e.food_id)
+        slot_sets.append({slot: frozenset(ids) for slot, ids in sets_now.items()})
+        for item, plan in zip(result["meals"], plans):
+            item["repeated"] = plan.repeated
+        day_after = {**result["day_after"], "projected_unknown": unknown_counts(with_plan)}
+        out_days.append({"date": day, "dialysis_day": is_dialysis_day(ctx, day), "meals": result["meals"],
+                         "protein_topup": result["protein_topup"], "day_after": day_after,
+                         "energy_note": result["energy_note"]})
+        entries.extend(result["apply"]["entries"])
+    return {
+        "status": "ok",
+        "rules_version": R.RULES_VERSION,
+        "start": start,
+        "end": add_days(start, len(days) - 1),
+        "variant": variant,
+        "days": out_days,
+        "apply": {"endpoint": "/api/log/batch", "entries": entries},
+        "shopping": {"items": shopping_items(ctx, entries)},
+        "notes": [M.DISCLAIMER],
+    }
+

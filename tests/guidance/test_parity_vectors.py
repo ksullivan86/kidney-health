@@ -43,8 +43,13 @@ def test_every_case_replays_from_its_plain_json_input():
 def test_vectors_cover_every_engine_function_and_the_note_06_cases():
     doc = json.loads(VECTORS.read_text(encoding="utf-8"))
     fns = {c["call"]["fn"] for c in doc["cases"]}
-    assert fns == {"meal_room", "what_fits", "find_swaps", "hypo_options", "plan_day", "day_insights", "period_insights",
-                   "prefilter", "learned", "fit_recipe"}
+    assert fns == {"meal_room", "what_fits", "find_swaps", "hypo_options", "plan_day", "plan_days", "day_insights",
+                   "period_insights", "prefilter", "learned", "fit_recipe"}
+    # Note 23: several days, with a meal that repeats only because nothing else fits.
+    days = [c for c in doc["cases"] if c["call"]["fn"] == "plan_days"]
+    assert any(m["repeated"] for c in days for d in c["output"]["days"] for m in d["meals"])
+    for needle in ("hemodialysis", "phosphorus week", "a low treatment", "lists no potassium", "real list: a week"):
+        assert any(needle in c["id"] for c in days), needle
     # Note 16: every outcome of a recipe fit is in the file.
     statuses = {c["output"]["status"] for c in doc["cases"] if c["call"]["fn"] == "fit_recipe"}
     assert statuses == {"fits", "fits_after_changes", "fits_smaller_serving", "does_not_fit"}

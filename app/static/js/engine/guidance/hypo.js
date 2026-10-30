@@ -1,6 +1,6 @@
 /* Kidney Diet Log — meal guidance, part 9 of 9: free text that may describe a low is never sent to AI
    (note 04 G7). Twin of app/guidance/hypo.py, plus the engine's public entry points
-   (KH.guidanceEngine.whatFits, findSwaps, hypoOptions, planDay, dayInsights, periodInsights, prefilter).
+   (KH.guidanceEngine.whatFits, findSwaps, hypoOptions, planDay, planDays, dayInsights, periodInsights, prefilter).
 
    The classifier errs on the side of showing the "Treating a low" card: a false alarm costs one tap, a
    missed low could cost far more. Food descriptors ("low-fat", "low sodium", "low-carb") are not a low.
@@ -125,6 +125,7 @@
     makeFood: R.makeFood, makeContext: R.makeContext, dayEntry: R.dayEntry, historyEntry: R.historyEntry,
     mealRoom: GE.budget.mealRoom, roomJson: GE.fits.roomJson,
     whatFits: GE.fits.whatFits, findSwaps: GE.swaps.findSwaps, hypoOptions: GE.swaps.hypoOptions, planDay: GE.planner.planDay,
+    planDays: GE.planner.planDays,
     dayInsights: GE.insights.dayInsights, periodInsights: GE.insights.periodInsights, periodBounds: GE.insights.periodBounds,
     learned: GE.fits.learned, prefilter, mentionsLow,
   });

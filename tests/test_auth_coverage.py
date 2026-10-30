@@ -94,6 +94,7 @@ V03_ROUTES = {
     ("post", "/api/labs/import"),  # v0.3.1
     ("get", "/api/guidance/next-meal"), ("get", "/api/guidance/swaps"), ("get", "/api/guidance/hypo-options"),
     ("post", "/api/guidance/plan-day"), ("get", "/api/guidance/insights/day"), ("get", "/api/guidance/insights/period"),
+    ("post", "/api/guidance/plan-days"), ("post", "/api/log/clear-planned"),  # several days at once (design note 23)
     ("get", "/api/guidance/rules"), ("get", "/api/guidance/not-for-me"), ("put", "/api/guidance/not-for-me/{food_id}"),
     ("delete", "/api/guidance/not-for-me/{food_id}"),
     ("post", "/api/log/batch"),

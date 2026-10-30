@@ -125,8 +125,11 @@
   // ---- the plan ----------------------------------------------------------------------------------
   function slotPlan(meal, room, status, extra = {}) {
     return { meal, room, status, source: null, name: null, template_id: null, scale: 1.0, score: null, items: null, reason: null,
-      closest: null, today: null, modified: false, ...extra };
+      closest: null, today: null, modified: false, repeated: false, ...extra };
   }
+  // The foods of a meal whatever the amounts, as a sorted id list: "the same meal" of the repeat rule (note 23 §4).
+  function foodSet(items) { return [...new Set(items.map(([f]) => f.id))].sort((a, b) => a - b).join(','); }
+  function withRecent(today, recent) { return recent && recent.size ? { ...today, recent } : today; }
   const isBuilt = (plan) => plan.source === 'built';
 
   function defaultSlots(ctx) { const used = new Set(ctx.day.map((e) => e.meal)); return R.SLOT_ORDER.filter((m) => !used.has(m)); }
@@ -173,10 +176,12 @@
       score: opt.score, items: [...opt._items] });
   }
 
-  function planSlot(ctx, slot, openMeals, habit, pools, counter, { useSaved, useUsual, useStarters, variant, forced = null }) {
+  // avoid (a Set of foodSet keys) and recent (food id → earlier plan days) serve several days at once (note 23 §4).
+  function planSlot(ctx, slot, openMeals, habit, pools, counter, { useSaved, useUsual, useStarters, variant, forced = null,
+    avoid = null, recent = null }) {
     const totals = B.dayTotals(ctx.day);
     const room = B.mealRoom(ctx, slot, openMeals, totals);
-    const today = S.todayStats(ctx.day);
+    const today = withRecent(S.todayStats(ctx.day), recent);
     const scorer = new S.Scorer(room, habit, today, counter);
     const dialysis = ctx.profile.dialysis !== 'none';
     const snack = slot === R.SNACK;
@@ -193,9 +198,15 @@
       ];
     }
     const width = Math.max(R.BEAM_WIDTH_RANGE[0], Math.min(Math.trunc(ctx.tunables.beam_width), R.BEAM_WIDTH_RANGE[1]));
-    const builtMeals = beamBuild(room, scorer, today, dialysis, steps, width, counter, { snack });
+    let builtMeals = beamBuild(room, scorer, today, dialysis, steps, width, counter, { snack });
     const pref = habit.pref;
-    const familiar = familiarOptions(ctx, slot, room, today, counter, useSaved, useUsual, useStarters, pref);
+    let familiar = familiarOptions(ctx, slot, room, today, counter, useSaved, useUsual, useStarters, pref);
+    let repeated = false;
+    if (avoid && avoid.size && (familiar.length || builtMeals.length)) {
+      const freshFamiliar = familiar.filter((o) => !avoid.has(foodSet(o._items)));
+      const freshBuilt = builtMeals.filter((b) => !avoid.has(foodSet(b.items)));
+      if (freshFamiliar.length || freshBuilt.length) { familiar = freshFamiliar; builtMeals = freshBuilt; } else repeated = true;
+    }
 
     const builtChoices = builtMeals.length ? builtMeals.slice(Math.min(variant, builtMeals.length - 1)) : [];
     const bestBuilt = builtChoices.length ? builtChoices[0] : null;
@@ -218,6 +229,7 @@
         if (options.length >= R.AI_PLAN_OPTIONS_MAX) break;
       }
       if (forced != null && forced >= 0 && forced < options.length) chosen = options[forced];
+      chosen.repeated = repeated;
       return [chosen, options];
     }
     // Nothing fits: the closest built meal (no room check) at its best scale.
@@ -376,14 +388,16 @@
   }
 
   // Plan the requested slots (default: every slot with no entries) of ctx.date.
-  function planDay(ctx, meals = null, { useSavedMeals = true, useUsual = true, useStarters = true, variant = 0, counter = null,
-    forced = null, withOptions = false } = {}) {
+  function planDay(ctx, meals = null, opts = {}) { return planDayWithSlots(ctx, meals, opts)[0]; }
+  // planDay and its slot plans; habit, avoid (slot → Set of foodSet keys) and recent come from planDays.
+  function planDayWithSlots(ctx, meals = null, { useSavedMeals = true, useUsual = true, useStarters = true, variant = 0, counter = null,
+    forced = null, withOptions = false, habit = null, avoid = null, recent = null } = {}) {
     counter = counter || S.newCounter();
     const slots = meals && meals.length ? R.SLOT_ORDER.filter((m) => meals.includes(m)) : defaultSlots(ctx);
     variant = Math.max(0, Math.min(Math.trunc(variant), R.VARIANT_MAX));
     const targets = ctx.profile.targets, warn = ctx.profile.warn_fraction;
     const before = engineStatus(dayTotals12(ctx.day), targets, warn);
-    const habit = S.habitStats(ctx);
+    habit = habit || S.habitStats(ctx);
     const poolSize = Math.max(R.POOL_PER_ROLE_RANGE[0], Math.min(Math.trunc(ctx.tunables.pool_per_role), R.POOL_PER_ROLE_RANGE[1]));
     const pools = buildPools(ctx, habit, S.todayStats(ctx.day), poolSize);
     const plans = [];
@@ -391,8 +405,8 @@
     slots.forEach((slot, i) => {
       const ctxI = R.withDay(ctx, dayWith(ctx, plans));
       const [plan, options] = planSlot(ctxI, slot, slots.slice(i), habit, pools, counter, { useSaved: useSavedMeals, useUsual,
-        useStarters, variant, forced: forced && slot in forced ? forced[slot] : null });
-      plan.today = S.todayStats(ctxI.day);
+        useStarters, variant, forced: forced && slot in forced ? forced[slot] : null, avoid: avoid ? avoid.get(slot) || null : null, recent });
+      plan.today = withRecent(S.todayStats(ctxI.day), recent);
       plans.push(plan);
       slotOptions[slot] = options;
     });
@@ -429,9 +443,95 @@
       result.options = {};
       for (const [slot, opts] of Object.entries(slotOptions)) result.options[slot] = opts.map((o) => planJson(ctx, o));
     }
-    return result;
+    return [result, plans];
+  }
+
+  // ---- several days at once (note 23) --------------------------------------------------------------
+  function isDialysisDay(ctx, day) { return ctx.profile.dialysis === 'hemodialysis' && ctx.profile.dialysis_days.map(Number).includes(R.weekday(day)); }
+  function unknownCounts(day) {
+    const out = {};
+    for (const e of day) for (const k of NUTRIENT_KEYS) if (e.nutrients[k] == null) out[k] = (out[k] || 0) + 1;
+    const ordered = {};
+    for (const k of NUTRIENT_KEYS) if (k in out) ordered[k] = out[k];
+    return ordered;
+  }
+  function shoppingItems(ctx, entries) {
+    const servings = new Map(), dates = new Map();
+    for (const e of entries) {
+      servings.set(e.food_id, (servings.get(e.food_id) || 0.0) + Number(e.servings));
+      if (!dates.has(e.food_id)) dates.set(e.food_id, new Set());
+      dates.get(e.food_id).add(e.date);
+    }
+    const foods = R.sortBy([...servings.keys()].map((id) => ctx.foods.get(id)), (f) => [f.name_fold, f.id]);
+    return foods.map((f) => ({ food_id: f.id, food_name: f.name, serving_desc: f.serving_desc, servings: R.roundTo(servings.get(f.id), 3),
+      grams: R.roundTo(servings.get(f.id) * f.serving_g, 1), days: dates.get(f.id).size }));
+  }
+  // Plan days.length days from ctx.date; days[i] holds the logged entries of ctx.date + i (planner.plan_days).
+  function planDays(ctx, days, meals = null, { useSavedMeals = true, useUsual = true, useStarters = true, variant = 0, counter = null } = {}) {
+    counter = counter || S.newCounter();
+    variant = Math.max(0, Math.min(Math.trunc(variant), R.VARIANT_MAX));
+    const start = ctx.date;
+    const habit0 = S.habitStats(ctx);
+    const carried = [];
+    const foodsOn = [];
+    const slotSets = [];
+    const outDays = [];
+    const entries = [];
+    days.forEach((logged, i) => {
+      const day = R.addDays(start, i);
+      const window = [];
+      for (let j = Math.max(0, i - R.PLAN_REPEAT_DAYS); j < i; j++) window.push(j);
+      const recent = new Map();
+      for (const j of window) for (const fid of [...foodsOn[j]].sort((a, b) => a - b)) recent.set(fid, (recent.get(fid) || 0) + 1);
+      let habit = habit0;
+      if (i) {
+        const since = R.addDays(day, -R.PLAN_REPEAT_DAYS);
+        const eaten = new Map();
+        for (const h of ctx.history) {
+          if (!h.hypo && since <= h.date && h.date < start) {
+            if (!eaten.has(h.food_id)) eaten.set(h.food_id, new Set());
+            eaten.get(h.food_id).add(h.date);
+          }
+        }
+        const prev2 = new Map();
+        for (const [fid, d] of eaten) prev2.set(fid, d.size);
+        for (const [fid, n] of recent) prev2.set(fid, (prev2.get(fid) || 0) + n);
+        habit = { ...habit0, prev2 };
+      }
+      const avoid = new Map();
+      for (const slot of R.SLOT_ORDER) {
+        const sets = new Set();
+        for (const j of window) if (slotSets[j].has(slot)) sets.add(slotSets[j].get(slot));
+        if (sets.size) avoid.set(slot, sets);
+      }
+      const ctxI = { ...ctx, date: day, day: [...logged], history: [...ctx.history, ...carried] };
+      const [result, plans] = planDayWithSlots(ctxI, meals, { useSavedMeals, useUsual, useStarters, variant, counter, habit, avoid, recent });
+      const withPlan = dayWith(ctxI, plans);
+      for (const e of withPlan) {
+        carried.push(R.historyEntry({ date: day, meal: e.meal, food_id: e.food_id, name: e.name, servings: e.servings, nutrients: e.nutrients,
+          purpose: e.purpose, flags: e.flags }));
+      }
+      foodsOn.push(new Set(withPlan.filter((e) => !e.hypo).map((e) => e.food_id)));
+      const bySlot = new Map();
+      for (const e of withPlan) {
+        if (e.hypo) continue;
+        if (!bySlot.has(e.meal)) bySlot.set(e.meal, new Set());
+        bySlot.get(e.meal).add(e.food_id);
+      }
+      const keys = new Map();
+      for (const [slot, ids] of bySlot) keys.set(slot, [...ids].sort((a, b) => a - b).join(','));
+      slotSets.push(keys);
+      result.meals.forEach((item, k) => { item.repeated = plans[k].repeated; });
+      const dayAfter = { ...result.day_after, projected_unknown: unknownCounts(withPlan) };
+      outDays.push({ date: day, dialysis_day: isDialysisDay(ctx, day), meals: result.meals, protein_topup: result.protein_topup,
+        day_after: dayAfter, energy_note: result.energy_note });
+      for (const e of result.apply.entries) entries.push(e);
+    });
+    return { status: 'ok', rules_version: R.RULES_VERSION, start, end: R.addDays(start, days.length - 1), variant, days: outDays,
+      apply: { endpoint: '/api/log/batch', entries }, shopping: { items: shoppingItems(ctx, entries) }, notes: [M.DISCLAIMER] };
   }
 
   GE.planner = { buildPools, stepCandidates, beamBuild, fineTune, defaultSlots, dayWith, dayTotals12, planSlot, repair,
-    proteinTopup, energyNote, planJson, planDay, engineStatus, projectedAlerts, roundValue };
+    proteinTopup, energyNote, planJson, planDay, planDays, shoppingItems, unknownCounts, isDialysisDay, foodSet, engineStatus,
+    projectedAlerts, roundValue };
 })(typeof window !== 'undefined' ? window : globalThis);
