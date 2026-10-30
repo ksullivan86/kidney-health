@@ -40,10 +40,14 @@ Owner's request: "for the planning it should be able to plan the whole day - wee
   day with meals open) so a 14-day preview stays short; the client_ids are made once per plan so pressing Add again after a
   part failed adds only the rest; after Undo new ids are made.
 
+* 6. Chromium walk `tools/e2e/plandays.py` (listed in `tools/e2e/README.md` and `tests/test_e2e_tools.py`): 24 of 24 pass,
+  `cd tools/e2e && python3 plandays.py --port 8231 --out <scratch>/e2e` (system python3, ~1 min; `--no-demo` skips the build).
+  Note: `inner_text` reads nothing inside a closed `<details>`; the walk opens the day first.
+
 ## Next
 
-6. Chromium walk `tools/e2e/plandays.py` (list it in `tools/e2e/README.md` and `tests/test_e2e_tools.py`).
-7. Docs, handbook, CHANGELOG, OpenAPI check.
+7. Docs: ARCHITECTURE.md (route shapes), docs/guidance.md, handbook `handbook/docs/app/planning-and-menus.md`, CHANGELOG
+   "## Unreleased", OpenAPI `--check`.
 
 ## Commands
 
