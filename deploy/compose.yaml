@@ -34,9 +34,9 @@ name: kidney-health
 services:
   kidney-health:
     # Track the minor release (security fixes, no breaking changes), never :latest on machines you
-    # care about; or pin a verified digest: ghcr.io/ksullivan86/kidney-health:0.11.0@sha256:...
+    # care about; or pin a verified digest: ghcr.io/ksullivan86/kidney-health:0.12.0@sha256:...
     # (scripts/verify-image.sh checks the signature and prints the digest).
-    image: ghcr.io/ksullivan86/kidney-health:0.11
+    image: ghcr.io/ksullivan86/kidney-health:0.12
     # Build locally instead (context is the repository root):
     # build:
     #   context: ..

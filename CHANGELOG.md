@@ -7,6 +7,44 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+## 0.12.0 — 2026-10-30
+
+Version 0.12 plans several days at once. On the Plan tab you can plan up to 14 days from your own foods, see each day and
+a shopping list first, and add it as planned food. AI meal ideas and recipes are made smaller or changed instead of left
+out, and the app says so when it does not start, for example over a VPN.
+
+**Before you upgrade, read [Upgrading from 0.11](#upgrading-from-011-read-this-first).** There is no schema step. Nothing
+new is switched on.
+
+### Highlights
+
+* **Plan several days at once**, up to 14, with a preview, a shopping list for those days, **Undo** and **Clear planned
+  days…**. Food you ate and planned low treatments always stay.
+* **Fewer "The AI ideas did not fit your targets today"**: an idea or recipe that is only too big is made smaller.
+* **A message when the app does not start**, with what to change when it happens over a VPN.
+* **Changes made while an entry syncs are kept**, and an entry you discard while it syncs is gone from the server too.
+* **Easier to use with bigger text, the keyboard and in the dark theme.** Field edges stand out.
+
+### Upgrading from 0.11 (read this first)
+
+1. **Back up first** (`podman exec kidney-health python -m app.admin backup /data/before-0.12.0.db`). There is no schema
+   step in 0.12.
+2. **Coming from 0.10**, read [Upgrading from 0.10](#upgrading-from-010-read-this-first) too. Schema step 25 runs at the
+   first start.
+3. **Change the tag** to `:0.12`, or pin a digest from the release notes. The shipped files already say `:0.12`.
+4. **Nothing new is switched on.** Planning several days uses the app's own rules and needs no setting.
+5. **If you use AI**, run `scripts/ai_eval.py` again for each model: `PROMPT_VERSION` is now `2026-10-29.1`.
+6. **If you reach the server over a VPN** such as NetBird, see [Only the header shows over a VPN](docs/deployment.md#only-the-header-shows-over-a-vpn).
+   The fix is in the network, not the app.
+
+### Known limitations
+
+* A plan covers at most 14 days, and every day uses the same targets; dialysis days are marked but not given their own.
+* The same meal is not planned on either of the 2 days before, unless nothing else fits. You cannot choose to repeat a
+  breakfast every day yet.
+* Every account still needs a password.
+* The iPhone app is built and tested in CI, but putting it on a phone needs the owner's Apple Developer account.
+
 ### For people using the app
 
 * **Plan several days at once.** On the Plan tab, **Plan several days…** plans up to 14 days from your own foods. Choose the
