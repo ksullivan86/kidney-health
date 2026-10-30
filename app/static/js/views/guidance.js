@@ -126,6 +126,16 @@
     }
     return prefsCache.item;
   }
+  // Change some fields of the person's guidance object (PATCH /api/me/settings takes the whole object): the plan sheet's
+  // remembered choices (design note 23 §12). Returns true when saved.
+  async function savePrefs(patch) {
+    const item = prefsCache && prefsCache.item;
+    const base = { ...((KH.settings && KH.settings.BY_KEY && KH.settings.BY_KEY.guidance) ? KH.settings.BY_KEY.guidance.default : {}),
+      ...((item && item.value) || {}) };
+    const res = await KH.api.updateMySettings({ guidance: { ...base, ...patch } });
+    prefsCache = { item: res.settings.guidance };
+    return true;
+  }
   function prefValue(name, fallback) {
     const v = prefsCache && prefsCache.item && prefsCache.item.value;
     return v && Object.prototype.hasOwnProperty.call(v, name) ? v[name] : fallback;
@@ -280,6 +290,7 @@
   const SOURCE_NOTE = { ask: 'added in Ask', assistant: 'from your assistant' };
   const PREF_HINT = 'More like this and Less often only change the order of suggestions. Not for me never suggests this food again. '
     + 'It stays in search, and Settings → Meal guidance can bring it back.';
+  const REPEAT_HINT = 'OK to repeat lets a plan of several days have this food every day.';
   // What a toast says after a change (value null: the preference was cleared).
   function prefToast(name, value) {
     if (value === 'like') return `${name}: more like this. Settings → Meal guidance lists it.`;
@@ -300,7 +311,8 @@
   // disclosure: the button controls a small inline row. `current` is the food's preference when the caller knows it
   // (Settings); otherwise it is read when the menu opens (an offline read leaves the state blank, and the save then says
   // it needs a connection). `onChange(value, before)` runs after a change that was saved (value null: cleared).
-  function rowMenu(item, { current, onChange = null, label = `More for ${item.name}` } = {}) {
+  // `repeat` (Plan several days, design note 23 §12.2): { on(foodId), toggle(item, button) } adds an "OK to repeat" toggle.
+  function rowMenu(item, { current, onChange = null, label = `More for ${item.name}`, repeat = null } = {}) {
     const menuId = uid('g-menu');
     const more = h('button', { class: 'icon-btn g-more', type: 'button', 'aria-expanded': 'false', 'aria-controls': menuId, 'aria-label': label },
       moreIcon());
@@ -309,8 +321,14 @@
       buttons[value] = h('button', { class: `btn secondary g-pref${value === 'not_for_me' ? ' g-nfm' : ''}`, type: 'button', 'aria-pressed': 'false',
         'data-pref': value }, PREF_WORD[value]);
     }
+    let again = null;
+    if (repeat) {
+      again = h('button', { class: 'btn secondary g-pref g-repeat-ok', type: 'button', 'aria-pressed': repeat.on(item.food_id) ? 'true' : 'false' },
+        'OK to repeat');
+      again.addEventListener('click', () => repeat.toggle(item, again));
+    }
     const menu = h('div', { class: 'g-menu', id: menuId, role: 'group', 'aria-label': `Your taste for ${item.name}`, hidden: true },
-      PREF_ORDER.map((value) => buttons[value]), h('span', { class: 'hint' }, PREF_HINT));
+      PREF_ORDER.map((value) => buttons[value]), again, h('span', { class: 'hint' }, again ? `${PREF_HINT} ${REPEAT_HINT}` : PREF_HINT));
     let now = null;
     let ready = null;
     let busy = false;
@@ -877,19 +895,27 @@
     return `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`;
   }
   const SOURCE_TEXT = { saved: 'Your saved meal', usual: 'A meal you often have', starter: 'Starter meal', built: 'Built from your foods' };
-  function planMeal(m, aiPick = false) {
+  // `repeat` (Plan several days): { on(foodId), toggle(item, button), mealOn(templateId), toggleMeal(meal, button) } adds the
+  // "OK to repeat" toggles (design note 23 §12.2): one on a saved meal, one in each food's "⋯" menu.
+  function planMeal(m, aiPick = false, { repeat = null } = {}) {
     const hid = uid('g-plan-h');
     const sec = h('section', { class: `g-plan-meal status-${m.status}`, 'aria-labelledby': hid });
     const source = m.source ? SOURCE_TEXT[m.source] || m.source : null;
+    let again = null;
+    if (repeat && m.source === 'saved' && m.template_id != null) {
+      again = h('button', { class: 'link-btn g-meal-repeat-ok', type: 'button', 'aria-pressed': repeat.mealOn(m.template_id) ? 'true' : 'false',
+        'aria-label': `OK to repeat: ${m.name}` }, 'OK to repeat');
+      again.addEventListener('click', () => repeat.toggleMeal(m, again));
+    }
     sec.append(h('div', { class: 'g-plan-head' },
       h('h3', { class: 'g-plan-title', id: hid }, MEAL_LABEL[m.meal], aiPick ? h('span', { class: 'g-ai-badge' }, 'AI’s pick') : null),
-      source ? h('span', { class: 'g-source' }, m.name && m.source !== 'built' ? `${source}: ${m.name}` : source) : null));
+      source ? h('span', { class: 'g-source' }, m.name && m.source !== 'built' ? `${source}: ${m.name}` : source) : null, again));
     if (m.message) {
       sec.append(h('div', { class: `warning level-${m.status === 'no_fit' ? 'over' : 'caution'}` },
         ratingIcon(m.status === 'no_fit' ? 'over' : 'caution', { label: m.status === 'no_fit' ? 'Nothing fits' : 'Partly fits' }),
         h('div', {}, m.message)));
     }
-    if (m.items && m.items.length) sec.append(portionList(m.items, { menus: true }));
+    if (m.items && m.items.length) sec.append(portionList(m.items, { menus: true, repeat }));
     if (m.totals) sec.append(h('p', { class: 'g-totals tabular' }, `Meal: ${keyNumbers(m.totals, m.unknown)}`));
     if (m.why && m.why.length) sec.append(list('g-why', m.why.map((w) => h('li', {}, w))));
     if (m.status === 'no_fit' && m.closest && m.closest.items && m.closest.items.length) {
@@ -899,14 +925,14 @@
   }
   // The foods of a plan meal. With `menus`, each carries the "⋯" menu (More like this, Less often, Not for me): Not for me
   // plans the day again without the food; a like or a "less often" is for the next plan.
-  function portionList(items, { menus = false } = {}) {
+  function portionList(items, { menus = false, repeat = null } = {}) {
     return list('compact-items g-portions', items.map((it) => {
       const li = h('li', { 'data-food-id': it.food_id },
         ratingIcon(it.renal_rating || 'green'),
         h('span', { class: 'ci-name' }, it.name, h('span', { class: 'muted small' }, ` · ${it.portion_text}`)),
         h('span', { class: 'ci-amt muted tabular' }, it.nutrients && it.nutrients.carbs_g != null ? `${fmtNum(it.nutrients.carbs_g, 'carbs_g')} g carbs` : ''));
       if (menus && it.food_id != null) {
-        const { more, menu } = rowMenu(it, { onChange: (value) => { if (value === 'not_for_me') replanAfterHiding(); } });
+        const { more, menu } = rowMenu(it, { repeat, onChange: (value) => { if (value === 'not_for_me') replanAfterHiding(); } });
         li.append(more, menu);
       }
       return li;
@@ -1548,6 +1574,7 @@
         ? '“What fits now”, swap ideas, the plan builder and insights.'
         : '“What fits now”, swap ideas, the plan builder and insights. Treating a low is always available.'),
       check('show_plan_builder', 'Show “Plan the rest of my day”'),
+      planDaysSettings({ v, save, check, locked }),
       check('show_insights', 'Show insights on Today and Trends'),
       aiEnrichRow(check),
       ...(kidneyOnly
@@ -1557,6 +1584,38 @@
     const src = KH.settings.SOURCE_LABEL[setting.source] || setting.source || '';
     body.append(h('span', { class: `setting-source src-${setting.source}` }, src), msg, err);
     body.append(prefsSection({ v, locked, save, check, catList: cats.status === 'fulfilled' ? cats.value.categories || [] : [] }));
+  }
+
+  // "Plan several days" (design note 23 §12): the snack, the meals that may repeat and the "OK to repeat" marks. The plan sheet
+  // remembers the same choices; the marks are set there, on a saved meal or in a food's "⋯" menu.
+  function planDaysSettings({ v, save, check, locked }) {
+    const box = h('fieldset', { class: 'field g-days-settings', id: 'set-g-plan-repeat-meals' }, h('legend', {}, 'Plan several days'));
+    const meals = h('div', { class: 'checks four' });
+    for (const m of MEALS) {
+      const id = `set-g-repeat-${m.key}`;
+      const input = h('input', { type: 'checkbox', id, value: m.key });
+      input.checked = (v.plan_repeat_meals || []).includes(m.key);
+      input.disabled = locked;
+      input.addEventListener('change', async () => {
+        input.disabled = true;
+        const chosen = $$('input:checked', meals).map((x) => x.value);
+        if (!(await save({ plan_repeat_meals: chosen }, input))) input.checked = !input.checked;
+        input.disabled = locked;
+      });
+      meals.append(h('label', { class: 'check', for: id }, input, h('span', { class: 'check-text' }, m.label)));
+    }
+    const marks = (v.repeat_ok_foods || []).length + (v.repeat_ok_meals || []).length;
+    const forget = marks ? btn('Clear the OK to repeat marks', 'secondary', async (e) => {
+      const b = e.currentTarget;
+      b.disabled = true;
+      if (await save({ repeat_ok_foods: [], repeat_ok_meals: [] }, b)) { b.hidden = true; note.textContent = 'No food or saved meal is marked OK to repeat.'; } else b.disabled = false;
+    }, { id: 'set-g-repeat-ok-clear', disabled: locked }) : null;
+    const note = h('span', { class: 'hint' }, marks
+      ? `${marks} ${marks === 1 ? 'food or saved meal is' : 'foods and saved meals are'} marked OK to repeat: a plan may have them every day.`
+      : 'No food or saved meal is marked OK to repeat. Mark one in Plan → Plan several days.');
+    box.append(check('plan_snack', 'Plan a snack too'),
+      h('span', { class: 'hint' }, 'Meals that may be the same on following days:'), meals, note, forget);
+    return box;
   }
 
   // "Your food preferences": the lists of foods, the kinds of food, what the app learned from the log and the text for AI.
@@ -1818,6 +1877,8 @@
     api,
     uuid,
     loadPrefs,
+    savePrefs,
+    prefValue,
     forgetAnswers,
     add: showAdd,
     reloadFits: () => { if (fits.meal && state.view === 'add') loadFits(); },

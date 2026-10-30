@@ -32,6 +32,19 @@ Branch: the worktree branch `worktree-agent-a2107be7cab2fa508` (local commits on
    PLAN_DAYS_AI_MAX 31, PLAN_DAYS_CEILING 90 in the rules table); docs/guidance.md rules table regenerated; 7 new tests in
    tests/guidance/test_plan_days.py. `snack=None` keeps the old slots, so the old vectors did not change.
 
+4. API: `PlanDaysRequest` (days ≤ 90, `repeat_meals`, `snack`, `skip_first_day`), 400 over `guidance.plan_days_max`,
+   `limits` and `choices` in the answer; `clear-planned` follows the setting, `CLEAR_PLANNED_MAX_IDS` 2500;
+   `GET /api/guidance/repeat-ok`, `PUT|DELETE /api/guidance/repeat-ok/{foods|meals}/{id}` (404 not yours, 409 full);
+   demo twin routes; OpenAPI regenerated (c33dd73). The demo's meal lists now say only "at most 4 items" for a list of 5 or
+   more, as pydantic-core does.
+5. AI: `repeat_ok` block `{meals, food_ids, saved_meals}` in every meal prompt (ideas, rerank, swap, plan), rule 10,
+   PROMPT_VERSION 2026-10-30.1, snapshots and fingerprint updated with KH_UPDATE_SNAPSHOTS=1. No guard change.
+6. UI: plandays.js rewritten (quick 7/14/30/60 hidden above the cap, Start tomorrow, snack checkbox, meals that may repeat,
+   OK-to-repeat list and toggles, past-meal skip and "Plan it anyway?" with core.js `cancelText`/`onCancel`, reset text,
+   Undo text, batch progress); guidance.js: `savePrefs`, `prefValue` exported, rowMenu/planMeal `repeat` option, Settings →
+   Meal guidance "Plan several days" block; CSS; static tests in tests/test_plan_days_ui.py and test_guidance_ui.py.
+   Bench: `plan-days (60 days)` in scripts/bench_guidance.py and tests/guidance/test_perf_guidance.py. Twin: 60 days ~1 s.
+
 ## Next
 
 1. Note 23 decisions. 2. Settings. 3. Engine + twin + vectors. 4. API. 5. AI field. 6. UI + mock. 7. e2e. 8. Docs.

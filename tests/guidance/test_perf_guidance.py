@@ -60,6 +60,21 @@ def test_requests_stay_well_inside_generous_wall_clock_bounds(scenario):
         assert statistics.median(samples) < bound, (name, samples)
 
 
+# Planning 60 days at once (design note 23 §12.1): about 2 s for 395 foods and 3 s for 2,000 on a laptop. One run, bounded
+# generously so a busy runner passes and a plan that grows faster than one day at a time fails.
+PLAN_DAYS_60_MS = {1: 20_000.0, 5: 40_000.0}
+
+
+def test_sixty_days_plan_within_a_generous_bound(scenario):
+    copies, path, user_id = scenario
+    calls = BENCH.scenario(path, user_id)
+    start = time.perf_counter()
+    plan = calls["plan-days (60 days)"]()
+    took = (time.perf_counter() - start) * 1000.0
+    assert len(plan["days"]) == 60 and took < PLAN_DAYS_60_MS[copies], took
+    assert len(plan["shopping"]["items"]) < 100  # one line a food: a 60-day list stays readable
+
+
 def test_synthetic_copies_are_distinct_deterministic_foods():
     a = BENCH.synthetic_foods(3)
     b = BENCH.synthetic_foods(3)
@@ -73,7 +88,7 @@ def test_bench_script_runs_and_reports(tmp_path, capsys):
     out = tmp_path / "bench.json"
     assert BENCH.main(["--runs", "2", "--copies", "1", "--json", str(out), "--max-p95", "10000"]) == 0
     printed = capsys.readouterr().out
-    assert "next-meal" in printed and "engine only: plan-day" in printed
+    assert "next-meal" in printed and "engine only: plan-day" in printed and "plan-days (60 days)" in printed
     import json
 
     report = json.loads(out.read_text())

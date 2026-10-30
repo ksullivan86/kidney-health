@@ -109,6 +109,16 @@
 .g-days-shop-list { margin: 0; }
 .g-days-added { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; border-left: 4px solid var(--accent); background: var(--accent-tint); border-radius: var(--radius-sm); padding: 10px 12px; }
 .g-days-added p { margin: 0; flex: 1 1 14rem; }
+/* Plan several days, the owner's answers (note 23 §12): the past-meal note, the question about it, the repeat choices and marks. */
+.g-days-past { margin: 0; }
+.g-days-ask:empty { display: none; }
+.g-days-repeat-meals { margin-bottom: 4px; }
+.g-days-ok-items { margin: 0; }
+.g-days-settings { display: flex; flex-direction: column; gap: 6px; }
+.g-days-ok-items li { display: flex; align-items: center; justify-content: space-between; gap: 8px; min-height: var(--tap); }
+.g-meal-repeat-ok { min-height: var(--tap); }
+.g-meal-repeat-ok[aria-pressed="true"] { color: var(--accent); font-weight: 700; }
+.g-meal-repeat-ok[aria-pressed="true"]::before { content: "✓ "; content: "✓ " / ""; }
 
 /* "Treating a low": information, never a warning (its colours are not the caution or over palette). */
 .g-low { display: flex; flex-direction: column; gap: 12px; }
