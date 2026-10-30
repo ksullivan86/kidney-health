@@ -20,7 +20,7 @@ passed over) and invites a second person with a preference of their own. Then, a
   is in one list at most), the Learn from my log switch (off: the learned list says so), the learned list with its reasons, Keep,
   Stop using this (then the food is under "Not learning about" with Learn again), Save as a meal (the saved-meal editor opens with
   the usual meal's foods and saves it), Not this meal and Show them again, the sentence of §4.10 word for word, the text for AI
-  ideas saved through the same call as before, and Settings → AI ideas pointing to it;
+  ideas saved through the same call as before, and Settings → AI features pointing to it;
 * ``low``: with every low-treatment food on "Not for me" the Treating a low sheet still lists them, with the line "Shown although
   you marked them Not for me.", and no row of it has a preference menu;
 * ``offline``: with the network gone a save says the server cannot be reached, changes nothing and queues nothing, and the lists say
@@ -508,7 +508,7 @@ def part_settings(page: Any, api: Any, out: Path, tag: str, mock: bool, phone: b
         shot(page, out, f"settings-ai-text-{tag}")
         page.locator("#set-ai-pref-moved").scroll_into_view_if_needed()
         moved = page.inner_text("#set-ai-pref-moved")
-        check(f"[{tag}] Settings → AI ideas has one line pointing to the new place, and no field", "Your food preferences for AI ideas are in" in moved
+        check(f"[{tag}] Settings → AI features has one line pointing to the new place, and no field", "Your food preferences for AI ideas are in" in moved
               and page.locator("#set-ai-body label:has-text('Food preferences for AI ideas')").count() == 0, moved)
         page.locator("#set-ai-pref-moved button").click()
         page.wait_for_function("() => document.activeElement && document.activeElement.id === 'set-g-prefs-h'", timeout=10000)

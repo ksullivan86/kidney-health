@@ -141,7 +141,7 @@ at once, a **local** one on the home network and a **cloud** one, and choose per
 more than a label), **meal ideas**, **describing a meal** and **Ask** all go to the local AI, and are **off** if there is
 none; a feature goes to a cloud company only when the admin pins it there, and the admin screen then says what it sends and
 where. What the local AI receives never leaves the home network (the server refuses to connect to it on a public
-address). Settings → AI ideas tells each person, per feature, where it runs, and a feature that moves to another provider asks
+address). Settings → AI features tells each person, per feature, where it runs, and a feature that moves to another provider asks
 for the person's consent again. A person's own key is their own choice and goes to that company; the admin can switch
 personal keys off. A server that already used one provider before this existed keeps using it for everything until the admin
 chooses.
@@ -174,7 +174,7 @@ go when the person saves, discards, picks another file or cancels. A password-pr
 
 When the assistant in Ask saves food or a recipe, what it saves is stored like anything else the person logs (their own
 entries and saved meals, in their export and deleted with their account). By default it only saves when the person presses
-Save on a card; the person can instead choose to trust it for a conversation or always (Settings → AI ideas, only while the
+Save on a card; the person can instead choose to trust it for a conversation or always (Settings → AI features, only while the
 admin allows it). The server then keeps three small things: the person's choice (with their other AI settings), a row in
 their activity list for every change of the choice and for every save ("with Ask"; no food names, only how many entries,
 the meal and the day, or the recipe's name), and, for 24 hours, a remembered key (a hash, never the key itself) with the ids

@@ -197,14 +197,14 @@ In **Settings → Meal guidance**:
   open it shows the last ideas it fetched, with their time ("Saved at 6:40 PM"); nothing is kept after
   you close it, because the ideas are about your health.
 
-## Optional AI ideas
+## Optional AI features
 
 If your admin allows it and you opt in, AI can re-rank the app's own ideas and pick between them. AI
 only chooses from foods the rules already allowed, and every idea is checked again by the same rules
 before you see it ([Optional AI](ai.md); [design note 04][NOTE04]).
 
 - **AI ideas, checked against your targets** appears at the end of **What fits now** once AI ideas are on
-  in **Settings → AI ideas**.
+  in **Settings → AI features**.
 - With **Let AI re-order and explain suggestions** ticked in **Settings → Meal guidance**, you also get
   **AI order** (the same foods in the AI's order, each with its reason; tap again for the app's order),
   **Ask AI to pick** under swap ideas, and **Let AI choose** in the plan, which marks the meals it chose

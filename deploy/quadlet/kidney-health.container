@@ -99,7 +99,7 @@ Environment=TRUSTED_PROXIES=127.0.0.1,::1
 # Environment=OFF_CONTACT=admin@example.net
 # Environment=GUIDANCE_ENABLED=true
 # Environment=PLAN_DAYS_MAX=60
-# Optional AI ideas (docs/ai.md has a recipe per provider). A cloud provider, its key as a secret:
+# Optional AI features (docs/ai.md has a recipe per provider). A cloud provider, its key as a secret:
 #   printf '%s' "$AI_KEY" | podman secret create kidney-ai-key -
 # Environment=AI_ENABLED=true
 # Environment=AI_PROVIDER=openai
@@ -140,7 +140,7 @@ Environment=TRUSTED_PROXIES=127.0.0.1,::1
 # writes, in a folder mounted read-only:
 # Volume=%h/ai-eval:/ai-eval:ro,Z
 # Environment=AI_EVAL_REPORTS_DIR=/ai-eval
-# Assistant access (docs/assistant.md): each person may make personal tokens (Settings → Assistant access) for a
+# Assistant access (docs/assistant.md): each person may make personal tokens (Settings → Outside AI apps) for a
 # chat assistant they connect, such as Open WebUI. A token reads; if the person ticks "Can also save food and
 # recipes" it can also log food and save recipes. Off by default; the app contacts nothing for it.
 # Environment=ASSISTANT_ENABLED=true

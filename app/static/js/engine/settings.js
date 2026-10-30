@@ -33,10 +33,10 @@
         { name: 'preferences', type: 'str', maxLength: 200, default: '' },
         { name: 'trust', type: 'str', pattern: '^(ask|conversation|always)$', strip: false, default: 'ask' },
       ],
-      label: 'AI ideas', help: 'opt_in, provider (auto, own or shared:<id>), share_age_sex, preferences (at most 200 characters) and trust (ask, conversation or always).' },
+      label: 'AI features', help: 'opt_in, provider (auto, own or shared:<id>), share_age_sex, preferences (at most 200 characters) and trust (ask, conversation or always).' },
     { key: 'ai.allow_trusted_saves', type: 'bool', default: false, scope: 'instance', env: 'AI_ALLOW_TRUSTED_SAVES',
       label: 'Let people trust Ask to save without asking',
-      help: 'Off by default. Needs Ask on. When on, a person can choose in Settings → AI ideas to let Ask save food and recipes at once (for one conversation, or always), after a warning. '
+      help: 'Off by default. Needs the AI assistant (Ask AI) on. When on, a person can choose in Settings → AI features to let the AI assistant save food and recipes at once (for one conversation, or always), after a warning. '
         + 'Off: Ask always shows a card and saves only when the person presses Save. Either way the app\'s numbers, the low and emergency rules and the dose checks stay on, and every save can be undone.' },
     { key: 'ai.allow_user_base_url', type: 'bool', default: false, scope: 'instance', env: 'AI_ALLOW_USER_BASE_URL',
       label: 'People may enter their own AI server address', help: 'Only https on port 443 to public addresses. Off by default; always off when AI_HTTP_PROXY is set.' },
@@ -47,7 +47,7 @@
       help: 'Off by default. Needs AI on. When on, people who opted in get an Ask screen: they type a question, the AI looks up the app\'s own numbers, and the app checks the answer before it is shown. '
         + 'Lows and emergencies are answered by the app\'s rules without asking the AI. Each question can use several AI calls.' },
     { key: 'ai.enabled', type: 'bool', default: false, scope: 'instance', env: 'AI_ENABLED',
-      label: 'Optional AI ideas', help: 'Off by default. When on, people who opt in can ask an AI provider you set up for meal ideas and photo help. The rules always run first and check every AI idea; nothing is sent anywhere while this is off.' },
+      label: 'Optional AI features', help: 'Off by default. When on, people who opt in can ask an AI provider you set up for meal ideas and photo help. The rules always run first and check every AI idea; nothing is sent anywhere while this is off.' },
     { key: 'ai.max_concurrency', type: 'int', min: 1, max: 32, default: 2, scope: 'instance', env: 'AI_MAX_CONCURRENCY',
       label: 'AI calls at the same time (whole server)', help: 'Each person has at most one call running. Extra calls are told to try again in a few seconds.' },
     { key: 'ai.recipe_steps', type: 'bool', default: false, scope: 'instance', env: 'AI_RECIPE_STEPS',
@@ -81,13 +81,13 @@
       label: 'Plate photos (AI estimate of what is on a plate)', help: 'Off by default. Needs a provider with a vision model. Portion estimates from photos are rough: the app says so on every result and never logs them without a tap.' },
     { key: 'ai.voice_enabled', type: 'bool', default: false, scope: 'instance', env: 'AI_VOICE_ENABLED',
       label: 'Voice input for Ask (a microphone button)',
-      help: 'Off by default. Needs Ask on and a transcription server set with STT_BASE_URL. When on, people can record a question; the recording goes to that server to become text, '
+      help: 'Off by default. Needs the AI assistant (Ask AI) on and a transcription server set with STT_BASE_URL. When on, people can record a question; the recording goes to that server to become text, '
         + 'is deleted at once, and the text appears in the box for them to read and edit before anything is sent to the AI.' },
     // Assistant access (docs/dev/plans/assistant-step1.md part A; app/auth/api_tokens.py). The tokens are rows of
     // api_tokens, never settings.
     { key: 'assistant.enabled', type: 'bool', default: false, scope: 'instance', env: 'ASSISTANT_ENABLED',
-      label: 'Assistant access (personal tokens for a chat assistant)',
-      help: 'Off by default. When on, each person can make tokens in Settings → Assistant access that let a chat assistant they connect read their own food log and targets and, if the person allows it for that token, also save food and recipes. '
+      label: 'Outside AI apps (personal tokens for an AI chat app)',
+      help: 'Off by default. When on, each person can make tokens in Settings → Outside AI apps that let a chat assistant they connect read their own food log and targets and, if the person allows it for that token, also save food and recipes. '
         + 'While off, no token can be made or used; turned on again, tokens that have not expired or been revoked work again.' },
     { key: 'audit.retention_days', type: 'int', min: 1, max: 3650, default: 365, scope: 'instance', env: 'AUDIT_RETENTION_DAYS',
       label: 'Keep the activity log for (days)', help: '' },

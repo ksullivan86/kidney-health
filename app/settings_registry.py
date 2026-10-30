@@ -571,7 +571,7 @@ TRUST_CHOICES: tuple[str, ...] = ("ask", "conversation", "always")
 
 
 class AiPreferences(BaseModel):
-    """The person's AI choices (note 04 R4 "User settings"; Settings → AI ideas). No key field (§9 A6):
+    """The person's AI choices (note 04 R4 "User settings"; Settings → AI features). No key field (§9 A6):
     a personal key goes only to ``ai_providers.api_key_enc`` through ``PUT /api/me/ai/provider``."""
 
     model_config = ConfigDict(extra="forbid")
@@ -590,7 +590,7 @@ register(
         default=False,
         scope="instance",
         env="AI_ENABLED",
-        label="Optional AI ideas",
+        label="Optional AI features",
         help="Off by default. When on, people who opt in can ask an AI provider you set up for meal ideas and photo help. "
         "The rules always run first and check every AI idea; nothing is sent anywhere while this is off.",
     ),
@@ -678,7 +678,7 @@ register(
         scope="instance",
         env="AI_VOICE_ENABLED",
         label="Voice input for Ask (a microphone button)",
-        help="Off by default. Needs Ask on and a transcription server set with STT_BASE_URL. When on, people can record "
+        help="Off by default. Needs the AI assistant (Ask AI) on and a transcription server set with STT_BASE_URL. When on, people can record "
         "a question; the recording goes to that server to become text, is deleted at once, and the text appears in the "
         "box for them to read and edit before anything is sent to the AI.",
     ),
@@ -689,7 +689,7 @@ register(
         scope="instance",
         env="AI_ALLOW_TRUSTED_SAVES",
         label="Let people trust Ask to save without asking",
-        help="Off by default. Needs Ask on. When on, a person can choose in Settings → AI ideas to let Ask save food and "
+        help="Off by default. Needs the AI assistant (Ask AI) on. When on, a person can choose in Settings → AI features to let the AI assistant save food and "
         "recipes at once (for one conversation, or always), after a warning. Off: Ask always shows a card and saves only "
         "when the person presses Save. Either way the app's numbers, the low and emergency rules and the dose checks stay "
         "on, and every save can be undone.",
@@ -699,7 +699,7 @@ register(
         model=AiPreferences,
         default=AiPreferences(),
         scope="user",
-        label="AI ideas",
+        label="AI features",
         help="opt_in, provider (auto, own or shared:<id>), share_age_sex, preferences (at most 200 characters) and trust "
         "(ask, conversation or always).",
     ),
@@ -835,8 +835,8 @@ register(
         default=False,
         scope="instance",
         env="ASSISTANT_ENABLED",
-        label="Assistant access (personal tokens for a chat assistant)",
-        help="Off by default. When on, each person can make tokens in Settings → Assistant access that let a chat "
+        label="Outside AI apps (personal tokens for an AI chat app)",
+        help="Off by default. When on, each person can make tokens in Settings → Outside AI apps that let a chat "
         "assistant they connect read their own food log and targets and, if the person allows it for that token, "
         "also save food and recipes. While off, no token can be made or used; "
         "turned on again, tokens that have not expired or been revoked work again.",

@@ -156,7 +156,7 @@ the person presses Save. Trusting it is a person's own choice, behind an admin s
 * **Admin**: `ai.allow_trusted_saves` (bool, default false, env `AI_ALLOW_TRUSTED_SAVES`, in Server administration next
   to the other AI switches; in `NO_SIGNIN_ENV_ONLY` like them). Off: nobody can trust the assistant to save; every save
   is a card to confirm.
-* **Person**: Settings → AI ideas → "How much do you trust the assistant?" (and a short link to it from the Ask screen),
+* **Person**: Settings → AI features → "How much do you trust the assistant?" (and a short link to it from the Ask screen),
   stored in the person's `ai` setting as `trust` (no new column): `ask` ("Ask me before every save", the default,
   marked recommended) | `conversation` ("Trust it for this conversation") | `always` ("Trust it always"). Choosing
   `conversation` or `always` first opens a warning sheet ("The assistant will save food and recipes without asking you

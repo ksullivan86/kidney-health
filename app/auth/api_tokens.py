@@ -4,7 +4,7 @@
 Two **families** share the ``api_tokens`` table, the hash-only storage, expiry, revocation and the generic 401:
 
 * **assistant** (``kha_``, scopes ``assistant:read``, ``assistant:log`` and ``assistant:prefs``, instance switch
-  ``assistant.enabled``): made in Settings → Assistant access and given to a chat assistant; accepted only at ``/mcp``.
+  ``assistant.enabled``): made in Settings → Outside AI apps and given to a chat assistant; accepted only at ``/mcp``.
   ``assistant:log`` lets it save food and recipes; ``assistant:prefs`` lets it remember a taste (``set_food_preference``).
   Each is a separate opt-in when the token is made: neither implies the other, and both imply only ``assistant:read``.
 * **device** (``khd_``, the one scope ``body:write``, instance switch ``push.enabled``): made in Settings → Phone shortcuts
@@ -87,8 +87,8 @@ SWITCH = "assistant.enabled"  # the assistant family's instance switch (env ASSI
 DEVICE_SWITCH = "push.enabled"  # the device family's (env PUSH_ENABLED)
 
 CHALLENGE = f'Bearer realm="{brand.BEARER_REALM}"'
-DENIED = "A valid assistant token is required (Settings → Assistant access)."
-SWITCHED_OFF = "Assistant access is turned off on this server. Ask your admin to turn it on."
+DENIED = "A valid assistant token is required (Settings → Outside AI apps)."
+SWITCHED_OFF = "Outside AI apps are turned off on this server. Ask your admin to turn it on."
 DEVICE_DENIED = "A valid device token is required (Settings → Phone shortcuts)."
 DEVICE_SWITCHED_OFF = "Phone shortcuts are turned off on this server. Ask your admin to turn them on."
 
