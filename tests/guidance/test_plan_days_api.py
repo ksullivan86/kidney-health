@@ -31,7 +31,7 @@ def add_plan(client, plan: dict[str, Any]) -> list[int]:
     return ids
 
 
-def test_plan_days_answers_with_the_contract_shape_and_writes_nothing(real):
+def test_plan_days_answers_with_the_contract_shape_and_writes_nothing(real):  # noqa: F811
     set_targets(real)
     log(real, "Bread, white", "breakfast", 2)
     before = [entries(real, d) for d in DAYS]
@@ -54,7 +54,7 @@ def test_plan_days_answers_with_the_contract_shape_and_writes_nothing(real):
     assert [m["items"] for m in plan["days"][0]["meals"]] == [m["items"] for m in one["meals"]]
 
 
-def test_added_days_are_planned_food_never_eaten_and_clear_takes_them_off(real):
+def test_added_days_are_planned_food_never_eaten_and_clear_takes_them_off(real):  # noqa: F811
     set_targets(real)
     eaten = log(real, "Bread, white", "breakfast", 2)
     low = log(real, "Apple juice", "snack", 1, day="2026-10-06", status="planned")  # a planned low treatment
@@ -83,13 +83,13 @@ def test_added_days_are_planned_food_never_eaten_and_clear_takes_them_off(real):
     assert sorted(e["id"] for d in DAYS for e in entries(real, d)) == sorted([eaten["id"], low["id"]])
 
 
-def test_a_hemodialysis_week_marks_the_dialysis_days(real):
+def test_a_hemodialysis_week_marks_the_dialysis_days(real):  # noqa: F811
     set_targets(real, dialysis="hemodialysis", dialysis_days=[0, 2, 4])
     plan = plan_days(real, days=7)  # Monday 5 October to Sunday 11 October
     assert [d["dialysis_day"] for d in plan["days"]] == [True, False, True, False, True, False, False]
 
 
-def test_the_range_is_capped_at_14_days(real):
+def test_the_range_is_capped_at_14_days(real):  # noqa: F811
     set_targets(real)
     assert len(plan_days(real, days=R.PLAN_DAYS_MAX)["days"]) == 14
     r = real.post("/api/guidance/plan-days", json={"start": DAY, "days": 15})
@@ -109,7 +109,7 @@ def test_the_range_is_capped_at_14_days(real):
     {"start": DAY, "meals": ["supper"]},
     {"start": DAY, "date": DAY},
 ])
-def test_plan_days_validation(real, body):
+def test_plan_days_validation(real, body):  # noqa: F811
     set_targets(real)
     assert real.post("/api/guidance/plan-days", json=body).status_code == 400
 
@@ -121,11 +121,11 @@ def test_plan_days_validation(real, body):
     {"start": DAY, "end": DAY, "ids": [0]},
     {"start": DAY, "end": DAY, "surprise": 1},
 ])
-def test_clear_planned_validation(real, body):
+def test_clear_planned_validation(real, body):  # noqa: F811
     assert real.post("/api/log/clear-planned", json=body).status_code == 400
 
 
-def test_without_targets_or_with_the_plan_builder_off(real):
+def test_without_targets_or_with_the_plan_builder_off(real):  # noqa: F811
     r = real.post("/api/guidance/plan-days", json={"start": DAY, "days": 2}).json()
     assert r["status"] == "no_targets"
     set_targets(real)
@@ -134,7 +134,7 @@ def test_without_targets_or_with_the_plan_builder_off(real):
     assert r["status"] == "disabled"
 
 
-def test_another_persons_food_and_entries_are_never_seen_and_are_404(real):
+def test_another_persons_food_and_entries_are_never_seen_and_are_404(real):  # noqa: F811
     admin = real
     sam = add_user(admin)
     for c in (admin, sam):

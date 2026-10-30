@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # multi-day-planning: plan 1 to 14 days at once (design note 23)
 
@@ -44,10 +44,25 @@ Owner's request: "for the planning it should be able to plan the whole day - wee
   `cd tools/e2e && python3 plandays.py --port 8231 --out <scratch>/e2e` (system python3, ~1 min; `--no-demo` skips the build).
   Note: `inner_text` reads nothing inside a closed `<details>`; the walk opens the day first.
 
-## Next
+* 7. Docs: ARCHITECTURE.md (module line, Plan tab, `clear-planned` under the log routes, `plan-days` row and `PlanDays`
+  shape, the frontend "Plan several days" item), `docs/guidance.md` (feature row, "Several days at once"), handbook
+  `handbook/docs/app/planning-and-menus.md` ("Plan several days", a "went wrong" item; cites ARCH and NOTE06, no new
+  sources.yml id so no handbook rebuild), CHANGELOG "## Unreleased" (both sections). OpenAPI `--check` is clean (regenerated
+  in f02db7e). Also fixed: `tests/guidance/test_parity_vectors.py` now expects `plan_days` (it failed since d8d2c52), and
+  `# noqa: F811` on the `real` fixture tests in `tests/guidance/test_plan_days_api.py` (ruff, as test_recipe_fit.py does).
 
-7. Docs: ARCHITECTURE.md (route shapes), docs/guidance.md, handbook `handbook/docs/app/planning-and-menus.md`, CHANGELOG
-   "## Unreleased", OpenAPI `--check`.
+## Final checks (all pass)
+
+`tests/guidance`, `tests/test_planning.py`, `tests/test_plan_days_demo.py`, `tests/test_plan_days_ui.py`, every
+`tests/*_ui.py`, `test_frontend_shell.py`, `test_pwa_routes.py`, `test_vendor.py`, `test_handbook_content.py`,
+`test_learn_links.py`, `test_auth_coverage.py`, `test_isolation*.py`, `test_log_if_match.py`, `test_menu_plan.py`,
+`test_openapi_snapshot.py`, `test_e2e_tools.py`; `node --test tests/js/*.test.mjs` (166); `node tests/js/run_vectors.mjs`;
+`gen_guidance_vectors.py --check`; `gen_openapi.py --check`; `ruff check .`; `tools/e2e/plandays.py` 24/24.
+
+## Open questions for the owner (note 23 §10)
+
+14 or 28 days; the 2-day repeat rule (same breakfast every day?); separate dialysis-day targets; Clear planned days takes
+every planned food or only what the plan added; the snack by default; skip a meal whose time has passed today.
 
 ## Commands
 

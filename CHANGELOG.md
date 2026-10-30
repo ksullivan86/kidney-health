@@ -9,6 +9,12 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people using the app
 
+* **Plan several days at once.** On the Plan tab, **Plan several days…** plans up to 14 days from your own foods. Choose the
+  first day and how many days, or tap **Rest of this week**, **7 days** or **14 days**. You see each day's meals and totals and a
+  shopping list for those days before anything is saved. **Add to plan** asks first and adds the food as planned, never as
+  eaten. **Undo** takes it off again, and **Clear planned days…** takes the planned food off those days. Food you ate and planned
+  low treatments always stay. The same meal is not planned two days in a row unless nothing else fits. See
+  [Planning meals](handbook/docs/app/planning-and-menus.md).
 * **Fewer "The AI ideas did not fit your targets today".** When an AI meal idea is only too big, the app now makes the portion
   smaller and shows the idea with "The app made a portion smaller so the meal fits your targets." See [`docs/ai.md`](docs/ai.md).
 * **An AI recipe with too much of one food is made smaller, not left out.** The app fits it like any other recipe and says
@@ -47,6 +53,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people who run a server
 
+* **Two new routes.** `POST /api/guidance/plan-days` plans 1 to 14 days and writes nothing. `POST /api/log/clear-planned` takes the
+  planned food off up to 14 days, or only the entries you name; it never deletes eaten food or a planned low treatment. The
+  guidance rules version is now `2026-10-30.1`. The Chromium check is `python tools/e2e/plandays.py`.
 * **New `PROMPT_VERSION` (`2026-10-29.1`).** Each meal candidate now tells the AI the most of it the app accepts. Run
   `scripts/ai_eval.py` again for each model you use. The report also counts `ideas_lowered`, the ideas the app made smaller.
 * **An automated accessibility check.** `python tools/e2e/a11y.py` tabs through the main screens and sheets at phone and desktop
