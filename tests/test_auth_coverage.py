@@ -24,6 +24,9 @@ PUBLIC = {
     ("post", "/api/auth/reset/info"),
     ("post", "/api/auth/passkey/options"),  # passkey sign-in (note 18 §5)
     ("post", "/api/auth/passkey"),
+    ("get", "/api/auth/oidc/start"),  # sign-in with a provider (note 24 §3): 404 while it is off
+    ("get", "/api/auth/oidc/callback"),
+    ("post", "/api/auth/oidc/invite"),
 }
 METHODS = ("get", "post", "put", "patch", "delete")
 

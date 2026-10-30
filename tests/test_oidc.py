@@ -398,6 +398,20 @@ def test_another_persons_link_is_404(admin, provider):
     assert sam.get("/api/me/oidc").json()["links"] == []
 
 
+def test_deleting_the_account_deletes_its_links(admin, provider):
+    link_admin(admin, provider)
+    sam = add_user(admin, username="sam", base_url=HTTPS_URL)
+    r = sam.post("/api/me/oidc/link")
+    assert come_back(sam, provider, r.json()["url"], claims={"sub": "sam-sub"}).headers["location"] == "/#/oidc/linked"
+    sam_id = sam.get("/api/me").json()["id"]
+    from conftest import USER_PASSWORD
+
+    assert sam.request("DELETE", "/api/me", json={"password": USER_PASSWORD, "confirm": "DELETE"}).status_code == 204
+    with database(admin) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM oidc_links WHERE user_id = ?", (sam_id,)).fetchone()[0] == 0
+        assert conn.execute("SELECT COUNT(*) FROM oidc_links").fetchone()[0] == 1  # the admin's stays
+
+
 def test_the_last_way_in_cannot_be_removed(admin, anon, provider):
     set_setting(admin, **{"auth.oidc.allow_signup": True})
     sign_in_with_provider(anon, provider, claims={"sub": "only", "email": "only@example.org"})

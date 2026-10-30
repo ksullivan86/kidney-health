@@ -53,6 +53,7 @@
     revokeUserTokens: (id) => request('POST', `/api/admin/users/${id}/revoke-tokens`),
     removeUserTwoStep: (id) => request('DELETE', `/api/admin/users/${id}/totp`),
     removeUserPasskeys: (id) => request('DELETE', `/api/admin/users/${id}/passkeys`),
+    removeUserOidc: (id) => request('DELETE', `/api/admin/users/${id}/oidc`),
     endUserShares: (id) => request('DELETE', `/api/admin/users/${id}/shares`),
     invites: () => request('GET', '/api/admin/invites'),
     createInvite: (b) => request('POST', '/api/admin/invites', b),
@@ -355,6 +356,7 @@
     if (hasLocalPassword()) body.append(passwordForm(me));
     if (hasLocalPassword() && KH.twoStep) body.append(KH.twoStep.block()); // js/views/two_step.js (design note 17)
     if (hasLocalPassword() && KH.passkeys) body.append(KH.passkeys.block()); // js/views/passkeys.js (design note 18)
+    if (hasLocalPassword() && KH.oidc) body.append(KH.oidc.block()); // js/views/oidc.js (design note 24): hidden without a provider
     if (authMode() !== 'none' && KH.sharing) body.append(KH.sharing.block()); // js/views/sharing.js (design note 19)
 
     body.append(subtitle('Signed-in devices', 'set-devices-h'), h('div', { id: 'set-devices', 'aria-labelledby': 'set-devices-h', role: 'region' }, loading()));
@@ -752,6 +754,7 @@
     'passkey.added': 'Passkey added', 'passkey.removed': 'Passkey removed', 'passkey.counter_went_back': 'Copied passkey refused',
     'share.code_created': 'Share link made', 'share.code_cancelled': 'Share link cancelled', 'share.accepted': 'Someone accepted your share link',
     'share.ended': 'Sharing stopped', 'share.viewed': 'Someone looked at what you share',
+    'oidc.linked': 'Sign-in provider linked', 'oidc.unlinked': 'Sign-in provider link removed',
   };
   // The row's label. Tokens come in two families and the details say which one made or lost a token (phone shortcut tokens: family
   // "device"); a revoke of everything a person had at once (an admin, a password change) names no family and says how many.
@@ -800,6 +803,10 @@
       return [d.count > 1 ? `${d.count} passkeys` : '', how].filter(Boolean).join(', ');
     }
     if (ev.action === 'passkey.added' && d.synced) return 'synced to a cloud account';
+    if (ev.action === 'oidc.linked') return { settings: 'from Settings', email: 'by the same email address', invite: 'with an invite link', signup: 'at the first sign-in' }[d.via] || '';
+    if (ev.action === 'oidc.unlinked') return { self: 'by the person', admin: 'by an admin' }[d.via] || '';
+    if (ev.action === 'login.failed' && d.via === 'oidc') return 'with the sign-in provider';
+    if (ev.action === 'login.succeeded' && d.via === 'oidc') return 'with the sign-in provider';
     if (ev.action === 'passkey.counter_went_back') return 'a passkey answered like an old copy of itself, so the sign-in was refused';
     if ((ev.action === 'share.code_created' || ev.action === 'share.accepted') && KH.sharing && d.areas) return KH.sharing.areasText(d.areas);
     if (ev.action === 'share.ended') return { owner: 'by you', grantee: 'by the person you shared with', admin: 'by an admin', time: 'on the end date you chose' }[d.by] || '';
@@ -1522,6 +1529,7 @@
     if (u.status !== 'active') badges.push(h('span', { class: `badge status-${u.status}` }, STATUS_LABEL[u.status] || u.status));
     if (u.two_step) badges.push(h('span', { class: 'badge two-step-on' }, 'Two-step sign-in'));
     if (u.passkeys) badges.push(h('span', { class: 'badge passkeys-on' }, u.passkeys === 1 ? '1 passkey' : `${u.passkeys} passkeys`));
+    if (u.oidc_links) badges.push(h('span', { class: 'badge passkeys-on' }, 'Linked sign-in'));
     if (u.shares) badges.push(h('span', { class: 'badge shares-on' }, `Sharing: ${u.shares}`));
     if (self) badges.push(h('span', { class: 'badge this-device' }, 'You'));
     const sub = [u.last_login_at ? `Last signed in ${relTime(u.last_login_at)}` : 'Never signed in', `joined ${fmtDate(u.created_at)}`,
@@ -1646,6 +1654,22 @@
         onConfirm: async () => {
           await A.removeUserPasskeys(u.id);
           await done(self ? 'Your passkeys were removed' : `Passkeys removed from ${name}`);
+          return true;
+        },
+      }));
+      actions.append(rm);
+    }
+    // Linked sign-in (design note 24 §6): for a lost or taken-over provider account.
+    if (u.oidc_links) {
+      const rm = h('button', { class: 'btn secondary', type: 'button' }, 'Remove linked sign-in');
+      rm.addEventListener('click', () => confirm.inline(actions, rm, {
+        message: self ? 'Remove your link to the sign-in provider? You then sign in with your password or a passkey.'
+          : `Remove the link of ${name} to the sign-in provider? Do this when their provider account is lost or someone else has it. `
+            + 'Without a password or passkey they need a reset link from you to get in.',
+        confirmText: 'Remove',
+        onConfirm: async () => {
+          await A.removeUserOidc(u.id);
+          await done(self ? 'Your linked sign-in was removed' : `Linked sign-in removed from ${name}`);
           return true;
         },
       }));
@@ -2087,6 +2111,9 @@
     const sk = a.secret_key || {};
     const secrets = sk.secrets || {};
     const proxy = a.proxy || {};
+    const oidc = a.oidc || {};
+    const oidcDiscovery = { ok: 'reached', blocked_address: 'refused: a private address (OIDC_ALLOW_PRIVATE_ISSUER)', dns_failed: 'its name does not resolve',
+      unreachable: 'cannot be reached', issuer_mismatch: 'it names another issuer (check OIDC_ISSUER)' };
     box.append(kv([
       ['Server version', a.version],
       ['Database schema', String(a.schema_version)],
@@ -2096,6 +2123,10 @@
       ['Public address', a.public_url || 'Not set: links use the address you opened (PUBLIC_URL)'],
       ['Secret key', sk.source === 'auto' ? 'Generated on the data volume' : sk.source === 'env' ? 'From SECRET_KEY' : sk.source === 'file' ? 'From SECRET_KEY_FILE' : String(sk.source || '')],
       ['Stored keys', `${secrets.current || 0} current${secrets.older_key ? `, ${secrets.older_key} under an older key` : ''}${secrets.unreadable ? `, ${secrets.unreadable} unreadable` : ''}`],
+      // Sign-in with a provider (design note 24 §10): the connection, never the client secret.
+      ['Single sign-on', oidc.enabled ? `On: ${oidc.issuer}` : 'Off (OIDC_ENABLED)'],
+      oidc.enabled ? ['Single sign-on details', `client ${oidc.client_id}, secret ${oidc.secret}, return address ${oidc.redirect_uri}`
+        + `, provider ${oidcDiscovery[oidc.discovery] || (oidc.discovery ? `not reached yet (${oidc.discovery})` : 'not asked yet')}`] : null,
       proxy.ignored_identity_headers ? ['Identity headers ignored', `${proxy.ignored_identity_headers} from untrusted peers (check TRUSTED_PROXIES)`] : null,
       ['Last backup', a.last_backup_at ? fmtDateTime(a.last_backup_at) : 'None recorded (python -m app.admin backup)'],
       a.pre_v3_backup ? ['Pre-v0.3 backup', `${a.pre_v3_backup.path} (${fmtBytes(a.pre_v3_backup.bytes)}), deleted after ${fmtDate(a.pre_v3_backup.deleted_after)}`] : null,

@@ -230,6 +230,7 @@
     });
     $('#login-demo').hidden = !MOCK;
     $('#login-passkey').hidden = !(st.passkeys && KH.passkeys && KH.passkeys.supported());
+    if (KH.oidc) KH.oidc.applyStatus(); // the provider's button (design note 24), on the sign-in and invite screens
     const proxy = st.auth_mode === 'proxy';
     $$('.setup-local').forEach((el) => { el.hidden = proxy; });
     $$('.setup-proxy').forEach((el) => { el.hidden = !proxy; });
@@ -438,8 +439,16 @@
     applyBanners(st);
     return st;
   }
+  // Back from the sign-in provider (design note 24): "#/oidc/<word>" says how it went (js/views/oidc.js has the sentences).
+  function takeOidcResult() {
+    const raw = (() => { try { return location.hash || ''; } catch (e) { return ''; } })();
+    const result = KH.oidc ? KH.oidc.parseResult(raw) : null;
+    if (result || /^#\/oidc\//.test(raw)) { try { history.replaceState(null, '', location.pathname); } catch (e) { /* sandboxed frame */ } }
+    return result;
+  }
   async function boot() {
     setupPwToggles();
+    const oidcResult = takeOidcResult();
     const initial = (() => { try { return location.hash.replace('#', ''); } catch (e) { return ''; } })();
     if (router.VIEWS.includes(initial)) resumeView = initial;
     const route = parseHash();
@@ -455,11 +464,19 @@
       linkScreen(route.screen);
       return false;
     }
+    const oidcText = oidcResult ? KH.oidc.message(oidcResult.word, (st.oidc || {}).label) : '';
     if (!st.user) {
       const notice = takeReloadNotice();
       if (st.auth_mode === 'proxy') showProxyScreen({ notice });
+      else if (oidcResult) showLogin(oidcResult.ok ? { notice: oidcText } : { error: oidcText });
       else showLogin({ notice });
       return false;
+    }
+    if (oidcResult) {
+      // Linked or confirmed in Settings, or refused: back to where the person was, with the sentence.
+      const back = KH.oidc.takeReturn() || 'settings';
+      try { history.replaceState(null, '', `#${router.VIEWS.includes(back) ? back : 'settings'}`); } catch (e) { /* sandboxed frame */ }
+      setTimeout(() => toast(oidcText, oidcResult.ok ? 'ok' : 'error'), 300);
     }
     if (st.user.must_change_password) { showChange(st.user); return false; }
     state.me = st.user;
@@ -709,6 +726,11 @@
     $('#reauth-submit').disabled = false;
     $('#reauth-passkey').hidden = true;
     if (KH.passkeys) KH.passkeys.reauthAvailable().then((yes) => { if (reauthWaiter && reauthWaiter.promise === promise) $('#reauth-passkey').hidden = !yes; });
+    $('#reauth-oidc').hidden = true;
+    if (KH.oidc) {
+      $('#reauth-oidc-btn').textContent = `Confirm with ${KH.oidc.shortLabel((status().oidc || {}).label)}`;
+      KH.oidc.reauthAvailable().then((yes) => { if (reauthWaiter && reauthWaiter.promise === promise) $('#reauth-oidc').hidden = !yes; });
+    }
     sheets.open(reauthDlg, null, $('#reauth-password'));
     reauthDlg._returnFocus = null; // handled below, once the waiting request has settled
     return promise;
@@ -780,6 +802,29 @@
       if (err.status === 401) { reauthDlg.close(); return; } // signed out after too many tries: the sign-in screen is up
       if (!err.handled) errBox.append(h('p', {}, err.detail || err.message || 'That did not work. Try again.'));
     } finally { btn.disabled = false; }
+  });
+
+  // The sign-in provider instead of the password (design note 24 §8): the page goes there and comes back to Settings.
+  $('#reauth-oidc-btn').addEventListener('click', async () => {
+    const btn = $('#reauth-oidc-btn');
+    const errBox = $('#reauth-error');
+    if (btn.disabled) return;
+    btn.disabled = true;
+    clear(errBox);
+    try { await KH.oidc.reauth(); } catch (err) {
+      if (!err.handled) errBox.append(h('p', {}, err.detail || err.message || 'That did not work. Try again.'));
+      btn.disabled = false;
+    }
+  });
+
+  // An invite redeemed with the sign-in provider (design note 24 §6): no username or password to choose.
+  $('#register-oidc-btn').addEventListener('click', async () => {
+    const btn = $('#register-oidc-btn');
+    await busy(btn, async () => {
+      setError('');
+      if (!linkToken || linkToken.kind !== 'invite' || !linkToken.token) { setError('This link is incomplete or damaged. Open the whole link again.'); return; }
+      try { await KH.oidc.startInvite(linkToken.token); } catch (err) { showApiError(err, $('#form-register'), btn); }
+    });
   });
 
   // ---------------------------------------------------------------------------

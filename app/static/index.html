@@ -201,6 +201,12 @@
           <button class="btn secondary auth-passkey-btn" type="button" id="login-passkey-btn">Sign in with a passkey</button>
           <span class="hint">Your device asks for your fingerprint, face or PIN. No password needed.</span>
         </div>
+        <!-- Sign-in with a provider (design note 24): shown by js/views/oidc.js when the admin set one up. A plain link (relative: the app is always at its root): the server sends the browser on. -->
+        <div class="auth-passkey" id="login-oidc" hidden>
+          <p class="auth-or" aria-hidden="true">or</p>
+          <a class="btn secondary auth-passkey-btn" id="login-oidc-btn" href="api/auth/oidc/start">Sign in with single sign-on</a>
+          <span class="hint">You sign in on that site, then come back here.</span>
+        </div>
         <p class="hint auth-help">Forgot your password? Ask your admin for a reset link; there is no email reset.</p>
         <p class="hint auth-help" id="login-demo" hidden>Demo: sign in as <b>sam</b> with any password of 15 or more characters. Nothing is sent anywhere.</p>
       </form>
@@ -261,6 +267,12 @@
           <span class="hint" id="reg-password-hint">At least 15 characters. A short sentence you will remember works well; no symbols needed. A password manager and pasting are fine.</span>
         </div>
         <button class="btn primary auth-submit" type="submit" id="reg-submit">Create account</button>
+        <!-- Or with the sign-in provider (design note 24 §6): no password to choose. -->
+        <div class="auth-passkey" id="register-oidc" hidden>
+          <p class="auth-or" aria-hidden="true">or</p>
+          <button class="btn secondary auth-passkey-btn" type="button" id="register-oidc-btn">Create the account with single sign-on</button>
+          <span class="hint">No username or password to choose: you sign in on that site, then come back here.</span>
+        </div>
         <p class="hint auth-help">The link works once. If it has expired, ask the person who sent it for a new one.</p>
       </form>
 
@@ -1987,6 +1999,12 @@
         <p class="auth-or" aria-hidden="true">or</p>
         <button class="btn secondary auth-passkey-btn" type="button" id="reauth-passkey-btn">Use a passkey instead</button>
       </div>
+      <!-- Or the sign-in provider (design note 24 §8): shown when this person has linked it. The page goes there and comes back. -->
+      <div class="reauth-passkey" id="reauth-oidc" hidden>
+        <p class="auth-or" aria-hidden="true">or</p>
+        <button class="btn secondary auth-passkey-btn" type="button" id="reauth-oidc-btn">Confirm with single sign-on</button>
+        <span class="hint">You come back here afterwards. Then do it again.</span>
+      </div>
       <div class="auth-error" id="reauth-error" role="alert" aria-live="assertive"></div>
     </div>
     <div class="sheet-foot">
@@ -2362,6 +2380,7 @@
 <script src="js/views/two_step.js"></script>
 <script src="js/views/passkeys.js"></script>
 <script src="js/views/sharing.js"></script>
+<script src="js/views/oidc.js"></script>
 <script src="js/views/ai.js"></script>
 <script src="js/views/ai_routing.js"></script>
 <script src="js/views/ai_quality.js"></script>

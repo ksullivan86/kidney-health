@@ -123,6 +123,7 @@
         assistant_tokens: 0, device_tokens: 0, // the demo makes no tokens of either family (app/auth/admin_api.py counts the active ones)
         two_step: false, // nor two-step sign-in (design note 17)
         passkeys: 0, // nor passkeys (design note 18)
+        oidc_links: 0, // nor links to a sign-in provider (design note 24)
         shares: 0 }; // nor shares (design note 19)
     },
     // app/auth/tokens.py: an open reset/setup link per account (the demo never shows its token).
@@ -191,6 +192,7 @@
         logout_url: null,
         no_login: false,
         passkeys: false, // the demo has no passkeys (design note 18): the sign-in page offers none
+        oidc: { enabled: false, label: null }, // nor a sign-in provider (design note 24): no button, nothing to go to
       };
     },
     _sessionView(s) {
@@ -381,6 +383,17 @@
     route(m, p, function () { this._currentUser(); fail(404, 'Not Found'); });
   }
 
+  // Sign-in with a provider (app/auth/oidc_api.py, design note 24): a server where the admin has not set one up. The demo never leaves
+  // the page, so there is no fake provider: the button is hidden and every route is the server's 404.
+  route('GET', '/api/me/oidc', function () {
+    this._currentUser();
+    return { available: false, enabled: false, label: null, links: [], can_link: false, has_password: true, passkeys: 0 };
+  });
+  for (const [m, p] of [['POST', '/api/me/oidc/link'], ['DELETE', /^\/api\/me\/oidc\/(\d+)$/], ['POST', '/api/auth/reauth/oidc'],
+    ['POST', '/api/auth/oidc/invite']]) {
+    route(m, p, function () { fail(404, 'Not Found'); });
+  }
+
   // Sharing (app/sharing.py, design note 19): a server where the admin has not turned it on.
   route('GET', '/api/me/shares', function () { this._currentUser(); return { enabled: false, areas: ['food', 'labs', 'body', 'symptoms'], max: 10, sharing: [], codes: [] }; });
   for (const [m, p] of [['POST', '/api/me/shares'], ['DELETE', /^\/api\/me\/shares\/(\d+)$/], ['GET', '/api/shared'], ['POST', '/api/shared/info'],
@@ -525,6 +538,12 @@
     this._requireAdmin();
     this._requireRecent();
     targetUser(this, id); // nobody in the demo has a passkey
+    return { removed: 0 };
+  });
+  route('DELETE', userIdRoute('/oidc'), function ({ id }) {
+    this._requireAdmin();
+    this._requireRecent();
+    targetUser(this, id); // nobody in the demo has a link to a sign-in provider
     return { removed: 0 };
   });
   route('DELETE', userIdRoute('/shares'), function ({ id }) {
