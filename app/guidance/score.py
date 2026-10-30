@@ -84,6 +84,9 @@ class TodayStats:
 
     food_ids: frozenset[int]
     families: Mapping[str, frozenset[int]]
+    # Several days at once (note 23 §4): food id → how many of the earlier days of the same plan (at most
+    # ``PLAN_REPEAT_DAYS``) it is on. Empty for one day, so a one-day plan is unchanged.
+    recent: Mapping[int, int] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -647,6 +650,9 @@ def score_meal(items: Sequence[MealItem], room: Room, today: TodayStats, dialysi
         fam = today.families.get(f.family)
         if fam and any(other != f.id for other in fam):
             s -= 0.75
+        days = today.recent.get(f.id)
+        if days:
+            s -= R.PLAN_RECENT_FOOD_PENALTY * days
         if f.role in R.PROTEIN_ROLES:
             has_protein = True
         if f.role == "veg_fruit":

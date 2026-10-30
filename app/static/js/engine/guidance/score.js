@@ -108,7 +108,8 @@
       ids.add(e.food_id);
       if (e.family) { let s = fams.get(e.family); if (!s) fams.set(e.family, (s = new Set())); s.add(e.food_id); }
     }
-    return { food_ids: ids, families: fams };
+    // recent (note 23 §4): food id → how many earlier days of the same plan it is on; empty for one day.
+    return { food_ids: ids, families: fams, recent: new Map() };
   }
   function otherInFamily(today, f) {
     const fam = today.families.get(f.family);
@@ -417,6 +418,8 @@
       if (f.additive) s -= 1.0;
       if (today.food_ids.has(f.id)) s -= 1.0;
       if (otherInFamily(today, f)) s -= 0.75;
+      const days = today.recent ? today.recent.get(f.id) : 0;
+      if (days) s -= R.PLAN_RECENT_FOOD_PENALTY * days;
       if (R.PROTEIN_ROLES.has(f.role)) hasProtein = true;
       if (f.role === 'veg_fruit') hasVeg = true;
     }

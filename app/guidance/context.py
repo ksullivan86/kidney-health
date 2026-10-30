@@ -466,6 +466,20 @@ def load(conn: sqlite3.Connection, user_id: int, day: str, *, store: SettingsSto
     )
 
 
+def load_days(conn: sqlite3.Connection, user_id: int, start: str, count: int, foods: Mapping[int, FoodVec],
+              foods_json: Path | None = None) -> list[tuple[DayEntry, ...]]:
+    """Every entry (eaten and planned) of ``start`` and the ``count - 1`` days after it, one tuple per day in log order
+    (several days at once, design note 23). One query, scoped to the person."""
+    end = (_date.fromisoformat(start) + timedelta(days=count - 1)).isoformat()
+    overrides = role_overrides(foods_json)
+    sql = _ENTRY_SQL.format(cols=_ENTRY_COLS, food_cols=_FOOD_COLS, status="")
+    by_day: dict[str, list[DayEntry]] = {}
+    for row in conn.execute(sql, (int(user_id), start, end)).fetchall():
+        by_day.setdefault(row["date"], []).append(day_entry(row, _food_of(row, foods, overrides)))
+    days = [(_date.fromisoformat(start) + timedelta(days=i)).isoformat() for i in range(count)]
+    return [tuple(by_day.get(d, ())) for d in days]
+
+
 def load_period(conn: sqlite3.Connection, user_id: int, start: str, end: str) -> tuple[HistoryEntry, ...]:
     """Eaten entries of ``start``…``end`` (period insights)."""
     return load_history(conn, user_id, start, end)

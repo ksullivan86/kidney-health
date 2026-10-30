@@ -541,6 +541,50 @@
     }
     return { updated: n };
   });
+  // log.clear_planned (design note 23 §5): the planned food of start…end (at most 14 days), or only the entries in ids; eaten
+  // food and planned low treatments always stay; an id that is not one of the person's entries is 404 and nothing is deleted.
+  route('POST', '/api/log/clear-planned', function ({ body }) {
+    const c = new Check(body);
+    c.date('start'); c.date('end');
+    if (c.has('ids') && c.body.ids != null) {
+      const raw = c.body.ids;
+      if (!Array.isArray(raw)) c.err('ids', 'Input should be a valid list');
+      else {
+        const n = c.errors.length;
+        raw.forEach((x, i) => {
+          if (typeof x !== 'number' || !Number.isInteger(x)) c.err(`ids.${i}`, 'Input should be a valid integer');
+          else if (x < 1) c.err(`ids.${i}`, 'Input should be greater than or equal to 1');
+          else if (x >= 2 ** 63) c.err(`ids.${i}`, 'Input should be less than or equal to 9223372036854775807');
+        });
+        if (c.errors.length === n) {
+          if (raw.length < 1) c.err('ids', 'List should have at least 1 item after validation, not 0');
+          else if (raw.length > 1000) c.err('ids', `List should have at most 1000 items after validation, not ${raw.length}`);
+          else c.out.ids = [...raw];
+        }
+      }
+    } else c.out.ids = null;
+    for (const k of Object.keys(c.body)) if (!['start', 'end', 'ids'].includes(k)) c.err(k, 'Extra inputs are not permitted');
+    const b = c.done();
+    const span = Math.round((Date.parse(`${b.end}T00:00:00Z`) - Date.parse(`${b.start}T00:00:00Z`)) / 86400000);
+    if (span < 0) failFields(['end must not be before start']);
+    if (span >= 14) failFields(['at most 14 days at a time']);
+    let wanted = null;
+    if (b.ids) {
+      wanted = new Set(b.ids);
+      const mine = new Set(this._entries.map((e) => e.id)); // the demo's log is the demo person's
+      const missing = [...wanted].sort((x, y) => x - y).find((id) => !mine.has(id));
+      if (missing != null) fail(404, `log entry ${missing} not found`);
+    }
+    let deleted = 0;
+    for (let i = this._entries.length - 1; i >= 0; i--) {
+      const e = this._entries[i];
+      if (e.date >= b.start && e.date <= b.end && e.status === 'planned' && e.purpose !== 'hypo' && (!wanted || wanted.has(e.id))) {
+        this._entries.splice(i, 1);
+        deleted += 1;
+      }
+    }
+    return { deleted };
+  });
   route('POST', '/api/log/copy-day', function ({ body }) {
     const c = new Check(body);
     c.date('from_date'); c.date('to_date');

@@ -53,7 +53,7 @@ app/nutrients.py            PURE FUNCTIONS: nutrient registry, daily status, ale
 app/nutrient_core.py        the registry, display rounding and number formatting that nutrients.py and rules_kidney.py share (note 14 §2.2)
 app/rules_kidney.py         the kidney/T1D rule pack: per-serving thresholds, food_warnings, kidney_rating, meal-carb alerts, suggested targets
 app/foods.py                food search/CRUD, builtin JSON import, USDA proxy
-app/log.py                  log entries (eaten/planned), day/range/period summaries, mark-eaten, copy-day, CSV export
+app/log.py                  log entries (eaten/planned), day/range/period summaries, mark-eaten, copy-day, clear-planned, CSV export
 app/periods.py              PURE FUNCTIONS (v0.2): period averages, previous period, interdialytic interval, week bounds
 app/meals.py                saved meals (templates), from-log, apply, shopping list (v0.2)
 app/profile.py              profile + targets (+ dialysis days, week start)
@@ -519,7 +519,8 @@ Mobile-first single page, five views switched client-side (no router library):
    a vertical list of day cards on phones). Each day shows projected (eaten + planned) K, P, Na,
    protein, carbs and fluid (when targeted) as small chips colored by `projected_status` level,
    plus counts of planned/eaten items; tapping a day opens it in Today. Actions: "Copy day…"
-   (POST /api/log/copy-day), week navigation, a **Saved meals** section (list, create/edit/delete,
+   (POST /api/log/copy-day), "Plan a day…" and "Plan several days…" (1 to 14 days, design note 23; see the guidance
+   frontend below), week navigation, a **Saved meals** section (list, create/edit/delete,
    "Add to a day" → POST /api/meals/{id}/apply with date + meal + status), and a **Shopping list**
    for the visible week (GET /api/plan/shopping) with checkboxes kept only in localStorage.
 
@@ -588,6 +589,11 @@ All strings in English. `fetch()` only to same-origin `/api/...`.
   sets every planned entry of that day (or meal) to `eaten`.
 * `POST /api/log/copy-day` body `{"from_date", "to_date", "meals"?: [Meal], "include"?: "all"|"eaten"|"planned" (default all), "status"?: "planned"|"eaten" (default planned)}`
   → `{"created": n, "entries": [Entry]}`; copies entries (snapshot recomputed from current foods) onto `to_date` with the given status. 400 if from_date == to_date.
+* `POST /api/log/clear-planned` body `{"start", "end", "ids"?: [int] (1–1000)}` → `{"deleted": n}` (design note 23 §5): takes the
+  planned food off `start`…`end` (at most 14 days; 400 for `end < start` or a longer range), or with `ids` only those entries
+  (the Undo after "Add to plan"). Eaten food is never touched and a planned low treatment (`purpose: "hypo"`) stays. An id
+  that is not one of the person's entries is 404 and nothing is deleted; one of theirs that is eaten, a low treatment or
+  outside the range is left alone.
 
 ### DaySummary gains projection fields
 ```json
@@ -1736,6 +1742,7 @@ that is not theirs. Responses are `Cache-Control: no-store` like every `/api` ro
 | `GET /api/guidance/swaps` | `food_id` + `meal` + `servings` or `grams` (+ `date`), **or** `entry_id`; `purpose` `hypo`\|`none` (default: `hypo` for a `hypo_treatment` food, else the entry's); `explain` → `Swaps`. 400 without exactly one of `food_id`/`entry_id`; 404 for a food or entry that is not the person's |
 | `GET /api/guidance/hypo-options` | → `{status, rules_version, dose_g, options: [FoodPortion + text], card: LowCard, notes}`. Never filtered by a budget; answers even when guidance is switched off; reads no soft preference and is never empty while a low treatment exists (the floor under "Food preferences" below) |
 | `POST /api/guidance/plan-day` | `{date, meals?: [Meal] (1–4, unique), use_saved_meals?, use_usual?, use_starters?, variant? 0–4, explain?}` → `Plan`; computes only |
+| `POST /api/guidance/plan-days` | `{start, days? 1–14 (7), meals?: [Meal] (1–4, unique), use_saved_meals?, use_usual?, use_starters?, variant? 0–4}` → `PlanDays`; computes only (design note 23). 400 for more than 14 days. Day 1 is what `plan-day` gives for that date; with `meals`, those meals are planned on every day even when they have food |
 | `POST /api/guidance/fit-recipe` | `{meal_id}` **or** `{items: [{food_id, servings ≤ 40}] (1–30), servings_made?}`, with `target?: {kind: meal\|day (meal), meal?, date?}` → `{status: fits\|fits_after_changes\|fits_smaller_serving\|does_not_fit\|unavailable, rules_version, target: {kind, meal, date}, servings_made, before, after, fitted, closest, changes, still_over, notes}`; computes only (note 16 §7, "Recipes that fit" in `docs/guidance.md`). `before`/`after` are `{per_serving, unknown, checks: [{nutrient, used, room, ok}]}`; `fitted` (or `closest` when it does not fit, with no Save) is `{items: [{food_id, name, servings, serving_desc, portion_text}], serving_fraction, log_scale}`, the pot amounts and the `scale` for `apply`. 400 without exactly one of `meal_id`/`items`; 404 for a recipe or food that is not the person's; `unavailable` when a food of the recipe is gone |
 | `GET /api/guidance/insights/day` | `date` → `{status, rules_version, date, insights: [Insight] (≤ 6), planned_excluded, notes}` |
 | `GET /api/guidance/insights/period` | `start`, `end` (default the 7 days ending yesterday; ≤ 92 days; 400 for `end < start`) → `{status, rules_version, start, end, days, logged_days, insights, notes, previous: {start, end}}` |
@@ -1748,7 +1755,7 @@ that is not theirs. Responses are `Cache-Control: no-store` like every `/api` ro
 | `PUT /api/guidance/not-for-me/{food_id}` | alias: → the list (idempotent; replaces another preference on the food); 404 for a food the person cannot use; 409 at 500 foods |
 | `DELETE /api/guidance/not-for-me/{food_id}` | alias: → 204; 404 when the food is not on the "Not for me" list (another preference on it stays) |
 
-Instead of a result, `next-meal`, `swaps`, `plan-day` and the insights answer 200
+Instead of a result, `next-meal`, `swaps`, `plan-day`, `plan-days` and the insights answer 200
 `{"status": "no_targets" | "disabled", "rules_version", "message"}`: `no_targets` when the profile has no
 numeric potassium, phosphorus or sodium target and no `carbs_per_meal_g`; `disabled` when the instance
 setting `guidance.enabled` is off ("Meal guidance is switched off on this server.") or the person's
@@ -1791,6 +1798,12 @@ Plan = {"status": "ok", "rules_version", "date", "variant",
   "energy_note": {"kcal", "goal", "text", "foods": [FoodPortion], "handbook"} | null,
   "apply": {"endpoint": "/api/log/batch", "entries": [{"date", "meal", "food_id", "servings", "status": "planned", "purpose": "none"}]},
   "notes", "targets", "explain"?}
+PlanDays = {"status": "ok", "rules_version", "start", "end", "variant",
+  "days": [{"date", "dialysis_day", "meals": [Plan meal + "repeated"], "protein_topup": [Meal],
+            "day_after": {"projected_totals", "projected_status", "new_alerts", "projected_unknown": {nutrient: count}},
+            "energy_note"}],
+  "apply": {"endpoint": "/api/log/batch", "entries": [… as Plan, every day]}, "shopping": {"items": [ShoppingItem]},
+  "notes", "targets"}
 Insight = {"id": "day.potassium_mg.over" | …, "severity": "warning" | "attention" | "info" | "good",
            "nutrient" | null, "message", "numbers": {…}, "sources": [{"name", "short_name", "value", "share_pct"}],
            "handbook": [{"slug", "title", "url"}]}
@@ -1966,6 +1979,15 @@ note 06 §4.12's 200 ms p95 in Chromium with 4× CPU throttling (numbers in `doc
   **Use this plan** sends `apply.entries` to `POST /api/log/batch` with a fresh `client_id` each (one retry
   after a network error is answered `existing`). Each food of a plan meal (and of the energy note) has the "⋯" menu; *Not for me*
   on one plans the day again (same option number) without it.
+* **Plan several days** (`js/views/plandays.js`, `KH.views.planDays`; Plan → "Plan several days…", design note 23): the same
+  sheet (kind `plan-days`, built from `KH.guidance.plan`) with the first day, the number of days (1–14; **Rest of this
+  week**, **7 days**, **14 days**), the meals to plan and where ideas come from. The preview (`POST /plan-days`) has one
+  folding box a day (the first open) with its meals, "Same as a day before: nothing else fits." for a `repeated` meal, and
+  the day's totals, which read "≥" or "not listed" from `projected_unknown`; then the range's shopping list with **Copy
+  list** / **Share list**. **Add to plan** asks first ("… Nothing is marked as eaten.") and sends `apply.entries` to
+  `POST /api/log/batch` at most 40 a request, with a `client_id` each made once per plan, so pressing it again after a
+  part failed adds only the rest. **Undo** sends the ids the batches answered to `POST /api/log/clear-planned`;
+  **Clear planned days…** asks first and clears the range. Nothing is kept in browser storage.
 * **Treating a low** (`GET /hypo-options`): the card, the person's options at their dose with **Log it**
   (`purpose: "hypo"`); never filtered, never warned against, available with guidance off; offline the card
   is drawn from `KH.guidanceEngine.M.treatingALowCard`.

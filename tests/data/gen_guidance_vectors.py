@@ -22,8 +22,9 @@ current. Plain JSON in, plain JSON out, no clock, no randomness:
   (eaten entries of the previous 14 days), ``history60``, ``planned30`` (``[food_id, date, meal]`` of the entries
   still planned on the last 30 days), ``saved_meals`` and ``combos`` (items as ``[food_id, servings]``).
   ``call.fn`` names the engine function: ``meal_room``, ``what_fits``, ``find_swaps``, ``hypo_options``,
-  ``plan_day``, ``day_insights``, ``period_insights``, ``learned`` or ``prefilter``; ``output`` is its JSON answer
-  exactly as the API body (before the API adds ``ai`` and ``targets``).
+  ``plan_day``, ``plan_days``, ``day_insights``, ``period_insights``, ``learned``, ``fit_recipe`` or ``prefilter``; ``output`` is
+  its JSON answer exactly as the API body (before the API adds ``ai`` and ``targets``). ``plan_days`` (design note 23) plans
+  ``input.day`` and then one day for each list of entries in ``call.later_days`` (the same shape as ``day``).
 
 Numbers: every output number is already rounded by the engine (scores with JavaScript ``Math.round``
 semantics to 2 decimals, milligrams to integers and grams to 1 decimal with the app's half-up display
@@ -117,10 +118,7 @@ def context_from(inp: Mapping[str, Any], all_foods: Mapping[int, FoodVec]) -> Gu
         row = rows[int(fid)]
         foods[int(fid)] = food_map([{**row, "nutrients": {**row["nutrients"], **values}}])[int(fid)]
     def day_entry(e: Mapping[str, Any]) -> DayEntry:
-        f = foods[e["food_id"]]
-        return DayEntry(id=e["id"], meal=e["meal"], status=e["status"], food_id=f.id, name=e["name"], servings=e["servings"],
-                        nutrients=dict(e["nutrients"]), purpose=e["purpose"], role=f.role, family=f.family,
-                        category=f.category, flags=f.flags)
+        return day_entry_of(e, foods)
 
     def history_entry(h: Mapping[str, Any]) -> HistoryEntry:
         return HistoryEntry(date=h["date"], meal=h["meal"], food_id=h["food_id"], name=h["name"], servings=h["servings"],
@@ -151,6 +149,13 @@ def context_from(inp: Mapping[str, Any], all_foods: Mapping[int, FoodVec]) -> Gu
                            source=c["source"]) for c in inp["combos"]),
         tunables=Tunables(**inp["tunables"]),
     )
+
+
+def day_entry_of(e: Mapping[str, Any], foods: Mapping[int, FoodVec]) -> DayEntry:
+    f = foods[e["food_id"]]
+    return DayEntry(id=e["id"], meal=e["meal"], status=e["status"], food_id=f.id, name=e["name"], servings=e["servings"],
+                    nutrients=dict(e["nutrients"]), purpose=e["purpose"], role=f.role, family=f.family,
+                    category=f.category, flags=f.flags)
 
 
 def _finite(value: Any) -> Any:
@@ -186,6 +191,11 @@ def call(inp: Mapping[str, Any], spec: Mapping[str, Any], foods: Mapping[int, Fo
         return planner.plan_day(ctx, spec.get("meals"), use_saved_meals=spec.get("use_saved_meals", True),
                                 use_usual=spec.get("use_usual", True), use_starters=spec.get("use_starters", True),
                                 variant=spec.get("variant", 0))
+    if fn == "plan_days":
+        days = [ctx.day] + [tuple(day_entry_of(e, ctx.foods) for e in later) for later in spec["later_days"]]
+        return planner.plan_days(ctx, days, spec.get("meals"), use_saved_meals=spec.get("use_saved_meals", True),
+                                 use_usual=spec.get("use_usual", True), use_starters=spec.get("use_starters", True),
+                                 variant=spec.get("variant", 0))
     if fn == "day_insights":
         return insights.day_insights(ctx)
     if fn == "learned":
@@ -560,7 +570,42 @@ def cases() -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
         out.append((f"prefilter {i + 1}", base_input(), {"fn": "prefilter", "text": text}))
     out += preference_cases()
     out += recipe_cases()
+    out += plan_days_cases()
     return out
+
+
+def plan_days_cases() -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
+    """Several days at once (design note 23): variety, the repeat rule, the dialysis interval, the phosphorus week, "Not for
+    me", a low treatment already logged, a value a food does not list, and the shopping list."""
+    def days(n: int, **kw: Any) -> dict[str, Any]:
+        return {"fn": "plan_days", "later_days": [[] for _ in range(n - 1)], **kw}
+
+    only_rice = [2, 3, 4, 5, 6, 7, 8, 11, 13, 14]
+    return [
+        ("DAYS three days, the rest of today first", base_input(), days(3)),
+        ("DAYS four dinners, the saved meal comes back after two days", base_input(day=[], history=[]),
+         days(4, meals=["dinner"])),
+        ("DAYS nothing else fits, the meal repeats", base_input(day=[], history=[], saved_meals=[], exclude_food_ids=only_rice),
+         days(3, meals=["dinner"])),
+        ("DAYS hemodialysis, Monday over on potassium", base_input(
+            date="2026-10-05", dialysis="hemodialysis", dialysis_days=[0, 2, 4], targets={**FIXTURE_TARGETS, "fluid_ml": 1500},
+            day=[entry(1, 2, "lunch", 3.0)], history=[]), days(3, meals=["dinner", "snack"])),
+        ("DAYS phosphorus week with a heavy first day", base_input(day=[entry(1, 14, "lunch", 4.0)], history=[]),
+         days(2, meals=["dinner"])),
+        ("DAYS a low treatment and a logged day later", base_input(day=[entry(1, 10, "snack", purpose="hypo")], history=[]),
+         {"fn": "plan_days", "later_days": [[entry(2, 10, "snack", purpose="hypo"), entry(3, 1, "lunch", status="planned")],
+                                            [entry(4, 1, m) for m in ("breakfast", "lunch", "dinner", "snack")]]}),
+        ("DAYS a food that lists no potassium", base_input(day=[entry(1, 1, "lunch", override={"potassium_mg": None})],
+                                                           history=[]), days(2, meals=["dinner"])),
+        ("DAYS real list: a week", real_input(), days(7)),
+        ("DAYS real list: hemodialysis, not for me, variant 2", real_input(
+            targets=HD, dialysis="hemodialysis", dialysis_days=[1, 3, 5],
+            exclude_food_ids=[rid("Egg white"), rid("Rice, white, long-grain, cooked")]), days(5, variant=2)),
+        ("DAYS real list: likes and history", real_input(
+            food_pref=[[rid("Tofu, firm"), "like"], [rid("Pasta, cooked"), "less"]],
+            history=[hist("2026-10-04", rid("Chicken breast, roasted, skinless"), "dinner"),
+                     hist("2026-10-03", rid("Couscous, cooked"), "lunch")]), days(4, meals=["lunch", "dinner"])),
+    ]
 
 
 def recipe_cases() -> list[tuple[str, dict[str, Any], dict[str, Any]]]:

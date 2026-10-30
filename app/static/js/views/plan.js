@@ -224,21 +224,20 @@
     const lines = (left.length ? left : items).map((it) => `- ${it.food_name}: ${fmtServings(it.servings)}${it.serving_desc ? ` of ${it.serving_desc}` : ''}`);
     return [`Shopping list, ${fmtRange(sh.start, sh.end)}`, '', ...lines].join('\n');
   }
-  function showShoppingText(text) { // where the clipboard is blocked: the text, selected, to copy by hand
-    const box = $('#shopping-text');
+  function showShoppingText(text, box = $('#shopping-text')) { // where the clipboard is blocked: the text, selected, to copy by hand
     box.value = text;
     box.hidden = false;
     box.focus();
     box.select();
   }
-  async function copyShopping(text) {
+  async function copyShopping(text, box = $('#shopping-text')) {
     const policy = document.permissionsPolicy || document.featurePolicy;
     let allowed = true;
     try { allowed = !policy || typeof policy.allowsFeature !== 'function' || policy.allowsFeature('clipboard-write'); } catch (e) { allowed = true; }
     try {
       if (allowed && navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); toast('Shopping list copied', 'ok'); return; }
     } catch (e) { /* fall back */ }
-    showShoppingText(text);
+    showShoppingText(text, box);
     toast('Select the list and copy it (Ctrl+C, or touch and hold on a phone).');
   }
   $('#shopping-copy').addEventListener('click', () => { if (state.shopping) copyShopping(shoppingText(state.shopping, loadChecks(state.shopping.start))); });
@@ -756,5 +755,6 @@
   }
 
   router.register('plan', () => loadPlan());
-  KH.views.plan = { loadPlan, afterLogChange, openCopySheet, openApplySheet, openSaveMealSheet, openMealEditor, openFitSheet };
+  KH.views.plan = { loadPlan, afterLogChange, openCopySheet, openApplySheet, openSaveMealSheet, openMealEditor, openFitSheet,
+    shoppingText, copyShopping, weekStartPref };
 })();

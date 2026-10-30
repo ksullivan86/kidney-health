@@ -6,7 +6,7 @@ import re
 from datetime import date as _date
 from datetime import datetime as _datetime
 from datetime import timedelta as _timedelta
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 from urllib.parse import urlsplit
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_serializer, model_validator
@@ -521,6 +521,40 @@ class MarkEaten(BaseModel):
 
 class MarkEatenResult(BaseModel):
     updated: int
+
+
+CLEAR_PLANNED_MAX_DAYS = 14  # the plan builder's PLAN_DAYS_MAX (design note 23 §2)
+CLEAR_PLANNED_MAX_IDS = 1000
+
+
+class ClearPlanned(BaseModel):
+    """``POST /api/log/clear-planned`` (design note 23 §5): take the planned food off ``start``…``end`` (at most 14 days).
+    With ``ids``, only those entries. Eaten food and planned low treatments always stay."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    start: str
+    end: str
+    ids: list[Annotated[int, Field(ge=1, le=MAX_SQLITE_INT)]] | None = Field(default=None, min_length=1,
+                                                                            max_length=CLEAR_PLANNED_MAX_IDS)
+
+    @field_validator("start", "end")
+    @classmethod
+    def _date(cls, v: str) -> str:
+        return validate_date(v)
+
+    @model_validator(mode="after")
+    def _range(self) -> "ClearPlanned":
+        span = (_date.fromisoformat(self.end) - _date.fromisoformat(self.start)).days
+        if span < 0:
+            raise ValueError("end must not be before start")
+        if span >= CLEAR_PLANNED_MAX_DAYS:
+            raise ValueError(f"at most {CLEAR_PLANNED_MAX_DAYS} days at a time")
+        return self
+
+
+class ClearPlannedResult(BaseModel):
+    deleted: int
 
 
 class CopyDay(BaseModel):

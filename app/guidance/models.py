@@ -11,7 +11,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-from ..models import MAX_SQLITE_INT, Alert, Meal, Number, NutrientStatus, Rating, Warning, validate_date
+from ..models import MAX_SQLITE_INT, Alert, Meal, Number, NutrientStatus, Rating, ShoppingList, Warning, validate_date
+from .rules import PLAN_DAYS_MAX
 
 Group = Literal["protein", "starch", "veg_fruit", "extra"]
 Role = Literal["protein", "mixed", "starch", "veg_fruit", "drink", "extra"]
@@ -352,6 +353,68 @@ class PlanDayResponse(_Out):
     notes: list[str]
     targets: TargetsUsed
     explain: dict[str, Any] | None = None
+
+
+# --------------------------------------------------------------------------- #
+# Several days at once (design note 23)
+# --------------------------------------------------------------------------- #
+
+
+class PlanDaysRequest(BaseModel):
+    """``POST /api/guidance/plan-days``: computes only. "Add to plan" sends ``apply.entries`` to ``/api/log/batch`` (≤ 40 a
+    request)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    start: str
+    days: int = Field(default=7, ge=1, le=PLAN_DAYS_MAX)
+    meals: list[Meal] | None = Field(default=None, min_length=1, max_length=4)
+    use_saved_meals: bool = True
+    use_usual: bool = True
+    use_starters: bool = True
+    variant: int = Field(default=0, ge=0, le=4)
+
+    @field_validator("start")
+    @classmethod
+    def _date(cls, v: str) -> str:
+        return validate_date(v)
+
+    @field_validator("meals")
+    @classmethod
+    def _unique(cls, v: list[str] | None) -> list[str] | None:
+        if v is not None and len(set(v)) != len(v):
+            raise ValueError("each meal may be listed once")
+        return v
+
+
+class PlanDaysMeal(PlanMeal):
+    repeated: bool  # the same foods as this meal on one of the 2 days before: nothing else fits
+
+
+class PlanDaysAfter(DayAfter):
+    projected_unknown: dict[str, int]  # entries and planned foods of the day without a value: the total is "at least"
+
+
+class PlanDaysDay(_Out):
+    date: str
+    dialysis_day: bool
+    meals: list[PlanDaysMeal]
+    protein_topup: list[Meal]
+    day_after: PlanDaysAfter
+    energy_note: EnergyNote | None
+
+
+class PlanDaysResponse(_Out):
+    status: Literal["ok"]
+    rules_version: str
+    start: str
+    end: str
+    variant: int
+    days: list[PlanDaysDay]
+    apply: ApplyBlock
+    shopping: ShoppingList
+    notes: list[str]
+    targets: TargetsUsed
 
 
 # --------------------------------------------------------------------------- #
