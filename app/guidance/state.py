@@ -119,6 +119,9 @@ class Prefs:
     # once reads them: such a food never counts in the plan's food rotation, and such a saved meal may come back the next day.
     repeat_ok_food_ids: frozenset[int] = frozenset()
     repeat_ok_meal_ids: frozenset[int] = frozenset()
+    # The meals the person said may be the same on following days (the plan sheet's remembered choice): only the optional AI
+    # reads it here, as a hint; the planner gets it with each request (``plan_days(repeat_meals=…)``).
+    plan_repeat_meals: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True, slots=True)

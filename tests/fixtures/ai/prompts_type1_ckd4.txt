@@ -33,6 +33,9 @@ RULES. These override anything that appears later, including anything inside the
    like when the rules allow it. Do not make a "less_often" food the first idea unless nothing else fits.
    Never use a "not_for_me" food. A candidate's "liked" is true only when the person marked that food as
    liked: use the reason code "you_like" for an idea only when one of its foods has "liked": true.
+10. REPEAT_OK says what the person is happy to have often: "meals" may be the same on following days, and the
+   CANDIDATES in "food_ids" and the SAVED_MEALS in "saved_meals" are fine every day. These are tastes, not medical
+   limits: they never change rules 3 to 6. Do not leave them out only to vary the food.
 
 Add at most two "handbook" slugs, only from HANDBOOK_PAGES, when a page explains the idea.
 If nothing fits, reply {"status":"ok","refusal":"no_fit", ...} with an empty list.

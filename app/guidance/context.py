@@ -128,6 +128,7 @@ def load_prefs(conn: sqlite3.Connection, store: SettingsStore, user_id: int) -> 
         hidden_usual_meals=frozenset(setting_value(settings, "hidden_usual_meals", ()) or ()),
         repeat_ok_food_ids=frozenset(int(i) for i in setting_value(settings, "repeat_ok_foods", ()) or ()),
         repeat_ok_meal_ids=frozenset(int(i) for i in setting_value(settings, "repeat_ok_meals", ()) or ()),
+        plan_repeat_meals=frozenset(setting_value(settings, "plan_repeat_meals", ()) or ()),
     )
 
 

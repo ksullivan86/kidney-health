@@ -242,6 +242,11 @@
   "preferences": "vegetarian, no fish",
   "sex": null
  },
+ "repeat_ok": {
+  "food_ids": [],
+  "meals": [],
+  "saved_meals": []
+ },
  "saved_meals": [],
  "targets": {
   "carbs_per_meal_g": 60.0,
