@@ -230,6 +230,31 @@ def test_provider_errors_and_a_wrong_iss_parameter(admin, anon, provider):
     assert r.headers["location"] == "/#/oidc/failed"
 
 
+def test_the_provider_can_send_the_browser_back_but_nothing_else_crosses_sites(admin, anon, provider):
+    """The provider's redirect back is a cross-site (or same-site) top-level navigation: the cross-site read guard lets that one
+    through, and only that one (a fetch, a frame, another method or another /api path stays refused)."""
+    link_admin(admin, provider)
+    r = anon.get("/api/auth/oidc/start", follow_redirects=False)
+    code, state, _ = provider.authorize(r.headers["location"], claims={"sub": "admin-sub"})
+    for site in ("cross-site", "same-site"):
+        for mode, dest in (("cors", "empty"), ("no-cors", "image"), ("navigate", "iframe")):
+            refused = anon.get("/api/auth/oidc/callback", params={"code": code, "state": state}, follow_redirects=False,
+                               headers={"Sec-Fetch-Site": site, "Sec-Fetch-Mode": mode, "Sec-Fetch-Dest": dest})
+            assert refused.status_code == 403, (site, mode, dest)
+    nav = {"Sec-Fetch-Site": "cross-site", "Sec-Fetch-Mode": "navigate", "Sec-Fetch-Dest": "document"}
+    assert anon.get("/api/me", headers=nav).status_code == 403
+    assert anon.get("/api/auth/oidc/start", headers=nav, follow_redirects=False).status_code == 403
+    assert anon.post("/api/auth/oidc/callback", headers=nav).status_code == 403
+    back = anon.get("/api/auth/oidc/callback", params={"code": code, "state": state}, headers=nav, follow_redirects=False)
+    assert back.status_code == 303 and back.headers["location"] == "/"
+    # A forged return in a browser that did not start the flow is still refused by the route itself
+    r = anon.get("/api/auth/oidc/start", follow_redirects=False)
+    code, state, _ = provider.authorize(r.headers["location"], claims={"sub": "admin-sub"})
+    other = TestClient(admin.app, base_url=HTTPS_URL)
+    forged = other.get("/api/auth/oidc/callback", params={"code": code, "state": state}, headers=nav, follow_redirects=False)
+    assert forged.headers["location"] == "/#/oidc/expired"
+
+
 def test_every_result_word_has_a_sentence_on_the_page():
     from pathlib import Path
 
