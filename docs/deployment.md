@@ -99,6 +99,12 @@ Phones need HTTPS for offline mode, the barcode camera and secure sign-in. Pick 
 will type **before** anyone installs the app on a phone; changing it later creates a new, empty app
 on every phone. The four options are in [`https.md`](https.md).
 
+**Reaching it over a VPN** (NetBird, Tailscale, WireGuard). The VPN is part of your network, not of the app: the app
+answers whatever reaches it and cannot change how the tunnel carries packets. If the server sits behind a NetBird
+routing peer, set up MSS clamping on that peer, or run NetBird on the server itself, when you install it. Otherwise
+large files can stall over the VPN and only the header shows. If you open the app by a NetBird name, add that name to
+`ALLOWED_HOSTS`. Details and checks: [Only the header shows over a VPN](#only-the-header-shows-over-a-vpn).
+
 ## Configuration
 
 Set these as environment variables (Quadlet `Environment=`, `deploy/.env` for compose, `env:` in

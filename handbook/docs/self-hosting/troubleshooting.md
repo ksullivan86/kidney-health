@@ -62,6 +62,9 @@ The commands for each engine, and the fixes below in more detail, are in the dep
 The app opens on the home Wi-Fi. Over a VPN such as NetBird, Tailscale or WireGuard, only the header shows, and after
 about 8 seconds the page says "The app did not start". The page arrived, but the app's script files did not.
 
+This is fixed in your network, not in the app. The app answers whatever reaches it. It cannot change how the VPN
+carries packets. Whoever runs the VPN, or the machine that routes it to the server, makes the change below.
+
 **The likely cause** is packets that are too big for the tunnel. A VPN wraps each packet in another one, so packets
 inside it must be smaller. Small answers get through, but large files stall when the big packets are dropped and the
 "too big" messages never come back. This is called a path MTU black hole. It is likely when the server sits behind a
