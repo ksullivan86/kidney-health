@@ -76,8 +76,10 @@ def _ip_gate(ctx: AuthContext, ip: str | None) -> None:
         raise too_many(wait)
 
 
-def start_session(request: Request, response: Response, conn: sqlite3.Connection, ctx: AuthContext, user_id: int) -> None:
-    """New session (never reusing a pre-login cookie), session + device cookies, last_login_at."""
+def start_session(request: Request, response: Response, conn: sqlite3.Connection, ctx: AuthContext, user_id: int,
+                  signed_in_with: str | None = None) -> None:
+    """New session (never reusing a pre-login cookie), session + device cookies, last_login_at. ``signed_in_with="oidc"`` marks a
+    session the sign-in provider started (design note 24 §9)."""
     s = ctx.settings
     old = sessions.lookup(conn, sessions.read_token(request))  # no commit: stays in the caller's transaction
     if old is not None:
@@ -88,6 +90,7 @@ def start_session(request: Request, response: Response, conn: sqlite3.Connection
         max_days=s.session_max_days,
         user_agent=request.headers.get("user-agent"),
         ip=request_ip(request),
+        signed_in_with=signed_in_with,
     )
     request.state.auth_session = info
     sessions.set_cookie(response, request, token, max_days=s.session_max_days)
@@ -150,7 +153,15 @@ def auth_status(request: Request, conn: sqlite3.Connection = Depends(get_db)) ->
         "no_login": mode == "none",
         # Whether the sign-in page offers "Sign in with a passkey" (note 18 §6): local mode on an address with a name.
         "passkeys": mode == "local" and not _passkeys_need_a_name(request, s),
+        # Sign-in with a provider (design note 24 §7): whether the sign-in page shows its button, and the button's words.
+        "oidc": _oidc_status(request, conn),
     }
+
+
+def _oidc_status(request: Request, conn: sqlite3.Connection) -> dict[str, Any]:
+    from .oidc_api import status_view
+
+    return status_view(request, conn)
 
 
 def _passkeys_need_a_name(request: Request, settings: Any) -> bool:

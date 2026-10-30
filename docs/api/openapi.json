@@ -12325,6 +12325,61 @@
         ]
       }
     },
+    "/api/admin/users/{user_id}/oidc": {
+      "delete": {
+        "description": "Remove all of another person's links to a sign-in provider, for a lost or taken-over provider account (note 24 §6). They\nsign in another way, or with a new link. ``{\"removed\": 0}`` when there were none.",
+        "operationId": "admin_remove_user_oidc_links",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "title": "User Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Admin Remove User Oidc Links",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Remove User Oidc Links",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/admin/users/{user_id}/passkeys": {
       "delete": {
         "description": "Remove all of another person's passkeys, for a lost or stolen device (note 18 §2). They sign in with the password and\ncan add new ones. ``{\"removed\": 0}`` when there were none.",
@@ -13518,6 +13573,157 @@
         ]
       }
     },
+    "/api/auth/oidc/callback": {
+      "get": {
+        "description": "Where the provider sends the browser back. Never reflects what the provider sent.\n\nAny web page can send a browser here with a made-up state, so an unknown state or a cookie that does not match counts as\nnothing: not a failed sign-in for the address, and the browser's cookie (perhaps for its own waiting sign-in) stays. Only a\nflow this browser really started, once taken, counts as a failure when it is refused, and only then is the cookie cleared.",
+        "operationId": "auth_callback",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Code"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "error",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Error"
+            }
+          },
+          {
+            "in": "query",
+            "name": "iss",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Iss"
+            }
+          }
+        ],
+        "responses": {
+          "307": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "summary": "Callback",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/oidc/invite": {
+      "post": {
+        "description": "An invite link redeemed with the provider: ``{url}`` to go to; the account is made when the person comes back.",
+        "operationId": "auth_start_with_invite",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkInfoBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Auth Start With Invite",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "summary": "Start With Invite",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/oidc/start": {
+      "get": {
+        "description": "Go to the provider to sign in (a plain link on the sign-in page).",
+        "operationId": "auth_start",
+        "responses": {
+          "303": {
+            "description": "Successful Response"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "summary": "Start",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/auth/passkey": {
       "post": {
         "description": "Sign in with a passkey: the same session as a password sign-in, without the two-step code (the device checked a\nfingerprint, face or PIN). Every failure is the same 401 and counts against the address.",
@@ -13657,6 +13863,47 @@
           }
         ],
         "summary": "Reauth",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/reauth/oidc": {
+      "post": {
+        "description": "Confirm with the provider instead of the password (note 24 §8): ``{url}``; the provider asks the person to sign in again.",
+        "operationId": "auth_reauth_start",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Auth Reauth Start",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Reauth Start",
         "tags": [
           "auth"
         ]
@@ -18234,6 +18481,131 @@
         ]
       }
     },
+    "/api/me/oidc": {
+      "get": {
+        "description": "``{available, enabled, label, links, can_link, has_password, passkeys}`` (never a subject or a token).",
+        "operationId": "me_my_links",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Me My Links",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "My Links",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/me/oidc/link": {
+      "post": {
+        "description": "Link the provider to this account *(re-auth)*: ``{url}``. The callback links only in this same session.",
+        "operationId": "me_link_start",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Me Link Start",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Link Start",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/me/oidc/{link_id}": {
+      "delete": {
+        "description": "Remove one of the person's links *(re-auth)*; never the last way in. Another person's id is 404.",
+        "operationId": "me_unlink",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "title": "Link Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Unlink",
+        "tags": [
+          "me"
+        ]
+      }
+    },
     "/api/me/passkeys": {
       "get": {
         "description": "The person's passkeys (names and dates only). ``usable`` is false, with ``reason``, when this server's address cannot carry\npasskeys (an IP address).",
@@ -18376,6 +18748,7 @@
     },
     "/api/me/passkeys/{passkey_id}": {
       "delete": {
+        "description": "Remove one of the person's passkeys, never their last way in (a password, a passkey or a linked sign-in; note 24 §6).",
         "operationId": "me_remove_passkey",
         "parameters": [
           {

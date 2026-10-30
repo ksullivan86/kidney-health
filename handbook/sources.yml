@@ -1632,6 +1632,13 @@ NOTE20:
   licence: "PolyForm Noncommercial 1.0.0 (project)"
   checked: 2026-10-29
   kind: project
+NOTE24:
+  cite: "kidney-health design note 24: sign in with another account (OpenID Connect): Authentik, Google and others."
+  short: "Design note 24"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/24-oidc-sign-in.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-30
+  kind: project
 APPLE-SHORTCUTS:
   cite: "Apple Support. Shortcuts User Guide (Health actions, Format Date, Dictionary, Get Contents of URL, personal automations)."
   short: "Apple: Shortcuts User Guide"

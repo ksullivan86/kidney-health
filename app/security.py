@@ -21,7 +21,9 @@ the outermost middleware comes first:
 6. :class:`CsrfMiddleware` - ``Sec-Fetch-Site``/``Origin`` checks on unsafe methods, the required
    ``X-Requested-With: kidney-health`` on unsafe ``/api`` requests, and no cross-site or same-site
    reads of ``/api`` at all. The bearer-only paths (:data:`BEARER_PATHS`, exactly ``/mcp``,
-   ``/push/v1/body`` and ``/push/v1/check``) get only the ``Origin`` check, on every method.
+   ``/push/v1/body`` and ``/push/v1/check``) get only the ``Origin`` check, on every method. One exception to the
+   cross-site read rule: the sign-in provider's way back (:data:`PROVIDER_RETURN_PATHS`), a top-level ``GET`` navigation only
+   (design note 24 §3; its own state and cookie checks stop a forged one).
 
 Request state other code may read (``request.state.<name>``): ``peer`` (TCP peer), ``client_ip``
 (after trusted proxy handling), ``scheme`` (effective scheme), ``proxy_trusted`` (bool).
@@ -111,6 +113,10 @@ UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 # read a session cookie, so the cookie CSRF checks (Sec-Fetch-Site, X-Requested-With) do not apply; the Origin rule does,
 # on every method (the MCP transport's DNS-rebinding rule; a page on another site cannot post to /push/v1/body either).
 BEARER_PATHS = frozenset({"/mcp", "/push/v1/body", "/push/v1/check"})
+# Where a sign-in provider sends the browser back (design note 24 §3): the provider is another site, so the browser says
+# Sec-Fetch-Site: cross-site (or same-site, for a provider on a sibling host). Allowed only as a top-level GET navigation, matched
+# exactly; the route itself refuses anything without the flow's single-use state and the cookie set by this browser at the start.
+PROVIDER_RETURN_PATHS = frozenset({"/api/auth/oidc/callback"})
 CSRF_HEADER = "X-Requested-With"
 CSRF_HEADER_VALUE = brand.CSRF_HEADER_VALUE
 PROXY_SECRET_HEADER = "X-Proxy-Secret"
@@ -613,7 +619,10 @@ class CsrfMiddleware:
         site = headers.get("sec-fetch-site")
         if site is not None:
             site = site.strip().lower()
-        if api and site in ("cross-site", "same-site"):
+        if api and site in ("cross-site", "same-site") and not (
+            path in PROVIDER_RETURN_PATHS and method == "GET" and (headers.get("sec-fetch-mode") or "").strip().lower() == "navigate"
+            and (headers.get("sec-fetch-dest") or "document").strip().lower() == "document"
+        ):
             await _json_response(403, "Cross-site request refused")(scope, receive, send)
             return
         if method in UNSAFE_METHODS:
@@ -710,6 +719,9 @@ _PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
         re.compile(r"(?i)\b(x-api-key|x-proxy-secret|api[_-]?key|password|passwd|secret|token)(\s*[=:]\s*)([^\s&,;\"']+)"),
         r"\1\2" + REDACTED,
     ),
+    # The sign-in provider's one-time code and the flow's state in a query string, as uvicorn's access line shows
+    # GET /api/auth/oidc/callback?code=...&state=... (design note 24 §10).
+    (re.compile(r"(?<=[?&])(code|state)=[^\s&#\"']+"), r"\1=" + REDACTED),
 )
 HTTP_CLIENT_LOGGERS = ("httpx", "httpx2", "httpcore", "httpcore2", "h11")
 

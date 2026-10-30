@@ -7,6 +7,29 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+### Sign in with Authentik, Google or another provider
+
+* **A "Sign in with Authentik" (or Google) button**, next to the password form. It uses OpenID Connect and is **off** until you
+  set `OIDC_ENABLED`, `OIDC_ISSUER`, `OIDC_CLIENT_ID` and `OIDC_CLIENT_SECRET_FILE` (the secret only as a file). `PUBLIC_URL` is
+  needed: the provider's return address is `<PUBLIC_URL>/api/auth/oidc/callback`. A home Authentik on a private address also needs
+  `OIDC_ALLOW_PRIVATE_ISSUER=true`. Setup for Authentik and Google: [accounts.md](docs/accounts.md#sign-in-with-authentik-google-or-another-provider).
+* **Who gets in** is set in Server administration → Server settings → Single sign-on, or with variables: the button's words
+  (`OIDC_BUTTON_LABEL`), new accounts at the first sign-in (`OIDC_ALLOW_SIGNUP`, off), giving someone the account you made for
+  their verified email in People, if nobody has used it yet (`OIDC_LINK_BY_EMAIL`, off; never a self-registered or admin account),
+  allowed email domains (`OIDC_ALLOWED_DOMAINS`; with Google only Workspace accounts of a listed domain) and admin groups
+  (`OIDC_ADMIN_GROUPS`). With signing up off, only linked accounts and invite links get in.
+* **The last way to sign in stays.** Removing a passkey is refused when it is the account's only way in (no password and no
+  linked sign-in), as removing a link already was.
+* **Settings → Account → Linked sign-in** links or removes a provider account, after the password or a passkey. The last way to
+  sign in cannot be removed. An invite link can make the account with the provider. When an action asks for the password again,
+  **Confirm with …** answers it for someone who has no password. Admins can remove a person's link in People.
+* A sign-in through the provider is not asked for the app's two-step code, and "Admins must use two-step sign-in" applies to
+  password sign-ins only: make the provider ask for a second factor. Sign-ins through the provider and every link and unlink are
+  in the activity log; tokens are never stored or logged.
+* Schema step 26 adds the table of links and marks which sessions the provider started. Nothing changes for anyone until you
+  switch it on. No new dependency: the signature checks use `cryptography`, which the app already uses.
+* Design note: [24 · Sign in with another account](docs/dev/research/24-oidc-sign-in.md).
+
 ## 0.12.1 — 2026-10-30
 
 Plans of several days now go up to 60 days, for easier shopping and ordering. You choose which meals may repeat, whether to

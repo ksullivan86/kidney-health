@@ -64,6 +64,7 @@ Do not remove a line unless you understand what it stops.
 | **Security headers** on every response: strict CSP, `frame-ancestors 'none'`, Trusted Types (three named policies, each created in one file: `kh-sw` for the service worker, `kh-xml` for reading a patient-portal C-CDA file in the browser and `kh-pdf` for the PDF reader, which makes its worker from one vendored URL; no default policy), `nosniff`, `no-referrer`, COOP/CORP; HSTS over HTTPS | Script injection, clickjacking, referrer leaks. The patient handbook at `/learn` gets its own, slightly looser policy ([below](#the-handbook-at-learn-its-own-policy-and-its-own-origin)). |
 | **`--limit-concurrency 64`**, `MAX_BODY_BYTES` 1 MiB, photos `MAX_IMAGE_BYTES` 4 MiB with a header check, an import of a person's own export `MAX_IMPORT_BYTES` 16 MiB (that one path only; the file is strictly validated and written in one transaction, `app/data_import.py`) | Connection floods and oversized bodies. |
 | **Local accounts by default** (`AUTH_MODE=local`) with a one-time setup code | No "first visitor becomes admin" race. Passwords of at least 15 characters (NIST SP 800-63B-4), Argon2id, throttling. |
+| **Sign-in with a provider off by default** (`OIDC_ENABLED`; [accounts.md](accounts.md#sign-in-with-authentik-google-or-another-provider)) | No company is involved unless you choose one. When on: the authorization code flow with PKCE (S256), `state` and `nonce`; the flow is tied to the browser that started it by a 10-minute `HttpOnly` cookie; the ID token's signature is checked with the provider's keys (RS, PS, ES and EdDSA; never `none` or HS256), and its issuer, audience, times and nonce too; the client secret only as a file and never shown. Unknown people get no account unless you allow it. |
 
 ### The handbook at `/learn`: its own policy, and its own origin
 
@@ -244,6 +245,7 @@ The app makes **no** outbound request until you turn a feature on. The full list
 | Open Food Facts barcode lookup | Yes (`food.off_enabled=false`; Settings or the setup screen) | The barcode number only. |
 | Optional AI (OpenAI, OpenRouter, Nous Portal, a local Ollama or Hermes) | Yes (`AI_ENABLED=false`, then per-person opt-in with a consent text naming the provider) | Only the fields the feature needs, shown to the person before sending. Prefer a local model. AI calls never use tools, and the rules engine checks every suggestion. Each feature is pinned to a local or a cloud provider (default local, so off until a local AI exists); the local provider can only be reached on private addresses ([ai.md](ai.md#which-ai-does-each-feature-use)). |
 | Breached-password check | Yes (`PASSWORD_BREACH_CHECK=false`) | The first 5 hex characters of the password's SHA-1 (k-anonymity). |
+| Sign-in with a provider (Authentik, Google) | Yes (`OIDC_ENABLED=false`) | The server asks the provider for its configuration and keys, and sends it the one-time code with the client ID and secret. The browser goes to the provider to sign in. Nothing about a person's health data. |
 
 AI base URLs pass an SSRF filter: private, loopback and link-local addresses are reachable only
 through the env-only `AI_PRIVATE_HOSTS` allowlist (for example `ollama:11434`), every resolved address
@@ -290,6 +292,10 @@ publicly is refused. On Kubernetes the egress NetworkPolicy is a second layer.
 * The handbook at `/learn` runs its theme's inline scripts (allowed by hash) without Trusted Types on
   the app's origin. The files are static, read-only and take no input; serve the handbook from its
   own host name if that is still too much ([above](#the-handbook-at-learn-its-own-policy-and-its-own-origin)).
+* With sign-in through a provider on, whoever controls a linked provider account (or the provider) can sign in to the linked
+  account here, and an admin signed in that way is not asked for the app's two-step code. Make the provider ask for a second
+  factor. The way back from the provider (`GET /api/auth/oidc/callback`) is the one `/api` path a cross-site top-level navigation
+  may reach; its single-use state and the browser's own cookie refuse a forged one.
 * A kernel zero-day that escapes a user namespace is out of scope; the subordinate-UID mapping limits
   what it can reach.
 * Auto-update trusts whoever controls the tag you track; signing, tag rulesets and the `:0.12`

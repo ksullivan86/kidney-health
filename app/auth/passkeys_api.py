@@ -222,8 +222,24 @@ def rename_passkey(passkey_id: int, body: PasskeyNameBody, request: Request, use
 
 @me_router.delete("/{passkey_id}", status_code=204, response_class=Response)
 def remove_passkey(passkey_id: int, request: Request, user: RecentUser, conn: sqlite3.Connection = Depends(get_db)) -> Response:
+    """Remove one of the person's passkeys, never their last way in (a password, a passkey or a linked sign-in; note 24 §6)."""
+    from .accounts import begin_immediate
+    from .oidc_api import LAST_WAY_IN, ways_in
+
     _only_local(request, user)
+    begin_immediate(conn)  # the count and the delete see the same rows
+    try:
+        found = passkeys.get_for(conn, user.id, passkey_id)
+    except OverflowError:
+        found = None
+    if found is None:
+        conn.rollback()
+        raise HTTPException(status_code=404, detail="Not Found")
+    if ways_in(conn, user.id) <= 1:
+        conn.rollback()
+        raise ApiProblem(409, LAST_WAY_IN)
     if not passkeys.remove(conn, user.id, passkey_id):
+        conn.rollback()
         raise HTTPException(status_code=404, detail="Not Found")
     audit(conn, user.id, "passkey.removed", "user", user.id, ip=request_ip(request), via="self", count=1)
     conn.commit()

@@ -67,6 +67,11 @@ SESSION_COOKIE_HOST = "__Host-kh_session"
 DEVICE_COOKIE = "kh_device"
 DEVICE_COOKIE_HOST = "__Host-kh_device"
 
+# The 10-minute cookie that ties a sign-in with a provider to the browser that started it (design note 24 §3), over HTTP and HTTPS.
+# Compatibility: barely; a new name only fails the sign-ins waiting at the provider at that moment.
+OIDC_COOKIE = "kh_oidc"
+OIDC_COOKIE_HOST = "__Host-kh_oidc"
+
 # --------------------------------------------------------------------------- #
 # Request headers and tokens
 # --------------------------------------------------------------------------- #
@@ -125,6 +130,7 @@ USER_AGENT_AI = "kidney-health/{version}"  # AI providers and speech-to-text (``
 USER_AGENT_USDA = "kidney-health/0.3 (self-hosted food log)"  # USDA FoodData Central (``app/foods.py``)
 USER_AGENT_OFF = "KidneyHealth/{version} ({contact})"  # Open Food Facts asks for ``name/version (contact)`` (``app/off.py``)
 USER_AGENT_HIBP = "kidney-health"  # the Pwned Passwords range lookup (``app/auth/policy.py``)
+USER_AGENT_OIDC = "kidney-health"  # discovery, keys and the token request of sign-in with a provider (``app/auth/oidc.py``)
 
 # --------------------------------------------------------------------------- #
 # Key derivation labels (the HKDF ``info`` of ``app.crypto.Keyring``)

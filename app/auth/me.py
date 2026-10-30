@@ -124,9 +124,15 @@ def delete_me(request: Request, user: CurrentUser, body: DeleteMeBody = Body(...
     if body.confirm != "DELETE":
         raise ApiProblem(400, 'Type DELETE to confirm.', field="confirm")
     if ctx.settings.auth_mode == "local":
-        if body.password is None:
+        has_password = conn.execute("SELECT password_hash FROM users WHERE id = ?", (user.id,)).fetchone()["password_hash"]
+        if not has_password:
+            # An account made through the sign-in provider (design note 24 §8): a recent confirmation instead of a password.
+            if not sessions.reauth_is_recent(getattr(request.state, "auth_session", None), ctx.settings.reauth_minutes):
+                raise ApiProblem(403, "Please confirm it is you again", reauth_required=True)
+        elif body.password is None:
             raise ApiProblem(403, "Please enter your password again", reauth_required=True)
-        check_own_password(request, conn, ctx, user, body.password.get_secret_value())
+        else:
+            check_own_password(request, conn, ctx, user, body.password.get_secret_value())
     begin_immediate(conn)  # the last-admin check and the delete see the same data
     if would_remove_last_admin(conn, user.id):
         raise ApiProblem(409, "You are the only admin. Make someone else an admin first.")

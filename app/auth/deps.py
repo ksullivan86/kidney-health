@@ -104,10 +104,14 @@ TWO_STEP_FIRST = ("This server asks admins to use two-step sign-in. Turn it on i
                   "then open Server administration again.")
 
 
-def two_step_required(ctx: AuthContext, conn: sqlite3.Connection, user: User) -> bool:
+def two_step_required(ctx: AuthContext, conn: sqlite3.Connection, user: User, request: Request | None = None) -> bool:
     """Whether this admin must turn on two-step sign-in before using admin routes: the switch is on, sign-in is local, and the
-    account signs in with a password. The sign-in proxy (or no sign-in) is responsible for its own second factor."""
+    account signs in with a password. The sign-in proxy (or no sign-in) is responsible for its own second factor, and so is the
+    sign-in provider for a session it started (``sessions.signed_in_with = 'oidc'``, design note 24 §9)."""
     if ctx.settings.auth_mode != "local" or user.auth_source != "local":
+        return False
+    info = getattr(request.state, "auth_session", None) if request is not None else None
+    if info is not None and getattr(info, "signed_in_with", None) == "oidc":
         return False
     return bool(ctx.store.get(conn, TWO_STEP_SETTING))
 
@@ -115,7 +119,7 @@ def two_step_required(ctx: AuthContext, conn: sqlite3.Connection, user: User) ->
 def require_admin(user: CurrentUser, request: Request, conn: Annotated[sqlite3.Connection, Depends(get_db)]) -> User:
     if user.role != "admin":
         raise ApiProblem(403, "Admins only")
-    if two_step_required(auth_context(request), conn, user) and not totp.is_enabled(conn, user.id):
+    if two_step_required(auth_context(request), conn, user, request) and not totp.is_enabled(conn, user.id):
         raise ApiProblem(403, TWO_STEP_FIRST, two_step_required=True)
     return user
 

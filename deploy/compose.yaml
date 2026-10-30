@@ -131,6 +131,19 @@ services:
       AUTH_REQUIRE_TWO_STEP_ADMINS: ${AUTH_REQUIRE_TWO_STEP_ADMINS:-}
       HANDBOOK_PUBLIC_URL: ${HANDBOOK_PUBLIC_URL:-}
       PASSWORD_BREACH_CHECK: ${PASSWORD_BREACH_CHECK:-}
+      # Sign in with Authentik, Google or another OpenID Connect provider (docs/accounts.md). Off unless OIDC_ENABLED=true;
+      # needs PUBLIC_URL. The client secret is a file secret only (OIDC_CLIENT_SECRET is refused):
+      # OIDC_CLIENT_SECRET_FILE: /run/secrets/oidc_client_secret   # and add oidc_client_secret below
+      OIDC_ENABLED: ${OIDC_ENABLED:-}
+      OIDC_ISSUER: ${OIDC_ISSUER:-}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+      OIDC_SCOPES: ${OIDC_SCOPES:-}
+      OIDC_ALLOW_PRIVATE_ISSUER: ${OIDC_ALLOW_PRIVATE_ISSUER:-}
+      OIDC_BUTTON_LABEL: ${OIDC_BUTTON_LABEL:-}
+      OIDC_ALLOW_SIGNUP: ${OIDC_ALLOW_SIGNUP:-}
+      OIDC_LINK_BY_EMAIL: ${OIDC_LINK_BY_EMAIL:-}
+      OIDC_ALLOWED_DOMAINS: ${OIDC_ALLOWED_DOMAINS:-}
+      OIDC_ADMIN_GROUPS: ${OIDC_ADMIN_GROUPS:-}
       # A cloud AI provider's key is a file secret like the others (never an env var):
       # AI_API_KEY_FILE: /run/secrets/ai_api_key                # and add ai_api_key below
       # AI_CLOUD_API_KEY_FILE: /run/secrets/ai_cloud_api_key    # the key of AI_CLOUD_PROVIDER; add ai_cloud_api_key below
@@ -144,6 +157,7 @@ services:
       # - admin_password
       # - ai_api_key
       # - ai_cloud_api_key
+      # - oidc_client_secret
 
     volumes:
       # Named volume: starts empty and is populated from the image's /data (owner 10001, group 0,
@@ -181,6 +195,9 @@ secrets:
   #   x-podman.relabel: Z
   # ai_cloud_api_key:                   # only for AI_CLOUD_PROVIDER, the cloud AI (docs/ai.md)
   #   file: ./secrets/ai_cloud_api_key
+  #   x-podman.relabel: Z
+  # oidc_client_secret:                 # only for sign-in with a provider (OIDC_ENABLED; docs/accounts.md)
+  #   file: ./secrets/oidc_client_secret
   #   x-podman.relabel: Z
 
 volumes:
