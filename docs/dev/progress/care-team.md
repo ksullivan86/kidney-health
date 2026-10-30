@@ -8,10 +8,19 @@ Branch: worktree-agent-a0c4dba93435a1585, fast-forwarded to next-8 (897538c, has
 - Design note `docs/dev/research/25-care-team.md` (decisions: saved meals not in this version; helper may change/remove any
   planned entry except a low treatment; Care helper adds food log; invite answers the same whether the name exists).
 
+- Server: `app/migrations/m027_care_team.py`; `app/sharing.py` (roles, user name invites, role change, `care_helper`
+  dependency, helper routes under `/api/shared/{id}/`: foods, plan/shopping, log POST/batch/PUT/DELETE, clear-planned,
+  guidance/plan-days with saved meals forced off); `app/log.py` (`added_by` on entries, not in version/export);
+  `app/audit.py` care.* actions; setting label/help (`app/settings_registry.py`, `js/engine/settings.js`); OpenAPI
+  regenerated (`app/openapi_doc.py` 409/429 lists). Vectors: settings + import regenerated; `node tests/js/run_vectors.mjs` passes.
+- Tests: `tests/test_care_team.py` (new), `test_sharing.py`, `test_sharing_security.py`, `test_isolation_v03.py` updated. They
+  pass with test_log_if_match, test_export_delete, test_data_import, test_auth_coverage, test_planning, test_openapi*.
+- Seen, not mine: `tests/test_settings_ui.py::test_the_assistant_card_waits...` expects the old "Assistant access" title
+  (the AI naming WIP renamed it to "Outside AI apps"). Fix the test's string at the end.
+- Note: do not pass `-p no:logging` to pytest (caplog tests then error).
+
 ## Next
-1. m027 + server (`app/sharing.py`, `app/log.py` added_by, `app/models.py` Entry.added_by) + `tests/test_care_team.py`.
-2. OpenAPI regen, vectors.
-3. UI: Settings → Care team section (`js/views/sharing.js`), Profile link, Today "Added by", Plan "Planning for" (`js/views/careplan.js`).
+3. UI (in progress: sharing.js Care team section, settings.js #set-care, today.js "Added by", index.html section): Settings → Care team section (`js/views/sharing.js`), Profile link, Today "Added by", Plan "Planning for" (`js/views/careplan.js`).
 4. Mock twin (sample Care team), Node UI tests.
 5. e2e `tools/e2e/sharing.py` extended.
 6. Docs (accounts.md, handbook caregivers + app pages, ARCHITECTURE.md, CHANGELOG).

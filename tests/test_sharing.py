@@ -303,7 +303,13 @@ def test_there_is_no_write_route_under_shared(people):
     from test_auth_coverage import _walk
 
     writes = {(m, p) for m, p, _ in _walk(ana.app.routes) if p.startswith("/api/shared") and m not in ("get", "head")}
-    assert writes == {("post", "/api/shared/info"), ("post", "/api/shared/accept"), ("delete", "/api/shared/{share_id}")}
+    # The Care helper's writes (design note 25) are the only writes on someone's data; tests/test_care_team.py checks each one
+    # goes through sharing.care_helper.
+    from test_care_team import HELPER_WRITES
+
+    assert writes == {("post", "/api/shared/info"), ("post", "/api/shared/accept"), ("delete", "/api/shared/{share_id}"),
+                      ("post", "/api/shared/invites/{invite_id}/accept"), ("post", "/api/shared/invites/{invite_id}/decline"),
+                      *HELPER_WRITES}
 
 
 def test_a_view_is_written_to_the_owners_activity_once_a_day(people, fake_clock):
@@ -328,10 +334,12 @@ def test_while_the_switch_is_off_everything_is_404_and_shares_come_back(people):
     ana, sam, _ = people
     sid = share(ana, sam)
     switch(ana, False)
-    assert ana.get("/api/me/shares").json() == {"enabled": False, "areas": list(sharing.AREAS), "max": sharing.MAX_SHARES,
-                                               "sharing": [], "codes": []}
+    assert ana.get("/api/me/shares").json() == {"enabled": False, "areas": list(sharing.AREAS), "roles": list(sharing.ROLES),
+                                               "max": sharing.MAX_SHARES, "sharing": [], "codes": [], "invites": []}
     for r in (ana.post("/api/me/shares", json={"areas": ["food"]}), sam.get("/api/shared"), sam.get(f"/api/shared/{sid}/labs"),
-              sam.post("/api/shared/info", json={"code": "x"}), sam.delete(f"/api/shared/{sid}")):
+              sam.post("/api/shared/info", json={"code": "x"}), sam.delete(f"/api/shared/{sid}"),
+              ana.post("/api/me/shares/invite", json={"username": "sam", "areas": ["food"]}), ana.put(f"/api/me/shares/{sid}/role", json={"role": "viewer"}),
+              sam.post("/api/shared/invites/1/accept"), sam.post("/api/shared/invites/1/decline"), ana.delete("/api/me/shares/invites/1")):
         assert r.status_code == 404
     switch(ana, True)
     assert sam.get(f"/api/shared/{sid}/labs").status_code == 200

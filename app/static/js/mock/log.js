@@ -215,6 +215,7 @@
         warnings, kidney_rating: ratingFromWarnings(warnings), purpose: row.purpose || null, client_id: row.client_id || null,
         created_at: row.created_at, updated_at: row.updated_at };
       view.version = entryVersion(view);
+      view.added_by = row.added_by || null; // schema step 27: the Care helper who planned it (not part of the version)
       return view;
     },
     // fetch_entries: ORDER BY date, meal, status (eaten first), created_at, id
