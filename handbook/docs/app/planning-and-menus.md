@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-30
 fact_checked: 2026-10-05
-sources: [ARCH, NOTE06, NOTE08, FDC, Q20, A26-5]
+sources: [ARCH, NOTE06, NOTE08, FDC, Q20, A26-5, K24, DG23, JBDS22]
 ---
 
 # Planning meals and using the menus
@@ -136,29 +136,61 @@ numbers worked out again from the foods. A good habit: copy a day that went well
 
 ## Plan several days
 
-**Plan → Plan several days…** plans up to 14 days at once from your own foods
+**Plan → Plan several days…** plans up to 60 days at once from your own foods, so shopping and ordering are easier
 ([architecture contract][ARCH]; [design note 06][NOTE06]).
 
-1. Choose the **First day** and how many **Days**, or tap **Rest of this week**, **7 days** or **14 days**.
-2. The app plans every meal that has nothing logged yet. Tick meals if you want only those, on every day.
+1. Choose the **First day** and how many **Days**, or tap **Rest of this week**, **7 days**, **14 days**, **30 days** or
+   **60 days**. **Start tomorrow** sets the first day to tomorrow.
+2. The app plans breakfast, lunch and dinner on every day that has nothing logged for them yet. Tick meals if you want only
+   those, on every day. Tick **Plan a snack too** for a snack. It is off at first, and the app remembers your choice.
 3. Check the preview. Each day shows its meals and what the day adds up to with the plan. A food that does
    not list a value shows **not listed**, and a total that misses some shows **≥**. It is never shown as 0.
-4. Below the days is a **shopping list** for those days, with **Copy list** and **Share list**.
+4. Below the days is a **shopping list** for those days, with **Copy list** and **Share list**. Each food is on one line
+   with the total, so a long plan gives a short list.
 5. Tap **Add to plan**. The app asks first, then adds the foods as **planned**. Nothing is marked as eaten.
 
 Each day is planned against your own targets, with the food you already logged that day. The days are
 planned in order and see each other: phosphorus counts on the week's average, and on hemodialysis the days
-between sessions add up. The same meal is not planned two days in a row unless nothing else fits; the
-preview then says "Same as a day before: nothing else fits."
+between sessions add up.
 
-The app has one set of daily targets, the same on every day. Dialysis days are marked in the preview. If
-your care team gives you other limits for those days, check them against the preview.
+### Meals that repeat
 
-**Undo**, right after adding, takes off exactly what was added. **Clear planned days…** takes every
-planned food off the days you chose. It never takes off food you ate, or a planned low treatment.
+The same meal is not planned two days in a row unless nothing else fits. The preview then says "Same as a day before:
+nothing else fits."
 
-Two weeks is the most because targets can change after a blood test or a clinic visit. Plan again after
-that, so the plan uses your new targets.
+If you like the same breakfast every day, tick **Breakfast** under **Meals that may repeat**. You can tick lunch, dinner or
+snack too. The app remembers your choice.
+
+You can also mark one saved meal or one food as **OK to repeat**: tap **OK to repeat** on a saved meal in the preview, or
+open a food's **⋯** menu. A plan may then use it every day. **Foods and meals OK to repeat** in the sheet lists what you
+marked, with **Remove**. **Settings → Meal guidance** has the same choices.
+
+### Today's meals that are already past
+
+When the plan starts today, the app looks at the time. It uses these usual times: breakfast 08:00, lunch 12:30, snack
+15:30 and dinner 18:30.
+
+- A meal more than 2 hours past its time is not planned for today. The sheet says so, with **Start tomorrow**.
+- A meal less than 2 hours past its time is asked about, for example "Lunch was at 12:30. Plan it anyway?" Tap **Plan it**
+  or **Skip**.
+
+This never touches a low treatment you logged. Treat a low as you always do.
+
+### Dialysis days
+
+The app keeps one set of daily targets, the same on every day. Dialysis days are marked in the preview. The guidelines
+the app uses give daily targets, not separate ones for dialysis days ([KDIGO 2024][K24]; [KDOQI 2020][Q20]). Fluid is
+about 1,000 mL a day plus your urine ([DaVita][DG23]). Advice for dialysis days is about glucose and insulin, which your
+team sets ([JBDS 2022][JBDS22]). What the app does count is the gap between sessions: potassium, sodium and fluid add up
+from one session to the next. If your care team gives you other limits for dialysis days, check them against the preview.
+
+### Undo and Clear planned days
+
+**Undo**, right after adding, takes off only the foods that plan added. **Clear planned days…** is a reset: it takes every
+planned food off the days you chose, also food you planned yourself. It never takes off food you ate, or a planned low
+treatment.
+
+Targets can change after a blood test or a clinic visit. Plan again after that, so the plan uses your new targets.
 
 ## Shopping list
 
@@ -237,3 +269,5 @@ Your sessions are Monday, Wednesday and Friday. On Sunday evening:
 - [Design note 08][NOTE08]: the sample menus; [design note 06][NOTE06]: the plan builder (v0.3).
 - [USDA FoodData Central][FDC]: the food list behind the app and the menus.
 - [KDOQI 2020 nutrition guideline][Q20]; [ADA Standards of Care 2026, section 5][A26-5], Rec 5.28.
+- [KDIGO 2024 CKD guideline][K24], [DaVita: hemodialysis fluid intake][DG23] and [JBDS 2022][JBDS22]: no separate daily
+  targets for dialysis days.

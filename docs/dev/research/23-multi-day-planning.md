@@ -53,7 +53,8 @@ Two rules, both only between days of the same plan, so day 1 is exactly what **P
    are picked and when whole meals are compared. That is the same weight the ranking already gives a food eaten the day before.
 
 "Not for me" foods and "Never suggest" groups are never planned, as for one day. "Less often" foods rank lower. A saved meal or a
-usual meal can still come back after two days.
+usual meal can still come back after two days. The owner's choices of §12.2 lift both rules for a meal the person ticks, and
+for foods and saved meals marked "OK to repeat".
 
 ## 5. How it lands
 
@@ -64,7 +65,8 @@ usual meal can still come back after two days.
   with its own `client_id`, so a retry after a lost answer adds nothing twice.
 * **Undo** right after adding takes off exactly the foods it added.
 * **Clear planned days** asks first, then takes every planned food off the days in the range: a new
-  `POST /api/log/clear-planned {start, end, ids?}`. Eaten food is never touched. Planned low treatments stay.
+  `POST /api/log/clear-planned {start, end, ids?}`. Eaten food is never touched. Planned low treatments stay. It is a reset
+  (§12.4): food planned by hand goes too, and the confirm says so.
 * Planned food counts only in the planned and projected totals, never as eaten, as today.
 
 ## 6. The shopping list for the range
@@ -88,9 +90,12 @@ sees more than one day's room at a time and never writes: the person adds the pl
 
 ## 9. The route
 
-`POST /api/guidance/plan-days` `{start, days (1-14), meals?, use_saved_meals?, use_usual?, use_starters?, variant?}` computes only,
-like `plan-day`, and answers `{status, rules_version, start, end, variant, days: [{date, dialysis_day, meals, protein_topup,
-day_after, energy_note}], apply: {endpoint, entries}, shopping: {items}, notes, targets}`. Every query is scoped to the signed-in
+`POST /api/guidance/plan-days` `{start, days (1 to PLAN_DAYS_MAX), meals?, use_saved_meals?, use_usual?, use_starters?, variant?,
+repeat_meals?, snack?, skip_first_day?}` computes only, like `plan-day`, and answers `{status, rules_version, start, end,
+variant, days: [{date, dialysis_day, meals, protein_topup, day_after, energy_note}], apply: {endpoint, entries}, shopping:
+{items}, notes, targets, limits: {days_max, ai_days_max}, choices: {repeat_meals, snack, skip_first_day}}`. The "OK to
+repeat" marks: `GET /api/guidance/repeat-ok`, `PUT` and `DELETE /api/guidance/repeat-ok/{foods|meals}/{id}` (404 when not
+the person's). Every query is scoped to the signed-in
 person; a food or entry that is not theirs is 404. The browser twin in the demo gives the same answer (parity vectors).
 
 ## 10. Open questions for the owner (answered in §12)

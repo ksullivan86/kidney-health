@@ -519,7 +519,7 @@ Mobile-first single page, five views switched client-side (no router library):
    a vertical list of day cards on phones). Each day shows projected (eaten + planned) K, P, Na,
    protein, carbs and fluid (when targeted) as small chips colored by `projected_status` level,
    plus counts of planned/eaten items; tapping a day opens it in Today. Actions: "Copy day…"
-   (POST /api/log/copy-day), "Plan a day…" and "Plan several days…" (1 to 14 days, design note 23; see the guidance
+   (POST /api/log/copy-day), "Plan a day…" and "Plan several days…" (1 to 60 days, design note 23; see the guidance
    frontend below), week navigation, a **Saved meals** section (list, create/edit/delete,
    "Add to a day" → POST /api/meals/{id}/apply with date + meal + status), and a **Shopping list**
    for the visible week (GET /api/plan/shopping) with checkboxes kept only in localStorage.
@@ -589,9 +589,10 @@ All strings in English. `fetch()` only to same-origin `/api/...`.
   sets every planned entry of that day (or meal) to `eaten`.
 * `POST /api/log/copy-day` body `{"from_date", "to_date", "meals"?: [Meal], "include"?: "all"|"eaten"|"planned" (default all), "status"?: "planned"|"eaten" (default planned)}`
   → `{"created": n, "entries": [Entry]}`; copies entries (snapshot recomputed from current foods) onto `to_date` with the given status. 400 if from_date == to_date.
-* `POST /api/log/clear-planned` body `{"start", "end", "ids"?: [int] (1–1000)}` → `{"deleted": n}` (design note 23 §5): takes the
-  planned food off `start`…`end` (at most 14 days; 400 for `end < start` or a longer range), or with `ids` only those entries
-  (the Undo after "Add to plan"). Eaten food is never touched and a planned low treatment (`purpose: "hypo"`) stays. An id
+* `POST /api/log/clear-planned` body `{"start", "end", "ids"?: [int] (1–2500)}` → `{"deleted": n}` (design note 23 §5): takes the
+  planned food off `start`…`end` (at most `PLAN_DAYS_MAX` days, default 60; 400 for `end < start` or a longer range), or with
+  `ids` only those entries (the Undo after "Add to plan"). Without `ids` it is a reset: every planned food of the days goes,
+  also food planned by hand. Eaten food is never touched and a planned low treatment (`purpose: "hypo"`) stays. An id
   that is not one of the person's entries is 404 and nothing is deleted; one of theirs that is eaten, a low treatment or
   outside the range is left alone.
 
@@ -1070,6 +1071,11 @@ preferences and the Python 3.15 image. What it could not verify is listed under 
 checks a maintainer runs before tagging are in `docs/maintainers.md`, and everything deferred or left open, with its owner, is in
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
+
+**Since 0.12.0 (unreleased):** the owner's answers to note 23 (§12): plans of up to 60 days (`PLAN_DAYS_MAX`,
+`PLAN_DAYS_AI_MAX`), meals and items that may repeat (`repeat_meals`, `/api/guidance/repeat-ok`), an optional snack, today's
+past meals (`skip_first_day`), one set of targets on dialysis days, and `repeat_ok` in the meal prompts (`PROMPT_VERSION`
+2026-10-30.1); `RULES_VERSION` 2026-10-30.2; no schema step.
 
 **Status (2026-10-30): v0.12.0 is prepared.** It plans several days at once (note 23: `POST /api/guidance/plan-days`,
 `POST /api/log/clear-planned`; no schema step), makes AI ideas and recipes that are only too big smaller (`portions_lowered`,
@@ -1745,7 +1751,10 @@ that is not theirs. Responses are `Cache-Control: no-store` like every `/api` ro
 | `GET /api/guidance/swaps` | `food_id` + `meal` + `servings` or `grams` (+ `date`), **or** `entry_id`; `purpose` `hypo`\|`none` (default: `hypo` for a `hypo_treatment` food, else the entry's); `explain` → `Swaps`. 400 without exactly one of `food_id`/`entry_id`; 404 for a food or entry that is not the person's |
 | `GET /api/guidance/hypo-options` | → `{status, rules_version, dose_g, options: [FoodPortion + text], card: LowCard, notes}`. Never filtered by a budget; answers even when guidance is switched off; reads no soft preference and is never empty while a low treatment exists (the floor under "Food preferences" below) |
 | `POST /api/guidance/plan-day` | `{date, meals?: [Meal] (1–4, unique), use_saved_meals?, use_usual?, use_starters?, variant? 0–4, explain?}` → `Plan`; computes only |
-| `POST /api/guidance/plan-days` | `{start, days? 1–14 (7), meals?: [Meal] (1–4, unique), use_saved_meals?, use_usual?, use_starters?, variant? 0–4}` → `PlanDays`; computes only (design note 23). 400 for more than 14 days. Day 1 is what `plan-day` gives for that date; with `meals`, those meals are planned on every day even when they have food |
+| `POST /api/guidance/plan-days` | `{start, days? 1–90 (7), meals?: [Meal] (1–4, unique), use_saved_meals?, use_usual?, use_starters?, variant? 0–4, repeat_meals?: [Meal] (≤ 4, unique), snack?: bool, skip_first_day?: [Meal] (≤ 4, unique)}` → `PlanDays`; computes only (design note 23). 400 above `PLAN_DAYS_MAX` (setting `guidance.plan_days_max`, default 60) with `days: at most N days at a time`. With `meals`, those meals are planned on every day even when they have food. `snack` (default the person's `plan_snack`, false) plans the snack too; `repeat_meals` (default the person's `plan_repeat_meals`) may be the same on following days; `skip_first_day` are not planned on the first day (today's meals whose time has passed, chosen by the screen). With `snack: true` and nothing skipped, day 1 is what `plan-day` gives for that date |
+| `GET /api/guidance/repeat-ok` | → `{foods: [{food_id, name}], meals: [{meal_id, name}], foods_limit: 200, meals_limit: 100}`: the foods and saved meals the person marked "OK to repeat" (design note 23 §12.2); only their own saved meals and foods they can use are listed |
+| `PUT /api/guidance/repeat-ok/{kind}/{item_id}` | `kind` `foods`\|`meals` → the list; marks a food or a saved meal "OK to repeat" (kept in the person's `guidance` object, one `BEGIN IMMEDIATE` transaction); the same mark again changes nothing; 404 for a food the person cannot use or a saved meal that is not theirs; 409 when the list is full |
+| `DELETE /api/guidance/repeat-ok/{kind}/{item_id}` | → the list; takes the mark off (nothing to take off is fine); 404 as for `PUT` |
 | `POST /api/guidance/fit-recipe` | `{meal_id}` **or** `{items: [{food_id, servings ≤ 40}] (1–30), servings_made?}`, with `target?: {kind: meal\|day (meal), meal?, date?}` → `{status: fits\|fits_after_changes\|fits_smaller_serving\|does_not_fit\|unavailable, rules_version, target: {kind, meal, date}, servings_made, before, after, fitted, closest, changes, still_over, notes}`; computes only (note 16 §7, "Recipes that fit" in `docs/guidance.md`). `before`/`after` are `{per_serving, unknown, checks: [{nutrient, used, room, ok}]}`; `fitted` (or `closest` when it does not fit, with no Save) is `{items: [{food_id, name, servings, serving_desc, portion_text}], serving_fraction, log_scale}`, the pot amounts and the `scale` for `apply`. 400 without exactly one of `meal_id`/`items`; 404 for a recipe or food that is not the person's; `unavailable` when a food of the recipe is gone |
 | `GET /api/guidance/insights/day` | `date` → `{status, rules_version, date, insights: [Insight] (≤ 6), planned_excluded, notes}` |
 | `GET /api/guidance/insights/period` | `start`, `end` (default the 7 days ending yesterday; ≤ 92 days; 400 for `end < start`) → `{status, rules_version, start, end, days, logged_days, insights, notes, previous: {start, end}}` |
@@ -1806,7 +1815,8 @@ PlanDays = {"status": "ok", "rules_version", "start", "end", "variant",
             "day_after": {"projected_totals", "projected_status", "new_alerts", "projected_unknown": {nutrient: count}},
             "energy_note"}],
   "apply": {"endpoint": "/api/log/batch", "entries": [… as Plan, every day]}, "shopping": {"items": [ShoppingItem]},
-  "notes", "targets"}
+  "notes", "targets", "limits": {"days_max", "ai_days_max"},
+  "choices": {"repeat_meals": [Meal], "snack": bool, "skip_first_day": [Meal]}}
 Insight = {"id": "day.potassium_mg.over" | …, "severity": "warning" | "attention" | "info" | "good",
            "nutrient" | null, "message", "numbers": {…}, "sources": [{"name", "short_name", "value", "share_pct"}],
            "handbook": [{"slug", "title", "url"}]}
@@ -1859,11 +1869,16 @@ nothing. `preference` is validated by the API (`like`, `less`, `not_for_me`, `ne
 
 `guidance.enabled` (instance, `true`, env `GUIDANCE_ENABLED`), `guidance.pool_per_role` (instance, 200,
 20–2000, env `GUIDANCE_POOL_PER_ROLE`), `guidance.beam_width` (instance, 16, 1–64, env
-`GUIDANCE_BEAM_WIDTH`), and the person's object `guidance` (scope `user`): `{enabled: true,
+`GUIDANCE_BEAM_WIDTH`), `guidance.plan_days_max` (instance, 60, 1–90, env `PLAN_DAYS_MAX`: the most days of one plan, and of
+one clear), `guidance.plan_days_ai_max` (instance, 31, 1–90, env `PLAN_DAYS_AI_MAX`: the cap for a plan whose ideas come from
+AI, never above `plan_days_max`; the several-days plan uses no AI yet, design note 23 §12.1), and the person's object
+`guidance` (scope `user`): `{enabled: true,
 carb_tolerance_g: 10 (5–20), hypo_dose_g: 15 (5–30), exclude_categories: [] (≤ 50), show_plan_builder:
 true, show_insights: true, ai_enrich: false, learn_from_log: true, like_categories: [] (≤ 50),
-less_categories: [] (≤ 50), hidden_usual_meals: [] (≤ 50 usual-meal keys of at most 400 characters)}`, unknown
-fields refused, each list de-duplicated. A food group may be in at most one of `like_categories`,
+less_categories: [] (≤ 50), hidden_usual_meals: [] (≤ 50 usual-meal keys of at most 400 characters),
+plan_repeat_meals: [] (≤ 4 meals), plan_snack: false, repeat_ok_foods: [] (≤ 200 food ids), repeat_ok_meals: [] (≤ 100 saved
+meal ids)}`, unknown fields refused, each list de-duplicated. Only the person's own foods and saved meals are ever read from
+`repeat_ok_foods` and `repeat_ok_meals`, so an id that is not theirs does nothing. A food group may be in at most one of `like_categories`,
 `less_categories` and `exclude_categories`; otherwise the update is refused with `guidance: Value error, a food group
 can be in only one of Like, Less often and Never suggest: <groups>` (`400` like every invalid setting). A usual-meal key
 is `<meal>:<food id>x<quarter servings>,…` over the items sorted by food id, e.g. `lunch:12x4,30x2`
@@ -1940,6 +1955,10 @@ check passes again; an idea that also fails for any other reason at the proposed
 `not_a_candidate`, `quarters_out_of_range`, `would_exceed:<k>`, `too_many_carbs`, `hypo_treatment`, …),
 `validate_ai_plan(ctx, picks)` and
 `register_ai_status(provider)` (feeds `next-meal`'s `ai` block; a failing provider reads as unavailable).
+The meal prompts (`ideas`, `rerank`, `swap`, `plan`; `PROMPT_VERSION` 2026-10-30.1) also carry `repeat_ok: {meals,
+food_ids, saved_meals}`: the meals the person said may repeat on following days and which of the prompt's candidates (ids)
+and saved meals (refs) they marked "OK to repeat" (design note 23 §12.2). Only fixed meal names, ids and refs; rule 10 says
+these are tastes that never change the safety rules. The guard checks every idea as before.
 `app.guidance.hypo.prefilter(text, dose_g)` returns the "Treating a low" card that must be shown
 **instead of** calling AI when free text may describe a low (note 04 G7).
 
@@ -1983,14 +2002,24 @@ note 06 §4.12's 200 ms p95 in Chromium with 4× CPU throttling (numbers in `doc
   after a network error is answered `existing`). Each food of a plan meal (and of the energy note) has the "⋯" menu; *Not for me*
   on one plans the day again (same option number) without it.
 * **Plan several days** (`js/views/plandays.js`, `KH.views.planDays`; Plan → "Plan several days…", design note 23): the same
-  sheet (kind `plan-days`, built from `KH.guidance.plan`) with the first day, the number of days (1–14; **Rest of this
-  week**, **7 days**, **14 days**), the meals to plan and where ideas come from. The preview (`POST /plan-days`) has one
+  sheet (kind `plan-days`, built from `KH.guidance.plan`) with the first day (**Start tomorrow**), the number of days (1 to
+  the answer's `limits.days_max`; **Rest of this week**, **7 days**, **14 days**, **30 days**, **60 days**, a choice above the
+  cap hidden), the meals to plan (breakfast, lunch, dinner), **Plan a snack too** (off at first), **Meals that may repeat**
+  (both remembered in the person's `guidance` object through `KH.guidance.savePrefs`), the "OK to repeat" list
+  (`GET /repeat-ok`, **Remove**), and where ideas come from (rules only; nothing goes to AI). When the first day is today, a
+  meal whose usual time (breakfast 08:00, lunch 12:30, snack 15:30, dinner 18:30, the browser's clock) is more than 2 hours
+  past goes in `skip_first_day` with a note; a meal up to 2 hours past that the preview holds is asked about in the app's
+  inline confirm ("Lunch was at 12:30. Plan it anyway?", **Plan it** / **Skip**; `KH.confirm.inline` takes `cancelText` and
+  `onCancel`), and **Add to plan** waits for the answer. A saved meal in the preview has an **OK to repeat** toggle and each
+  food's "⋯" menu one more (`PUT|DELETE /repeat-ok/…`); a change plans the days again. The preview (`POST /plan-days`) has one
   folding box a day (the first open) with its meals, "Same as a day before: nothing else fits." for a `repeated` meal, and
   the day's totals, which read "≥" or "not listed" from `projected_unknown`; then the range's shopping list with **Copy
   list** / **Share list**. **Add to plan** asks first ("… Nothing is marked as eaten.") and sends `apply.entries` to
   `POST /api/log/batch` at most 40 a request, with a `client_id` each made once per plan, so pressing it again after a
-  part failed adds only the rest. **Undo** sends the ids the batches answered to `POST /api/log/clear-planned`;
-  **Clear planned days…** asks first and clears the range. Nothing is kept in browser storage.
+  part failed adds only the rest; a long plan says "Added 120 of 696 foods…" as it goes. **Undo** sends the ids the
+  batches answered to `POST /api/log/clear-planned` and says it takes off only what this plan added; **Clear planned
+  days…** asks first, says it is a reset (also food planned by hand) and clears the range. Settings → Meal guidance has the
+  same snack and repeat choices and **Clear the OK to repeat marks**. Nothing is kept in browser storage.
 * **Treating a low** (`GET /hypo-options`): the card, the person's options at their dose with **Log it**
   (`purpose: "hypo"`); never filtered, never warned against, available with guidance off; offline the card
   is drawn from `KH.guidanceEngine.M.treatingALowCard`.
