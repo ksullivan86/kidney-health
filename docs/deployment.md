@@ -155,6 +155,9 @@ NetworkPolicy and the compose, Quadlet and `.env.example` comments name the same
 | `ASSISTANT_ENABLED` | `false` | Assistant access: each person may make personal tokens (Settings → Assistant access) for a chat assistant that reads their own food log and targets and, if the person ticks "Can also save food and recipes" for that token, saves food and recipes, and, if the person ticks "Also let it remember tastes" for that token, remembers likes and dislikes (at most 30 changes a day per token; never anything about treating a low). Also in Server administration → Server settings. Nothing leaves the server for it. See [assistant.md](assistant.md). |
 | `PUSH_ENABLED` | `false` | Phone shortcuts: each person may make device tokens (Settings → Phone shortcuts) that an iPhone Shortcut uses to add weights and blood pressure readings to that person's own log at `POST /push/v1/body`. A token can only add: it reads nothing. Also in Server administration → Server settings. The phone must reach the server (home network or your VPN); a reverse proxy that lists paths needs `/push/v1/`. Nothing leaves the server for it. See [push.md](push.md). |
 | `SHARING_ENABLED` | `false` | Read-only sharing: each person may send a link to a caregiver or dietitian with an account on this server, who can then read the parts that were ticked (food log, lab results, weight and blood pressure, symptoms) and never change anything. Either side can stop it at any time. Also in Server administration → Server settings. Nothing leaves the server for it. See [accounts.md](accounts.md#sharing-with-a-caregiver). |
+| `OIDC_ENABLED`, `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET_FILE` | off | Sign in with Authentik, Google or another OpenID Connect provider ([setup](#sign-in-with-a-provider-authentik-or-google)). Needs `AUTH_MODE=local` and `PUBLIC_URL`. The issuer exactly as the provider names it; the client secret **only as a file** (`OIDC_CLIENT_SECRET` stops the start; leave it out for a public client). The provider's return address is `<PUBLIC_URL>/api/auth/oidc/callback`. Env only, never changed in the app. |
+| `OIDC_SCOPES`, `OIDC_ALLOW_PRIVATE_ISSUER` | `openid email profile`, `false` | The scopes asked for (must include `openid`), and whether the server may reach a provider on a private address (a home Authentik on the LAN or a VPN). Off, every address the provider's names resolve to must be public; metadata and link-local addresses are always refused. |
+| `OIDC_BUTTON_LABEL`, `OIDC_ALLOW_SIGNUP`, `OIDC_LINK_BY_EMAIL`, `OIDC_ALLOWED_DOMAINS`, `OIDC_ADMIN_GROUPS` | `Sign in with single sign-on`, `false`, `false`, empty, empty | Who may get in through the provider: the button's words, an account at the first sign-in of someone new, linking a verified email to the account with that username (never an admin), a comma list of email domains, and a comma list of provider groups whose members are admins. Also in Server administration → Server settings → Single sign-on. |
 | `AUTH_REQUIRE_TWO_STEP_ADMINS` | `false` | Admins must use two-step sign-in (a code from an authenticator app) before they can open Server administration; an admin without it still uses the app and turns it on in Settings → Account. Also in **Server administration → Server settings**, where you can turn it on only after turning on your own. No effect with a sign-in proxy or no sign-in ([accounts.md](accounts.md#two-step-sign-in)). |
 | `INSTANCE_NAME`, `REGISTRATION_MODE`, `INVITE_TTL_DAYS`, `AUDIT_RETENTION_DAYS` | Kidney Health, `invite`, 7, 365 | The name shown in the app, who may make an account (`invite`, `closed`, `open`), how many days an invite link works, and how long the activity log is kept. |
 | `USDA_SHARED_ENABLED`, `USDA_ALLOW_USER_KEYS`, `USDA_SHARED_DAILY_LIMIT` | `true`, `true`, 200 | Whether people use the server's USDA key, whether they may add their own, and the shared key's searches per person per day (0: no limit). |
@@ -515,10 +518,40 @@ The image has no shell by design. Use `kubectl debug -it --profile=restricted --
   cannot add headers, so it needs `TRUSTED_PROXY_SECRET_OPTIONAL=true` (logged as a warning).
   **Recommended whenever more than one person signs in**, until local accounts get a second factor:
   put an SSO provider with MFA in front (Authelia, Authentik, Keycloak, Kanidm, Pocket ID).
+* **`AUTH_MODE=local` with a provider** (`OIDC_ENABLED=true`): a "Sign in with Authentik" or "Sign in with Google" button next
+  to the password form. See [Sign in with a provider](#sign-in-with-a-provider-authentik-or-google) below.
 * **`AUTH_MODE=none`**: no sign-in at all; everything belongs to one person and anyone who can open
   the page can read and change it. Only for one person on a trusted LAN, never exposed beyond it. Anyone who
   can reach it can also make assistant and phone shortcut tokens, so changing the mode later revokes every
   token (and signs everybody out) the next time the server starts.
+
+### Sign in with a provider (Authentik or Google)
+
+The return address to give the provider is always `<PUBLIC_URL>/api/auth/oidc/callback`, for example
+`https://kidney.example.org/api/auth/oidc/callback`. Quadlet:
+
+```ini
+Environment=PUBLIC_URL=https://kidney.example.org
+Environment=OIDC_ENABLED=true
+Environment=OIDC_ISSUER=https://auth.example.org/application/o/kidney-health/
+Environment=OIDC_CLIENT_ID=the-client-id
+Secret=kidney-oidc-secret,type=mount,target=oidc_client_secret,uid=10001,gid=10001,mode=0400
+Environment=OIDC_CLIENT_SECRET_FILE=/run/secrets/oidc_client_secret
+Environment=OIDC_BUTTON_LABEL=Sign in with Authentik
+# Only for a provider on a private address (a home Authentik on the LAN or a VPN):
+Environment=OIDC_ALLOW_PRIVATE_ISSUER=true
+```
+
+```bash
+printf '%s' "$CLIENT_SECRET" | podman secret create kidney-oidc-secret -
+```
+
+Compose: the same variables in `deploy/.env`, and uncomment `OIDC_CLIENT_SECRET_FILE` and the `oidc_client_secret` secret in
+`deploy/compose.yaml` (the file is `deploy/secrets/oidc_client_secret`). Kubernetes: add `oidc_client_secret` to the Secret and
+`OIDC_CLIENT_SECRET_FILE=/run/secrets/kidney-health/oidc_client_secret` to the Deployment. For Google use
+`OIDC_ISSUER=https://accounts.google.com` and `OIDC_BUTTON_LABEL=Sign in with Google`. The server reaches the provider for its
+configuration, its keys and the token (allow those hosts outbound, [network-allowlist.md](network-allowlist.md)); the browser only
+follows redirects. What to click at Authentik and at Google, and who may get in: [accounts.md](accounts.md#sign-in-with-authentik-google-or-another-provider).
 
 ## Backups and restore
 

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Accepted, 2026-10-30. The owner asked: "can we add integration with oauth so we could setup google login like I did with netbird or use my authentik instance". The choices below are the defaults this note took; §11 lists them so the owner can change any of them. The schema step is **26**. |
+| Status | Accepted, 2026-10-30. The owner asked: "can we add integration with oauth so we could setup google login like I did with netbird or use my authentik instance". The choices below are the defaults this note took; §12 lists the open questions so the owner can change any of them. The schema step is **26**. Built 2026-10-30, the server and the screens together, tested against a fake provider (`tests/oidc_support.py`) and in Chromium (`tools/e2e/oidc.py`); not yet tried against a real Authentik or Google. |
 | Scope | One OpenID Connect provider per server, set by the admin in the environment. People sign in with it from the sign-in page; a person with a password links it in Settings → Account → Linked sign-in; an invite link can create an account with it; new accounts on first sign-in only when the admin allows it. Off by default. |
 | Out of scope | More than one provider at once, hiding the password form (`OIDC_ONLY`), single sign-out at the provider, the userinfo endpoint, `form_post` responses, encrypted ID tokens, dynamic client registration. See §12 "Later". |
 | Builds on | Note 07 (accounts, F6 proxy sign-in, F7 OIDC, §3.1, §6 "Later"), note 17 (two-step sign-in), note 18 (passkeys, the precedent of checking signatures with `cryptography` only), `app/egress.py` (the SSRF-checked transport). |
@@ -47,7 +47,9 @@ Pick **proxy** when everything already sits behind Authentik forward auth and no
    stored with the flow. Then it answers `303` to the provider's authorization endpoint with `response_type=code`, `client_id`,
    `redirect_uri`, `scope`, `state`, `nonce`, `code_challenge`, `code_challenge_method=S256`.
 3. The person signs in **at the provider**. The provider sends the browser back to `GET /api/auth/oidc/callback?code&state` (a
-   top-level navigation, so the `SameSite=Lax` cookies come along).
+   top-level navigation, so the `SameSite=Lax` cookies come along). The browser marks it `Sec-Fetch-Site: cross-site` (or
+   `same-site` for a provider on a sibling host), which the app's cross-site read guard refuses for every other `/api` path; this
+   one path is let through only as a top-level `GET` navigation (`security.PROVIDER_RETURN_PATHS`). The Chromium walk found this.
 4. **Callback** (public). The flow is taken by `state` (once); the cookie must match the flow (this stops another browser from
    finishing someone else's flow, the classic login CSRF of OAuth); `iss`, when the provider sends it (RFC 9207), must equal the
    issuer. An `error` from the provider is not shown as given: the person sees a fixed message.
@@ -197,8 +199,8 @@ Audit actions: `login.succeeded` with `via: oidc`; `login.failed` with `via: oid
 account is known; `oidc.linked` (`via: settings | email | invite | signup`), `oidc.unlinked` (`via: self | admin`, `count`),
 `user.registered` with `via: oidc_invite | oidc_signup`, `user.role_changed` with `via: oidc_groups`. The person's activity list shows
 the link events. **Tokens, codes, the state, the nonce and the client secret are never logged or stored**; the issuer and the email
-are stored for the person's own Settings list. The export (`export.json`) adds `oidc_links: [{issuer, email, created_at,
-last_used_at}]` (no subject: it means nothing outside the provider). Deleting an account deletes its links.
+are stored for the person's own Settings list. The export (`export.json`) does not carry the links: a link means nothing on another
+server, and the person links again there. Deleting an account deletes its links.
 
 The client secret is write-only by construction: it exists only in the file and in memory, no route returns it, and `GET
 /api/admin/about` shows `oidc: {enabled, issuer, client_id, secret: "set" | "not set", private_issuer_allowed, redirect_uri,
