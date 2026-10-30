@@ -30,7 +30,7 @@ def test_the_sign_in_button_is_a_plain_hidden_link():
 
 
 def test_no_inline_script_and_the_view_is_kept_offline():
-    assert not re.search(r"<script(?![^>]*\bsrc=)[^>]*>", HTML), "the CSP allows no inline script"
+    assert not re.search(r"<script(?![^>]*\bsrc\s*=)[^>]*>", HTML, re.IGNORECASE), "the CSP allows no inline script"
     assert "onclick=" not in HTML.lower()
     scripts = re.findall(r'<script src="([^"]+)"', HTML)
     assert scripts.index("js/views/oidc.js") == scripts.index("js/views/sharing.js") + 1
