@@ -89,6 +89,8 @@ ACTIONS: set[str] = {
     "share.accepted",
     "share.ended",
     "share.viewed",
+    "oidc.linked",  # sign-in with a provider (design note 24; app/auth/oidc_api.py, admin_api.py)
+    "oidc.unlinked",
 }
 USER_VISIBLE_ACTIONS = frozenset(
     {
@@ -124,6 +126,8 @@ USER_VISIBLE_ACTIONS = frozenset(
         "share.accepted",
         "share.ended",
         "share.viewed",
+        "oidc.linked",
+        "oidc.unlinked",
     }
 )
 _ACTION = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")

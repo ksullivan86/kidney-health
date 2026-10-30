@@ -828,6 +828,76 @@ register(
         help='Off by default. When on, an admin must use two-step sign-in (a code from an authenticator app) to open Server administration. An admin without it can still use the app and turns it on in Settings → Account → Two-step sign-in. Has no effect when a sign-in proxy or no sign-in is used. You can turn it on only after turning on your own two-step sign-in.',
     ),
 )
+# --------------------------------------------------------------------------- #
+# Sign-in with an OpenID Connect provider (design note 24 §4; read by app/auth/oidc_api.py). Who may sign in. The connection itself
+# (OIDC_ENABLED, OIDC_ISSUER, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET_FILE, OIDC_SCOPES, OIDC_ALLOW_PRIVATE_ISSUER) is env only
+# (app/config.py OidcEnv): what the server connects to, and its secret, never change at run time.
+# --------------------------------------------------------------------------- #
+
+OidcButtonLabel = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=60, pattern=r"^[^\x00-\x1f\x7f]+$")]
+OidcDomains = Annotated[str, StringConstraints(strip_whitespace=True, max_length=500, pattern=r"^[A-Za-z0-9., -]*$")]
+OidcGroups = Annotated[str, StringConstraints(strip_whitespace=True, max_length=500, pattern=r"^[^\x00-\x1f\x7f]*$")]
+
+
+def comma_list(value: str) -> list[str]:
+    """``"a, b,,c"`` → ``["a", "b", "c"]`` (the list settings below are typed as one comma-separated line)."""
+    return [part.strip() for part in str(value or "").split(",") if part.strip()]
+
+
+register(
+    SettingDef(
+        key="auth.oidc.button_label",
+        model=OidcButtonLabel,
+        default="Sign in with single sign-on",
+        scope="instance",
+        env="OIDC_BUTTON_LABEL",
+        label="Words on the single sign-on button",
+        help="Shown on the sign-in page when sign-in with a provider is on (OIDC_ENABLED). For example: Sign in with Authentik, "
+        "or Sign in with Google.",
+    ),
+    SettingDef(
+        key="auth.oidc.allow_signup",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="OIDC_ALLOW_SIGNUP",
+        label="Make an account for someone new who signs in with the provider",
+        help="Off by default: only people who already have an account (and linked it), or who have an invite link, get in. "
+        "Turn it on only for a provider where you choose who has an account, such as your own Authentik. With Google, anyone "
+        "in the world has an account: then also set the allowed email domains.",
+    ),
+    SettingDef(
+        key="auth.oidc.link_by_email",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="OIDC_LINK_BY_EMAIL",
+        label="Link a provider account to the account whose username is the same email",
+        help="Off by default. When on, someone the provider says has a verified email signs in to the account here whose username "
+        "is that email address. Never for an admin account, and never when the email is not verified.",
+    ),
+    SettingDef(
+        key="auth.oidc.allowed_domains",
+        model=OidcDomains,
+        default="",
+        scope="instance",
+        env="OIDC_ALLOWED_DOMAINS",
+        label="Only let in email addresses from these domains",
+        help="A comma list, for example example.org, family.net. Empty: any address. When set, the provider must say the email is "
+        "verified, and for a Google Workspace account its domain must be listed too.",
+    ),
+    SettingDef(
+        key="auth.oidc.admin_groups",
+        model=OidcGroups,
+        default="",
+        scope="instance",
+        env="OIDC_ADMIN_GROUPS",
+        label="Provider groups that make someone an admin",
+        help="A comma list of group names, for example authentik Admins. Empty: roles are set here only. When set, and the provider "
+        "sends a groups claim, the role follows it at each sign-in: in a listed group means admin, otherwise user. The last admin "
+        "is never demoted.",
+    ),
+)
 register(
     SettingDef(
         key="sharing.enabled",

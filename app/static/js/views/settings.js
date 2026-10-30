@@ -1835,6 +1835,9 @@
   // ---- Server settings (instance keys; env locks are read-only)
   const GROUPS = [
     ['Sign-in and registration', ['instance.name', 'registration.mode', 'registration.invite_ttl_days', 'auth.require_two_step_admins']],
+    // Design note 24: who may sign in with the provider (the connection itself is env only: OIDC_ENABLED, OIDC_ISSUER, ...).
+    ['Single sign-on', ['auth.oidc.button_label', 'auth.oidc.allow_signup', 'auth.oidc.link_by_email', 'auth.oidc.allowed_domains',
+      'auth.oidc.admin_groups']],
     ['Food data', ['food.off_enabled', 'food.off_contact', 'food.off_rate_per_minute', 'food.barcode_negative_ttl_hours', 'food.usda_branded_barcode',
       'providers.usda.shared_enabled', 'providers.usda.user_keys_allowed', 'providers.usda.daily_limit_per_user']],
     ['Default for everyone', ['ui.theme', 'user.units.labs', 'user.units.weight']],
