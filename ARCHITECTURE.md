@@ -878,7 +878,7 @@ build can inline them in order). All code hangs off one namespace `window.KH`:
 ```
 app/static/
   index.html            shell only: no inline script or style attributes (CSP), placeholders for every view/sheet
-  theme-init.js         loaded in <head> (was the inline theme script)
+  theme-init.js         loaded in <head> (was the inline theme script); keeps the first script error for js/main.js
   manifest.webmanifest, apple-touch-icon.png, icons/, sw.js (template), vendor/ (M2)
   css/base.css, css/<view>.css
   js/core.js            KH.h/s/$, KH.api (fetch wrapper: X-Requested-With, 401 → sign-in, toasts), state, router, sheets, confirm,
@@ -955,8 +955,18 @@ app/static/
   js/mock/ai.js         demo answers: a server with AI off (GET /api/me/ai; /api/ai/* and /api/vision/* 404)
   js/mock/handbook.js   demo answer for GET /api/handbook (none; the Pages demo links to the handbook beside it)
   js/mock/meta.js       demo answer for GET /api/meta (nothing optional switched on; the registry from js/engine/rules.js; tests/data/meta_vectors.json)
-  js/main.js            boot
+  js/main.js            boot; hides "The app did not start" once a screen shows (below)
 ```
+
+**"The app did not start"** (`#boot-fail`, the first child of `<main>`). Every view is `hidden` until the scripts boot, so a
+script that never arrives (a VPN that drops large packets, a blocker) or throws used to leave only the header. The notice
+needs no script: `css/base.css` keeps it `visibility: hidden` and a zero-length animation with an 8 s delay makes it visible,
+a step and not a fade, kept under reduced motion (`!important` on the class outranks the reduced-motion `*` rule). It holds a
+plain **Reload** link to `/` and a link to the handbook's "Only the header shows over a VPN". `js/main.js` runs the whole boot
+in try/catch: when `KH.auth.boot()` shows a sign-in screen or the first view shows, it sets `hidden` for good; when boot
+throws or rejects, it shows the notice at once (`.boot-fail-now`) with "The app could not start: <reason>". The reason is the
+page's first script error, which `theme-init.js` keeps in `window.KDL_BOOT_ERROR`, else the boot's own error. Tests: `tests/test_boot_fail.py`, `tests/js/boot_fail.test.mjs`,
+`tools/e2e/boot_fail.py`.
 
 `scripts/build_preview.py` inlines the `<link rel="stylesheet">` and `<script src>` tags of
 `index.html` in document order. With `--pages DIR` (v0.3.1) it writes the same demo as a static site for
@@ -967,7 +977,7 @@ database is an `application/json` block), and `preview-flag.js`, which sets `win
 `window.KDL_DEMO_HANDBOOK` (`{url: "../", links: APP_LINKS}`, the table of `app/guidance/topics.py` that
 `GET /api/handbook` also serves): `js/mock/handbook.js` then answers like a server with
 `HANDBOOK_PUBLIC_URL` set to the handbook one level up, so the demo's Learn links work. The absolute
-paths of the markup become relative (`/learn/` → `../`; anything else absolute stops the build). The
+paths of the markup become relative (`/learn/…` → `../…`, `/` → `./`; anything else absolute stops the build). The
 handbook Pages workflow builds it into `site/demo/` before the link check, and the Pages handbook's
 announce bar links to it (`extra.demo_link` in `handbook/mkdocs.pages.yml`; empty in the `/learn` copy). **Parity rule:** every JS twin of server logic (`js/engine/*`,
 `js/mock/*`) is checked against the server by shared vector files in `tests/data/*.json`, run by

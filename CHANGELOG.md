@@ -9,6 +9,10 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### For people using the app
 
+* **A message when the app does not start.** If the app's files do not finish loading, the page no longer shows only the
+  header. After about 8 seconds it says "The app did not start", with **Reload** and a link to what to change on the server.
+  If a script fails, it says so at once. Over a VPN such as NetBird this is often packets too big for the tunnel: see
+  "Only the header shows over a VPN" in [`docs/deployment.md`](docs/deployment.md#only-the-header-shows-over-a-vpn).
 * **Fewer "The AI ideas did not fit your targets today".** When an AI meal idea is only too big, the app now makes the portion
   smaller and shows the idea with "The app made a portion smaller so the meal fits your targets." See [`docs/ai.md`](docs/ai.md).
 * **An AI recipe with too much of one food is made smaller, not left out.** The app fits it like any other recipe and says
