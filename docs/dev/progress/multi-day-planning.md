@@ -30,9 +30,20 @@ Owner's request: "for the planning it should be able to plan the whole day - wee
   that clearing keeps eaten food and a planned low treatment. The demo test plans 30 days after today because the demo's sample
   log covers today-N to today+3 (`js/mock/seed.js`).
 
+* 5. Screens: `js/views/plandays.js` (new; in index.html after guidance.js and in sw.js), button `#btn-plan-days`
+  "Plan several days…" on the Plan tab. It fills `#sheet-guidance` (kind `plan-days`) with the plan sheet's parts, exported
+  as `KH.guidance.plan`. `dayAfter` in guidance.js now reads `projected_unknown` ("≥", "not listed"). "Not for me" in the
+  preview re-plans (`KH.views.planDays.replan`). `confirm.inline` takes `tone: 'primary'` (core.js) for Add to plan.
+  plan.js exports `shoppingText`, `copyShopping(text, box)`, `weekStartPref`. Static tests `tests/test_plan_days_ui.py`.
+  Checked: all `tests/*_ui.py`, `test_frontend_shell.py`, `test_pwa_routes.py`, `test_vendor.py`, `node --test`.
+  Decisions: "Clear planned days…" is a link in the body, not a third foot button (375 px); each day is a `<details>` (first
+  day with meals open) so a 14-day preview stays short; the client_ids are made once per plan so pressing Add again after a
+  part failed adds only the rest; after Undo new ids are made.
+
 ## Next
 
-5. Screens + UI tests. 6. Chromium walk (`tools/e2e/`). 7. Docs, handbook, CHANGELOG, OpenAPI check.
+6. Chromium walk `tools/e2e/plandays.py` (list it in `tools/e2e/README.md` and `tests/test_e2e_tools.py`).
+7. Docs, handbook, CHANGELOG, OpenAPI check.
 
 ## Commands
 

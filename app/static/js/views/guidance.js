@@ -914,6 +914,7 @@
   }
   // Not for me on a plan item: the plan is made again without it (same option number), and the focus stays in the sheet.
   async function replanAfterHiding() {
+    if (sheetEl.dataset.kind === 'plan-days') { if (KH.views.planDays) KH.views.planDays.replan(); return; }
     if (sheetEl.dataset.kind !== 'plan') return;
     await runPlan();
     const another = $('#g-plan-another');
@@ -926,17 +927,23 @@
     if (page) { const l = learnFor(page.url, page.title); if (l) box.append(l); }
     return box;
   }
+  // The day's totals with the plan. `projected_unknown` (several days, note 23) counts the foods of the day that do not list a
+  // value: the total then reads "≥", or "not listed" when no food lists it, never as an exact number or 0.
   function dayAfter(d) {
     const hid = uid('g-after');
     const sec = h('section', { class: 'g-after', 'aria-labelledby': hid }, h('h3', { class: 'g-group-title', id: hid }, 'The day with this plan'));
     const rows = [];
+    const unknown = (d && d.projected_unknown) || {};
     for (const k of DAY_KEYS) {
       const st = d && d.projected_status ? d.projected_status[k] : null;
       if (!st || st.target == null || !NUT[k]) continue;
       const pctText = `${Math.round((st.fraction || 0) * 100)} %`;
+      const of = `${fmtNum(st.target, k)} ${NUT[k].unit}`;
+      const text = !unknown[k] ? `${fmtNum(st.value, k)} of ${of} (${pctText})`
+        : st.value > 0 ? `≥ ${fmtNum(st.value, k)} of ${of} (≥ ${pctText})` : `not listed (target ${of})`;
       rows.push(h('li', { class: 'g-after-row' },
         h('span', { class: 'g-after-label' }, NUT[k].label),
-        h('span', { class: 'tabular' }, `${fmtNum(st.value, k)} of ${fmtNum(st.target, k)} ${NUT[k].unit} (${pctText})`),
+        h('span', { class: 'tabular' }, text),
         levelPill(st.level || 'ok', KH.ui.levelTextFor(st, st.level || 'ok', k))));
     }
     if (rows.length) sec.append(list('g-after-list', rows));
@@ -1819,6 +1826,9 @@
     whatFitsButton,
     lowBadge,
     openPlan,
+    // The plan sheet's parts, for "Plan several days" (js/views/plandays.js), which fills the same sheet.
+    plan: { sheetEl, fillSheet, planMeal, dayAfter, energyNote, targetsUsed, notes, unavailable, failure, loadingNote, staleNote,
+      remembered, noteAnswer, joinWords, NEEDS_CONNECTION, MAX_VARIANT },
     openLow,
     renderSettings,
     openPreferences,

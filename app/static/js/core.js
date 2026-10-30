@@ -716,11 +716,12 @@
   function dismissConfirm(host, refocus = false) {
     if (host && host._confirmRow) host._confirmRow._close(refocus);
   }
-  function inlineConfirm(host, trigger, { message, confirmText = 'Delete', onConfirm }) {
+  // `tone: 'primary'` for a confirm that deletes nothing (Add to plan); the default is the red Delete button.
+  function inlineConfirm(host, trigger, { message, confirmText = 'Delete', onConfirm, tone = 'danger' }) {
     dismissConfirm(host);
     const msgId = `confirm-msg-${++confirmSeq}`;
     const cancel = h('button', { class: 'btn secondary', type: 'button' }, 'Cancel');
-    const ok = h('button', { class: 'btn danger-solid', type: 'button' }, confirmText);
+    const ok = h('button', { class: `btn ${tone === 'primary' ? 'primary' : 'danger-solid'}`, type: 'button' }, confirmText);
     const row = h('div', { class: `confirm-row${host.classList.contains('sheet-foot') ? ' sheet-foot' : ''}`, role: 'group', 'aria-labelledby': msgId },
       h('p', { class: 'confirm-msg', id: msgId }, message),
       h('div', { class: 'confirm-actions' }, cancel, ok));
