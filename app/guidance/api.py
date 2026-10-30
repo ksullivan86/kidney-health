@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from fastapi import Path as FastPath
 
 from .. import brand
 from ..auth.deps import CurrentUser, current_user
@@ -29,6 +30,7 @@ from ..db import get_db, utcnow
 from ..foods import WEIGHT_UNKNOWN_DETAIL, fetch_food, fetch_user_food, weight_known
 from ..meals import fetch_template, parse_items, recipe_fields
 from ..models import MAX_GRAMS, MAX_SERVINGS, MAX_SQLITE_INT, Meal, validate_date
+from ..settings_registry import REPEAT_OK_FOODS_MAX, REPEAT_OK_MEALS_MAX
 from ..settings_store import SettingsStore, default_store
 from . import context as C
 from . import insights as I
@@ -54,6 +56,7 @@ from .models import (
     PreferenceBody,
     PreferenceFood,
     PreferenceList,
+    RepeatOkList,
     RulesResponse,
     SwapResponse,
 )
@@ -314,23 +317,44 @@ def plan_the_day(body: PlanDayRequest, request: Request, user: CurrentUser,
     return result
 
 
+def plan_days_limits(conn: sqlite3.Connection, store: SettingsStore) -> dict[str, int]:
+    """The caps of several days at once (design note 23 §12.1): ``PLAN_DAYS_MAX`` and ``PLAN_DAYS_AI_MAX``, never above it."""
+    days_max = int(store.get(conn, "guidance.plan_days_max"))
+    return {"days_max": days_max, "ai_days_max": min(int(store.get(conn, "guidance.plan_days_ai_max")), days_max)}
+
+
+def plan_days_over(days: int, limit: int) -> HTTPException:
+    return HTTPException(status_code=400, detail=f"days: at most {limit} days at a time")
+
+
 @router.post("/plan-days", response_model=PlanDaysResponse | GuidanceUnavailable)
 def plan_several_days(body: PlanDaysRequest, request: Request, user: CurrentUser,
                       conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    """Plan 1 to 14 days at once (design note 23): each day against its own room, the days seeing each other (the
-    phosphorus week, the dialysis interval, no meal twice in a row). Computes only; "Add to plan" sends ``apply.entries`` to
-    ``POST /api/log/batch``, at most 40 a request."""
+    """Plan 1 to ``PLAN_DAYS_MAX`` days at once (design note 23; default 60): each day against its own room, the days seeing
+    each other (the phosphorus week, the dialysis interval, no meal twice in a row unless the person said it may repeat).
+    Computes only; "Add to plan" sends ``apply.entries`` to ``POST /api/log/batch``, at most 40 a request."""
     store = settings_store(request)
+    limits = plan_days_limits(conn, store)
+    if body.days > limits["days_max"]:
+        raise plan_days_over(body.days, limits["days_max"])
     off = gate(conn, store, user.id, "plan")
     if off is not None:
         return off
     ctx = load_ctx(request, conn, user.id, body.start)
     if not C.has_targets(ctx.profile):
         return unavailable("no_targets", M.NO_TARGETS)
+    settings = C.user_settings(conn, store, user.id)
+    remembered = list(C.setting_value(settings, "plan_repeat_meals", ()) or ())
+    repeat = [m for m in R.SLOT_ORDER if m in set(body.repeat_meals if body.repeat_meals is not None else remembered)]
+    snack = bool(C.setting_value(settings, "plan_snack", False)) if body.snack is None else body.snack
+    skip = [m for m in R.SLOT_ORDER if m in set(body.skip_first_day)]
     days = C.load_days(conn, user.id, body.start, body.days, ctx.foods, foods_json(request))
     result = plan_days(ctx, days, body.meals, use_saved_meals=body.use_saved_meals, use_usual=body.use_usual,
-                       use_starters=body.use_starters, variant=body.variant)
+                       use_starters=body.use_starters, variant=body.variant, repeat_meals=repeat, snack=snack,
+                       skip_first_day=skip)
     result["targets"] = targets_used(ctx)
+    result["limits"] = limits
+    result["choices"] = {"repeat_meals": repeat, "snack": snack, "skip_first_day": skip}
     return result
 
 
@@ -515,6 +539,89 @@ def delete_preference(food_id: int, user: CurrentUser, conn: sqlite3.Connection 
         raise HTTPException(status_code=404, detail=f"food {food_id} has no preference of yours")
     conn.commit()
     return Response(status_code=204)
+
+
+# --------------------------------------------------------------------------- #
+# "OK to repeat" (design note 23 §12.2): foods and saved meals the person is happy to have every day
+# --------------------------------------------------------------------------- #
+
+REPEAT_KINDS = {"foods": ("repeat_ok_foods", REPEAT_OK_FOODS_MAX), "meals": ("repeat_ok_meals", REPEAT_OK_MEALS_MAX)}
+RepeatKind = Literal["foods", "meals"]
+RepeatId = Annotated[int, FastPath(ge=1, le=2_147_483_647)]  # as the setting stores them
+
+
+def _repeat_ok_list(conn: sqlite3.Connection, store: SettingsStore, user_id: int) -> dict[str, Any]:
+    """The marks by name: only the foods the person can use and their own saved meals (an id that is not theirs is left out)."""
+    settings = C.user_settings(conn, store, user_id)
+    foods = []
+    for food_id in C.setting_value(settings, "repeat_ok_foods", ()) or ():
+        row = fetch_user_food(conn, user_id, int(food_id))
+        if row is not None:
+            foods.append({"food_id": int(food_id), "name": row["name"]})
+    meals = []
+    for meal_id in C.setting_value(settings, "repeat_ok_meals", ()) or ():
+        row = fetch_template(conn, user_id, int(meal_id))
+        if row is not None:
+            meals.append({"meal_id": int(meal_id), "name": row["name"]})
+    return {"foods": foods, "meals": meals, "foods_limit": REPEAT_OK_FOODS_MAX, "meals_limit": REPEAT_OK_MEALS_MAX}
+
+
+def _set_repeat_ok(conn: sqlite3.Connection, store: SettingsStore, user_id: int, kind: str, item_id: int, on: bool) -> None:
+    """Add or take off one mark in the person's ``guidance`` settings object, under ``BEGIN IMMEDIATE`` so two changes at once
+    cannot lose one; then commit."""
+    field, limit = REPEAT_KINDS[kind]
+    conn.execute("BEGIN IMMEDIATE")
+    try:
+        settings = C.user_settings(conn, store, user_id)
+        value = settings.model_dump(mode="json") if hasattr(settings, "model_dump") else dict(settings or {})
+        ids = [int(i) for i in value.get(field) or []]
+        if on and item_id not in ids:
+            if len(ids) >= limit:
+                raise HTTPException(status_code=409, detail=f"the \"OK to repeat\" list is full ({limit}); remove one first")
+            ids.append(item_id)
+        elif not on:
+            ids = [i for i in ids if i != item_id]
+        if ids != [int(i) for i in value.get(field) or []]:
+            value[field] = ids
+            store.set_user(conn, user_id, "guidance", value)
+        conn.commit()
+    except BaseException:
+        conn.rollback()
+        raise
+
+
+def _repeat_target_or_404(conn: sqlite3.Connection, user_id: int, kind: str, item_id: int) -> None:
+    if kind == "foods" and fetch_user_food(conn, user_id, item_id) is None:
+        raise HTTPException(status_code=404, detail=f"food {item_id} not found")
+    if kind == "meals" and fetch_template(conn, user_id, item_id) is None:
+        raise HTTPException(status_code=404, detail=f"saved meal {item_id} not found")
+
+
+@router.get("/repeat-ok", response_model=RepeatOkList)
+def list_repeat_ok(request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """The foods and saved meals the person marked "OK to repeat", by name."""
+    return _repeat_ok_list(conn, settings_store(request), user.id)
+
+
+@router.put("/repeat-ok/{kind}/{item_id}", response_model=RepeatOkList)
+def put_repeat_ok(kind: RepeatKind, item_id: RepeatId, request: Request, user: CurrentUser,
+                  conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Mark a food (``foods``) or a saved meal (``meals``) "OK to repeat": a plan of several days may have it every day.
+    404 for a food the person cannot use or a saved meal that is not theirs; 409 when the list is full."""
+    store = settings_store(request)
+    _repeat_target_or_404(conn, user.id, kind, item_id)
+    _set_repeat_ok(conn, store, user.id, kind, item_id, True)
+    return _repeat_ok_list(conn, store, user.id)
+
+
+@router.delete("/repeat-ok/{kind}/{item_id}", response_model=RepeatOkList)
+def delete_repeat_ok(kind: RepeatKind, item_id: RepeatId, request: Request, user: CurrentUser,
+                     conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Take the mark off. 404 for a food or saved meal that is not the person's; nothing to take off is fine."""
+    store = settings_store(request)
+    _repeat_target_or_404(conn, user.id, kind, item_id)
+    _set_repeat_ok(conn, store, user.id, kind, item_id, False)
+    return _repeat_ok_list(conn, store, user.id)
 
 
 # --------------------------------------------------------------------------- #

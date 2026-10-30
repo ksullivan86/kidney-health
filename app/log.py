@@ -757,10 +757,15 @@ def mark_eaten(body: MarkEaten, user: CurrentUser, conn: sqlite3.Connection = De
 
 
 @router.post("/clear-planned", response_model=ClearPlannedResult)
-def clear_planned(body: ClearPlanned, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+def clear_planned(body: ClearPlanned, request: Request, user: CurrentUser,
+                  conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """Take the planned food off ``start``…``end`` (design note 23 §5: "Clear planned days", and the Undo after "Add to plan"
     with ``ids``). Eaten food is never touched and a planned low treatment stays. An id that is not one of the person's
-    entries is 404 and nothing is deleted; one of theirs that is eaten, a low treatment or on another day is left alone."""
+    entries is 404 and nothing is deleted; one of theirs that is eaten, a low treatment or on another day is left alone. At most
+    the server's ``PLAN_DAYS_MAX`` days (400 above it)."""
+    limit = int(settings_store(request).get(conn, "guidance.plan_days_max"))
+    if (_date.fromisoformat(body.end) - _date.fromisoformat(body.start)).days >= limit:
+        raise HTTPException(status_code=400, detail=f"at most {limit} days at a time")
     where = "user_id = ? AND date >= ? AND date <= ? AND status = 'planned' AND (purpose IS NULL OR purpose != 'hypo')"
     params: list[Any] = [user.id, body.start, body.end]
     if body.ids is None:

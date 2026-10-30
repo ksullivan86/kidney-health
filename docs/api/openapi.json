@@ -1400,7 +1400,7 @@
       },
       "ClearPlanned": {
         "additionalProperties": false,
-        "description": "``POST /api/log/clear-planned`` (design note 23 §5): take the planned food off ``start``…``end`` (at most 14 days).\nWith ``ids``, only those entries. Eaten food and planned low treatments always stay.",
+        "description": "``POST /api/log/clear-planned`` (design note 23 §5): take the planned food off ``start``…``end`` (at most the server's\n``PLAN_DAYS_MAX`` days, default 60).\nWith ``ids``, only those entries. Eaten food and planned low treatments always stay.",
         "properties": {
           "end": {
             "title": "End",
@@ -1414,7 +1414,7 @@
                   "minimum": 1.0,
                   "type": "integer"
                 },
-                "maxItems": 1000,
+                "maxItems": 2500,
                 "minItems": 1,
                 "type": "array"
               },
@@ -6876,6 +6876,49 @@
         "title": "PlanDaysAfter",
         "type": "object"
       },
+      "PlanDaysChoices": {
+        "additionalProperties": false,
+        "description": "What the plan used: the request's values, or the person's remembered ones.",
+        "properties": {
+          "repeat_meals": {
+            "items": {
+              "enum": [
+                "breakfast",
+                "lunch",
+                "dinner",
+                "snack"
+              ],
+              "type": "string"
+            },
+            "title": "Repeat Meals",
+            "type": "array"
+          },
+          "skip_first_day": {
+            "items": {
+              "enum": [
+                "breakfast",
+                "lunch",
+                "dinner",
+                "snack"
+              ],
+              "type": "string"
+            },
+            "title": "Skip First Day",
+            "type": "array"
+          },
+          "snack": {
+            "title": "Snack",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "repeat_meals",
+          "snack",
+          "skip_first_day"
+        ],
+        "title": "PlanDaysChoices",
+        "type": "object"
+      },
       "PlanDaysDay": {
         "additionalProperties": false,
         "properties": {
@@ -6930,6 +6973,25 @@
           "energy_note"
         ],
         "title": "PlanDaysDay",
+        "type": "object"
+      },
+      "PlanDaysLimits": {
+        "additionalProperties": false,
+        "properties": {
+          "ai_days_max": {
+            "title": "Ai Days Max",
+            "type": "integer"
+          },
+          "days_max": {
+            "title": "Days Max",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "days_max",
+          "ai_days_max"
+        ],
+        "title": "PlanDaysLimits",
         "type": "object"
       },
       "PlanDaysMeal": {
@@ -7131,11 +7193,11 @@
       },
       "PlanDaysRequest": {
         "additionalProperties": false,
-        "description": "``POST /api/guidance/plan-days``: computes only. \"Add to plan\" sends ``apply.entries`` to ``/api/log/batch`` (≤ 40 a\nrequest).",
+        "description": "``POST /api/guidance/plan-days``: computes only. \"Add to plan\" sends ``apply.entries`` to ``/api/log/batch`` (≤ 40 a\nrequest). ``days`` is at most the server's ``PLAN_DAYS_MAX`` (default 60; 400 above it). ``repeat_meals`` and ``snack``\ndefault to the person's remembered choices (``guidance.plan_repeat_meals``, ``guidance.plan_snack``, note 23 §12);\n``skip_first_day`` lists meals not to plan on the first day (today's meals whose time has passed).",
         "properties": {
           "days": {
             "default": 7,
-            "maximum": 14.0,
+            "maximum": 90.0,
             "minimum": 1.0,
             "title": "Days",
             "type": "integer"
@@ -7161,6 +7223,52 @@
               }
             ],
             "title": "Meals"
+          },
+          "repeat_meals": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "breakfast",
+                    "lunch",
+                    "dinner",
+                    "snack"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 4,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Repeat Meals"
+          },
+          "skip_first_day": {
+            "items": {
+              "enum": [
+                "breakfast",
+                "lunch",
+                "dinner",
+                "snack"
+              ],
+              "type": "string"
+            },
+            "maxItems": 4,
+            "title": "Skip First Day",
+            "type": "array"
+          },
+          "snack": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snack"
           },
           "start": {
             "title": "Start",
@@ -7201,6 +7309,9 @@
           "apply": {
             "$ref": "#/components/schemas/ApplyBlock"
           },
+          "choices": {
+            "$ref": "#/components/schemas/PlanDaysChoices"
+          },
           "days": {
             "items": {
               "$ref": "#/components/schemas/PlanDaysDay"
@@ -7211,6 +7322,9 @@
           "end": {
             "title": "End",
             "type": "string"
+          },
+          "limits": {
+            "$ref": "#/components/schemas/PlanDaysLimits"
           },
           "notes": {
             "items": {
@@ -7253,7 +7367,9 @@
           "apply",
           "shopping",
           "notes",
-          "targets"
+          "targets",
+          "limits",
+          "choices"
         ],
         "title": "PlanDaysResponse",
         "type": "object"
@@ -8828,6 +8944,80 @@
           "response"
         ],
         "title": "RegistrationCredential",
+        "type": "object"
+      },
+      "RepeatOkFood": {
+        "additionalProperties": false,
+        "properties": {
+          "food_id": {
+            "title": "Food Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "food_id",
+          "name"
+        ],
+        "title": "RepeatOkFood",
+        "type": "object"
+      },
+      "RepeatOkList": {
+        "additionalProperties": false,
+        "description": "``GET /api/guidance/repeat-ok``: the foods and saved meals the person marked \"OK to repeat\" (note 23 §12.2), by name.\nOnly the person's own saved meals and the foods they can use are listed.",
+        "properties": {
+          "foods": {
+            "items": {
+              "$ref": "#/components/schemas/RepeatOkFood"
+            },
+            "title": "Foods",
+            "type": "array"
+          },
+          "foods_limit": {
+            "title": "Foods Limit",
+            "type": "integer"
+          },
+          "meals": {
+            "items": {
+              "$ref": "#/components/schemas/RepeatOkMeal"
+            },
+            "title": "Meals",
+            "type": "array"
+          },
+          "meals_limit": {
+            "title": "Meals Limit",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "foods",
+          "meals",
+          "foods_limit",
+          "meals_limit"
+        ],
+        "title": "RepeatOkList",
+        "type": "object"
+      },
+      "RepeatOkMeal": {
+        "additionalProperties": false,
+        "properties": {
+          "meal_id": {
+            "title": "Meal Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "meal_id",
+          "name"
+        ],
+        "title": "RepeatOkMeal",
         "type": "object"
       },
       "ResetBody": {
@@ -15676,7 +15866,7 @@
     },
     "/api/guidance/plan-days": {
       "post": {
-        "description": "Plan 1 to 14 days at once (design note 23): each day against its own room, the days seeing each other (the\nphosphorus week, the dialysis interval, no meal twice in a row). Computes only; \"Add to plan\" sends ``apply.entries`` to\n``POST /api/log/batch``, at most 40 a request.",
+        "description": "Plan 1 to ``PLAN_DAYS_MAX`` days at once (design note 23; default 60): each day against its own room, the days seeing\neach other (the phosphorus week, the dialysis interval, no meal twice in a row unless the person said it may repeat).\nComputes only; \"Add to plan\" sends ``apply.entries`` to ``POST /api/log/batch``, at most 40 a request.",
         "operationId": "guidance_plan_several_days",
         "requestBody": {
           "content": {
@@ -15878,6 +16068,179 @@
           }
         ],
         "summary": "Put Preference",
+        "tags": [
+          "guidance"
+        ]
+      }
+    },
+    "/api/guidance/repeat-ok": {
+      "get": {
+        "description": "The foods and saved meals the person marked \"OK to repeat\", by name.",
+        "operationId": "guidance_list_repeat_ok",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepeatOkList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "List Repeat Ok",
+        "tags": [
+          "guidance"
+        ]
+      }
+    },
+    "/api/guidance/repeat-ok/{kind}/{item_id}": {
+      "delete": {
+        "description": "Take the mark off. 404 for a food or saved meal that is not the person's; nothing to take off is fine.",
+        "operationId": "guidance_delete_repeat_ok",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "foods",
+                "meals"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepeatOkList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Delete Repeat Ok",
+        "tags": [
+          "guidance"
+        ]
+      },
+      "put": {
+        "description": "Mark a food (``foods``) or a saved meal (``meals``) \"OK to repeat\": a plan of several days may have it every day.\n404 for a food the person cannot use or a saved meal that is not theirs; 409 when the list is full.",
+        "operationId": "guidance_put_repeat_ok",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "enum": [
+                "foods",
+                "meals"
+              ],
+              "title": "Kind",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "maximum": 2147483647,
+              "minimum": 1,
+              "title": "Item Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RepeatOkList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Put Repeat Ok",
         "tags": [
           "guidance"
         ]
@@ -16588,7 +16951,7 @@
     },
     "/api/log/clear-planned": {
       "post": {
-        "description": "Take the planned food off ``start``…``end`` (design note 23 §5: \"Clear planned days\", and the Undo after \"Add to plan\"\nwith ``ids``). Eaten food is never touched and a planned low treatment stays. An id that is not one of the person's\nentries is 404 and nothing is deleted; one of theirs that is eaten, a low treatment or on another day is left alone.",
+        "description": "Take the planned food off ``start``…``end`` (design note 23 §5: \"Clear planned days\", and the Undo after \"Add to plan\"\nwith ``ids``). Eaten food is never touched and a planned low treatment stays. An id that is not one of the person's\nentries is 404 and nothing is deleted; one of theirs that is eaten, a low treatment or on another day is left alone. At most\nthe server's ``PLAN_DAYS_MAX`` days (400 above it).",
         "operationId": "log_clear_planned",
         "requestBody": {
           "content": {

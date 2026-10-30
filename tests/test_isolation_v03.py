@@ -45,7 +45,8 @@ CLIENT_ID = "6f1c2a9e-3b7d-4e8a-9c0f-1d2e3f4a5b6c"
 OWN_KEY = "sk-own-isolation-0123456789abcdefXYZ9"
 GUIDANCE_A = {"enabled": True, "carb_tolerance_g": 15, "hypo_dose_g": 20, "exclude_categories": ["Sweets & Snacks"],
               "show_plan_builder": True, "show_insights": False, "ai_enrich": False, "learn_from_log": False,
-              "like_categories": ["Fruits"], "less_categories": ["Dairy & Alternatives"], "hidden_usual_meals": ["dinner:5x4,9x2"]}
+              "like_categories": ["Fruits"], "less_categories": ["Dairy & Alternatives"], "hidden_usual_meals": ["dinner:5x4,9x2"],
+              "plan_repeat_meals": ["breakfast"], "plan_snack": True, "repeat_ok_foods": [], "repeat_ok_meals": []}
 
 # Every table with a person's rows (a ``user_id`` or ``owner_user_id`` column) and the tests that prove a
 # second person can neither see nor change them. Tables without a person (``barcode_cache`` holds product
