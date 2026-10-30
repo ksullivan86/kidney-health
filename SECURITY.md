@@ -52,7 +52,7 @@ commands below succeed only for images released after it went public.
 The script does all of it and prints the digest to pin:
 
 ```bash
-scripts/verify-image.sh 0.12.0     # a release; or 0.11, edge, or sha256:<digest>
+scripts/verify-image.sh 0.12.1     # a release; or 0.11, edge, or sha256:<digest>
 ```
 
 By hand (**cosign 3.0 or later**, a current `gh` with the `attestation` command, and `crane` or
@@ -62,7 +62,7 @@ attached to the image as an OCI 1.1 referrer; cosign 2.4 and 2.5 cannot find suc
 signatures found" even for a genuine image:
 
 ```bash
-D=$(crane digest ghcr.io/ksullivan86/kidney-health:0.12.0)
+D=$(crane digest ghcr.io/ksullivan86/kidney-health:0.12.1)
 
 # 1. Signature: made by this repository's release workflow, for a v* tag, via GitHub's OIDC issuer.
 cosign verify "ghcr.io/ksullivan86/kidney-health@$D" \
@@ -77,7 +77,7 @@ gh attestation verify "oci://ghcr.io/ksullivan86/kidney-health@$D" --repo ksulli
   --predicate-type https://spdx.dev/Document/v2.3
 ```
 
-Then deploy **by digest** (`ghcr.io/ksullivan86/kidney-health:0.12.0@sha256:…`), or track `:0.12`
+Then deploy **by digest** (`ghcr.io/ksullivan86/kidney-health:0.12.1@sha256:…`), or track `:0.12`
 with auto-update. Podman cannot enforce these signatures at pull time (its `policy.json` needs a
 `subjectEmail`, and GitHub's certificates carry a workflow URI instead), so verify before you pin.
 For `:edge` images, the certificate identity ends in `@refs/heads/main`.

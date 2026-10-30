@@ -22,6 +22,7 @@
   const { route, MockApi, Check, fail, failFields, MEAL_RANK, MAX_INTERDIALYTIC_DAYS } = M;
 
   const INTERDIALYTIC_KEYS = ['potassium_mg', 'sodium_mg', 'fluid_ml'];
+  const CLEAR_PLANNED_MAX_DAYS = 90; // models.CLEAR_PLANNED_MAX_DAYS: the most PLAN_DAYS_MAX may be (the route applies the setting itself)
   const NOTE_DAILY = 'Potassium, sodium and fluid are judged day by day: a day well over the limit is a risk on its own, '
     + 'and a low day does not bank against a high one.';
   const NOTE_WEEKLY = 'Phosphorus and protein are judged on the weekly average: blood phosphate and nutritional status '
@@ -541,7 +542,7 @@
     }
     return { updated: n };
   });
-  // log.clear_planned (design note 23 §5): the planned food of start…end (at most 14 days), or only the entries in ids; eaten
+  // log.clear_planned (design note 23 §5): the planned food of start…end (at most PLAN_DAYS_MAX days), or only the entries in ids; eaten
   // food and planned low treatments always stay; an id that is not one of the person's entries is 404 and nothing is deleted.
   route('POST', '/api/log/clear-planned', function ({ body }) {
     const c = new Check(body);
@@ -558,7 +559,7 @@
         });
         if (c.errors.length === n) {
           if (raw.length < 1) c.err('ids', 'List should have at least 1 item after validation, not 0');
-          else if (raw.length > 1000) c.err('ids', `List should have at most 1000 items after validation, not ${raw.length}`);
+          else if (raw.length > 2500) c.err('ids', `List should have at most 2500 items after validation, not ${raw.length}`);
           else c.out.ids = [...raw];
         }
       }
@@ -567,7 +568,9 @@
     const b = c.done();
     const span = Math.round((Date.parse(`${b.end}T00:00:00Z`) - Date.parse(`${b.start}T00:00:00Z`)) / 86400000);
     if (span < 0) failFields(['end must not be before start']);
-    if (span >= 14) failFields(['at most 14 days at a time']);
+    if (span >= CLEAR_PLANNED_MAX_DAYS) failFields([`at most ${CLEAR_PLANNED_MAX_DAYS} days at a time`]);
+    const limit = Number(this._effectiveSetting('guidance.plan_days_max', null).value);
+    if (span >= limit) fail(400, `at most ${limit} days at a time`);
     let wanted = null;
     if (b.ids) {
       wanted = new Set(b.ids);

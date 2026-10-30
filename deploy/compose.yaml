@@ -34,7 +34,7 @@ name: kidney-health
 services:
   kidney-health:
     # Track the minor release (security fixes, no breaking changes), never :latest on machines you
-    # care about; or pin a verified digest: ghcr.io/ksullivan86/kidney-health:0.12.0@sha256:...
+    # care about; or pin a verified digest: ghcr.io/ksullivan86/kidney-health:0.12.1@sha256:...
     # (scripts/verify-image.sh checks the signature and prints the digest).
     image: ghcr.io/ksullivan86/kidney-health:0.12
     # Build locally instead (context is the repository root):
@@ -103,6 +103,8 @@ services:
       OFF_ENABLED: ${OFF_ENABLED:-}
       OFF_CONTACT: ${OFF_CONTACT:-}
       GUIDANCE_ENABLED: ${GUIDANCE_ENABLED:-}
+      PLAN_DAYS_MAX: ${PLAN_DAYS_MAX:-}
+      PLAN_DAYS_AI_MAX: ${PLAN_DAYS_AI_MAX:-}
       AI_ENABLED: ${AI_ENABLED:-}
       AI_PROVIDER: ${AI_PROVIDER:-}
       AI_BASE_URL: ${AI_BASE_URL:-}

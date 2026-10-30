@@ -206,7 +206,8 @@
         hypo_dose_g: Number(s.hypo_dose_g == null ? R.HYPO_DOSE_G : s.hypo_dose_g),
         exclude_food_ids: never, exclude_categories: [...(s.exclude_categories || [])], food_pref: new Map(soft),
         like_categories: [...(s.like_categories || [])], less_categories: [...(s.less_categories || [])],
-        learn_from_log: s.learn_from_log !== false, hidden_usual_meals: [...(s.hidden_usual_meals || [])] };
+        learn_from_log: s.learn_from_log !== false, hidden_usual_meals: [...(s.hidden_usual_meals || [])],
+        repeat_ok_food_ids: [...(s.repeat_ok_foods || [])], repeat_ok_meal_ids: [...(s.repeat_ok_meals || [])] };
     },
     // context.load(conn, user_id, day, options)
     _guidanceContext(day, { history = true, history60 = true, savedMeals = true, combos = true } = {}) {
@@ -245,6 +246,11 @@
       return GE.makeContext({ date: day, profile: this._guidanceProfile(), prefs, foods, day: entries, history: hist,
         history60: hist60, planned30, eaten30, saved_meals: saved, combos: starters,
         tunables: { pool_per_role: this._effectiveSetting('guidance.pool_per_role', null).value, beam_width: this._effectiveSetting('guidance.beam_width', null).value } });
+    },
+    // api.plan_days_limits: PLAN_DAYS_MAX and PLAN_DAYS_AI_MAX (never above it).
+    _planDaysLimits() {
+      const daysMax = Number(this._effectiveSetting('guidance.plan_days_max', null).value);
+      return { days_max: daysMax, ai_days_max: Math.min(Number(this._effectiveSetting('guidance.plan_days_ai_max', null).value), daysMax) };
     },
     // api.gate: the server switch first, then the person's own switches.
     _guidanceGate(feature = null) {
@@ -457,34 +463,46 @@
     if (!c.has('start')) c.err('start', 'Field required');
     else if (typeof body.start !== 'string') c.err('start', 'Input should be a valid string');
     else { const e = validDate(body.start); if (e) c.err('start', e); else c.out.start = body.start; }
-    c.num('days', { def: 7, ge: 1, le: R.PLAN_DAYS_MAX, int: true, nullable: false });
-    if (c.has('meals') && body.meals != null) {
-      const raw = body.meals;
-      if (!Array.isArray(raw)) c.err('meals', 'Input should be a valid list');
-      else {
-        const n = c.errors.length;
-        raw.forEach((x, i) => { if (!MEAL_KEYS.includes(x)) c.err(`meals.${i}`, MEAL_CHOICE); });
-        if (c.errors.length === n) {
-          if (raw.length < 1) c.err('meals', 'List should have at least 1 item after validation, not 0');
-          else if (raw.length > 4) c.err('meals', `List should have at most 4 items after validation, not ${raw.length}`);
-          else if (new Set(raw).size !== raw.length) c.err('meals', 'each meal may be listed once');
-          else c.out.meals = [...raw];
-        }
-      }
-    } else c.out.meals = null;
+    c.num('days', { def: 7, ge: 1, le: R.PLAN_DAYS_CEILING, int: true, nullable: false });
+    // A list of meals: `meals` (null or 1 to 4), `repeat_meals` (null or 0 to 4), `skip_first_day` (0 to 4, default []); each meal once.
+    const mealList = (name, { def, min, nullable }) => {
+      if (!c.has(name) || (nullable && body[name] === null)) { c.out[name] = def; return; }
+      const raw = body[name];
+      if (!Array.isArray(raw)) { c.err(name, 'Input should be a valid list'); return; }
+      // pydantic-core stops at the fifth item: a list that is too long says only that, whatever its items are.
+      if (raw.length > 4) { c.err(name, `List should have at most 4 items after validation, not ${raw.length}`); return; }
+      const n = c.errors.length;
+      raw.forEach((x, i) => { if (!MEAL_KEYS.includes(x)) c.err(`${name}.${i}`, MEAL_CHOICE); });
+      if (c.errors.length !== n) return;
+      if (raw.length < min) c.err(name, `List should have at least ${min} item after validation, not 0`);
+      else if (new Set(raw).size !== raw.length) c.err(name, 'each meal may be listed once');
+      else c.out[name] = [...raw];
+    };
+    mealList('meals', { def: null, min: 1, nullable: true });
     for (const name of ['use_saved_meals', 'use_usual', 'use_starters']) {
       if (!c.has(name)) { c.out[name] = true; continue; }
       const r = KH.settings.validate({ type: 'bool' }, body[name]);
       if (r.error) c.err(name, r.error); else c.out[name] = r.value;
     }
     c.num('variant', { def: 0, ge: 0, le: 4, int: true, nullable: false });
-    const known = ['start', 'days', 'meals', 'use_saved_meals', 'use_usual', 'use_starters', 'variant'];
+    mealList('repeat_meals', { def: null, min: 0, nullable: true });
+    if (!c.has('snack') || body.snack === null) c.out.snack = null;
+    else { const r = KH.settings.validate({ type: 'bool' }, body.snack); if (r.error) c.err('snack', r.error); else c.out.snack = r.value; }
+    mealList('skip_first_day', { def: [], min: 0, nullable: false });
+    const known = ['start', 'days', 'meals', 'use_saved_meals', 'use_usual', 'use_starters', 'variant', 'repeat_meals', 'snack', 'skip_first_day'];
     for (const k of Object.keys(c.body)) if (!known.includes(k)) c.err(k, 'Extra inputs are not permitted');
     const b = c.done();
+    const limits = this._planDaysLimits();
+    if (b.days > limits.days_max) fail(400, `days: at most ${limits.days_max} days at a time`);
     const off = this._guidanceGate('plan');
     if (off) return off;
     const ctx = this._guidanceContext(b.start);
     if (!this._guidanceHasTargets(ctx.profile)) return this._guidanceUnavailable('no_targets', GE.M.NO_TARGETS);
+    const s = this._guidanceSetting('guidance') || {};
+    const wanted = new Set(b.repeat_meals != null ? b.repeat_meals : (s.plan_repeat_meals || []));
+    const repeat = R.SLOT_ORDER.filter((m) => wanted.has(m));
+    const snack = b.snack == null ? !!s.plan_snack : b.snack;
+    const skip = R.SLOT_ORDER.filter((m) => b.skip_first_day.includes(m));
     const days = [];
     for (let i = 0; i < b.days; i++) {
       const day = R.addDays(b.start, i);
@@ -492,8 +510,10 @@
         name: e.food_name, servings: e.servings, nutrients: { ...e.nutrients }, purpose: e.purpose || null })));
     }
     const result = GE.planDays(ctx, days, b.meals, { useSavedMeals: b.use_saved_meals, useUsual: b.use_usual, useStarters: b.use_starters,
-      variant: b.variant });
+      variant: b.variant, repeatMeals: repeat, snack, skipFirstDay: skip });
     result.targets = this._guidanceTargets(ctx);
+    result.limits = limits;
+    result.choices = { repeat_meals: repeat, snack, skip_first_day: skip };
     for (const day of result.days) {
       for (const meal of day.meals) withNulls(meal, ['message', 'closest', 'apply_saved']);
       day.day_after.projected_status = statusModel(day.day_after.projected_status);
@@ -604,6 +624,45 @@
     if (!row || row.preference !== 'not_for_me') fail(404, `food ${big} is not on your list`);
     prefs.delete(foodId);
     return null;
+  });
+
+  // "OK to repeat" (design note 23 §12.2; api.list_repeat_ok, put_repeat_ok, delete_repeat_ok): marks in the person's guidance
+  // settings object. Only the demo person's own saved meals and the foods they can use are listed or may be marked.
+  const REPEAT_KINDS = { foods: ['repeat_ok_foods', 200], meals: ['repeat_ok_meals', 100] };
+  Object.assign(MockApi.prototype, {
+    _repeatOkList() {
+      const s = this._guidanceSetting('guidance') || {};
+      const foods = [], meals = [];
+      for (const id of s.repeat_ok_foods || []) { const f = this._food(id); if (f && this._foodVisible(f)) foods.push({ food_id: Number(id), name: f.name }); }
+      for (const id of s.repeat_ok_meals || []) { const m = this._templates.find((x) => x.id === Number(id)); if (m) meals.push({ meal_id: m.id, name: m.name }); }
+      return { foods, meals, foods_limit: REPEAT_KINDS.foods[1], meals_limit: REPEAT_KINDS.meals[1] };
+    },
+  });
+  route('GET', '/api/guidance/repeat-ok', function () { this._currentUser(); return this._repeatOkList(); });
+  route('*', /^\/api\/guidance\/repeat-ok\/([^/]+\/[^/]+)$/, function ({ method, id }) {
+    const u = this._currentUser();
+    if (method !== 'PUT' && method !== 'DELETE') fail(405, 'Method Not Allowed');
+    const [kind, raw] = id.split('/').map(decodeURIComponent);
+    const errors = [];
+    if (!REPEAT_KINDS[kind]) errors.push("kind: Input should be 'foods' or 'meals'");
+    const n = pydanticInt(raw);
+    if (n === undefined) errors.push('item_id: Input should be a valid integer, unable to parse string as an integer');
+    else if (n < 1) errors.push('item_id: Input should be greater than or equal to 1');
+    else if (n > 2147483647) errors.push('item_id: Input should be less than or equal to 2147483647');
+    if (errors.length) failFields(errors);
+    const itemId = Number(n);
+    if (kind === 'foods') { const f = this._food(itemId); if (!f || !this._foodVisible(f)) fail(404, `food ${itemId} not found`); }
+    if (kind === 'meals' && !this._templates.some((x) => x.id === itemId)) fail(404, `saved meal ${itemId} not found`);
+    const [field, limit] = REPEAT_KINDS[kind];
+    const value = { ...(this._guidanceSetting('guidance') || {}) };
+    let ids = [...(value[field] || [])];
+    if (method === 'PUT' && !ids.includes(itemId)) {
+      if (ids.length >= limit) fail(409, `the "OK to repeat" list is full (${limit}); remove one first`);
+      ids.push(itemId);
+    } else if (method === 'DELETE') ids = ids.filter((x) => x !== itemId);
+    value[field] = ids;
+    this._patchSettings({ guidance: value }, { admin: false, userId: u.id });
+    return this._repeatOkList();
   });
 
   Object.assign(M, { GUIDANCE_COMBOS: COMBOS });

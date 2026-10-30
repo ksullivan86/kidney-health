@@ -26,7 +26,7 @@ import re
 from functools import lru_cache
 from typing import Any, Iterable, Mapping
 
-RULES_VERSION = "2026-10-30.1"
+RULES_VERSION = "2026-10-30.2"
 
 MAIN_MEALS: tuple[str, ...] = ("breakfast", "lunch", "dinner")
 SNACK = "snack"
@@ -152,7 +152,9 @@ RECIPE_MAX_ITEMS = 30
 RECIPE_POT_MAX_SERVINGS = 40.0
 VARIANT_MAX = 4
 # Several days at once (note 23): design choices, no clinical numbers.
-PLAN_DAYS_MAX = 14  # §2: targets can change at the next blood test; about as far ahead as fresh food keeps
+PLAN_DAYS_MAX = 60  # §12.1: the owner's cap, the default of the PLAN_DAYS_MAX setting (guidance.plan_days_max)
+PLAN_DAYS_AI_MAX = 31  # §12.1: the cap when ideas come from AI, the default of PLAN_DAYS_AI_MAX (guidance.plan_days_ai_max)
+PLAN_DAYS_CEILING = 90  # §12.1: the most either setting may be
 PLAN_REPEAT_DAYS = 2  # §4: the same meal is not planned for the same slot on either of the 2 days before
 PLAN_RECENT_FOOD_PENALTY = 0.5  # §4: per earlier plan day a food is on; the weight of a food eaten the day before
 UNKNOWN_PENALTY = 1.5
@@ -468,7 +470,9 @@ RULE_DOCS: tuple[tuple[str, str], ...] = (
     ("RECIPE_MAX_ITEMS", "Most ingredients in a recipe (as save_recipe)"),
     ("RECIPE_POT_MAX_SERVINGS", "Most servings of one food in the whole recipe after a swap"),
     ("VARIANT_MAX", "Most \"Show another plan\" variants"),
-    ("PLAN_DAYS_MAX", "Most days one request plans (note 23: targets can change at the next blood test, and fresh food keeps about that long)"),
+    ("PLAN_DAYS_MAX", "Most days one request plans by default (note 23 §12.1; the server setting PLAN_DAYS_MAX, 1 to 90)"),
+    ("PLAN_DAYS_AI_MAX", "Most days one request plans by default when its ideas come from AI (note 23 §12.1; PLAN_DAYS_AI_MAX)"),
+    ("PLAN_DAYS_CEILING", "The most PLAN_DAYS_MAX and PLAN_DAYS_AI_MAX may be set to"),
     ("PLAN_REPEAT_DAYS", "A meal with the same foods is not planned for the same meal on this many days before in the same plan, unless nothing else fits"),
     ("PLAN_RECENT_FOOD_PENALTY", "Score cost per earlier day of the same plan a food is on (the weight of a food eaten the day before)"),
     ("UNKNOWN_PENALTY", "Score cost of each unknown potassium, phosphorus or sodium value (unknown is never 0, note 03)"),

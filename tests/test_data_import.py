@@ -27,6 +27,8 @@ SECOND_DAY = "2026-10-06"
 GUIDANCE = {"enabled": True, "carb_tolerance_g": 15, "hypo_dose_g": 20, "exclude_categories": ["Sweets & Snacks"],
             "show_plan_builder": True, "show_insights": False, "ai_enrich": False, "learn_from_log": False,
             "like_categories": ["Fruits"], "less_categories": ["Dairy & Alternatives"], "hidden_usual_meals": ["dinner:5x4,9x2"]}
+# Read back, the setting also carries the planning choices at their defaults (0.12.1).
+GUIDANCE_READ = {**GUIDANCE, "plan_repeat_meals": [], "plan_snack": False, "repeat_ok_foods": [], "repeat_ok_meals": []}
 # Tables a person's rows live in; "what is stored" below compares them as a whole.
 DATA_TABLES = ("log_entries", "foods", "meal_templates", "lab_results", "food_preferences", "user_food_links",
                "user_profiles", "user_settings", "audit_log")
@@ -183,7 +185,7 @@ def test_round_trip_into_a_fresh_server_matches(client, fresh):
         a_profile.pop(key), b_profile.pop(key)
     assert b_profile == a_profile and b_profile["targets"]["protein_g"] == {"min": 50, "max": 60}
     mine, theirs = client.get("/api/me/settings").json()["settings"], fresh.get("/api/me/settings").json()["settings"]
-    assert theirs["guidance"]["value"] == mine["guidance"]["value"] == GUIDANCE and theirs["ui.theme"]["value"] == "dark"
+    assert theirs["guidance"]["value"] == mine["guidance"]["value"] == GUIDANCE_READ and theirs["ui.theme"]["value"] == "dark"
     # the low treatments stay low treatments, the one marked "none" stays a plain entry
     day = fresh.get("/api/log", params={"date": DAY}).json()["entries"]
     assert {e["food_name"]: e["purpose"] for e in day if e["meal"] == "snack"} == {"Home gel": "hypo", "Glucose tablets": None}
@@ -876,7 +878,7 @@ def test_the_profile_targets_and_settings_are_replaced_only_when_asked(client, f
     profile = fresh.get("/api/profile").json()
     assert profile["name"] == "Sam" and profile["weight_kg"] == 70 and profile["dialysis_days"] == [0, 3] and profile["ckd_stage"] == "4"
     assert profile["targets"] == {"potassium_mg": 2500, "protein_g": {"min": 50, "max": 60}}  # replaced, not merged
-    assert fresh.get("/api/me/settings").json()["settings"]["guidance"]["value"] == GUIDANCE
+    assert fresh.get("/api/me/settings").json()["settings"]["guidance"]["value"] == GUIDANCE_READ
 
 
 def test_a_stage_that_was_not_chosen_stays_not_chosen(tmp_path, foods_json, fresh):

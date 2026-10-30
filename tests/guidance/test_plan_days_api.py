@@ -40,8 +40,10 @@ def test_plan_days_answers_with_the_contract_shape_and_writes_nothing(real):  # 
     assert plan["status"] == "ok" and plan["rules_version"] == R.RULES_VERSION
     assert (plan["start"], plan["end"], plan["variant"]) == (DAY, "2026-10-07", 0)
     assert [d["date"] for d in plan["days"]] == DAYS
-    assert [m["meal"] for m in plan["days"][0]["meals"]] == ["lunch", "dinner", "snack"]  # breakfast is logged
-    assert [m["meal"] for m in plan["days"][1]["meals"]] == ["breakfast", "lunch", "dinner", "snack"]
+    assert [m["meal"] for m in plan["days"][0]["meals"]] == ["lunch", "dinner"]  # breakfast is logged; no snack unless asked
+    assert [m["meal"] for m in plan["days"][1]["meals"]] == ["breakfast", "lunch", "dinner"]
+    assert plan["limits"] == {"days_max": 60, "ai_days_max": 31}
+    assert plan["choices"] == {"repeat_meals": [], "snack": False, "skip_first_day": []}
     for d in plan["days"]:
         assert d["dialysis_day"] is False and isinstance(d["day_after"]["projected_unknown"], dict)
         assert all(isinstance(m["repeated"], bool) for m in d["meals"])
@@ -49,9 +51,10 @@ def test_plan_days_answers_with_the_contract_shape_and_writes_nothing(real):  # 
     assert all(e["status"] == "planned" and e["purpose"] == "none" for e in plan["apply"]["entries"])
     assert {e["date"] for e in plan["apply"]["entries"]} == set(DAYS)
     assert plan["shopping"]["items"] and plan["targets"]["values"]["potassium_mg"] == 2500
-    # The first day is what "Plan a day…" gives for it.
+    # With the snack, the first day is what "Plan a day…" gives for it.
+    with_snack = plan_days(real, days=3, snack=True)
     one = real.post("/api/guidance/plan-day", json={"date": DAY}).json()
-    assert [m["items"] for m in plan["days"][0]["meals"]] == [m["items"] for m in one["meals"]]
+    assert [m["items"] for m in with_snack["days"][0]["meals"]] == [m["items"] for m in one["meals"]]
 
 
 def test_added_days_are_planned_food_never_eaten_and_clear_takes_them_off(real):  # noqa: F811
@@ -89,13 +92,117 @@ def test_a_hemodialysis_week_marks_the_dialysis_days(real):  # noqa: F811
     assert [d["dialysis_day"] for d in plan["days"]] == [True, False, True, False, True, False, False]
 
 
-def test_the_range_is_capped_at_14_days(real):  # noqa: F811
+def test_the_range_is_capped_by_the_server_settings(real):  # noqa: F811
     set_targets(real)
-    assert len(plan_days(real, days=R.PLAN_DAYS_MAX)["days"]) == 14
-    r = real.post("/api/guidance/plan-days", json={"start": DAY, "days": 15})
-    assert r.status_code == 400 and "days" in r.text
-    r = real.post("/api/log/clear-planned", json={"start": "2026-10-01", "end": "2026-10-15"})
-    assert r.status_code == 400 and "at most 14 days" in r.text
+    big = plan_days(real, days=60, meals=["breakfast"])  # the default cap (note 23 §12.1)
+    assert len(big["days"]) == 60 and big["end"] == "2026-12-03"
+    r = real.post("/api/guidance/plan-days", json={"start": DAY, "days": 61})
+    assert r.status_code == 400 and "at most 60 days" in r.text
+    r = real.post("/api/guidance/plan-days", json={"start": DAY, "days": 91})
+    assert r.status_code == 400 and "days" in r.text  # above the ceiling: refused by the request model
+    assert real.post("/api/log/clear-planned", json={"start": "2026-10-01", "end": "2026-11-29"}).status_code == 200
+    r = real.post("/api/log/clear-planned", json={"start": "2026-10-01", "end": "2026-11-30"})
+    assert r.status_code == 400 and "at most 60 days" in r.text
+    # An admin lowers the caps: the plan and the clear follow, and the AI cap never goes above the plain one.
+    r = real.patch("/api/admin/settings", json={"guidance.plan_days_max": 20, "guidance.plan_days_ai_max": 31})
+    assert r.status_code == 200, r.text
+    assert plan_days(real, days=20, meals=["dinner"])["limits"] == {"days_max": 20, "ai_days_max": 20}
+    r = real.post("/api/guidance/plan-days", json={"start": DAY, "days": 21})
+    assert r.status_code == 400 and "at most 20 days" in r.text
+    r = real.post("/api/log/clear-planned", json={"start": "2026-10-01", "end": "2026-10-21"})
+    assert r.status_code == 400 and "at most 20 days" in r.text
+    r = real.patch("/api/admin/settings", json={"guidance.plan_days_max": 90, "guidance.plan_days_ai_max": 10})
+    assert r.status_code == 200, r.text
+    assert plan_days(real, days=1)["limits"] == {"days_max": 90, "ai_days_max": 10}
+    for bad in (0, 91):
+        assert real.patch("/api/admin/settings", json={"guidance.plan_days_max": bad}).status_code == 400
+
+
+def test_the_caps_are_environment_variables():
+    from app.settings_registry import get
+    from app.settings_store import SettingsStore
+
+    for key, env, default in (("guidance.plan_days_max", "PLAN_DAYS_MAX", 60),
+                              ("guidance.plan_days_ai_max", "PLAN_DAYS_AI_MAX", 31)):
+        d = get(key)
+        assert (d.env, d.default, d.scope) == (env, default, "instance")
+        assert SettingsStore(env={env: "45"}).env_value(d) == (True, 45)
+        assert SettingsStore(env={env: ""}).env_value(d)[0] is False  # an empty value means unset
+    assert R.PLAN_DAYS_MAX == get("guidance.plan_days_max").default
+    assert R.PLAN_DAYS_AI_MAX == get("guidance.plan_days_ai_max").default
+
+
+def test_the_owners_choices_reach_the_plan_and_are_remembered_per_person(real):  # noqa: F811
+    admin = real
+    sam = add_user(admin)
+    for c in (admin, sam):
+        set_targets(c)
+    # Each person's remembered choices are their own (the guidance settings object, on the server).
+    r = admin.patch("/api/me/settings", json={"guidance": {"plan_repeat_meals": ["breakfast"], "plan_snack": True}})
+    assert r.status_code == 200, r.text
+    mine = plan_days(admin, days=4)
+    assert mine["choices"] == {"repeat_meals": ["breakfast"], "snack": True, "skip_first_day": []}
+    assert all("snack" in [m["meal"] for m in d["meals"]] for d in mine["days"])
+    breakfasts = [tuple((i["food_id"], i["servings"]) for i in d["meals"][0]["items"]) for d in mine["days"][1:]]
+    assert len(set(breakfasts)) == 1  # breakfast may repeat: the same on the days that are planned whole
+    theirs = sam.post("/api/guidance/plan-days", json={"start": DAY, "days": 4}).json()
+    assert theirs["choices"] == {"repeat_meals": [], "snack": False, "skip_first_day": []}
+    assert sam.get("/api/me/settings").json()["settings"]["guidance"]["value"]["plan_repeat_meals"] == []
+    # The request wins over the remembered choice, and the first day's past meals are left out.
+    asked = plan_days(admin, days=2, repeat_meals=[], snack=False, skip_first_day=["lunch", "dinner"])
+    assert asked["choices"] == {"repeat_meals": [], "snack": False, "skip_first_day": ["lunch", "dinner"]}
+    assert [m["meal"] for m in asked["days"][0]["meals"]] == ["breakfast"]
+    assert [m["meal"] for m in asked["days"][1]["meals"]] == ["breakfast", "lunch", "dinner"]
+
+
+def test_ok_to_repeat_is_the_persons_own_and_another_persons_meal_or_food_is_404(real):  # noqa: F811
+    admin = real
+    sam = add_user(admin)
+    for c in (admin, sam):
+        set_targets(c)
+    rice = food_id(admin, "Rice, white, long-grain, cooked")
+    dinner = [food_id(admin, "Chicken breast, roasted, skinless"), rice, food_id(admin, "Green beans, boiled")]
+    meal = admin.post("/api/meals", json={"name": "Admin's dinner", "meal_hint": "dinner",
+                                          "items": [{"food_id": f, "servings": 1} for f in dinner]})
+    assert meal.status_code == 201, meal.text
+    meal_id = meal.json()["id"]
+    soup = admin.post("/api/foods", json={"name": "Admin's own soup", "serving_desc": "1 cup", "serving_g": 240,
+                                          "nutrients": {"carbs_g": 10, "potassium_mg": 100}})
+    assert soup.status_code == 201, soup.text
+    soup_id = soup.json()["id"]
+    r = admin.put(f"/api/guidance/repeat-ok/meals/{meal_id}")
+    assert r.status_code == 200 and r.json()["meals"] == [{"meal_id": meal_id, "name": "Admin's dinner"}]
+    r = admin.put(f"/api/guidance/repeat-ok/foods/{soup_id}")
+    assert r.status_code == 200 and r.json()["foods"] == [{"food_id": soup_id, "name": "Admin's own soup"}]
+    again = admin.put(f"/api/guidance/repeat-ok/foods/{soup_id}").json()  # the same mark twice is one mark
+    assert again["foods"] == [{"food_id": soup_id, "name": "Admin's own soup"}]
+    # Sam can mark neither: 404, and Sam's list stays empty.
+    assert sam.put(f"/api/guidance/repeat-ok/meals/{meal_id}").status_code == 404
+    assert sam.put(f"/api/guidance/repeat-ok/foods/{soup_id}").status_code == 404
+    assert sam.delete(f"/api/guidance/repeat-ok/meals/{meal_id}").status_code == 404
+    listed = sam.get("/api/guidance/repeat-ok")
+    assert listed.json()["meals"] == [] and "Admin" not in listed.text
+    # A builtin food is everyone's to use.
+    marked = sam.put(f"/api/guidance/repeat-ok/foods/{rice}").json()
+    assert marked["foods"] == [{"food_id": rice, "name": "Rice, white, long-grain, cooked"}]
+    assert admin.get("/api/guidance/repeat-ok").json()["foods"] == [{"food_id": soup_id, "name": "Admin's own soup"}]
+    # An id typed into the settings object by hand that is not the person's is never listed nor used.
+    r = sam.patch("/api/me/settings", json={"guidance": {"repeat_ok_meals": [meal_id], "repeat_ok_foods": [rice, soup_id]}})
+    assert r.status_code == 200
+    listed = sam.get("/api/guidance/repeat-ok").json()
+    assert listed["meals"] == [] and [f["food_id"] for f in listed["foods"]] == [rice]
+    # The marked saved meal comes back on every dinner of the admin's plan; Sam's plan never sees it.
+    plan = plan_days(admin, days=3, meals=["dinner"])
+    assert all(d["meals"][0]["source"] == "saved" and d["meals"][0]["template_id"] == meal_id for d in plan["days"])
+    theirs = sam.post("/api/guidance/plan-days", json={"start": DAY, "days": 3, "meals": ["dinner"]})
+    assert "Admin's dinner" not in theirs.text
+    # Taking the mark off: the saved meal waits two days again.
+    assert admin.delete(f"/api/guidance/repeat-ok/meals/{meal_id}").json()["meals"] == []
+    plan = plan_days(admin, days=3, meals=["dinner"])
+    assert [d["meals"][0]["template_id"] for d in plan["days"]] == [meal_id, None, None]
+    assert admin.delete(f"/api/guidance/repeat-ok/meals/{meal_id}").status_code == 200  # nothing to take off is fine
+    for bad in ("/api/guidance/repeat-ok/drinks/1", "/api/guidance/repeat-ok/foods/0", "/api/guidance/repeat-ok/foods/x"):
+        assert admin.put(bad).status_code in (400, 404)
 
 
 @pytest.mark.parametrize("body", [
@@ -108,6 +215,11 @@ def test_the_range_is_capped_at_14_days(real):  # noqa: F811
     {"start": DAY, "meals": ["dinner", "dinner"]},
     {"start": DAY, "meals": ["supper"]},
     {"start": DAY, "date": DAY},
+    {"start": DAY, "repeat_meals": ["brunch"]},
+    {"start": DAY, "repeat_meals": ["lunch", "lunch"]},
+    {"start": DAY, "snack": "maybe"},
+    {"start": DAY, "skip_first_day": ["dinner", "dinner"]},
+    {"start": DAY, "skip_first_day": "dinner"},
 ])
 def test_plan_days_validation(real, body):  # noqa: F811
     set_targets(real)

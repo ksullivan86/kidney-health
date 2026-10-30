@@ -154,6 +154,7 @@ be sent?" (`?dry_run=true`), and pinned by a snapshot test (`tests/test_ai_promp
 | Up to 40 candidate foods: id, name, serving, category, rating, numbers per portion, warning levels, a few flags, an "often" bit (true for a food you had on at least 2 of the last 14 days, the rule of "You often have this"), a "liked" bit (true only for a food you marked **Like**), the source (built-in, USDA, Open Food Facts, custom), and for the meal features the most quarters of it the app accepts in this meal (`max_quarters`) | Yes (meal features; AI recipes send up to 48, with numbers for one serving of each) |
 | To rework a recipe: its foods, the amounts for the whole pot, how many servings it makes, and the app's own findings (where one serving does not fit) | Yes (AI recipes). **Never** the recipe's name, note, steps or link |
 | Your food preferences text (≤ 200 characters) | Only if you wrote some |
+| What may repeat (`repeat_ok`): the meals you said may be the same on following days (meal names only), and which of the candidates (ids) and saved meals (refs) in this prompt you marked **OK to repeat** | Yes (meal features: ideas, AI order, swaps, "Let AI choose"), **only your own choices**, never as text. The instructions say these are tastes that never change the safety rules. Never to recipes, Describe a meal, photos or Ask |
 | The foods and food groups you marked **Like**, **Less often** or **Not for me**, by name (at most 10 of each, each name cut to 60 characters) | Yes, **only your own explicit choices**, to **meal ideas and Ask** and only with the consent you already gave for them (nothing is sent before you agree, and "What will be sent?" shows the lists). Never to Describe a meal, photos or lab report photos. **What the app learned from your log is never sent**, and neither is a food you told the app to stop learning about |
 | Age as a 10-year band and sex | Only if you tick "Share my age band and sex" |
 | The text you type into "Describe a meal" (≤ 300 characters) | Yes (that feature) |
@@ -1235,8 +1236,9 @@ and is agreed under the **Meal data** consent. That consent now names recipes, s
   have not been made ([`ROADMAP.md`](ROADMAP.md)).
 * **Re-run the golden set after a prompt change** (the owner, with a live model; CI never does). Any change to the
   prompts bumps `PROMPT_VERSION`, and the new version needs a live run before a model is called recommended for it.
-  `PROMPT_VERSION` `2026-10-29.1` (each meal candidate says `max_quarters`, rule 5 says never to use more, and the app makes
-  a too-big portion smaller instead of dropping the idea; `2026-10-21.1` added food preferences, `2026-10-15.4` the lab report
+  `PROMPT_VERSION` `2026-10-30.1` (the meal prompts carry `repeat_ok`, what the person said may repeat, and rule 10 says
+  these are tastes, not limits; `2026-10-29.1` made each meal candidate say `max_quarters`, rule 5 says never to use more,
+  and the app makes a too-big portion smaller instead of dropping the idea; `2026-10-21.1` added food preferences, `2026-10-15.4` the lab report
   line, .3 made the instructions follow the profile) has not had one yet: **the owner's live run,
   `python scripts/ai_eval.py --chat` with the model in use, is still to do**. Compare `dropped_reasons` with the
   2026-10-29 run (23 of 118 ideas dropped for `high_portion_too_large`, 1 recipe for `share_too_large`); the report now

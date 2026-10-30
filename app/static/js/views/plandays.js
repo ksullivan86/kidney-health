@@ -1,12 +1,14 @@
-/* Kidney Diet Log — "Plan several days" (design note 23): plan 1 to 14 days at once from the Plan tab.
+/* Kidney Diet Log — "Plan several days" (design note 23): plan up to 60 days at once from the Plan tab.
 
    Fills the guidance sheet (#sheet-guidance, kind "plan-days") with the range (first day, number of days, quick choices), the
-   meals to plan, a preview of each day (POST /api/guidance/plan-days, which computes only), and the range's shopping list.
-   Nothing is written until the person confirms "Add to plan": the foods then go in as planned food through
-   POST /api/log/batch, at most 40 a request, each with its own client_id, so a retry after a lost answer adds nothing twice.
-   Undo takes off exactly the foods that were added; "Clear planned days" takes off every planned food of the range
-   (POST /api/log/clear-planned). Eaten food is never touched and a planned low treatment stays. A plan never holds a low
-   treatment and nothing here delays treating one. Answers are kept in memory only (KH.guidance.plan.remembered). */
+   meals to plan, the snack, the meals that may repeat, a preview of each day (POST /api/guidance/plan-days, which computes
+   only), and the range's shopping list. Nothing is written until the person confirms "Add to plan": the foods then go in as
+   planned food through POST /api/log/batch, at most 40 a request, each with its own client_id, so a retry after a lost answer
+   adds nothing twice. Undo takes off exactly the foods that were added; "Clear planned days" is a reset: it takes off every
+   planned food of the range (POST /api/log/clear-planned). Eaten food is never touched and a planned low treatment stays. A
+   plan never holds a low treatment and nothing here delays treating one. Answers are kept in memory only
+   (KH.guidance.plan.remembered); the snack and repeat choices are remembered on the server (the person's guidance settings),
+   and "OK to repeat" marks go through /api/guidance/repeat-ok (design note 23 §12). */
 (() => {
   'use strict';
   const KH = window.KH;
@@ -16,45 +18,182 @@
   const G = KH.guidance;
   const P = G.plan;
 
-  const MAX_DAYS = 14; // the server's PLAN_DAYS_MAX (app/guidance/rules.py, design note 23 §2)
+  const MAX_DAYS = 60; // the server's PLAN_DAYS_MAX by default (app/guidance/rules.py, design note 23 §12.1); each answer gives the cap
   const BATCH = 40; // POST /api/log/batch takes at most 40 entries
+  const QUICK = [7, 14, 30, 60]; // the quick choices after "Rest of this week"; one above the cap is hidden
+  // Today's meals whose time has passed (note 23 §12.6). The profile has no meal times, so these are the usual ones: times, not targets.
+  const MEAL_TIMES = { breakfast: '08:00', lunch: '12:30', snack: '15:30', dinner: '18:30' };
+  const PAST_ASK_MINUTES = 120; // more than 2 hours past: not planned; up to 2 hours past: asked
+  const MAIN = ['breakfast', 'lunch', 'dinner'];
   const api = {
     planDays: (body) => request('POST', '/api/guidance/plan-days', body),
     logBatch: (entries) => request('POST', '/api/log/batch', { entries }),
     clearPlanned: (body) => request('POST', '/api/log/clear-planned', body),
+    repeatOk: () => request('GET', '/api/guidance/repeat-ok'),
+    setRepeatOk: (kind, id, on) => request(on ? 'PUT' : 'DELETE', `/api/guidance/repeat-ok/${kind}/${encodeURIComponent(id)}`),
   };
   const st = { start: null, days: 7, meals: [], variant: 0, options: { use_saved_meals: true, use_usual: true, use_starters: true },
+    snack: false, repeatMeals: [], past: {}, maxDays: MAX_DAYS, ok: { foods: new Map(), meals: new Map() },
     result: null, rows: null, request: 0, busy: false };
 
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
   function rangeText(start, end) { return start === end ? fmtDateShort(start) : `${fmtDateShort(start)} to ${fmtDateShort(end)}`; }
   function endOf() { return addDays(st.start, st.days - 1); }
-  function validRange() { return /^\d{4}-\d{2}-\d{2}$/.test(st.start || '') && Number.isInteger(st.days) && st.days >= 1 && st.days <= MAX_DAYS; }
+  function validRange() { return /^\d{4}-\d{2}-\d{2}$/.test(st.start || '') && Number.isInteger(st.days) && st.days >= 1 && st.days <= st.maxDays; }
   function restOfWeek() {
     const pref = KH.views.plan && KH.views.plan.weekStartPref ? KH.views.plan.weekStartPref() : 'monday';
     return daysBetween(st.start, addDays(weekStartOf(st.start, pref), 6)) + 1;
+  }
+  const mealWord = (m, first) => (first ? MEAL_LABEL[m] : MEAL_LABEL[m].toLowerCase());
+
+  // ---- Today's meals that are already past (the browser's clock and the person's day) ----------------------------------
+  // { skip: meals more than 2 hours past, ask: meals up to 2 hours past }, only when the first day is today.
+  function pastMeals(now = new Date()) {
+    const out = { skip: [], ask: [] };
+    if (st.start !== todayStr()) return out;
+    const minutes = now.getHours() * 60 + now.getMinutes();
+    for (const m of ['breakfast', 'lunch', 'snack', 'dinner']) {
+      const [hh, mm] = MEAL_TIMES[m].split(':').map(Number);
+      const late = minutes - (hh * 60 + mm);
+      if (late > PAST_ASK_MINUTES) out.skip.push(m);
+      else if (late > 0) out.ask.push(m);
+    }
+    return out;
+  }
+  function skipFirstDay() {
+    const { skip, ask } = pastMeals();
+    return [...skip, ...ask.filter((m) => st.past[m] === 'skip')];
+  }
+  function pastNote() {
+    const el = $('#g-days-past');
+    if (!el) return;
+    const { skip } = pastMeals();
+    const shown = skip.filter((m) => m !== 'snack' || st.snack);
+    clear(el);
+    el.hidden = !shown.length;
+    if (!shown.length) return;
+    const words = P.joinWords(shown.map((m, i) => mealWord(m, i === 0)));
+    el.append(`${words} ${shown.length === 1 ? 'is' : 'are'} not planned for today: ${shown.length === 1 ? 'its' : 'their'} time has passed. `,
+      h('button', { class: 'link-btn', type: 'button', id: 'g-days-tomorrow-2', onclick: () => startTomorrow() }, 'Start tomorrow'));
+  }
+  // A meal of today up to 2 hours past that the plan holds: ask once, in the sheet ("Lunch was at 12:30. Plan it anyway?").
+  function askAboutPast(res) {
+    const first = res && res.days && res.days[0];
+    if (!first || first.date !== todayStr()) return;
+    const pending = pastMeals().ask.filter((m) => !(m in st.past) && first.meals.some((x) => x.meal === m));
+    if (!pending.length) return;
+    const add = $('#g-days-add');
+    if (add) add.disabled = true; // answered first: the plan is added as the person chose
+    const said = pending.map((m, i) => `${mealWord(m, i === 0)} was at ${MEAL_TIMES[m]}`);
+    const one = pending.length === 1;
+    confirm.inline($('#g-days-ask'), $('#g-days-start'), {
+      message: `${P.joinWords(said)}. Plan ${one ? 'it' : 'them'} anyway?`,
+      confirmText: one ? 'Plan it' : 'Plan them',
+      cancelText: 'Skip',
+      tone: 'primary',
+      onConfirm: () => {
+        for (const m of pending) st.past[m] = 'plan';
+        const b = $('#g-days-add');
+        if (b && st.result === res && (res.apply.entries || []).length) b.disabled = false;
+        return true;
+      },
+      onCancel: () => { for (const m of pending) st.past[m] = 'skip'; run(); },
+    });
+  }
+  function startTomorrow() {
+    const input = $('#g-days-start');
+    st.start = addDays(todayStr(), 1);
+    if (input) input.value = st.start;
+    st.past = {};
+    changed();
+  }
+
+  // ---- Remembered choices and "OK to repeat" ----------------------------------------------------------------------
+  async function remember(patch) {
+    try { await G.savePrefs(patch); } catch (err) {
+      if (!err.handled) live(`Not remembered for next time: ${err.detail || err.message}`);
+    }
+  }
+  function applyMarks(list) {
+    st.ok.foods = new Map(((list && list.foods) || []).map((f) => [f.food_id, f.name]));
+    st.ok.meals = new Map(((list && list.meals) || []).map((m) => [m.meal_id, m.name]));
+    renderMarks();
+  }
+  async function loadMarks() {
+    try { applyMarks(await api.repeatOk()); } catch (err) { /* offline: the marks stay as the server has them */ }
+  }
+  async function setMark(kind, id, name, button) {
+    const on = button.getAttribute('aria-pressed') !== 'true';
+    button.disabled = true;
+    try {
+      applyMarks(await api.setRepeatOk(kind, id, on));
+      G.forgetAnswers();
+      toast(on ? `${name} is OK to repeat: a plan may have it every day.` : `${name} is no longer marked OK to repeat.`, 'ok');
+      await replan();
+    } catch (err) {
+      if (!err.handled) toast(err.detail || err.message, 'error');
+    } finally {
+      if (document.contains(button)) button.disabled = false;
+    }
+  }
+  const repeat = {
+    on: (foodId) => st.ok.foods.has(foodId),
+    mealOn: (mealId) => st.ok.meals.has(mealId),
+    toggle: (item, button) => setMark('foods', item.food_id, item.name, button),
+    toggleMeal: (m, button) => setMark('meals', m.template_id, m.name, button),
+  };
+  function renderMarks() {
+    const box = $('#g-days-ok-list');
+    if (!box) return;
+    const rows = [...[...st.ok.meals].map(([id, name]) => ['meals', id, name]), ...[...st.ok.foods].map(([id, name]) => ['foods', id, name])];
+    clear(box);
+    if (!rows.length) {
+      box.append(h('p', { class: 'hint' }, 'None yet. Use “OK to repeat” on a saved meal, or in a food’s “⋯” menu, in the plan below.'));
+      return;
+    }
+    box.append(h('ul', { class: 'compact-items g-days-ok-items', role: 'list' }, rows.map(([kind, id, name]) => h('li', {},
+      h('span', { class: 'ci-name' }, name, h('span', { class: 'muted small' }, kind === 'meals' ? ' · saved meal' : ' · food')),
+      h('button', { class: 'link-btn', type: 'button', 'aria-label': `Remove ${name} from OK to repeat`, 'aria-pressed': 'true',
+        onclick: (e) => setMark(kind, id, name, e.currentTarget) }, 'Remove')))));
   }
 
   // ---- The sheet ----------------------------------------------------------------------------------------------------
   async function openPlanDays({ start = null, trigger = null } = {}) {
     await G.loadPrefs();
-    Object.assign(st, { start: start || todayStr(), days: 7, meals: [], variant: 0, result: null, rows: null });
+    const remembered = G.prefValue('plan_repeat_meals', []);
+    Object.assign(st, { start: start || todayStr(), days: 7, meals: [], variant: 0, result: null, rows: null, past: {},
+      snack: G.prefValue('plan_snack', false) === true, repeatMeals: Array.isArray(remembered) ? [...remembered] : [] });
     const { body, foot } = P.fillSheet('plan-days', 'Plan these days',
-      'Up to 14 days from your own foods. Each day is planned against what is left of your targets.');
+      'Days or weeks from your own foods. Each day is planned against what is left of your targets.');
     const startInput = h('input', { id: 'g-days-start', type: 'date', value: st.start, required: true });
-    const countInput = h('input', { id: 'g-days-count', type: 'number', min: '1', max: String(MAX_DAYS), step: '1', inputmode: 'numeric',
+    const countInput = h('input', { id: 'g-days-count', type: 'number', min: '1', max: String(st.maxDays), step: '1', inputmode: 'numeric',
       value: String(st.days), required: true, 'aria-describedby': 'g-days-count-hint' });
     const setCount = (n) => { st.days = n; countInput.value = String(n); changed(); };
     const quick = h('div', { class: 'g-days-quick', role: 'group', 'aria-label': 'Quick choices' },
       h('button', { class: 'btn secondary', type: 'button', id: 'g-days-week', onclick: () => setCount(restOfWeek()) }, 'Rest of this week'),
-      h('button', { class: 'btn secondary', type: 'button', id: 'g-days-7', onclick: () => setCount(7) }, '7 days'),
-      h('button', { class: 'btn secondary', type: 'button', id: 'g-days-14', onclick: () => setCount(MAX_DAYS) }, '14 days'));
+      QUICK.map((n) => h('button', { class: 'btn secondary', type: 'button', id: `g-days-${n}`, 'data-days': String(n), hidden: n > st.maxDays,
+        onclick: () => setCount(n) }, `${n} days`)));
     const mealsBox = h('div', { class: 'checks four g-plan-meals' });
-    for (const m of MEALS) {
+    for (const m of MEALS.filter((x) => MAIN.includes(x.key))) {
       const id = `g-days-meal-${m.key}`;
       const box = h('input', { type: 'checkbox', id, value: m.key });
       box.addEventListener('change', () => { st.meals = $$('input:checked', mealsBox).map((x) => x.value); changed(); });
       mealsBox.append(h('label', { class: 'check', for: id }, box, h('span', { class: 'check-text' }, m.label)));
+    }
+    const snackBox = h('input', { type: 'checkbox', id: 'g-days-snack', 'aria-describedby': 'g-days-snack-hint' });
+    snackBox.checked = st.snack;
+    snackBox.addEventListener('change', () => { st.snack = snackBox.checked; remember({ plan_snack: st.snack }); changed(); });
+    const repeatBox = h('div', { class: 'checks four g-days-repeat-meals' });
+    for (const m of MEALS) {
+      const id = `g-days-repeat-${m.key}`;
+      const box = h('input', { type: 'checkbox', id, value: m.key });
+      box.checked = st.repeatMeals.includes(m.key);
+      box.addEventListener('change', () => {
+        st.repeatMeals = $$('input:checked', repeatBox).map((x) => x.value);
+        remember({ plan_repeat_meals: st.repeatMeals });
+        changed();
+      });
+      repeatBox.append(h('label', { class: 'check', for: id }, box, h('span', { class: 'check-text' }, m.label)));
     }
     const opts = h('div', { class: 'g-plan-options' });
     for (const [key, label] of [['use_saved_meals', 'Use my saved meals'], ['use_usual', 'Use meals I often have'], ['use_starters', 'Use starter meals']]) {
@@ -64,7 +203,9 @@
       box.addEventListener('change', () => { st.options[key] = box.checked; changed(); });
       opts.append(h('label', { class: 'check', for: id }, box, h('span', { class: 'check-text' }, label)));
     }
-    startInput.addEventListener('change', () => { if (/^\d{4}-\d{2}-\d{2}$/.test(startInput.value)) { st.start = startInput.value; changed(); } });
+    startInput.addEventListener('change', () => {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(startInput.value)) { st.start = startInput.value; st.past = {}; changed(); }
+    });
     const typed = debounce(() => changed(), 400);
     countInput.addEventListener('input', () => { st.days = Number(countInput.value); typed(); });
     const clearRow = h('p', { class: 'g-days-clear' },
@@ -72,21 +213,33 @@
     const out = h('div', { class: 'g-plan-out', id: 'g-days-out' });
     body.append(
       h('div', { class: 'g-days-range' },
-        h('div', { class: 'field' }, h('label', { for: 'g-days-start' }, 'First day'), startInput),
+        h('div', { class: 'field' }, h('label', { for: 'g-days-start' }, 'First day'), startInput,
+          h('button', { class: 'link-btn', type: 'button', id: 'g-days-tomorrow', onclick: () => startTomorrow() }, 'Start tomorrow')),
         h('div', { class: 'field' }, h('label', { for: 'g-days-count' }, 'Days'), countInput)),
-      h('span', { class: 'hint', id: 'g-days-count-hint' }, '1 to 14 days.'),
+      h('span', { class: 'hint', id: 'g-days-count-hint' }, `1 to ${st.maxDays} days.`),
       quick,
       h('fieldset', { class: 'field' }, h('legend', {}, 'Meals to plan'), mealsBox,
-        h('span', { class: 'hint' }, 'With none ticked, every meal with nothing logged yet. A ticked meal is planned on every day.')),
-      h('details', { class: 'g-disclosure' }, h('summary', {}, 'Where ideas come from'), opts),
+        h('span', { class: 'hint' }, 'With none ticked, every meal with nothing logged yet. A ticked meal is planned on every day.'),
+        h('label', { class: 'check', for: 'g-days-snack' }, snackBox, h('span', { class: 'check-text' }, 'Plan a snack too')),
+        h('span', { class: 'hint', id: 'g-days-snack-hint' }, 'Off at first. Your choice is remembered.')),
+      h('fieldset', { class: 'field' }, h('legend', {}, 'Meals that may repeat'), repeatBox,
+        h('span', { class: 'hint' }, 'A ticked meal may be the same on following days. Other meals change for 2 days. Your choice is remembered.'),
+        h('details', { class: 'g-disclosure', id: 'g-days-ok' }, h('summary', {}, 'Foods and meals OK to repeat'),
+          h('div', { id: 'g-days-ok-list' }))),
+      h('details', { class: 'g-disclosure' }, h('summary', {}, 'Where ideas come from'), opts,
+        h('span', { class: 'hint' }, 'All three come from your own foods and the app’s rules. Nothing is sent to AI.')),
       clearRow,
+      h('p', { class: 'hint g-days-past', id: 'g-days-past', hidden: true }),
+      h('div', { class: 'g-days-ask', id: 'g-days-ask' }),
       h('p', { class: 'sr-only', role: 'status', id: 'g-days-status' }),
       out);
+    renderMarks();
     const another = h('button', { class: 'btn secondary', type: 'button', id: 'g-days-another', disabled: true,
       onclick: () => { st.variant = (st.variant + 1) % (P.MAX_VARIANT + 1); run(); } }, 'Show another');
     const add = h('button', { class: 'btn primary', type: 'button', id: 'g-days-add', disabled: true, onclick: (e) => confirmAdd(e.currentTarget) }, 'Add to plan');
     foot.append(another, h('span', { class: 'spacer' }), add);
     sheets.open(P.sheetEl, trigger, startInput);
+    loadMarks();
     run();
   }
   function changed() { st.variant = 0; run(); }
@@ -96,6 +249,16 @@
     if (a) a.disabled = !add;
     if (b) b.disabled = !another;
   }
+  // The server's caps (PLAN_DAYS_MAX): the field, the hint and the quick choices follow the last answer.
+  function applyLimits(limits) {
+    if (!limits || !Number.isInteger(limits.days_max) || limits.days_max === st.maxDays) return;
+    st.maxDays = limits.days_max;
+    const input = $('#g-days-count');
+    if (input) input.max = String(st.maxDays);
+    const hint = $('#g-days-count-hint');
+    if (hint) hint.textContent = `1 to ${st.maxDays} days.`;
+    for (const b of $$('[data-days]', P.sheetEl)) b.hidden = Number(b.dataset.days) > st.maxDays;
+  }
 
   async function run() {
     const out = $('#g-days-out');
@@ -104,12 +267,16 @@
     st.result = null;
     st.rows = null;
     setButtons();
+    const ask = $('#g-days-ask');
+    if (ask && ask._confirmRow) ask._confirmRow._close(false);
     $('#g-days-clear').disabled = !validRange();
+    pastNote();
     if (!validRange()) {
-      clear(out).append(h('p', { class: 'empty-state' }, 'Choose a first day and 1 to 14 days.'));
+      clear(out).append(h('p', { class: 'empty-state' }, `Choose a first day and 1 to ${st.maxDays} days.`));
       return;
     }
-    const body = { start: st.start, days: st.days, variant: st.variant, ...st.options };
+    const body = { start: st.start, days: st.days, variant: st.variant, ...st.options, snack: st.snack, repeat_meals: st.repeatMeals,
+      skip_first_day: skipFirstDay() };
     if (st.meals.length) body.meals = st.meals;
     out.setAttribute('aria-busy', 'true');
     clear(out).append(P.loadingNote(`Planning ${plural(st.days, 'day', 'days')}…`));
@@ -118,7 +285,9 @@
       if (reqId !== st.request) return;
       P.noteAnswer(data);
       st.result = data;
+      applyLimits(data && data.limits);
       render(out, data, at);
+      if (!at) askAboutPast(data);
     } catch (err) {
       if (reqId !== st.request) return;
       if (!err.handled) clear(out).append(P.failure(err));
@@ -127,7 +296,7 @@
       if (reqId === st.request) out.removeAttribute('aria-busy');
     }
   }
-  // "Not for me" on a planned food: plan the same days again without it (the menu is in js/views/guidance.js).
+  // "Not for me" or "OK to repeat" on a planned food: plan the same days again (the menu is in js/views/guidance.js).
   async function replan() {
     await run();
     const b = $('#g-days-another');
@@ -159,9 +328,9 @@
       const day = h('details', { class: 'g-days-day', 'data-date': d.date }, sum, inner);
       if (!opened && d.meals.length) { day.open = true; opened = true; }
       const box = inner;
-      if (!d.meals.length) box.append(h('p', { class: 'empty-state' }, 'Every meal of this day already has food. Tick the meals you want planned anyway.'));
+      if (!d.meals.length) box.append(h('p', { class: 'empty-state' }, 'Every meal of this day already has food, or its time has passed. Tick the meals you want planned anyway.'));
       for (const m of d.meals) {
-        const sec = P.planMeal(m);
+        const sec = P.planMeal(m, false, { repeat });
         if (m.repeated) sec.append(h('p', { class: 'hint g-days-repeat' }, 'Same as a day before: nothing else fits.'));
         box.append(sec);
       }
@@ -188,11 +357,13 @@
   }
 
   // What the plan adds, summed over the days (GET /api/plan/shopping's shape), with Copy list and Share list (note 22 part A).
+  // One line a food, however many days: 60 days list about as many lines as 14.
   function shopping(res) {
     const items = (res.shopping && res.shopping.items) || [];
     const sec = h('section', { class: 'g-days-shop', 'aria-labelledby': 'g-days-shop-h' },
       h('h3', { class: 'g-group-title', id: 'g-days-shop-h' }, 'Shopping list for these days'));
     if (!items.length) { sec.append(h('p', { class: 'hint' }, 'This plan adds no food.')); return sec; }
+    sec.append(h('p', { class: 'hint' }, `${plural(items.length, 'food', 'foods')}, each once with the total for ${rangeText(res.start, res.end)}.`));
     sec.append(h('ul', { class: 'compact-items g-days-shop-list', role: 'list' }, items.map((it) => h('li', {},
       h('span', { class: 'ci-name' }, it.food_name),
       h('span', { class: 'ci-amt muted' }, `${fmtServings(it.servings)}${it.serving_desc ? ` of ${it.serving_desc}` : ''}${it.grams ? ` · ${fmtNum(it.grams, 'fluid_ml')} g` : ''} · ${plural(it.days, 'day', 'days')}`)))));
@@ -244,6 +415,7 @@
         const answer = await sendChunk(chunk);
         for (const r of (answer && answer.results) || []) ids.push(r.id);
         sent += chunk.length;
+        if (rows.length > BATCH) live(`Added ${sent} of ${rows.length} foods…`);
       }
     } catch (err) {
       if (sent) { G.forgetAnswers(); KH.views.plan.afterLogChange(res.start); }
@@ -270,7 +442,8 @@
     st.result = null;
     st.rows = null;
     setButtons();
-    const msg = h('p', {}, `Added ${plural(ids.length, 'planned food', 'planned foods')} to ${rangeText(res.start, res.end)}. Nothing is marked as eaten.`);
+    const msg = h('p', {}, `Added ${plural(ids.length, 'planned food', 'planned foods')} to ${rangeText(res.start, res.end)}. Nothing is marked as eaten. `
+      + 'Undo takes off only what this plan added.');
     const undo = h('button', { class: 'btn secondary', type: 'button', id: 'g-days-undo' }, 'Undo');
     const box = h('div', { class: 'g-days-added', role: 'status' }, msg, undo);
     undo.addEventListener('click', async () => {
@@ -291,12 +464,12 @@
     undo.focus();
   }
 
-  // ---- Clear planned days -------------------------------------------------------------------------------------------
+  // ---- Clear planned days: a reset of the range ---------------------------------------------------------------------
   function confirmClear(trigger) {
     if (!validRange()) return;
     const start = st.start, end = endOf();
     confirm.inline(trigger.parentElement, trigger, {
-      message: `Take every planned food off ${rangeText(start, end)}? Eaten food and planned low treatments stay.`,
+      message: `Take every planned food off ${rangeText(start, end)}? This is a reset: it also takes off food you planned yourself, not only what a plan added. Eaten food and planned low treatments stay.`,
       confirmText: 'Clear planned days',
       onConfirm: async () => {
         const r = await api.clearPlanned({ start, end });
@@ -316,5 +489,5 @@
     openPlanDays({ start: !start || (today >= start && today <= addDays(start, 6)) ? today : start, trigger: e.currentTarget });
   });
 
-  KH.views.planDays = { open: openPlanDays, replan };
+  KH.views.planDays = { open: openPlanDays, replan, pastMeals, MEAL_TIMES };
 })();

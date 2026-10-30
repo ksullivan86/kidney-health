@@ -107,7 +107,7 @@ RUN /opt/hb/bin/mkdocs build --strict -d /out/learn \
 # ---------------------------------------------------------------------------------------------------
 # Stage 3: runtime. Chainguard python:latest: no shell, no pip, no apk; glibc (manylinux wheels).
 # ---------------------------------------------------------------------------------------------------
-FROM cgr.dev/chainguard/python:latest@sha256:012106301931c182063868dee31dc36a0d278267ec837176ba1774a320fa1bbb
+FROM cgr.dev/chainguard/python:latest@sha256:bf06e09413bec94d6489f0be783b8f9349339907b89e0f759d190d0b95ab2d8f
 
 # OCI annotations. CI (docker/metadata-action) adds version, revision and created. The licences are
 # SPDX ids: the code's LICENSE, PolyForm Noncommercial 1.0.0 (personal and noncommercial use only),
@@ -149,8 +149,10 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
   CMD ["python", "-m", "app.healthcheck"]
 
 # The base image's ENTRYPOINT is the bare interpreter; replace it.
+ENV UVICORN_LIMIT_CONCURRENCY=512
 ENTRYPOINT ["python", "-m", "uvicorn", "app.main:app"]
 # --no-proxy-headers: X-Forwarded-* are applied once, by the app, only from TRUSTED_PROXIES (§5.5).
-# --limit-concurrency 64: answer 503 beyond 64 concurrent connections (§10 S9).
+# Connection cap (§10 S9): uvicorn answers 503 beyond UVICORN_LIMIT_CONCURRENCY open connections. 512, not 64: a
+# page load asks for about 120 files at once, and a reverse proxy that opens one connection per request hit 64.
 CMD ["--host", "0.0.0.0", "--port", "8000", "--no-proxy-headers", "--no-server-header", \
-     "--timeout-graceful-shutdown", "10", "--limit-concurrency", "64"]
+     "--timeout-graceful-shutdown", "10"]

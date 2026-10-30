@@ -435,6 +435,12 @@ CategoryName = Annotated[str, StringConstraints(strip_whitespace=True, min_lengt
 USUAL_MEAL_KEY_PATTERN = r"^(?:breakfast|lunch|dinner|snack):[0-9]+x[0-9]+(?:,[0-9]+x[0-9]+)*$"
 UsualMealKey = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=400, pattern=USUAL_MEAL_KEY_PATTERN)]
 CATEGORY_CONFLICT = "a food group can be in only one of Like, Less often and Never suggest: "
+PlanMeal = Literal["breakfast", "lunch", "dinner", "snack"]
+# A food or saved meal id in the person's "OK to repeat" lists (design note 23 §12.2). Only the person's own foods and saved
+# meals are ever read from these lists (app/guidance/context.py), so an id that is not theirs does nothing.
+RepeatId = Annotated[int, Field(ge=1, le=2_147_483_647)]
+REPEAT_OK_FOODS_MAX = 200
+REPEAT_OK_MEALS_MAX = 100
 
 
 class GuidancePreferences(BaseModel):
@@ -453,11 +459,17 @@ class GuidancePreferences(BaseModel):
     like_categories: Annotated[list[CategoryName], Field(max_length=50)] = []  # food groups ranked a little higher
     less_categories: Annotated[list[CategoryName], Field(max_length=50)] = []  # food groups ranked lower, never hidden
     hidden_usual_meals: Annotated[list[UsualMealKey], Field(max_length=50)] = []  # "Not this meal" on a learned usual meal
+    # Planning several days (design note 23 §12): the plan sheet's remembered choices and the "OK to repeat" marks.
+    plan_repeat_meals: Annotated[list[PlanMeal], Field(max_length=4)] = []  # meals that may be the same on following days
+    plan_snack: bool = False  # "Plan a snack too" (off by default)
+    repeat_ok_foods: Annotated[list[RepeatId], Field(max_length=REPEAT_OK_FOODS_MAX)] = []  # foods OK to have every day
+    repeat_ok_meals: Annotated[list[RepeatId], Field(max_length=REPEAT_OK_MEALS_MAX)] = []  # saved meals OK to have every day
 
-    @field_validator("exclude_categories", "like_categories", "less_categories", "hidden_usual_meals")
+    @field_validator("exclude_categories", "like_categories", "less_categories", "hidden_usual_meals", "plan_repeat_meals",
+                     "repeat_ok_foods", "repeat_ok_meals")
     @classmethod
-    def _unique(cls, value: list[str]) -> list[str]:
-        out: list[str] = []
+    def _unique(cls, value: list[Any]) -> list[Any]:
+        out: list[Any] = []
         for name in value:
             if name not in out:
                 out.append(name)
@@ -476,6 +488,8 @@ class GuidancePreferences(BaseModel):
             raise ValueError(CATEGORY_CONFLICT + ", ".join(clash))
         return self
 
+
+PLAN_DAYS_CEILING = 90  # the most PLAN_DAYS_MAX and PLAN_DAYS_AI_MAX may be (design note 23 §12.1)
 
 register(
     SettingDef(
@@ -504,6 +518,24 @@ register(
         env="GUIDANCE_BEAM_WIDTH",
         label="Plan builder: search width",
         help="Partial meals kept at each step. 8 is about 15 % faster and finds slightly worse meals.",
+    ),
+    SettingDef(
+        key="guidance.plan_days_max",
+        model=Annotated[int, Field(ge=1, le=PLAN_DAYS_CEILING)],
+        default=60,
+        scope="instance",
+        env="PLAN_DAYS_MAX",
+        label="Plan several days: most days at once",
+        help="Plans from the person's own foods, without AI. About 30 ms a day on a laptop; lower it on a small server.",
+    ),
+    SettingDef(
+        key="guidance.plan_days_ai_max",
+        model=Annotated[int, Field(ge=1, le=PLAN_DAYS_CEILING)],
+        default=31,
+        scope="instance",
+        env="PLAN_DAYS_AI_MAX",
+        label="Plan several days with AI ideas: most days at once",
+        help="Each day costs AI calls. Never more than the plain cap. The several-days plan uses no AI yet.",
     ),
     SettingDef(
         key="guidance",

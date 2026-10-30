@@ -98,7 +98,11 @@ def test_the_demo_answers_every_guidance_route() -> None:
     routes = _mock_routes(MOCK)
     for r in guidance_api.router.routes:
         for method in r.methods:
-            if "{food_id}" in r.path:
+            if "{item_id}" in r.path:
+                # PUT / DELETE /api/guidance/repeat-ok/{kind}/{item_id} (design note 23 §12.2): one regex route for any method
+                assert re.search(r"route\('\*', /\^\\/api\\/guidance\\/repeat-ok\\/", MOCK), r.path
+                assert f"method !== '{method}'" in MOCK or f"method === '{method}'" in MOCK, (method, r.path)
+            elif "{food_id}" in r.path:
                 # PUT / DELETE /api/guidance/preferences/{food_id} and its alias /not-for-me/{food_id}: one regex route for any method
                 segment = r.path.split("/")[3]
                 assert segment in ("preferences", "not-for-me"), r.path
@@ -403,7 +407,7 @@ def test_the_menu_is_on_suggestions_swaps_and_plan_items_and_never_on_a_low() ->
     assert "rowMenu(item, {" in _fn(VIEW, "foodRow")
     swap = _fn(VIEW, "swapRow")
     assert swap.index("res.mode !== 'hypo'") < swap.index("rowMenu(s,")
-    assert "portionList(m.items, { menus: true })" in VIEW and "portionList(m.closest.items)" in VIEW
+    assert "portionList(m.items, { menus: true, repeat })" in VIEW and "portionList(m.closest.items)" in VIEW
     assert "rowMenu" not in _fn(VIEW, "lowOption") and "rowMenu" not in _fn(VIEW, "lowCard")
     # a toast confirms each change, in the words of the menu
     for text in ("more like this. Settings → Meal guidance lists it.", "will be suggested less often.", "will not be suggested again.",

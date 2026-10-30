@@ -21,10 +21,10 @@
   const GE = KH.guidanceEngine || (KH.guidanceEngine = {});
   const { NUTRIENT_KEYS } = KH.rules;
 
-  const RULES_VERSION = '2026-10-30.1';
+  const RULES_VERSION = '2026-10-30.2';
   // rules.rules_hash() of this RULES_VERSION (sha256 over the sorted JSON of the rules table, first 16 hex
   // digits). The runner checks it against the vectors and tests/test_guidance_ui.py against the server.
-  const RULES_HASH = 'e8b1375066c1c02b';
+  const RULES_HASH = '6ea926817a5688ac';
 
   const MAIN_MEALS = ['breakfast', 'lunch', 'dinner'];
   const SNACK = 'snack';
@@ -136,7 +136,9 @@
   const RECIPE_POT_MAX_SERVINGS = 40;
   const VARIANT_MAX = 4;
   // Several days at once (note 23).
-  const PLAN_DAYS_MAX = 14;
+  const PLAN_DAYS_MAX = 60;
+  const PLAN_DAYS_AI_MAX = 31;
+  const PLAN_DAYS_CEILING = 90;
   const PLAN_REPEAT_DAYS = 2;
   const PLAN_RECENT_FOOD_PENALTY = 0.5;
   const UNKNOWN_PENALTY = 1.5;
@@ -421,7 +423,10 @@
         food_pref: new Map(pairsOf(prefs.food_pref).map(([k, v]) => [Number(k), v])),
         like_categories: new Set(prefs.like_categories || []), less_categories: new Set(prefs.less_categories || []),
         learn_from_log: prefs.learn_from_log == null ? true : !!prefs.learn_from_log,
-        hidden_usual_meals: new Set(prefs.hidden_usual_meals || []) },
+        hidden_usual_meals: new Set(prefs.hidden_usual_meals || []),
+        // "OK to repeat" (design note 23 §12.2): read only when several days are planned at once.
+        repeat_ok_food_ids: new Set((prefs.repeat_ok_food_ids || []).map(Number)),
+        repeat_ok_meal_ids: new Set((prefs.repeat_ok_meal_ids || []).map(Number)) },
       foods,
       day,
       history,
@@ -541,7 +546,9 @@
     ['RECIPE_MAX_ITEMS', 'Most ingredients in a recipe (as save_recipe)'],
     ['RECIPE_POT_MAX_SERVINGS', 'Most servings of one food in the whole recipe after a swap'],
     ['VARIANT_MAX', 'Most "Show another plan" variants'],
-    ['PLAN_DAYS_MAX', 'Most days one request plans (note 23: targets can change at the next blood test, and fresh food keeps about that long)'],
+    ['PLAN_DAYS_MAX', 'Most days one request plans by default (note 23 §12.1; the server setting PLAN_DAYS_MAX, 1 to 90)'],
+    ['PLAN_DAYS_AI_MAX', 'Most days one request plans by default when its ideas come from AI (note 23 §12.1; PLAN_DAYS_AI_MAX)'],
+    ['PLAN_DAYS_CEILING', 'The most PLAN_DAYS_MAX and PLAN_DAYS_AI_MAX may be set to'],
     ['PLAN_REPEAT_DAYS', 'A meal with the same foods is not planned for the same meal on this many days before in the same plan, unless nothing else fits'],
     ['PLAN_RECENT_FOOD_PENALTY', 'Score cost per earlier day of the same plan a food is on (the weight of a food eaten the day before)'],
     ['UNKNOWN_PENALTY', 'Score cost of each unknown potassium, phosphorus or sodium value (unknown is never 0, note 03)'],
@@ -571,7 +578,7 @@
     AI_MEALS_MAX, AI_PLAN_OPTIONS_MAX, AI_QUARTERS_RANGE, ENERGY_NOTE_FRACTION, ENERGY_LOW_INSIGHT_FRACTION, ENERGY_DENSE_MIN_KCAL,
     ENERGY_DENSE_MAX, ENERGY_NOTE_FOODS, PROTEIN_TOPUP_STEP, PROTEIN_TOPUP_STEPS, REPAIR_STEP, REPAIR_STEPS, RECIPE_FLOOR,
     RECIPE_MAX_LOWER_STEPS, RECIPE_MAX_SWAPS, RECIPE_SERVING_FRACTIONS, RECIPE_MAX_ITEMS, RECIPE_POT_MAX_SERVINGS, VARIANT_MAX,
-    PLAN_DAYS_MAX, PLAN_REPEAT_DAYS, PLAN_RECENT_FOOD_PENALTY, UNKNOWN_PENALTY, FREE_FOOD_CARBS_G, HIGH_GI_PENALTY_MIN_CARBS_G, FILLS_CARBS_MIN_G, LOW_K_REASON_MG, LOW_P_REASON_MG,
+    PLAN_DAYS_MAX, PLAN_DAYS_AI_MAX, PLAN_DAYS_CEILING, PLAN_REPEAT_DAYS, PLAN_RECENT_FOOD_PENALTY, UNKNOWN_PENALTY, FREE_FOOD_CARBS_G, HIGH_GI_PENALTY_MIN_CARBS_G, FILLS_CARBS_MIN_G, LOW_K_REASON_MG, LOW_P_REASON_MG,
     MAX_NAME_CHARS, RENAL_MEDIUM, RENAL_HIGH,
   };
   function plain(v) { return JSON.parse(JSON.stringify(v)); }

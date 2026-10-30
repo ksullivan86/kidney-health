@@ -81,6 +81,11 @@ GUIDANCE_VALUES = [
     {"hidden_usual_meals": [""]}, {"hidden_usual_meals": ["lunch:" + ",".join(f"{i}x4" for i in range(1, 200))]},
     {"hidden_usual_meals": [f"snack:{i}x4" for i in range(50)]}, {"hidden_usual_meals": [f"snack:{i}x4" for i in range(51)]},
     {"hidden_usual_meals": "lunch:1x4"}, {"hidden_usual_meals": [7]},
+    {"plan_repeat_meals": ["breakfast", "snack", "breakfast"]}, {"plan_repeat_meals": ["brunch"]}, {"plan_repeat_meals": "lunch"},
+    {"plan_repeat_meals": ["breakfast", "lunch", "dinner", "snack", "lunch"]}, {"plan_snack": True}, {"plan_snack": "maybe"},
+    {"repeat_ok_foods": [12, 40, 12]}, {"repeat_ok_foods": [0]}, {"repeat_ok_foods": ["12"]}, {"repeat_ok_foods": [2147483648]},
+    {"repeat_ok_foods": list(range(1, 202))}, {"repeat_ok_meals": [3, 3]}, {"repeat_ok_meals": list(range(1, 102))},
+    {"repeat_ok_meals": [1.5]}, {"repeat_ok_meals": "1"},
     {"unknown_field": 1}, {"like_categories": ["a"], "unknown_field": 1},
     {"carb_tolerance_g": 4, "like_categories": ["Fruits"], "exclude_categories": ["Fruits"]},
 ]

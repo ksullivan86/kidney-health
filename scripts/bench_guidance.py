@@ -10,7 +10,9 @@ engine function behind one endpoint. Sizes are copies of ``data/foods.json``: 1 
 and their own names, so they are distinct foods).
 
 Budget (§4.12): p95 < 200 ms per request on a Raspberry Pi 4 (4 GB) with 2,000 foods; on the x86 CI
-runner what-fits ≤ 25 ms, swaps ≤ 5 ms, plan-day ≤ 40 ms, insights ≤ 15 ms (engine time).
+runner what-fits ≤ 25 ms, swaps ≤ 5 ms, plan-day ≤ 40 ms, insights ≤ 15 ms (engine time). Planning 60 days at once
+(design note 23 §12.1, the default PLAN_DAYS_MAX) is about 60 one-day plans: ≤ 4,000 ms on x86 (engine time), timed with at
+most 3 runs.
 
 Usage::
 
@@ -54,7 +56,9 @@ TARGETS = {
     "calories_kcal": 2100, "protein_g": {"min": 42, "max": 56}, "carbs_g": 236, "carbs_per_meal_g": 60,
     "sodium_mg": 2000, "potassium_mg": 3000, "phosphorus_mg": 1000, "calcium_mg": 1000, "fluid_ml": None,
 }
-X86_BUDGET_MS = {"next-meal": 25.0, "swaps": 5.0, "plan-day": 40.0, "insights/day": 15.0}
+X86_BUDGET_MS = {"next-meal": 25.0, "swaps": 5.0, "plan-day": 40.0, "insights/day": 15.0, "plan-days (60 days)": 4000.0}
+LONG_PLAN_DAYS = 60  # the default PLAN_DAYS_MAX (design note 23 §12.1)
+SLOW_RUNS = 3  # a 60-day plan takes seconds: at most this many timed runs
 COPY_FDC_OFFSET = 10_000_000
 
 
@@ -152,6 +156,14 @@ def scenario(path: Path, user_id: int) -> dict[str, Callable[[], Any]]:
         finally:
             conn.close()
 
+    def plan_days(c: Any | None = None) -> Any:
+        conn = db.connect(path)
+        try:
+            c = c if c is not None else ctx()
+            return planner.plan_days(c, C.load_days(conn, user_id, TODAY, LONG_PLAN_DAYS, c.foods, FOODS_JSON), snack=True)
+        finally:
+            conn.close()
+
     def cold_vectors() -> Any:
         conn = db.connect(path)
         try:
@@ -166,10 +178,12 @@ def scenario(path: Path, user_id: int) -> dict[str, Callable[[], Any]]:
         "insights/day": lambda: insights.day_insights(ctx(history60=False, saved_meals=False, combos=False)),
         "insights/period": period,
         "hypo-options": lambda: swaps.hypo_options(ctx(history=False, history60=False, saved_meals=False, combos=False)),
+        "plan-days (60 days)": plan_days,
         "vectors (cold cache)": cold_vectors,
         "engine only: next-meal": (lambda c=probe: fits.what_fits(c, "lunch")),
         "engine only: swaps": (lambda c=probe: swaps.find_swaps(c, "dinner", potato, 1.0)),
         "engine only: plan-day": (lambda c=probe: planner.plan_day(c)),
+        "engine only: plan-days (60 days)": (lambda c=probe: plan_days(c)),
         "engine only: insights/day": (lambda c=probe: insights.day_insights(c)),
     }
 
@@ -195,9 +209,11 @@ def run(copies_list: list[int], runs: int) -> dict[str, Any]:
             path = Path(tmp) / "kidney.db"
             user_id = build_database(path, copies)
             calls = scenario(path, user_id)
-            for fn in calls.values():  # warm-up: caches, imports
-                fn()
-            size = {"counts": counts(path, user_id), "timings_ms": {name: timed(fn, runs) for name, fn in calls.items()}}
+            for name, fn in calls.items():  # warm-up: caches, imports
+                if "60 days" not in name:
+                    fn()
+            size = {"counts": counts(path, user_id),
+                    "timings_ms": {name: timed(fn, min(runs, SLOW_RUNS) if "60 days" in name else runs) for name, fn in calls.items()}}
             report["sizes"][str(size["counts"]["foods"])] = size
     return report
 
@@ -218,7 +234,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--runs", type=int, default=50, help="timed runs per call (default 50)")
     parser.add_argument("--copies", default="1,5", help="food-list copies to test, comma-separated (default 1,5)")
     parser.add_argument("--json", type=Path, help="also write the report as JSON to this file")
-    parser.add_argument("--max-p95", type=float, help="exit 1 when a request (not engine-only) p95 exceeds this many ms")
+    parser.add_argument("--max-p95", type=float, help="exit 1 when a request (not engine-only, not the 60-day plan) p95 exceeds this many ms")
     args = parser.parse_args(argv)
     copies = [int(c) for c in args.copies.split(",") if c.strip()]
     if args.runs < 1 or not copies or any(c < 1 or c > 20 for c in copies):
@@ -230,7 +246,8 @@ def main(argv: list[str] | None = None) -> int:
     if args.max_p95 is not None:
         slow = [(foods, name, t["p95"]) for foods, size in report["sizes"].items()
                 for name, t in size["timings_ms"].items()
-                if not name.startswith("engine only") and name != "vectors (cold cache)" and t["p95"] > args.max_p95]
+                if not name.startswith("engine only") and name != "vectors (cold cache)" and "60 days" not in name
+                and t["p95"] > args.max_p95]
         for foods, name, p95 in slow:
             print(f"OVER BUDGET: {name} at {foods} foods: p95 {p95} ms > {args.max_p95} ms", file=sys.stderr)
         return 1 if slow else 0

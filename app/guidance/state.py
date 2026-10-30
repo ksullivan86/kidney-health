@@ -103,7 +103,8 @@ class Prefs:
     ``exclude_food_ids`` holds the "Not for me" foods (never suggested); ``food_pref`` the soft ones, food id → ``like``,
     ``less`` or ``neutral`` (``neutral``: nothing learned from the log counts for this food). ``like_categories`` and
     ``less_categories`` nudge a whole food group; ``learn_from_log`` switches every learned signal off; ``hidden_usual_meals``
-    holds the keys of learned usual meals the person said "Not this meal" to (``rules.usual_meal_key``)."""
+    holds the keys of learned usual meals the person said "Not this meal" to (``rules.usual_meal_key``); ``repeat_ok_food_ids``
+    and ``repeat_ok_meal_ids`` the foods and saved meals marked "OK to repeat" (note 23 §12.2)."""
 
     carb_tolerance_g: float = float(R.CARB_TOLERANCE_G)
     hypo_dose_g: float = float(R.HYPO_DOSE_G)
@@ -114,6 +115,13 @@ class Prefs:
     less_categories: frozenset[str] = frozenset()
     learn_from_log: bool = True
     hidden_usual_meals: frozenset[str] = frozenset()
+    # "OK to repeat" (design note 23 §12.2): foods and saved meals the person is happy to have every day. Only several days at
+    # once reads them: such a food never counts in the plan's food rotation, and such a saved meal may come back the next day.
+    repeat_ok_food_ids: frozenset[int] = frozenset()
+    repeat_ok_meal_ids: frozenset[int] = frozenset()
+    # The meals the person said may be the same on following days (the plan sheet's remembered choice): only the optional AI
+    # reads it here, as a hint; the planner gets it with each request (``plan_days(repeat_meals=…)``).
+    plan_repeat_meals: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True, slots=True)

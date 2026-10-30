@@ -523,12 +523,13 @@ class MarkEatenResult(BaseModel):
     updated: int
 
 
-CLEAR_PLANNED_MAX_DAYS = 14  # the plan builder's PLAN_DAYS_MAX (design note 23 §2)
-CLEAR_PLANNED_MAX_IDS = 1000
+CLEAR_PLANNED_MAX_DAYS = 90  # the most PLAN_DAYS_MAX may be (design note 23 §12.1); the route applies the setting itself
+CLEAR_PLANNED_MAX_IDS = 2500  # an Undo of the longest plan: 90 days of four meals
 
 
 class ClearPlanned(BaseModel):
-    """``POST /api/log/clear-planned`` (design note 23 §5): take the planned food off ``start``…``end`` (at most 14 days).
+    """``POST /api/log/clear-planned`` (design note 23 §5): take the planned food off ``start``…``end`` (at most the server's
+    ``PLAN_DAYS_MAX`` days, default 60).
     With ``ids``, only those entries. Eaten food and planned low treatments always stay."""
 
     model_config = ConfigDict(extra="forbid")

@@ -12,7 +12,7 @@ from typing import Any, Literal
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from ..models import MAX_SQLITE_INT, Alert, Meal, Number, NutrientStatus, Rating, ShoppingList, Warning, validate_date
-from .rules import PLAN_DAYS_MAX
+from .rules import PLAN_DAYS_CEILING
 
 Group = Literal["protein", "starch", "veg_fruit", "extra"]
 Role = Literal["protein", "mixed", "starch", "veg_fruit", "drink", "extra"]
@@ -362,24 +362,29 @@ class PlanDayResponse(_Out):
 
 class PlanDaysRequest(BaseModel):
     """``POST /api/guidance/plan-days``: computes only. "Add to plan" sends ``apply.entries`` to ``/api/log/batch`` (≤ 40 a
-    request)."""
+    request). ``days`` is at most the server's ``PLAN_DAYS_MAX`` (default 60; 400 above it). ``repeat_meals`` and ``snack``
+    default to the person's remembered choices (``guidance.plan_repeat_meals``, ``guidance.plan_snack``, note 23 §12);
+    ``skip_first_day`` lists meals not to plan on the first day (today's meals whose time has passed)."""
 
     model_config = ConfigDict(extra="forbid")
 
     start: str
-    days: int = Field(default=7, ge=1, le=PLAN_DAYS_MAX)
+    days: int = Field(default=7, ge=1, le=PLAN_DAYS_CEILING)
     meals: list[Meal] | None = Field(default=None, min_length=1, max_length=4)
     use_saved_meals: bool = True
     use_usual: bool = True
     use_starters: bool = True
     variant: int = Field(default=0, ge=0, le=4)
+    repeat_meals: list[Meal] | None = Field(default=None, max_length=4)
+    snack: bool | None = None
+    skip_first_day: list[Meal] = Field(default_factory=list, max_length=4)
 
     @field_validator("start")
     @classmethod
     def _date(cls, v: str) -> str:
         return validate_date(v)
 
-    @field_validator("meals")
+    @field_validator("meals", "repeat_meals", "skip_first_day")
     @classmethod
     def _unique(cls, v: list[str] | None) -> list[str] | None:
         if v is not None and len(set(v)) != len(v):
@@ -404,6 +409,19 @@ class PlanDaysDay(_Out):
     energy_note: EnergyNote | None
 
 
+class PlanDaysLimits(_Out):
+    days_max: int  # PLAN_DAYS_MAX: the most days one plan may hold
+    ai_days_max: int  # PLAN_DAYS_AI_MAX (never above days_max): the cap for a plan whose ideas come from AI
+
+
+class PlanDaysChoices(_Out):
+    """What the plan used: the request's values, or the person's remembered ones."""
+
+    repeat_meals: list[Meal]
+    snack: bool
+    skip_first_day: list[Meal]
+
+
 class PlanDaysResponse(_Out):
     status: Literal["ok"]
     rules_version: str
@@ -415,6 +433,28 @@ class PlanDaysResponse(_Out):
     shopping: ShoppingList
     notes: list[str]
     targets: TargetsUsed
+    limits: PlanDaysLimits
+    choices: PlanDaysChoices
+
+
+class RepeatOkFood(_Out):
+    food_id: int
+    name: str
+
+
+class RepeatOkMeal(_Out):
+    meal_id: int
+    name: str
+
+
+class RepeatOkList(_Out):
+    """``GET /api/guidance/repeat-ok``: the foods and saved meals the person marked "OK to repeat" (note 23 §12.2), by name.
+    Only the person's own saved meals and the foods they can use are listed."""
+
+    foods: list[RepeatOkFood]
+    meals: list[RepeatOkMeal]
+    foods_limit: int
+    meals_limit: int
 
 
 # --------------------------------------------------------------------------- #

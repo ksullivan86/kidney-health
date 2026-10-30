@@ -7,6 +7,50 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+## 0.12.1 — 2026-10-30
+
+Plans of several days now go up to 60 days, for easier shopping and ordering. You choose which meals may repeat, whether to
+plan a snack, and what to do with today's meals that are already past.
+
+**Upgrading from 0.12.0:** change nothing if you track `:0.12`; it moves to 0.12.1 by itself. There is no schema step and
+nothing new is switched on. If you use AI, run `scripts/ai_eval.py` again: the prompt changed. From 0.11 or 0.10, follow
+[Upgrading from 0.11](#upgrading-from-011-read-this-first).
+
+### For people using the app
+
+* **Plan up to 60 days.** **Plan several days…** has **30 days** and **60 days** next to **7 days** and **14 days**, and
+  **Start tomorrow**. Adding a long plan says how far it has got. The shopping list has one line a food, however many days.
+* **Meals that may repeat.** Tick breakfast, lunch, dinner or snack to let that meal be the same on following days, for
+  example the same breakfast every day. The app remembers your choice.
+* **OK to repeat.** On a saved meal in the plan, or in a food's **⋯** menu, choose **OK to repeat**. A plan may then use it
+  every day. The plan sheet lists what you marked, with **Remove**.
+* **The snack is a choice.** **Plan a snack too** is off at first and remembered.
+* **Today's past meals.** When the plan starts today, a meal more than 2 hours past its usual time is not planned. One that
+  is less than 2 hours past is asked about: "Lunch was at 12:30. Plan it anyway?" with **Plan it** and **Skip**. A low
+  treatment is never touched.
+* **Clear planned days is a reset**, and now says so: it takes off every planned food on those days, also food you planned
+  yourself. Eaten food and planned low treatments stay. **Undo** right after adding takes off only what that plan added.
+* **One set of targets on dialysis days.** The guidelines the app cites give no separate daily potassium, phosphorus or
+  sodium targets for dialysis days, so the plan keeps your one set. The gap between sessions is still counted.
+
+### For people who run a server
+
+* **The app no longer shows only its header behind some reverse proxies.** The image allowed 64 open connections, and a
+  proxy that opens one per request went over that on a single page load: most script files got "503", and the log said
+  "Exceeded concurrency limit". The limit is now 512 and an environment variable, `UVICORN_LIMIT_CONCURRENCY`. See
+  [Only the header shows](docs/deployment.md#only-the-header-shows-and-the-log-says-exceeded-concurrency-limit).
+* **`PLAN_DAYS_MAX`** (60, 1 to 90) and **`PLAN_DAYS_AI_MAX`** (31) set the most days of one plan, and of one plan whose
+  ideas come from AI. The several-days plan uses no AI yet, so the second one changes nothing today. A 60-day plan takes
+  about 2 seconds on a laptop. No schema step.
+* **If you use AI**, run `scripts/ai_eval.py` again for each model: `PROMPT_VERSION` is now `2026-10-30.1`. The meal
+  prompts say what the person marked as OK to repeat, as meal names and ids.
+* New routes: `GET /api/guidance/repeat-ok`, `PUT` and `DELETE /api/guidance/repeat-ok/{foods|meals}/{id}`.
+  `POST /api/guidance/plan-days` takes `repeat_meals`, `snack` and `skip_first_day`, and answers with `limits` and `choices`.
+  `RULES_VERSION` is `2026-10-30.2`.
+* **Security: CVE-2026-114613 (High) in the pip wheel** that ships inside the Chainguard Python base image. The app
+  never runs pip, but the image scan counts it. The runtime base image digest moved to the fixed build
+  (`py3-pip-wheel 26.2.2-r2`).
+
 ## 0.12.0 — 2026-10-30
 
 Version 0.12 plans several days at once. On the Plan tab you can plan up to 14 days from your own foods, see each day and

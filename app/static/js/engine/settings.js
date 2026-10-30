@@ -146,7 +146,8 @@
     // they are rows of food_preferences (PUT/DELETE /api/guidance/preferences/{food_id}, aliases /not-for-me/{food_id}).
     { key: 'guidance', type: 'object', model: 'GuidancePreferences', scope: 'user', env: null,
       default: { enabled: true, carb_tolerance_g: 10, hypo_dose_g: 15, exclude_categories: [], show_plan_builder: true, show_insights: true, ai_enrich: false,
-        learn_from_log: true, like_categories: [], less_categories: [], hidden_usual_meals: [] },
+        learn_from_log: true, like_categories: [], less_categories: [], hidden_usual_meals: [], plan_repeat_meals: [], plan_snack: false,
+        repeat_ok_foods: [], repeat_ok_meals: [] },
       fields: [
         { name: 'enabled', type: 'bool', default: true },
         { name: 'carb_tolerance_g', type: 'int', min: 5, max: 20, default: 10 },
@@ -161,6 +162,12 @@
         // A usual meal's key, "<meal>:<food id>x<quarter servings>,…" (GE.fits.usualMealKey); integers only, so both sides write the same text.
         { name: 'hidden_usual_meals', type: 'list', maxItems: 50, unique: true, default: [],
           item: { type: 'str', minLength: 1, maxLength: 400, pattern: '^(?:breakfast|lunch|dinner|snack):[0-9]+x[0-9]+(?:,[0-9]+x[0-9]+)*$' } },
+        // Planning several days (design note 23 §12): the plan sheet's remembered choices and the "OK to repeat" marks.
+        { name: 'plan_repeat_meals', type: 'list', maxItems: 4, unique: true, default: [],
+          item: { type: 'choice', options: ['breakfast', 'lunch', 'dinner', 'snack'] } },
+        { name: 'plan_snack', type: 'bool', default: false },
+        { name: 'repeat_ok_foods', type: 'list', maxItems: 200, unique: true, default: [], item: { type: 'int', min: 1, max: 2147483647 } },
+        { name: 'repeat_ok_meals', type: 'list', maxItems: 100, unique: true, default: [], item: { type: 'int', min: 1, max: 2147483647 } },
       ],
       // The model validator: a food group is liked, ranked lower or never suggested, not two of them (runs when every field is valid).
       check(out) {
@@ -177,6 +184,12 @@
       label: 'Plan builder: search width', help: 'Partial meals kept at each step. 8 is about 15 % faster and finds slightly worse meals.' },
     { key: 'guidance.enabled', type: 'bool', default: true, scope: 'instance', env: 'GUIDANCE_ENABLED',
       label: 'Meal guidance', help: 'Rule-based suggestions for the next meal, swap ideas, plan-the-day and insights. Works without AI.' },
+    { key: 'guidance.plan_days_ai_max', type: 'int', min: 1, max: 90, default: 31, scope: 'instance', env: 'PLAN_DAYS_AI_MAX',
+      label: 'Plan several days with AI ideas: most days at once',
+      help: 'Each day costs AI calls. Never more than the plain cap. The several-days plan uses no AI yet.' },
+    { key: 'guidance.plan_days_max', type: 'int', min: 1, max: 90, default: 60, scope: 'instance', env: 'PLAN_DAYS_MAX',
+      label: 'Plan several days: most days at once',
+      help: "Plans from the person's own foods, without AI. About 30 ms a day on a laptop; lower it on a small server." },
     { key: 'guidance.pool_per_role', type: 'int', min: 20, max: 2000, default: 200, scope: 'instance', env: 'GUIDANCE_POOL_PER_ROLE',
       label: 'Plan builder: foods considered per role',
       help: 'Lower it (for example to 120) if planning a day is slow on a small server such as a Raspberry Pi 4.' },

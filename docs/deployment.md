@@ -30,8 +30,8 @@ Contents:
 | Fact | Value |
 |---|---|
 | Image | `ghcr.io/ksullivan86/kidney-health` (linux/amd64 + linux/arm64), based on Chainguard Python (no shell, no pip, no package manager). Pulls need no login once the GHCR package is public; if a pull asks for credentials (`401`, `denied`), the package is private: its owner sets it public under the package's *Package settings* (a repository's visibility does not carry over to its packages). |
-| Tags | `0.12` = the current 0.12.x release (**track this**); `0.12.0` = one release; `latest` = the newest release; `edge` and `sha-<short>` = every push to `main` (testing only) |
-| Verify | `scripts/verify-image.sh 0.12.0` checks the signature and attestations and prints the digest to pin ([`SECURITY.md`](../SECURITY.md)) |
+| Tags | `0.12` = the current 0.12.x release (**track this**); `0.12.1` = one release; `latest` = the newest release; `edge` and `sha-<short>` = every push to `main` (testing only) |
+| Verify | `scripts/verify-image.sh 0.12.1` checks the signature and attestations and prints the digest to pin ([`SECURITY.md`](../SECURITY.md)) |
 | Listens on | TCP **8000**, plain HTTP: put HTTPS on a reverse proxy ([`https.md`](https.md)) |
 | Runs as | UID **10001**, GID 10001 (works with any UID whose GID is 0, too); no capabilities |
 | Writes | only `/data` (`kidney.db`, its `-wal`/`-shm` files) and `/tmp`; the root filesystem can be read-only |
@@ -130,6 +130,7 @@ NetworkPolicy and the compose, Quadlet and `.env.example` comments name the same
 | `PUBLIC_URL` | unset | The URL people type, e.g. `https://food.home.example.net`. Its host passes the Host check, browsers' `Origin` must match it, and invite/reset links and the setup line use it. **Set it whenever you use a host name.** |
 | `ALLOWED_HOSTS` | localhost, IP literals and the `PUBLIC_URL` host | Extra host names (comma list, `*.example.org` wildcards). Any other `Host` gets `400 Unknown host` (DNS-rebinding defence) and one log line naming it. |
 | `TRUSTED_PROXIES` | `127.0.0.1,::1` | Addresses whose `X-Forwarded-For`/`-Proto` are believed. **Depends on your engine**: see [`security.md` §4](security.md#4-proxy-trust-trusted_proxies-per-topology). |
+| `UVICORN_LIMIT_CONCURRENCY` | `512` | Most open connections; beyond it the server answers 503. A page load asks for about 120 files at once, so keep it well above that. Before 0.12.1 the image had 64, which a reverse proxy that opens one connection per request could hit: only the header showed. |
 | `AUTH_MODE` | `local` | `local` (accounts with passwords), `proxy` (identity from Authelia, Authentik or `tailscale serve`), `none` (no sign-in). See [Sign-in modes](#sign-in-modes). |
 | `SECRET_KEY_FILE` | auto-generated `/data/secret.key` with a warning | Encrypts stored API keys. One key per line, ≥ 32 characters. Every shipped profile mounts it from the engine's secret store, **outside** the data volume. |
 | `USDA_API_KEY_FILE` | unset | Enables "Search USDA" (free key: <https://fdc.nal.usda.gov/api-key-signup>; `DEMO_KEY` allows 30 requests per hour). |
@@ -149,6 +150,7 @@ NetworkPolicy and the compose, Quadlet and `.env.example` comments name the same
 | `PASSWORD_BREACH_CHECK` | `false` | Refuse new passwords found in the Have I Been Pwned list (only the first 5 characters of the password's SHA-1 leave the server, to `api.pwnedpasswords.com`). |
 | `OFF_ENABLED`, `OFF_CONTACT` | off; the project URL | Open Food Facts barcode lookups (only the barcode digits go to `world.openfoodfacts.org`, and only for people who agreed in Settings → Food data) and the contact sent in their `User-Agent`. `OFF_RATE_PER_MINUTE` (10, at most 15), `BARCODE_NEGATIVE_TTL_HOURS` (24) and `USDA_BRANDED_BARCODE` (`true`: with a USDA key, a barcode Open Food Facts does not know, or knows without nutrition facts, is looked up in USDA's branded foods) tune them. See [barcode-and-photos.md](barcode-and-photos.md). |
 | `GUIDANCE_ENABLED` | `true` | Rule-based meal guidance (What fits now, swaps, Plan the rest of my day, insights). It runs on the server and sends nothing out. `GUIDANCE_POOL_PER_ROLE` (200) and `GUIDANCE_BEAM_WIDTH` (16) make planning cheaper on a small server. See [guidance.md](guidance.md). |
+| `PLAN_DAYS_MAX`, `PLAN_DAYS_AI_MAX` | 60; 31 | The most days **Plan several days** plans at once (1 to 90), and the most when its ideas come from AI (never more than `PLAN_DAYS_MAX`; each day costs AI calls). Today the several-days plan uses only the app's own rules, so `PLAN_DAYS_AI_MAX` changes nothing yet. A 60-day plan takes about 2 seconds on a laptop; lower `PLAN_DAYS_MAX` on a small server such as a Raspberry Pi. Also in Server administration → Server settings. See [guidance.md](guidance.md#several-days-at-once). |
 | `AI_ENABLED` and the other `AI_*` | AI off | Optional AI ideas. `AI_ENABLED` is the server-wide switch (also in Server administration); the provider is env-only: `AI_PROVIDER`, `AI_BASE_URL`, `AI_MODEL`, `AI_VISION_MODEL`, `AI_API_KEY_FILE`, `AI_PRIVATE_HOSTS` for a server on your LAN. `AI_CLOUD_PROVIDER` with `AI_CLOUD_BASE_URL`, `AI_CLOUD_MODEL`, `AI_CLOUD_VISION_MODEL` and `AI_CLOUD_API_KEY_FILE` adds a second provider that is always the cloud AI (for a LiteLLM proxy or another server you run, `AI_CLOUD_UPSTREAM` names the company it forwards to). `AI_CHAT_ENABLED` (off by default) adds the Ask chat screen. `AI_PROVIDER_ROLE=local` marks the first provider as your local AI, and each feature (photos, meal ideas, describe a meal, Ask) uses the local or the cloud AI you pin it to (`AI_ROUTE_*`; default local, so off until a local AI exists); reading a photo of a lab report (`AI_ROUTE_LABS`) is local or off only. Each person still opts in. Full list and recipes: [ai.md](ai.md), among them [a local AI and a cloud AI, both from the environment](ai.md#a-local-ai-and-a-cloud-ai-both-from-the-environment); a local Ollama: `deploy/compose.ai-ollama.yaml`. |
 | `AI_EVAL_REPORTS_DIR` | unset | A folder with the `*.json` reports `scripts/ai_eval.py` writes, mounted **read-only** (Quadlet `Volume=...:/ai-eval:ro,Z`, compose `volumes:`, Kubernetes `volumeMounts` with `readOnly: true`). Server administration → AI providers then says, per feature, whether the model in use passed the evaluation, and the start-up log warns about each one that failed or has no report. The mount recipes and what is read are in [ai.md](ai.md#how-well-each-ai-is-doing). |
 | `STT_BASE_URL`, `STT_MODEL`, `STT_API_KEY_FILE`, `AI_VOICE_ENABLED` | voice off | Speech to text for the Ask **microphone**: one OpenAI-compatible transcription server (`{STT_BASE_URL}/audio/transcriptions`, the base ends in `/v1`), its model name and, if it wants one, its key as a file. The address follows the AI rules: a LAN host must be in `AI_PRIVATE_HOSTS`. `AI_VOICE_ENABLED` (off by default; also in Server administration; needs Ask) switches the button on; each person agrees on first use. `STT_TIMEOUT_S` (60), `STT_DAILY_LIMIT` (100 per person per day) and `STT_MAX_AUDIO_BYTES` (1.5 MiB) tune it. Recordings are transcribed and deleted, never stored; the browser's own speech recognition is never used. A local container: `deploy/compose.stt-whisper.yaml`. See [ai.md](ai.md#voice-input-speech-to-text). |
@@ -251,9 +253,9 @@ systemctl --user enable --now podman-auto-update.timer               # daily pul
 ```
 
 **Which image to run.** Each GitHub release's notes carry the multi-arch index digest of that
-release. For a host managed from git (GitOps), pin it: `Image=ghcr.io/ksullivan86/kidney-health:0.12.0@sha256:<index digest>`
+release. For a host managed from git (GitOps), pin it: `Image=ghcr.io/ksullivan86/kidney-health:0.12.1@sha256:<index digest>`
 and drop `AutoUpdate=registry`; Renovate or Dependabot then open a change that bumps tag and digest
-together, which you review and apply, and `scripts/verify-image.sh 0.12.0` checks the signature and
+together, which you review and apply, and `scripts/verify-image.sh 0.12.1` checks the signature and
 attestations of exactly that digest. The shipped unit instead tracks `:0.12` with `AutoUpdate=registry`
 (patch releases arrive on their own, breaking changes never do): simpler, with the pull happening
 outside your review.
@@ -385,7 +387,7 @@ the overlay's patches in your repository:
 ```yaml
 # kustomization.yaml in your GitOps repository
 resources:
-  - https://github.com/ksullivan86/kidney-health//deploy/k8s?ref=v0.12.0
+  - https://github.com/ksullivan86/kidney-health//deploy/k8s?ref=v0.12.1
   - httproute.yaml
 patches:
   - path: deployment-env.yaml
@@ -467,8 +469,8 @@ an `AI_PRIVATE_HOSTS` entry.
 
 ```bash
 kubectl label --dry-run=server --overwrite ns kidney-health pod-security.kubernetes.io/enforce=restricted   # no warnings
-scripts/verify-image.sh 0.12.0                 # prints the verified digest (also in the release notes)
-cd deploy/k8s-overlays/home && kustomize edit set image ghcr.io/ksullivan86/kidney-health=ghcr.io/ksullivan86/kidney-health:0.12.0@sha256:<digest>
+scripts/verify-image.sh 0.12.1                 # prints the verified digest (also in the release notes)
+cd deploy/k8s-overlays/home && kustomize edit set image ghcr.io/ksullivan86/kidney-health=ghcr.io/ksullivan86/kidney-health:0.12.1@sha256:<digest>
 ```
 
 `imagePullPolicy: IfNotPresent` plus a digest means a node never pulls something you did not verify.
@@ -641,7 +643,7 @@ older one.
 
 ## Upgrades
 
-* **Pin the release digest** (`Image=...:0.12.0@sha256:<index digest>` from the release notes,
+* **Pin the release digest** (`Image=...:0.12.1@sha256:<index digest>` from the release notes,
   checked with `scripts/verify-image.sh`) and let Renovate or Dependabot propose the next one, or
   **track `:0.12`** (patch releases, no breaking changes) with Quadlet `AutoUpdate=registry` and
   `podman-auto-update.timer`. Do not track `:latest` or `:edge` on a machine you care about: `:edge`
@@ -655,10 +657,10 @@ older one.
 
 Read **Upgrading from 0.11** in [CHANGELOG.md](../CHANGELOG.md#0120--2026-10-30) first.
 
-1. **Back up first** (`podman exec kidney-health python -m app.admin backup /data/before-0.12.0.db`, or your backup tool).
+1. **Back up first** (`podman exec kidney-health python -m app.admin backup /data/before-0.12.1.db`, or your backup tool).
    0.12 has no schema step. Coming from 0.10, step 25 from [From v0.10 to v0.11](#from-v010-to-v011) runs at the first start.
-2. **Change the tag** from `:0.11` (or `:0.10`) to `:0.12` (or a digest from the 0.12.0 release notes, checked with
-   `scripts/verify-image.sh 0.12.0`). The shipped files already say `:0.12`.
+2. **Change the tag** from `:0.11` (or `:0.10`) to `:0.12` (or a digest from the 0.12.1 release notes, checked with
+   `scripts/verify-image.sh 0.12.1`). The shipped files already say `:0.12`.
 3. **Nothing new is switched on.** Planning several days uses the rules engine and the person's own foods; it needs no
    setting.
 4. **If you use AI:** `PROMPT_VERSION` is `2026-10-29.1`. Each meal candidate now tells the AI the most of it the app
@@ -789,7 +791,7 @@ Read **Upgrading from 0.3** in [CHANGELOG.md](../CHANGELOG.md#040--2026-10-22) f
    The first start runs schema steps 8 to 17 in one go, each in its own transaction; there is no automatic copy as there was for
    0.3, and a backup restores into the same or a newer version, never an older one.
 2. **Change the tag** from `:0.3` to the current one (`:0.12`, or a digest from the latest release notes, checked with
-   `scripts/verify-image.sh 0.12.0`) in your Quadlet unit, compose file or Kubernetes overlay. The shipped files say `:0.12`.
+   `scripts/verify-image.sh 0.12.1`) in your Quadlet unit, compose file or Kubernetes overlay. The shipped files say `:0.12`.
    The image now runs Python 3.15 on the same Chainguard base.
 3. **Nothing new is switched on.** Assistant access, Ask, voice input, trusted saves and the cloud fallback are off until an admin
    turns them on; an upgraded server that already had a shared AI provider keeps every AI feature on the old rule (`any`) until an
@@ -946,6 +948,16 @@ RuntimeDefault`.
 
 **Which version is running?** `podman inspect kidney-health --format '{{.ImageDigest}}'` or
 `kubectl -n kidney-health get deploy kidney-health -o jsonpath='{.spec.template.spec.containers[0].image}'`.
+
+### Only the header shows, and the log says "Exceeded concurrency limit"
+
+The page opens but nothing below the header, on any network, and the server log has many `WARNING:  Exceeded concurrency
+limit.` lines and `503 Service Unavailable` for `/js/…` files. The image before 0.12.1 allowed only 64 open connections, and
+a reverse proxy that opens a new connection for each request goes over that on one page load. Upgrade to 0.12.1 or newer,
+which allows 512 (`UVICORN_LIMIT_CONCURRENCY`). On an older image, set the container's command to the image's own
+arguments with a higher limit, for example Quadlet
+`Exec=--host 0.0.0.0 --port 8000 --no-proxy-headers --no-server-header --timeout-graceful-shutdown 10 --limit-concurrency 512`
+or compose `command: [...]` with the same list. Letting the proxy reuse its connections to the app (keep-alive) helps too.
 
 ### Only the header shows over a VPN
 

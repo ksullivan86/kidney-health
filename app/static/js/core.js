@@ -717,10 +717,12 @@
     if (host && host._confirmRow) host._confirmRow._close(refocus);
   }
   // `tone: 'primary'` for a confirm that deletes nothing (Add to plan); the default is the red Delete button.
-  function inlineConfirm(host, trigger, { message, confirmText = 'Delete', onConfirm, tone = 'danger' }) {
+  // `cancelText` and `onCancel` (a choice of two, such as "Plan it" or "Skip"): onCancel runs when the person picks the
+  // other button or presses Escape.
+  function inlineConfirm(host, trigger, { message, confirmText = 'Delete', onConfirm, tone = 'danger', cancelText = 'Cancel', onCancel = null }) {
     dismissConfirm(host);
     const msgId = `confirm-msg-${++confirmSeq}`;
-    const cancel = h('button', { class: 'btn secondary', type: 'button' }, 'Cancel');
+    const cancel = h('button', { class: 'btn secondary', type: 'button' }, cancelText);
     const ok = h('button', { class: `btn ${tone === 'primary' ? 'primary' : 'danger-solid'}`, type: 'button' }, confirmText);
     const row = h('div', { class: `confirm-row${host.classList.contains('sheet-foot') ? ' sheet-foot' : ''}`, role: 'group', 'aria-labelledby': msgId },
       h('p', { class: 'confirm-msg', id: msgId }, message),
@@ -736,9 +738,10 @@
     host._confirmRow = row;
     host.hidden = true;
     host.after(row);
-    cancel.addEventListener('click', () => close(true));
+    const cancelled = () => { close(true); if (onCancel) onCancel(); };
+    cancel.addEventListener('click', cancelled);
     row.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close(true); }
+      if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); cancelled(); }
     });
     ok.addEventListener('click', async () => {
       ok.disabled = true; cancel.disabled = true;
