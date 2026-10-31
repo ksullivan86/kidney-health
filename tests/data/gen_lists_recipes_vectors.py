@@ -67,7 +67,7 @@ PASTES = ["For the sauce:\n1 cup tomato\n\n2 tsp sugar\nStep 3:\n", "\r\n1 egg\r
 FOODS = ["boneless skinless chicken breasts", "diced tomatoes", "butter or margarine", "fresh berries (any kind)",
          "Salt and pepper to taste", "", "chopped", "low-sodium chicken broth", "large eggs", "Jalapeño peppers", "olive oil, for frying",
          "rice/quinoa", "whole wheat flour plus more for dusting", "a b c d e f g h", "dishes boxes glasses", "asparagus hummus",
-         "cheese for serving", "optional parsley"]
+         "cheese for serving", "optional parsley", "dried thyme", "extra virgin olive oil", "chicken thighs, bone-in, skin-on"]
 
 SERVINGS = [
     (2, "cup", "1/2 cup (79 g)", 79), (1.5, "lb", "3 oz (85 g)", 85), (200, "g", "1 cup (140 g)", 140),

@@ -280,6 +280,7 @@
     'halved', 'quartered', 'trimmed', 'rinsed', 'drained', 'packed', 'softened', 'melted', 'beaten', 'boneless', 'skinless',
     'uncooked', 'raw', 'organic', 'ripe', 'clove', 'cloves', 'sprig', 'sprigs', 'handful', 'pinch', 'dash', 'heaping', 'level',
     'generous', 'good', 'quality', 'can', 'cans', 'package', 'jar', 'bunch', 'head', 'stalk', 'stalks', 'inch', 'inches', 'few',
+    'dried', 'virgin', 'lean', 'bone', 'skin',
   ]);
   const WORD = /[a-zà-ÿ]+/g;
   function stem(word) {

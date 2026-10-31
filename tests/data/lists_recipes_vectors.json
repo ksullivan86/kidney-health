@@ -1257,6 +1257,28 @@
    "terms": [
     "parsley"
    ]
+  },
+  {
+   "food": "dried thyme",
+   "terms": [
+    "thyme"
+   ]
+  },
+  {
+   "food": "extra virgin olive oil",
+   "terms": [
+    "olive oil",
+    "oil",
+    "olive"
+   ]
+  },
+  {
+   "food": "chicken thighs, bone-in, skin-on",
+   "terms": [
+    "chicken thigh",
+    "thigh",
+    "chicken"
+   ]
   }
  ],
  "text_cases": [
