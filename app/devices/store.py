@@ -10,6 +10,10 @@
   reading), when its ``source_key`` is already there (a restored export), when it is outside the app's plausibility ranges or
   dated after today, or when its day already holds the most rows a day may hold. Nothing that is already in the log is changed.
 
+**Activity days and workouts** (Whoop, design note 28 §4.3) are Whoop's own rows: a person cannot type them, so a later sync
+**replaces** the values of a day or workout it imported before (the day the person is in grows until it ends). A row that was
+deleted (Disconnect with "also delete") stays deleted while the ledger remembers it.
+
 Every function takes the person's id and never commits unless it says so.
 """
 from __future__ import annotations
@@ -23,11 +27,12 @@ from ..body import context_for, round_kg
 from ..crypto import InvalidToken, Keyring
 from ..db import utcnow
 from ..models import MAX_READINGS_PER_DAY, MAX_WEIGHTS_PER_DAY, BloodPressureCreate, WeightCreate
-from .base import ProviderError, Reading, TokenSet
+from .base import ActivityDay, ProviderError, Reading, TokenSet, Workout
 
 STATUS_ACTIVE = "active"
 STATUS_NEEDS_RECONNECT = "needs_reconnect"
 _CHUNK = 400
+_TABLES = (("weights", "weights"), ("readings", "blood_pressures"), ("days", "activity_days"), ("workouts", "activity_workouts"))
 
 
 def purpose(provider: str) -> str:
@@ -51,8 +56,10 @@ def _sealed(keyring: Keyring, user_id: int, provider: str, tokens: TokenSet) -> 
 def connect(conn: sqlite3.Connection, keyring: Keyring, user_id: int, provider: str, tokens: TokenSet) -> int:
     """Save a new or renewed connection (no commit). Raises :class:`ProviderError` ``account_taken`` when that company account is
     connected to another person on this server."""
-    other = conn.execute("SELECT user_id FROM device_connections WHERE provider = ? AND external_user_id = ? AND user_id <> ?",
-                         (provider, tokens.external_user_id, user_id)).fetchone()
+    external = tokens.external_user_id or None  # Whoop's id may only be known after the first sync
+    other = None if external is None else conn.execute(
+        "SELECT user_id FROM device_connections WHERE provider = ? AND external_user_id = ? AND user_id <> ?",
+        (provider, external, user_id)).fetchone()
     if other is not None:
         raise ProviderError("account_taken", "account_taken")
     sealed, key_id = _sealed(keyring, user_id, provider, tokens)
@@ -63,16 +70,30 @@ def connect(conn: sqlite3.Connection, keyring: Keyring, user_id: int, provider: 
         cur = conn.execute(
             "INSERT INTO device_connections (user_id, provider, external_user_id, tokens_enc, key_id, access_expires_at, scopes, "
             "status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            (user_id, provider, tokens.external_user_id, sealed, key_id, expires, tokens.scopes, STATUS_ACTIVE, now, now))
+            (user_id, provider, external, sealed, key_id, expires, tokens.scopes, STATUS_ACTIVE, now, now))
         return int(cur.lastrowid or 0)
     # Connecting again (after "needs reconnect"): a different company account starts its own "changed since" mark.
-    same_account = row["external_user_id"] == tokens.external_user_id
+    same_account = external is None or row["external_user_id"] == external
     conn.execute(
         "UPDATE device_connections SET external_user_id = ?, tokens_enc = ?, key_id = ?, access_expires_at = ?, scopes = ?, "
         "status = ?, last_error = NULL, next_sync_after = NULL, sync_cursor = ?, updated_at = ? WHERE id = ? AND user_id = ?",
-        (tokens.external_user_id, sealed, key_id, expires, tokens.scopes, STATUS_ACTIVE, row["sync_cursor"] if same_account else None,
+        (external or row["external_user_id"], sealed, key_id, expires, tokens.scopes, STATUS_ACTIVE,
+         row["sync_cursor"] if same_account else None,
          now, row["id"], user_id))
     return int(row["id"])
+
+
+def set_external(conn: sqlite3.Connection, row: sqlite3.Row, external_user_id: str) -> None:
+    """Record the company's id for the person when the connection did not know it yet (no commit). Raises
+    :class:`ProviderError` ``account_taken`` when another person here has that account connected."""
+    if row["external_user_id"] or not external_user_id:
+        return
+    other = conn.execute("SELECT user_id FROM device_connections WHERE provider = ? AND external_user_id = ? AND user_id <> ?",
+                         (row["provider"], external_user_id, row["user_id"])).fetchone()
+    if other is not None:
+        raise ProviderError("account_taken", "account_taken")
+    conn.execute("UPDATE device_connections SET external_user_id = ? WHERE id = ? AND user_id = ?",
+                 (external_user_id, row["id"], row["user_id"]))
 
 
 def save_refreshed(conn: sqlite3.Connection, keyring: Keyring, row: sqlite3.Row, tokens: TokenSet) -> None:
@@ -119,10 +140,9 @@ def mark(conn: sqlite3.Connection, row: sqlite3.Row, *, error: str | None, curso
 
 
 def imported_counts(conn: sqlite3.Connection, user_id: int, provider: str) -> dict[str, int]:
-    """How many of the person's weights and readings still say they came from ``provider``."""
-    w = conn.execute("SELECT COUNT(*) FROM weights WHERE user_id = ? AND source = ?", (user_id, provider)).fetchone()[0]
-    r = conn.execute("SELECT COUNT(*) FROM blood_pressures WHERE user_id = ? AND source = ?", (user_id, provider)).fetchone()[0]
-    return {"weights": int(w), "readings": int(r)}
+    """How many of the person's weights, readings, activity days and workouts still say they came from ``provider``."""
+    return {name: int(conn.execute(f"SELECT COUNT(*) FROM {table} WHERE user_id = ? AND source = ?", (user_id, provider)).fetchone()[0])
+            for name, table in _TABLES}
 
 
 def view(conn: sqlite3.Connection, row: sqlite3.Row | None) -> dict[str, Any] | None:
@@ -144,11 +164,10 @@ def disconnect(conn: sqlite3.Connection, user_id: int, provider: str, *, delete_
     from ``provider`` and the ledger, so a later connection brings them back; otherwise the ledger stays, so a reading the person
     deleted stays deleted after connecting again. Rows the person edited are theirs (``manual``) and are always kept."""
     conn.execute("DELETE FROM device_connections WHERE user_id = ? AND provider = ?", (user_id, provider))
-    removed = {"weights": 0, "readings": 0}
+    removed = {name: 0 for name, _ in _TABLES}
     if delete_readings:
-        removed["weights"] = int(conn.execute("DELETE FROM weights WHERE user_id = ? AND source = ?", (user_id, provider)).rowcount or 0)
-        removed["readings"] = int(conn.execute("DELETE FROM blood_pressures WHERE user_id = ? AND source = ?",
-                                               (user_id, provider)).rowcount or 0)
+        for name, table in _TABLES:
+            removed[name] = int(conn.execute(f"DELETE FROM {table} WHERE user_id = ? AND source = ?", (user_id, provider)).rowcount or 0)
         conn.execute("DELETE FROM device_imports WHERE user_id = ? AND provider = ?", (user_id, provider))
     return removed
 
@@ -277,3 +296,108 @@ def add_readings(conn: sqlite3.Connection, user_id: int, provider: str, readings
         conn.rollback()
         raise
     return {"added": added, "already_there": there + (len(unique) - len(fresh)), "skipped": skipped}
+
+
+# --------------------------------------------------------------------------- #
+# Activity days and workouts (Whoop)
+# --------------------------------------------------------------------------- #
+
+DAY_FIELDS = ("kcal", "strain", "recovery_pct", "resting_hr", "hrv_ms", "sleep_minutes", "sleep_performance_pct")
+WORKOUT_FIELDS = ("date", "start_time", "end_time", "minutes", "sport", "kcal", "strain")
+LATEST_DAYS_AHEAD = 1  # a Whoop day dated after tomorrow (a clock far ahead) is not taken
+_DAY_SET = ", ".join(f"{f} = ?" for f in DAY_FIELDS)
+_WORKOUT_SET = ", ".join(f"{f} = ?" for f in WORKOUT_FIELDS)
+
+
+def _ledger(conn: sqlite3.Connection, user_id: int, provider: str, ids: list[str]) -> dict[str, int | None]:
+    out: dict[str, int | None] = {}
+    for part in _chunks(ids):
+        marks = ", ".join("?" for _ in part)
+        for r in conn.execute(f"SELECT external_id, row_id FROM device_imports WHERE user_id = ? AND provider = ? "
+                              f"AND external_id IN ({marks})", (user_id, provider, *part)):
+            out[r[0]] = r[1]
+    return out
+
+
+def _add_day(conn: sqlite3.Connection, user_id: int, provider: str, d: ActivityDay, known: dict[str, int | None], now: str,
+             counts: dict[str, int]) -> None:
+    values = (*(getattr(d, f) for f in DAY_FIELDS), int(d.finished), d.started_at)
+    if d.external_id in known:  # seen before: Whoop's newer numbers replace the old ones
+        row_id = known[d.external_id]
+        changed = row_id is not None and conn.execute(
+            f"UPDATE activity_days SET {_DAY_SET}, finished = ?, started_at = ?, updated_at = ? "
+            "WHERE id = ? AND user_id = ? AND source_key = ?", (*values, now, row_id, user_id, f"{provider}:{d.external_id}")
+        ).rowcount
+        counts["updated" if changed else "skipped"] += 1  # a deleted row stays deleted
+        return
+    key = f"{provider}:{d.external_id}"
+    there = conn.execute("SELECT id, started_at FROM activity_days WHERE user_id = ? AND date = ? AND source = ?",
+                         (user_id, d.date, provider)).fetchone()
+    row_id: int | None = None
+    if there is None:
+        marks = ", ".join("?" for _ in DAY_FIELDS)
+        row_id = int(conn.execute(
+            f"INSERT INTO activity_days (user_id, date, source, source_key, {', '.join(DAY_FIELDS)}, finished, started_at, created_at, "
+            f"updated_at) VALUES (?, ?, ?, ?, {marks}, ?, ?, ?, ?)", (user_id, d.date, provider, key, *values, now, now)).lastrowid or 0)
+        counts["days"] += 1
+    elif (there["started_at"] or "") < d.started_at:  # two Whoop days on one date: the one that started later is kept
+        row_id = int(there["id"])
+        conn.execute(f"UPDATE activity_days SET source_key = ?, {_DAY_SET}, finished = ?, started_at = ?, updated_at = ? "
+                     "WHERE id = ? AND user_id = ?", (key, *values, now, row_id, user_id))
+        counts["updated"] += 1
+    else:
+        counts["skipped"] += 1
+    conn.execute("INSERT OR REPLACE INTO device_imports (user_id, provider, external_id, kind, row_id, imported_at) "
+                 "VALUES (?, ?, ?, 'activity_day', ?, ?)", (user_id, provider, d.external_id, row_id, now))
+
+
+def _add_workout(conn: sqlite3.Connection, user_id: int, provider: str, w: Workout, known: dict[str, int | None], now: str,
+                 counts: dict[str, int]) -> None:
+    values = tuple(getattr(w, f) for f in WORKOUT_FIELDS)
+    if w.external_id in known:
+        row_id = known[w.external_id]
+        changed = row_id is not None and conn.execute(
+            f"UPDATE activity_workouts SET {_WORKOUT_SET}, updated_at = ? WHERE id = ? AND user_id = ?", (*values, now, row_id, user_id)
+        ).rowcount
+        counts["updated" if changed else "skipped"] += 1
+        return
+    marks = ", ".join("?" for _ in WORKOUT_FIELDS)
+    row_id = int(conn.execute(
+        f"INSERT INTO activity_workouts (user_id, {', '.join(WORKOUT_FIELDS)}, source, source_key, created_at, updated_at) "
+        f"VALUES (?, {marks}, ?, ?, ?, ?)", (user_id, *values, provider, f"{provider}:{w.external_id}", now, now)).lastrowid or 0)
+    counts["workouts"] += 1
+    conn.execute("INSERT OR IGNORE INTO device_imports (user_id, provider, external_id, kind, row_id, imported_at) "
+                 "VALUES (?, ?, ?, 'workout', ?, ?)", (user_id, provider, w.external_id, row_id, now))
+
+
+def add_activity(conn: sqlite3.Connection, user_id: int, provider: str, days: list[ActivityDay], workouts: list[Workout],
+                 *, today: str) -> dict[str, int]:
+    """Add or replace the person's activity days and workouts from ``provider`` in one transaction (committed here).
+    Returns ``{days, workouts, updated, skipped}``: rows added, rows whose values were replaced, and records not taken."""
+    from datetime import date, timedelta
+
+    from ..auth.accounts import begin_immediate
+
+    counts = {"days": 0, "workouts": 0, "updated": 0, "skipped": 0}
+    if not days and not workouts:
+        return counts
+    latest = (date.fromisoformat(today) + timedelta(days=LATEST_DAYS_AHEAD)).isoformat()
+    begin_immediate(conn)
+    try:
+        now = utcnow()
+        known = _ledger(conn, user_id, provider, [d.external_id for d in days] + [w.external_id for w in workouts])
+        for d in days:
+            if d.date > latest:
+                counts["skipped"] += 1
+            else:
+                _add_day(conn, user_id, provider, d, known, now, counts)
+        for w in workouts:
+            if w.date > latest:
+                counts["skipped"] += 1
+            else:
+                _add_workout(conn, user_id, provider, w, known, now, counts)
+        conn.commit()
+    except BaseException:
+        conn.rollback()
+        raise
+    return counts

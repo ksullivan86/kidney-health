@@ -276,7 +276,7 @@ class WithingsProvider:
         return FetchResult(readings, str(new_cursor), left_out)
 
     # ------------------------------------------------------------------ disconnect
-    def revoke(self, external_user_id: str) -> bool:
+    def revoke(self, external_user_id: str, access_token: str | None = None) -> bool:
         """Ask Withings to end this app's access to the account (signed with a fresh nonce). True when Withings said yes; any
         failure is logged as a constant sentence and returns False (the tokens are deleted here either way)."""
         client_id, key = self.env.client_id or "", self.env.client_secret or ""

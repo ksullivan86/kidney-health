@@ -99,6 +99,8 @@ ACTIONS: set[str] = {
     "device.connected",  # connected devices (design note 27; app/devices/)
     "device.disconnected",
     "device.sync_failed",
+    "activity.extra_on",  # the active-day calorie extra (design note 28; app/activity.py)
+    "activity.extra_off",
 }
 USER_VISIBLE_ACTIONS = frozenset(
     {
@@ -144,6 +146,8 @@ USER_VISIBLE_ACTIONS = frozenset(
         "device.connected",
         "device.disconnected",
         "device.sync_failed",
+        "activity.extra_on",
+        "activity.extra_off",
     }
 )
 _ACTION = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")

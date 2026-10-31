@@ -36,7 +36,9 @@ Keys (defaults in brackets):
 * Connected devices (design note 27; :class:`WithingsEnv`, ``Settings.withings``): ``WITHINGS_ENABLED`` [false],
   ``WITHINGS_CLIENT_ID``, ``WITHINGS_CLIENT_SECRET_FILE`` (only as a file: ``WITHINGS_CLIENT_SECRET`` is refused). Env only, like
   OIDC. On needs ``PUBLIC_URL`` (Withings sends people back to ``<PUBLIC_URL>/api/devices/withings/callback``). The switches
-  ``DEVICES_ENABLED`` and ``DEVICES_SYNC_HOURS`` are settings (``devices.*``).
+  ``DEVICES_ENABLED`` and ``DEVICES_SYNC_HOURS`` are settings (``devices.*``). Whoop (design note 28; :class:`WhoopEnv`,
+  ``Settings.whoop``): ``WHOOP_ENABLED`` [false], ``WHOOP_CLIENT_ID``, ``WHOOP_CLIENT_SECRET_FILE`` (only as a file:
+  ``WHOOP_CLIENT_SECRET`` is refused), the same way; the return address is ``<PUBLIC_URL>/api/devices/whoop/callback``.
 * Test accounts (design note 26): ``TEST_ACCOUNT_PASSWORD_FILE`` (only as a file: ``TEST_ACCOUNT_PASSWORD`` is refused). The file
   is read when the accounts are made or reset. The switches ``TEST_ACCOUNT_ENABLED`` and ``TEST_ACCOUNT_AI`` are settings
   (``test_accounts.*``).
@@ -410,6 +412,39 @@ def _validate_withings(s: "Settings") -> list[str]:
     return []
 
 
+@dataclass(frozen=True)
+class WhoopEnv(WithingsEnv):
+    """The server's Whoop developer app (design note 28): ``WHOOP_ENABLED``, ``WHOOP_CLIENT_ID`` and ``WHOOP_CLIENT_SECRET_FILE``.
+    The secret is never returned by any API; Server administration says only "set"."""
+
+
+def load_whoop_env(env: Mapping[str, str]) -> WhoopEnv:
+    if env.get("WHOOP_CLIENT_SECRET"):
+        raise ConfigError("Give the Whoop client secret as a file: put it in a file and set WHOOP_CLIENT_SECRET_FILE to its "
+                          "path. Remove WHOOP_CLIENT_SECRET.")
+    value, _, _ = read_secret({k: v for k, v in env.items() if k == "WHOOP_CLIENT_SECRET_FILE"}, "WHOOP_CLIENT_SECRET")
+    return WhoopEnv(enabled=parse_bool(env, "WHOOP_ENABLED", False), client_id=_raw(env, "WHOOP_CLIENT_ID"),
+                    client_secret=(value or "").strip() or None)
+
+
+def _validate_whoop(s: "Settings") -> list[str]:
+    w = s.whoop
+    if not w.enabled:
+        return ["WHOOP_CLIENT_ID set without WHOOP_ENABLED=true: Whoop stays off."] if w.client_id else []
+    if not w.client_id or not _WITHINGS_CLIENT_ID.match(w.client_id):
+        raise ConfigError("WHOOP_ENABLED=true needs WHOOP_CLIENT_ID: the client id of your Whoop developer app "
+                          "(letters, digits, dots, dashes and underscores; see docs/devices.md).")
+    if not w.client_secret:
+        raise ConfigError("WHOOP_ENABLED=true needs WHOOP_CLIENT_SECRET_FILE: a file holding your Whoop app's client "
+                          "secret (see docs/devices.md).")
+    if not s.public_url:
+        raise ConfigError("WHOOP_ENABLED=true needs PUBLIC_URL: Whoop sends people back to "
+                          "<PUBLIC_URL>/api/devices/whoop/callback.")
+    if urlsplit(s.public_url).scheme != "https":
+        return ["WHOOP_ENABLED=true with a PUBLIC_URL that is not https: register an https return address with Whoop."]
+    return []
+
+
 def check_oidc_issuer(raw: str, var: str = "OIDC_ISSUER") -> str:
     """``OIDC_ISSUER``: ``https://`` with a host (plain ``http://`` only for a loopback host, for tests), no query, no fragment."""
     try:
@@ -577,6 +612,8 @@ class Settings:
     oidc: OidcEnv = field(default_factory=OidcEnv, repr=False)
     # Connected devices (design note 27): the server's Withings developer app; off for Settings built in code.
     withings: WithingsEnv = field(default_factory=WithingsEnv, repr=False)
+    # Whoop (design note 28): the server's Whoop developer app; off for Settings built in code.
+    whoop: WhoopEnv = field(default_factory=WhoopEnv, repr=False)
 
     # Secrets at rest (note 07 §4.12). ``secret_key`` holds the raw SECRET_KEY text (one key per
     # line); None means "use or create $DATA_DIR/secret.key" (see app.crypto.load_keyring).
@@ -641,7 +678,7 @@ class Settings:
         """Every secret value loaded from the environment, for the log-redaction filter."""
         values = [self.usda_api_key, self.app_password, self.admin_password, self.trusted_proxy_secret, self.ai.api_key,
                   self.ai.cloud.api_key, self.ai.stt_api_key, self.oidc.client_secret,
-                  *(p.client_secret for p in self.oidc.providers), self.withings.client_secret]
+                  *(p.client_secret for p in self.oidc.providers), self.withings.client_secret, self.whoop.client_secret]
         return [v for v in values if v] + self.secret_key_lines()
 
     def validate(self) -> tuple[str, ...]:
@@ -961,6 +998,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         ai=load_ai_env(env),
         oidc=load_oidc_env(env),
         withings=load_withings_env(env),
+        whoop=load_whoop_env(env),
     )
     extra: list[str] = []
     if env.get("FORWARDED_ALLOW_IPS"):
@@ -1055,6 +1093,7 @@ def _validate(s: Settings) -> list[str]:
             )
     warnings += _validate_oidc(s)
     warnings += _validate_withings(s)
+    warnings += _validate_whoop(s)
     if "*" in s.allowed_hosts:
         warnings.append("ALLOWED_HOSTS contains '*': the Host check (DNS-rebinding defence) is switched off.")
     if s.docs_enabled:

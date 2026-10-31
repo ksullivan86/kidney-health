@@ -37,6 +37,7 @@ from dataclasses import dataclass
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+from . import activity as activity_module
 from . import body as body_module
 from . import labs as labs_module
 from . import log as log_module
@@ -88,8 +89,8 @@ from .models import (
 from .profile import get_profile
 
 SWITCH = "sharing.enabled"
-AREAS = ("food", "labs", "body", "symptoms")
-Area = Literal["food", "labs", "body", "symptoms"]
+AREAS = ("food", "labs", "body", "symptoms", "activity")  # "activity": activity and recovery (design note 28 §4.4, step 30)
+Area = Literal["food", "labs", "body", "symptoms", "activity"]
 ROLES = ("viewer", "care_helper")  # schema step 27 (design note 25 §2)
 Role = Literal["viewer", "care_helper"]
 CODE_DAYS = 7
@@ -727,6 +728,12 @@ FoodShare = Annotated[User, Depends(shared_owner("food"))]
 LabsShare = Annotated[User, Depends(shared_owner("labs"))]
 BodyShare = Annotated[User, Depends(shared_owner("body"))]
 SymptomsShare = Annotated[User, Depends(shared_owner("symptoms"))]
+ActivityShare = Annotated[User, Depends(shared_owner("activity"))]
+
+
+def _shares_activity(conn: sqlite3.Connection, share_id: int) -> bool:
+    row = conn.execute("SELECT areas FROM shares WHERE id = ?", (share_id,)).fetchone()  # shared_owner checked it is this person's
+    return row is not None and "activity" in _areas(row["areas"])
 
 
 @shared_router.get("/{share_id}/profile", response_model=SharedProfile)
@@ -744,8 +751,10 @@ def shared_profile(share_id: ShareId, owner: AnyShare, conn: sqlite3.Connection 
 @shared_router.get("/{share_id}/log", response_model=DaySummary)
 def shared_day(share_id: ShareId, request: Request, owner: FoodShare, date: str | None = None,
                conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    """A day of the owner's food log, as ``GET /api/log`` answers it to them."""
-    return log_module.get_day(owner, request, date, conn)
+    """A day of the owner's food log, as ``GET /api/log`` answers it to them; without the activity area with the base calorie target
+    (the active-day extra would tell how active they were)."""
+    day = log_module.parse_date_param(date, "date") if date else log_module.today_local()
+    return log_module.day_summary(conn, request, owner.id, day, activity_extra=_shares_activity(conn, share_id))
 
 
 @shared_router.get("/{share_id}/log/range", response_model=RangeSummary)
@@ -796,6 +805,14 @@ def shared_symptoms(share_id: ShareId, owner: SymptomsShare, conn: sqlite3.Conne
                     end: str | None = None) -> dict[str, Any]:
     """The owner's symptoms log, as ``GET /api/symptoms``."""
     return symptoms_module.list_symptoms(owner, conn, start, end)
+
+
+@shared_router.get("/{share_id}/activity", response_model=activity_module.ActivityOut)
+def shared_activity(share_id: ShareId, owner: ActivityShare, conn: sqlite3.Connection = Depends(get_db), start: str | None = None,
+                    end: str | None = None) -> dict[str, Any]:
+    """The owner's Whoop days and workouts (the Activity and recovery card), as ``GET /api/activity`` without their setting."""
+    start_s, end_s = activity_module.parse_range(start, end)
+    return activity_module.activity_view(conn, owner.id, start_s, end_s)
 
 
 # --------------------------------------------------------------------------- #

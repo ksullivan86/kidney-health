@@ -27,11 +27,12 @@ from ..crypto import Keyring
 from ..settings_store import SettingsStore
 from . import store
 from .base import Provider, ProviderError
+from .whoop import WhoopProvider
 from .withings import WithingsProvider
 
 log = logging.getLogger(f"{brand.LOGGER_NAME}.devices")
 
-FIRST_DAYS = 365  # the first sync reaches this far back
+FIRST_DAYS = 365  # the first sync reaches this far back (a provider may say less: Whoop's ``first_days`` is 90)
 REFRESH_MARGIN_S = 300
 RATE_PAUSE_S = 3600
 SYNC_NOW_MIN_S = 600  # Withings: "do not poll more than once every 10 minutes per user"
@@ -45,7 +46,8 @@ class Devices:
 
     def __init__(self, settings: Settings) -> None:
         self.settings = settings
-        self.providers: dict[str, Provider] = {"withings": WithingsProvider(settings.withings)}
+        self.providers: dict[str, Provider] = {"withings": WithingsProvider(settings.withings),
+                                               "whoop": WhoopProvider(settings.whoop)}
         self._busy: set[int] = set()
         self._lock = threading.Lock()
 
@@ -62,6 +64,11 @@ class Devices:
     def release(self, connection_id: int) -> None:
         with self._lock:
             self._busy.discard(connection_id)
+
+
+def today_local() -> str:
+    """The server's date, as ``app.log.today_local`` gives it."""
+    return datetime.now().date().isoformat()
 
 
 def _utc(text: str | None) -> datetime | None:
@@ -105,7 +112,7 @@ def sync_connection(conn: sqlite3.Connection, keyring: Keyring, provider: Provid
         expires = _utc(row["access_expires_at"])
         if expires is None or expires - datetime.now(timezone.utc) < timedelta(seconds=REFRESH_MARGIN_S):
             access = refresh()
-        since = int(time.time()) - FIRST_DAYS * 86400
+        since = int(time.time()) - int(getattr(provider, "first_days", FIRST_DAYS)) * 86400
         try:
             result = provider.fetch(access, cursor=row["sync_cursor"], since=since)
         except ProviderError as exc:
@@ -121,8 +128,20 @@ def sync_connection(conn: sqlite3.Connection, keyring: Keyring, provider: Provid
         else:
             _record_error(conn, row, exc.code)
         raise
+    if result.external_user_id and not row["external_user_id"]:
+        try:
+            store.set_external(conn, row, result.external_user_id)
+        except ProviderError:  # that company account is connected to someone else here: nothing of it is kept
+            conn.rollback()
+            _record_error(conn, row, "account_taken", needs_reconnect=True)
+            raise
+        conn.commit()
     counts = store.add_readings(conn, int(row["user_id"]), row["provider"], result.readings)
+    activity = store.add_activity(conn, int(row["user_id"]), row["provider"], result.days, result.workouts, today=today_local())
     store.mark(conn, row, error=None, cursor=result.cursor)
+    counts["added"].update(days=activity["days"], workouts=activity["workouts"])
+    counts["updated"] = activity["updated"]
+    counts["skipped"] += activity["skipped"]
     counts["left_out"] = result.left_out
     return counts
 
