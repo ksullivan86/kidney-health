@@ -31,13 +31,13 @@ other). The app **records and shows**, works out a few plain numbers, and points
 Two tables, because the readings validate differently (`weights`, `blood_pressures`; both `ON DELETE CASCADE` from `users`, one unique
 index each on `(user_id, source_key)` where the key is not null, so a second import adds nothing). There is **no `CHECK` on a context or
 a source** (a later value must not need a table rebuild); a row with a value this version does not know is kept, left out of the lists and
-included in the export. `source` is `manual` (typed), `apple_health`, `import` or `shortcut` (a phone shortcut's device token, see
-[Phone shortcuts](push.md)); editing an imported row makes it `manual` and keeps its key, so importing again does not bring the old value back.
+included in the export. `source` is `manual` (typed), `apple_health`, `import`, `shortcut` (a phone shortcut's device token, see
+[Phone shortcuts](push.md)) or `withings` (fetched from a connected Withings account, see [Connected devices](devices.md)); editing an imported row makes it `manual` and keeps its key, so importing again does not bring the old value back.
 Ids are never reused (`AUTOINCREMENT`). A row from a shortcut also carries `api_token_id` (schema step 19), and the list routes answer `via`: the
 token's name, or `null` for every other row and once the token is purged.
 
 **Where a row came from is shown** on Today (a "from a shortcut (Morning weight)" line next to the time; "from the Health app" and "from a file" the same
-way; nothing for a row the person typed) and in the Trends tables (a "From" column while some row of the period has an origin). The words are made by
+way, and "from Withings"; nothing for a row the person typed) and in the Trends tables (a "From" column while some row of the period has an origin). The words are made by
 `KH.bodyUi.originText(row)` and drawn as text, so a token named with markup shows the markup. Editing a row makes it the person's own. Visit prep shows
 no per-row sources.
 

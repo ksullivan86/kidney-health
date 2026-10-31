@@ -133,6 +133,14 @@ spec:
             #   value: "true"
             # - name: TOKENS_ALLOW_NEVER_EXPIRING # false: every new token expires (30, 90 or 365 days)
             #   value: "false"
+            # - name: DEVICES_ENABLED             # each person's own Withings scale or blood pressure monitor
+            #   value: "true"                     # (docs/devices.md); needs PUBLIC_URL and the three WITHINGS_ variables
+            # - name: WITHINGS_ENABLED
+            #   value: "true"
+            # - name: WITHINGS_CLIENT_ID
+            #   value: your-withings-client-id
+            # - name: WITHINGS_CLIENT_SECRET_FILE # from the Secret (add withings_client_secret there)
+            #   value: /run/secrets/kidney-health/withings_client_secret
             # - name: TEST_ACCOUNT_ENABLED        # tester and tester-helper for people who test the app
             #   value: "true"                     # (docs/test-the-full-app.md); never admins
             # - name: TEST_ACCOUNT_PASSWORD_FILE  # their one password, from the Secret (add test_account_password there)

@@ -7,6 +7,22 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+### Connected devices: Withings
+
+* **A Withings scale or blood pressure monitor can fill in the log.** Each person connects their own Withings account in
+  **Settings → Connected devices**. The server then fetches their weight, blood pressure and pulse every few hours and adds them
+  to Weight and blood pressure, marked "from Withings". **Sync now** fetches at once. Nothing about the person is sent to
+  Withings: the server only signs in and reads.
+* The server never changes a reading someone typed, does not add the same reading twice, and does not bring back a reading the
+  person deleted. Weighings Withings is not sure about (a guest on the scale) are left out.
+* **Disconnect** keeps the readings, unless the person ticks "Also delete the readings that came from Withings".
+* If Withings stops accepting the sign-in, the section says so and offers **Connect again**.
+* Off until you turn it on. You need a free Withings developer app and an `https` `PUBLIC_URL`: set `DEVICES_ENABLED`,
+  `WITHINGS_ENABLED`, `WITHINGS_CLIENT_ID` and `WITHINGS_CLIENT_SECRET_FILE`. The steps are in [devices.md](docs/devices.md).
+  The server then needs to reach `wbsapi.withings.net`.
+* Test accounts cannot connect a device. The demo shows a sample Withings connection.
+* Schema step 29 adds two tables. Back up before you upgrade, as always.
+
 ## 0.15.0 — 2026-10-31
 
 Version 0.15 lets people sign in with Authentik and Google on the same server, adds a choice to sign in only through them,

@@ -1653,6 +1653,13 @@ NOTE26:
   licence: "PolyForm Noncommercial 1.0.0 (project)"
   checked: 2026-10-31
   kind: project
+NOTE27:
+  cite: "kidney-health design note 27: connected devices, and Withings weight, blood pressure and pulse."
+  short: "Design note 27"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/27-connected-devices.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-31
+  kind: project
 APPLE-SHORTCUTS:
   cite: "Apple Support. Shortcuts User Guide (Health actions, Format Date, Dictionary, Get Contents of URL, personal automations)."
   short: "Apple: Shortcuts User Guide"
