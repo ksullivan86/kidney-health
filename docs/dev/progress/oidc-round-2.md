@@ -33,9 +33,16 @@ tokens, docs (README row, accounts.md "If it doesn't work"), tests.
    `tests/test_test_accounts.py` (sync_role per provider). Command:
    `python -m pytest tests/test_oidc*.py tests/test_auth_coverage.py -p no:cacheprovider --basetemp=<scratch>/bt1`
 
+4. Tokens that never expire: `api_tokens.NEVER`/`NEVER_EXPIRES_AT`, `TokenCreate.expires_in_days: 30|90|365|"never"`, setting
+   `tokens.allow_never_expiring` (registry + engine/settings.js + vectors regenerated), Settings UI (choice, warning, list),
+   mock. Tests in `tests/test_api_tokens.py`, `tests/test_assistant_ui.py`, `tests/test_device_tokens.py`.
+5. OpenAPI regenerated (`python scripts/gen_openapi.py --check` passes), `node tests/js/run_vectors.mjs` passes, ruff clean.
+6. Docs: README row, accounts.md (two providers, OIDC_ONLY, how to turn on link by email, "If it doesn't work"), deployment.md,
+   assistant.md, push.md, security.md, network-allowlist.md, .env.example, compose, quadlet, k8s, handbook users-and-keys,
+   ARCHITECTURE.md, CHANGELOG Unreleased, note 24 §13.
+7. `tools/e2e/oidc.py` extended (second provider "google" as a public client; restart with OIDC_ONLY): 28 of 28 pass with
+   `python3 tools/e2e/oidc.py --port 8351 --idp-port 8352 --out <scratch>/e2e-oidc --python <venv python>`.
+
 ## Next
 
-* Token never-expiry (api_tokens, schemas, settings registry + engine/settings.js + vectors, settings.js UI, mock).
-* OpenAPI regen, settings vectors, node vectors, ruff.
-* Docs: README row, accounts.md (+ "If it doesn't work"), deployment.md, .env.example, quadlet/compose/k8s, handbook,
-  ARCHITECTURE.md, CHANGELOG, note 24 §13, network-allowlist. tools/e2e/oidc.py if practical.
+* Full suite once, fix anything, mark complete.
