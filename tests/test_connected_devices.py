@@ -103,7 +103,9 @@ def sync(client: TestClient) -> dict[str, Any]:
 
 
 def test_off_by_default_every_route_is_404(client: TestClient) -> None:
-    assert client.get("/api/devices").status_code == 404
+    # The list answers (Settings asks on every open; a 404 there is a failed request in the browser) and says it is off.
+    r = client.get("/api/devices")
+    assert r.status_code == 200 and r.json() == {"enabled": False, "can_connect": False, "sync_hours": 0, "providers": []}
     assert client.post("/api/devices/withings/start").status_code == 404
     assert client.get("/api/devices/withings/callback", params={"code": "x", "state": "y"}).status_code == 404
     assert client.post("/api/devices/withings/sync").status_code == 404
@@ -129,7 +131,7 @@ def test_the_switch_off_again_hides_a_connection_and_stops_the_loop(dev) -> None
     admin, fake = dev
     connect_withings(admin, fake)
     admin.patch("/api/admin/settings", json={"devices.enabled": False})
-    assert admin.get("/api/devices").status_code == 404
+    assert admin.get("/api/devices").json()["enabled"] is False
     assert admin.post("/api/devices/withings/sync").status_code == 404
     app = admin.app
     assert devices_sync.run_due(app.state.devices, app.state.keyring, app.state.settings_store, app.state.settings.db_path) == 0

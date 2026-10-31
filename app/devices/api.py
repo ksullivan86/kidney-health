@@ -1,7 +1,7 @@
 """``/api/devices``: Settings → Connected devices (design note 27 §4).
 
 Every route needs a signed-in person and only ever reaches that person's own connection (there is no id to guess: the provider
-name and the session decide). Every route is ``404`` while ``devices.enabled`` is off, and a provider the server has not set up
+name and the session decide). While ``devices.enabled`` is off, ``GET /api/devices`` answers ``enabled: false`` and every other route is ``404``, and a provider the server has not set up
 is ``404`` too.
 
 * ``GET /api/devices``: the providers, whether each is set up, and the person's connection to each (never a token, never the
@@ -223,7 +223,8 @@ def _connection_out(conn: sqlite3.Connection, user_id: int, provider_id: str) ->
 
 @router.get("", response_model=DevicesOut)
 def list_devices(request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    _require_on(request, conn)
+    if not enabled(request, conn):  # answer, not 404: Settings asks on every open and a 404 is a failed request in the browser
+        return {"enabled": False, "can_connect": False, "sync_hours": 0, "providers": []}
     devices = devices_of(request)
     providers = [{"id": p.id, "name": p.name, "what": list(p.what), "available": bool(p.available),
                   "connection": _connection_out(conn, user.id, p.id)} for p in devices.providers.values()]

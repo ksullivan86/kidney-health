@@ -1,7 +1,7 @@
 /* Kidney Diet Log — Settings → Connected devices (design note 27; app/devices/api.py).
 
    * KH.devices.render(body) fills the section and answers whether it should show: false while the server has the feature off
-     (GET /api/devices is 404 then), so Settings hides the section.
+     (GET /api/devices answers enabled: false then), so Settings hides the section.
    * Connect: a short "before you connect" box says what is fetched and that nothing about the person is sent; Continue asks the
      server for the Withings address and goes there. Withings sends the browser back to the server, which sends it on to
      "#/devices/<word>/<provider>". That address is taken out of the bar when the page opens (KH.devices.takeResult) and, once
@@ -93,6 +93,7 @@
       return true;
     }
     if (ticket !== drawSeq) return true;
+    if (!res.enabled) { clear(body); return false; }
     const parts = [h('p', {}, INTRO)];
     if (!res.can_connect) parts.push(h('p', { class: 'hint', id: 'set-devices-test' }, TEST_ACCOUNT));
     for (const provider of res.providers || []) parts.push(providerBlock(body, res, provider));

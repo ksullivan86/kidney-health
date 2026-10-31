@@ -83,8 +83,9 @@ Uncertain, and what we do about it:
 11. **Errors** in plain words, kept as short codes on the connection: `needs_reconnect` (Withings said no to the tokens),
     `rate_limited` (wait an hour), `unreachable`, `provider_error`. The Activity list shows connect, disconnect and the first
     sync error of a kind (not every retry).
-12. **Switches**: `DEVICES_ENABLED` (setting `devices.enabled`, off) turns the whole feature on; while off every
-    `/api/devices` route is 404 and nothing syncs. `WITHINGS_ENABLED`, `WITHINGS_CLIENT_ID` and
+12. **Switches**: `DEVICES_ENABLED` (setting `devices.enabled`, off) turns the whole feature on; while off
+    `GET /api/devices` answers `enabled: false` (Settings asks it on every open, and a 404 is a failed request in the
+    browser), every other `/api/devices` route is 404 and nothing syncs. `WITHINGS_ENABLED`, `WITHINGS_CLIENT_ID` and
     `WITHINGS_CLIENT_SECRET_FILE` are env only (what the server connects to is never changed at run time;
     `WITHINGS_CLIENT_SECRET` is refused, as `OIDC_CLIENT_SECRET` is).
 13. **Test accounts cannot connect a device**: they are shared by testers, and a real Withings account must not land in one.

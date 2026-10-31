@@ -4558,7 +4558,7 @@ Nothing about the person is sent out. 0.16 has Withings (weight, blood pressure,
 * **Switches.** `devices.enabled` (`DEVICES_ENABLED`, off) and `devices.sync_hours` (`DEVICES_SYNC_HOURS`, 1 to 24, default 4)
   are settings. The provider app is env only (`app/config.py` `WithingsEnv`): `WITHINGS_ENABLED`, `WITHINGS_CLIENT_ID`,
   `WITHINGS_CLIENT_SECRET_FILE` (`WITHINGS_CLIENT_SECRET` is a `ConfigError`); on needs `PUBLIC_URL`. While `devices.enabled` is
-  off every `/api/devices` route is 404 and nothing syncs; a provider that is not set up is 404 for its routes.
+  off `GET /api/devices` answers `enabled: false`, every other `/api/devices` route is 404 and nothing syncs; a provider that is not set up is 404 for its routes.
 * **Modules.** `app/devices/base.py` (`Provider`, `TokenSet`, `Reading`, `ProviderError` with the codes `auth`, `rate_limited`,
   `unreachable`, `provider_error`, `scope`, `account_taken`), `withings.py` (the client, through `egress.CheckedTransport`, no
   redirects, 2 MiB, 15 s), `store.py` (connections, sealed tokens, the ledger, adding rows), `sync.py` (one sync, the loop,
