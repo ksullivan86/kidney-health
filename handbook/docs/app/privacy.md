@@ -7,9 +7,9 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-15
+last_checked: 2026-10-31
 fact_checked: 2026-10-05
-sources: [NOTE01, NOTE02, NOTE03, NOTE04, NOTE07, ARCH, GDPR]
+sources: [NOTE01, NOTE02, NOTE03, NOTE04, NOTE31, NOTE07, ARCH, GDPR]
 ---
 
 # Privacy and your data
@@ -63,7 +63,7 @@ you when you add your own USDA or AI key ([design note 01][NOTE01]):
 |---|---|---|
 | USDA search | your search words | USDA FoodData Central |
 | Barcode lookups | the barcode digits only; Open Food Facts only after **you** agreed in **Settings → Food data** | Open Food Facts and USDA ([design note 03][NOTE03]) |
-| AI ideas and photos (you must opt in and agree to each destination) | stage, targets, today's totals, candidate foods, the text or photo you send; never your name, weight or exact age | the AI provider your admin set up, or your own ([design note 04][NOTE04]) |
+| AI ideas and photos (you must opt in and agree to each destination) | stage, targets, today's totals, candidate foods, the text or photo you send; never your name, weight or exact age. Before a cloud AI gets your text, names, places, dates and record numbers in it are replaced with labels ([design note 31][NOTE31]) | the AI provider your admin set up, or your own ([design note 04][NOTE04]) |
 | Breached-password check | 5 characters of a scrambled form of your new password, never the password | Have I Been Pwned |
 
 The handbook (**Learn**) loads nothing from the internet either.
@@ -159,6 +159,6 @@ This is not legal advice.
 
 - [Design note 07: accounts, settings and secrets][NOTE07], sections 4.5, 4.13–4.15 and the security review.
 - [Design note 01][NOTE01] (outbound traffic); [design note 02][NOTE02] (data on the phone);
-  [design note 03][NOTE03] (barcodes); [design note 04][NOTE04] (AI payload).
+  [design note 03][NOTE03] (barcodes); [design note 04][NOTE04] (AI payload); [design note 31][NOTE31] (the privacy filter).
 - [Project architecture contract][ARCH]: every query scoped to the signed-in person.
 - [EU General Data Protection Regulation][GDPR].

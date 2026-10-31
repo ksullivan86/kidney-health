@@ -40,6 +40,10 @@
     voice: 'Nothing but the recording is sent: no name, user name, e-mail or account details. The words come back into the question box for you to read and edit; '
       + 'nothing goes to the AI until you press Send. The recording is not kept on this device or on the server.',
   };
+  // The privacy filter (note 31): on for every AI that is not the local one, with no switch. The server does the filtering;
+  // "What will be sent?" shows its result and this line says what it does.
+  const PRIVACY_FILTER_TEXT = 'Before anything leaves, a privacy filter takes names, places, dates, phone numbers, e-mail addresses '
+    + 'and record numbers out of the text and puts them back in the answer. It reads text only, not photos.';
   const FEATURE_TEXT = { next_meal: 'Meal ideas', parse_meal: 'Describe a meal', read_label: 'Read a label', plate: 'Plate photo', chat: 'AI assistant', voice: 'Voice',
     read_lab_report: 'Read a lab report', recipes: 'AI recipes' };
   const CONSENT_NAME = { text: 'Meal data', photos: 'Photos', chat: 'AI assistant conversations', voice: 'Voice recordings', labs: 'Lab report photos' };
@@ -271,7 +275,8 @@
         h('div', { class: 'kv-row' }, h('dt', {}, 'Goes to'), h('dd', {}, `${dry.provider ? dry.provider.label : ''} · ${dry.host}${dry.provider && dry.provider.local ? ' (your local AI, on your network)' : ''}`)),
         h('div', { class: 'kv-row' }, h('dt', {}, 'Address'), h('dd', {}, `${dry.method} ${dry.destination}`)),
         dry.image_bytes ? h('div', { class: 'kv-row' }, h('dt', {}, 'Photo'), h('dd', {}, `${Math.round(dry.image_bytes / 1024)} KiB JPEG, ${dry.images.map((i) => `${i.width}×${i.height}`).join(', ')}, location and camera data removed`)) : null,
-        dry.trimmed_candidates ? h('div', { class: 'kv-row' }, h('dt', {}, 'Left out'), h('dd', {}, `${dry.trimmed_candidates} lower-ranked foods, to fit the provider's prompt size`)) : null),
+        dry.trimmed_candidates ? h('div', { class: 'kv-row' }, h('dt', {}, 'Left out'), h('dd', {}, `${dry.trimmed_candidates} lower-ranked foods, to fit the provider's prompt size`)) : null,
+        dry.privacy_filter ? h('div', { class: 'kv-row' }, h('dt', {}, 'Privacy filter'), h('dd', {}, dry.privacy_filter.text)) : null),
       h('details', { class: 'settings-details' }, h('summary', {}, 'Headers'), pre(dry.headers)),
       h('details', { class: 'settings-details', open: true }, h('summary', {}, 'Body (exactly as sent)'), pre(dry.body)),
       dry.cloud_fallback ? fallbackDryRun(dry.cloud_fallback) : null);
@@ -285,7 +290,8 @@
       h('dl', { class: 'kv' },
         h('div', { class: 'kv-row' }, h('dt', {}, 'Would go to'), h('dd', {}, `${f.provider ? f.provider.label : ''} · ${f.host}`)),
         h('div', { class: 'kv-row' }, h('dt', {}, 'Address'), h('dd', {}, `${f.method} ${f.destination}`)),
-        f.image_bytes ? h('div', { class: 'kv-row' }, h('dt', {}, 'Photo'), h('dd', {}, 'The same photo, location and camera data removed')) : null),
+        f.image_bytes ? h('div', { class: 'kv-row' }, h('dt', {}, 'Photo'), h('dd', {}, 'The same photo, location and camera data removed')) : null,
+        f.privacy_filter ? h('div', { class: 'kv-row' }, h('dt', {}, 'Privacy filter'), h('dd', {}, f.privacy_filter.text)) : null),
       h('details', { class: 'settings-details' }, h('summary', {}, 'Second request (exactly as it would be sent)'), pre(f.body)));
   }
   async function showSent(dry, { trigger = null, confirmText = null } = {}) {
@@ -327,6 +333,7 @@
           ' at ', h('strong', { class: 'ai-host' }, consent.host), consent.local ? ', which runs on your own network.' : '.'),
       consent.as_fallback ? h('p', { class: 'hint' }, `This is the cloud AI your admin set as the fallback. ${consent.rule || ''}`) : null,
       note('caution', h('p', {}, consent.policy)),
+      !consent.local && !voice && !notice ? h('p', { class: 'hint ai-privacy-filter' }, PRIVACY_FILTER_TEXT) : null,
       fb ? h('div', { class: 'ai-consent-fallback' },
         h('p', {}, 'Only if the local AI\'s answer fails the app\'s checks, the same request goes a second time to ', h('strong', {}, fb.provider_label),
           ' at ', h('strong', { class: 'ai-host' }, fb.host), ', outside your network.'),

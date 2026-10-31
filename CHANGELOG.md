@@ -5,6 +5,22 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## Unreleased
+
+### The privacy filter for cloud AI
+
+* **Names, places and dates come out before a cloud AI sees your words.** Before any request goes to a cloud AI, the server
+  replaces your name, your Care team's names, other names after words like "Dr" or "my wife", places, street addresses,
+  postcodes, dates, phone numbers, e-mail addresses and record numbers with labels such as `[PERSON_1]`. Your words come back in
+  the answer. Health details and amounts stay, because they are the question. See
+  [docs/ai.md](docs/ai.md#the-privacy-filter).
+* It is always on for every AI that is not your local one, and has no switch. It never changes a request to the local AI.
+  Lab report photos still go only to the local AI. It reads text only, not photos or voice recordings.
+* "What will be sent?" shows the request after the filter and how many details were replaced. The AI activity list keeps that
+  count, never which words they were. The words are held in memory for one request only.
+* It is rule-based, with no new package. On the app's test set it removes about 96 % of the details; a name typed in lower case
+  with no cue word can get through.
+
 ## 0.19.0 — 2026-10-31
 
 Your own list app and recipe import (design note 30, schema step 32).

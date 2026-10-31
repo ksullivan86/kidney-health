@@ -156,6 +156,15 @@ first fails the checks; every answer says which AI gave it, and the AI activity 
 cloud is exactly what a feature pinned to the cloud would send, no more, and never to a person's own provider. Ask is not
 offered this way (it is several calls in a row) and **lab report photos never are**: they stay on the local AI only.
 
+**The privacy filter** ([ai.md](ai.md#the-privacy-filter)). Before any request goes to a cloud AI (the shared cloud AI, a
+person's own provider, or a shared provider without the local role), the server replaces names, places, dates, addresses,
+phone numbers, e-mail addresses, web addresses with a query and record numbers in its text with labels such as `[PERSON_1]`,
+and puts the words back into the answer. The person's own names and their Care team's names are always among them. The list
+that links labels to words lives in memory for that one request: it is not stored, logged or sent. The AI activity row keeps
+the filtered request and the count of replaced details, never which words they were. It is always on and has no switch. It
+never runs for the local AI, and it does not change where anything goes: lab report photos still go only to the local AI. It
+reads text only, not photos or voice recordings, and it hides who is asking, not the health question.
+
 **A photo of a lab report, or a PDF** (Labs → Read a lab report photo or PDF, [ai.md](ai.md#lab-report-photos)) can show a person's name,
 date of birth, record numbers and clinic, and the app cannot take them out of an image. So it is read **only by the local
 AI**: never by a cloud AI and never by a provider the person added themselves, whatever the admin's routing says (the setting
