@@ -76,6 +76,7 @@ deploy/quadlet/kidney-health.container
 deploy/k8s/*.yaml (+ kustomization.yaml)   PSA restricted, NetworkPolicy, HTTPRoute
 .github/workflows/ci.yml    pytest 3.12+3.14+3.15, JS parity, linters, image smoke test + Grype gate (never pushes)
 .github/workflows/release.yml  build by digest -> scan -> sign/attest (public repo) -> tags (v0.3 decision 7)
+.github/workflows/tag-release.yml  a merge that changes the version tags it and starts release.yml (decision 7)
 SECURITY.md, docs/security.md, docs/https.md, scripts/verify-image.sh   (v0.3, deploy owner)
 CHANGELOG.md                user-facing changes per version (v0.3)
 CONTRIBUTING.md, CODE_OF_CONDUCT.md, AGENTS.md   contributor rules and how-tos; Contributor Covenant 2.1; agents' short rules
@@ -786,7 +787,12 @@ proxies, the image and CI; (5) the note that owns the feature.
    `:latest` moves to v0.3.0 when it is tagged and `HOLD_LATEST` stays unset; v0.2 hosts are
    protected by the upgrade warnings in CHANGELOG.md, README.md and docs/deployment.md (replace the
    v0.2 `.container` file with the v0.3 one before the update). The variable remains for a future
-   release that needs a hold (`docs/maintainers.md`).
+   release that needs a hold (`docs/maintainers.md`). **Owner decision (2026-10-31): releases tag
+   themselves.** `.github/workflows/tag-release.yml` runs when a push to `main` changes `pyproject.toml`:
+   if the version in it has no `v*` tag yet, it creates the GitHub release (the CHANGELOG section as notes,
+   which also makes the tag) and starts `release.yml` on that tag with `workflow_dispatch` (a tag made by a
+   workflow starts no workflow by itself). The gate is the pull request into `main` that changes the
+   version; the signing identity stays `release.yml@refs/tags/vX.Y.Z`.
 8. **Open Food Facts** is **off by default** (`food.off_enabled=false`); the admin turns it on in
    Settings, and the first-run setup screen offers a checkbox for it.
 9. **`potassium_additive` flag** (note 03 R5): a **medium** warning ("contains a potassium
@@ -1083,7 +1089,8 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
 
-**Status (2026-10-31): v0.18.0 is prepared.** The full Care team (note 29, schema step 31): per-person switches with Viewer, Care
+**Status (2026-10-31): v0.18.1 is prepared.** Releases now tag themselves (decision 7; `tag-release.yml`). It carries
+v0.18.0, which was never published: the full Care team (note 29, schema step 31): per-person switches with Viewer, Care
 helper and Caregiver as presets, a Caregiver who logs eaten food, saved meals for helpers, and meal suggestions; see "The full Care
 team" below; CHANGELOG.md 0.18.0. **v0.17.0 (2026-10-31)** adds Whoop, Activity and recovery and the active-day calorie extra (note 28, schema step 30, `/api/activity`, off until `DEVICES_ENABLED` and
 `WHOOP_ENABLED`; the active-day calorie extra off until the person turns it on); see "Activity and recovery" below; CHANGELOG.md
@@ -4775,7 +4782,7 @@ Signed in only (`current_user`; an anonymous caller gets the generic `401`, so a
 (`no-store` like every `/api` answer). The answer:
 
 ```json
-{"app_version": "0.18.0", "api_version": 1,
+{"app_version": "0.18.1", "api_version": 1,
  "capabilities": {"ai": false, "ai_next_meal": false, "ai_parse_meal": false, "ai_label": false, "ai_plate": false, "ai_lab_report": false,
                   "chat": false, "voice": false, "assistant": false, "push": false,
                   "barcode": false, "barcode_off": false, "barcode_usda": false, "handbook": false},

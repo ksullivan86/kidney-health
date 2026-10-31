@@ -118,7 +118,13 @@ index was signed and attested. Users are told to track `:X.Y` or a verified dige
    * `python3 scripts/bench_guidance.py --max-p95 200` on a Raspberry Pi 4 and 5 with the image's
      Python, results recorded in [docs/guidance.md](guidance.md#performance);
    * for a release that changes the upgrade path: decide whether to hold `:latest` (below).
-4. **Tag `main`** with an annotated (preferably signed) tag and push it:
+4. **Tagging is automatic** (owner, 2026-10-31). Merging the release pull request, which changes the version in
+   `pyproject.toml`, starts `Tag release` (`.github/workflows/tag-release.yml`): it creates the GitHub release
+   `vX.Y.Z` with the version's CHANGELOG section as notes (which also makes the tag) and starts `Release image` on
+   that tag. Steps 5 to 7 then happen without you; the `notes` job adds the Image block to the release. The
+   `v*` tag ruleset must let GitHub Actions create tags. To tag an older commit by hand, run `Tag release` from
+   the Actions tab with the version and the commit (with **publish** off it only makes the git tag). To tag by
+   hand instead, use an annotated (preferably signed) tag and push it:
 
    ```bash
    git switch main && git pull --ff-only
@@ -252,6 +258,8 @@ A repository variable (Settings → Secrets and variables → Actions → Variab
 * **v0.16.0: not held.** The release runs schema step 29 at start without an automatic copy (it only adds two tables), adds
   the `tzdata` dependency and moves the shipped files from `:0.15` to `:0.16`. A host that tracks `:0.15` stays on 0.15.x.
   CHANGELOG.md, "Upgrading from 0.15", says to take a backup first.
+* **v0.18.1: not held.** The first published 0.18 image: it carries 0.18.0 (never published) and the automatic tagging.
+  0.16.0 and 0.17.0 were never published either; their git tags were made without an image.
 * **v0.18.0: not held.** Schema step 31 adds four columns to `shares` and `care_invites` and a table `care_suggestions`
   (every row kept). The release moves the shipped files from `:0.17` to `:0.18`. A host that tracks `:0.17` stays on 0.17.x.
   CHANGELOG.md, "Upgrading from 0.17", says to take a backup first.
