@@ -1935,6 +1935,7 @@
     ['Tokens for outside apps and phone shortcuts', ['tokens.allow_never_expiring']],
     ['Care team', ['sharing.enabled']],
     ['Connected devices', ['devices.enabled', 'devices.sync_hours']],
+    ['Shopping list app and recipe import', ['lists.sync_enabled', 'recipes.import_enabled']],
     // Design note 26: not in the demo (it has no accounts of its own to make).
     ['Test accounts', ['test_accounts.enabled', 'test_accounts.ai']],
     ['Activity log', ['audit.retention_days']],

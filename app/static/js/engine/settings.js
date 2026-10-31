@@ -217,6 +217,11 @@
       help: 'Lower it (for example to 120) if planning a day is slow on a small server such as a Raspberry Pi 4.' },
     { key: 'instance.name', type: 'str', minLength: 1, maxLength: 80, default: 'Kidney Health', scope: 'instance', env: 'INSTANCE_NAME',
       label: 'Server name', help: 'Shown on the sign-in, invite and password pages, and in Settings under About & privacy.' },
+    // Your own list app and recipe import (design note 30; app/list_sync/, app/recipe_import/). LIST_SYNC_ALLOWED_HOSTS is env only.
+    { key: 'lists.sync_enabled', type: 'bool', default: false, scope: 'instance', env: 'LIST_SYNC_ENABLED',
+      label: 'Let people send the shopping list to their own Grocy, KitchenOwl or Mealie',
+      help: 'Off by default. When on, each person can add their own list app\'s address and key in Settings → Shopping list app, then send the Plan\'s shopping list to it. Only the foods\' names and amounts are sent. '
+        + 'A list app on a home address works only when the server lists it in LIST_SYNC_ALLOWED_HOSTS (see docs/list-sync.md). While off, nothing is sent and the section is hidden; turned on again, saved addresses work again.' },
     { key: 'providers.usda.daily_limit_per_user', type: 'int', min: 0, max: 100000, default: 200, scope: 'instance', env: 'USDA_SHARED_DAILY_LIMIT',
       label: 'Shared USDA lookups per person per day', help: '0 means unlimited.' },
     { key: 'providers.usda.shared_enabled', type: 'bool', default: true, scope: 'instance', env: 'USDA_SHARED_ENABLED',
@@ -228,6 +233,9 @@
       label: 'Let people send weights and blood pressure from a phone shortcut',
       help: 'Off by default. When on, each person can make tokens in Settings → Phone shortcuts; a shortcut on their phone can use one to add weights and blood pressure readings to that person\'s own log. '
         + 'A token can only add: it cannot read or change anything. While off, no token can be made or used; turned on again, tokens that have not expired or been revoked work again.' },
+    { key: 'recipes.import_enabled', type: 'bool', default: false, scope: 'instance', env: 'RECIPE_IMPORT_ENABLED',
+      label: 'Let people import a recipe from a web page',
+      help: 'Off by default. When on, a person can paste a recipe page\'s link in Plan → Import a recipe, and this server reads that page from the internet (never a private address) to find its ingredients and steps. Pasting the ingredients works either way, with no network.' },
     { key: 'registration.invite_ttl_days', type: 'int', min: 1, max: 90, default: 7, scope: 'instance', env: 'INVITE_TTL_DAYS',
       label: 'Invite links expire after (days)', help: '' },
     { key: 'registration.mode', type: 'choice', options: ['invite', 'closed', 'open'], default: 'invite', scope: 'instance', env: 'REGISTRATION_MODE',

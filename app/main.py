@@ -37,6 +37,10 @@ from . import sharing  # schema step 24: read-only sharing with a caregiver or d
 from . import feedback, test_accounts  # schema step 28: test accounts, Send feedback (/api/feedback, /api/admin/feedback)
 from . import activity as activity_api  # schema step 30: Whoop days, workouts, the active-day calorie extra (/api/activity)
 from .devices import api as devices_api, sync as devices_sync  # schema step 29: connected devices (/api/devices)
+from .list_sync import api as list_sync_api  # schema step 32: your own list app (/api/list-sync, design note 30)
+from .list_sync.apps import HostAllowlist, Net as ListSyncNet
+from .recipe_import import api as recipe_import_api  # design note 30: a recipe from a web page or pasted ingredients
+from .recipe_import.fetch import RecipeFetcher
 from . import openapi_doc  # design note 14 change 2: stable operation ids, honest errors and security schemes in the OpenAPI document
 from .auth import bootstrap as auth_bootstrap
 from .config import DEFAULT_STATIC_DIR, ConfigError, Settings, load_settings
@@ -134,6 +138,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.settings = settings
     app.state.settings_store = store
     app.state.devices = devices_sync.Devices(settings)  # design note 27: the providers (tests swap in a fake Withings)
+    # Design note 30: how list sync and recipe pages reach out (tests swap in fakes behind the real checked transport).
+    app.state.list_sync_net = ListSyncNet(HostAllowlist.parse(settings.list_sync_allowed_hosts))
+    app.state.recipe_fetcher = RecipeFetcher()
     app.add_exception_handler(RequestValidationError, security.validation_error_handler)
     auth_ctx = auth.install(app, settings, store)  # /api/auth, /api/me, /api/admin + error handler
 
@@ -171,6 +178,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(feedback.admin_router)
     app.include_router(devices_api.router)
     app.include_router(activity_api.router)
+    app.include_router(list_sync_api.router)
+    app.include_router(recipe_import_api.router)
 
     @app.get("/healthz")
     def healthz(conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
