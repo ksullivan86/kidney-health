@@ -127,14 +127,16 @@ def setup_problem(conn: sqlite3.Connection, settings: Settings, store: SettingsS
     if not secret:
         return "TEST_ACCOUNT_PASSWORD_FILE is empty. Put the test accounts' password in it."
     instance = str(store.get(conn, "instance.name"))
-    known = (policy.MSG_TOO_SHORT.format(n=settings.password_min_length), policy.MSG_TOO_LONG, policy.MSG_CONTEXT,
-             policy.MSG_COMMON, policy.MSG_PATTERN, policy.MSG_BREACHED)
+    # The policy's own fixed sentences; "too short" is the only one with a number in it, so it is named, not quoted.
+    fixed = (policy.MSG_TOO_LONG, policy.MSG_CONTEXT, policy.MSG_COMMON, policy.MSG_PATTERN, policy.MSG_BREACHED)
     for name in NAMES:
         problems = policy.validate_new_password(secret, username=name, display_name=DISPLAY[name], instance_name=instance,
                                                 min_length=settings.password_min_length)
         if problems:
-            why = " ".join(msg for msg in known if msg in problems) or "Choose another password."
-            return "The password in TEST_ACCOUNT_PASSWORD_FILE does not meet the password policy: " + why
+            parts = [msg for msg in fixed if msg in problems]
+            if len(parts) < len(problems):
+                parts.insert(0, "It is shorter than the minimum length (PASSWORD_MIN_LENGTH).")
+            return "The password in TEST_ACCOUNT_PASSWORD_FILE does not meet the password policy: " + " ".join(parts)
     return None
 
 
