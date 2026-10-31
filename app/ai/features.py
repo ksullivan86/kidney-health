@@ -38,7 +38,7 @@ from ..guidance.ai_bridge import candidates_for_ai
 from ..guidance.budget import open_slots
 from ..guidance.state import GuidanceContext
 from ..textclean import clean_text
-from . import guard, lab_report, prompts, schemas
+from . import guard, lab_report, privacy_filter, prompts, schemas
 from .client import ProviderConfig, build_body, shown_headers
 from .config import FALLBACK_RULE
 from ..imagecheck import CheckedImage
@@ -165,9 +165,15 @@ class Prepared:
     def model(self) -> str:
         return str(self.body.get("model", ""))
 
+    def sent_body(self) -> tuple[dict[str, Any], int | None]:
+        """The body exactly as it leaves the server, and how many details the privacy filter replaced in it (None for the
+        local AI, whose requests the filter never changes). The labels are the same ones the call itself uses."""
+        return privacy_filter.preview(self.cfg, self.body)
+
     def audit_copy(self) -> dict[str, Any]:
-        """The request as the AI activity log keeps it: each image replaced by its SHA-256, size and dimensions."""
-        body = json.loads(json.dumps(self.body))
+        """The request as the AI activity log keeps it, as sent (after the privacy filter for a cloud AI): each image replaced
+        by its SHA-256, size and dimensions."""
+        body = self.sent_body()[0]
         images = iter(self.images)
         for message in body.get("messages", []):
             content = message.get("content")
@@ -184,8 +190,11 @@ class Prepared:
         With a cloud fallback (route ``local_then_cloud``) the answer also says, under ``cloud_fallback``, that a second request
         with the same content may go to the cloud host **only if the local AI's answer fails the app's checks**, and shows that
         request too. ``cloud_consent`` is whether the person already agreed to send this purpose to that host (without it
-        nothing is sent there)."""
-        body = json.loads(json.dumps(self.body))
+        nothing is sent there).
+
+        For a provider that is not local the body is shown after the privacy filter, exactly as it is sent, and
+        ``privacy_filter`` says how many details were replaced (None for the local AI)."""
+        body, replaced = self.sent_body()
         for message in body.get("messages", []):
             content = message.get("content")
             if isinstance(content, list):
@@ -207,6 +216,7 @@ class Prepared:
             "image_bytes": sum(len(i.data) for i in self.images),
             "images": [i.audit_copy() for i in self.images],
             "trimmed_candidates": self.trimmed,
+            "privacy_filter": None if replaced is None else {"on": True, "replaced": replaced, "text": privacy_filter_text(replaced)},
         }
         if self.cloud is not None:
             second = self.cloud.dry_run(app_version)
@@ -214,12 +224,21 @@ class Prepared:
             refused = " You have not agreed to send this to that host, so it would not be sent." if cloud_consent is False else ""
             out["cloud_fallback"] = {
                 **{k: second[k] for k in ("destination", "host", "provider", "method", "headers", "body", "image_bytes", "images",
-                                          "trimmed_candidates")},
+                                          "trimmed_candidates", "privacy_filter")},
                 "model": self.cloud.model, "consent": cloud_consent, "rule": FALLBACK_RULE,
                 "message": f"A second request with the same content may go to {host}, but only if the local AI's answer fails the "
                            f"app's checks. If its answer passes, or the local AI cannot be reached, nothing is sent there.{refused}",
             }
         return out
+
+
+def privacy_filter_text(replaced: int) -> str:
+    """The line "What will be sent?" shows for a cloud AI (note 31)."""
+    if replaced == 0:
+        return "The privacy filter found no names, places, dates or numbers to take out of this request."
+    noun = "detail" if replaced == 1 else "details"
+    return (f"The privacy filter replaced {replaced} {noun} (names, places, dates or numbers) with labels such as [PERSON_1]. "
+            "You see your own words again in the answer.")
 
 
 def judge_rejected(verdict: Mapping[str, Any]) -> bool:

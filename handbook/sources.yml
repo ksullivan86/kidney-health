@@ -1681,6 +1681,13 @@ NOTE30:
   licence: "PolyForm Noncommercial 1.0.0 (project)"
   checked: 2026-10-31
   kind: project
+NOTE31:
+  cite: "kidney-health design note 31: the privacy filter: names, places and dates out before a cloud AI."
+  short: "Design note 31"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/31-privacy-filter.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-31
+  kind: project
 SCHEMA-NUTRITION:
   cite: "schema.org. NutritionInformation (the nutrition data a recipe page can carry)."
   short: "schema.org NutritionInformation"

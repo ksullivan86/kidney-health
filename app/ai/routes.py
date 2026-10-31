@@ -91,6 +91,7 @@ ERROR_TEXT = {
     "schema": "The AI answer could not be used.",
     "empty": "The AI answer was empty.",
     "truncated": "The AI answer was cut short.",
+    "privacy_filter": "This request is too long for the privacy filter, so nothing was sent to the cloud AI.",
 }
 
 
@@ -323,12 +324,18 @@ def _finish(conn: sqlite3.Connection, state: AiState, user: User, prep: F.Prepar
         # ``repaired`` is the client's JSON repair turn; ``portions_lowered`` the meal ideas and recipes the app made smaller to fit.
         verdict={**{k: v for k, v in verdict.items() if k in ("status", "dropped", "portions_lowered", "claims_corrected", "reason", "error",
                                                              "repaired", "retried", "trimmed", "steps_dropped")},
-                 **Q.shown_of(verdict), **(extra or {})},
+                 **Q.shown_of(verdict), **_filter_count(result), **(extra or {})},
         latency_ms=result.latency_ms, status=status, keep_bodies=keep,
     )
     conn.commit()
     housekeeping(conn, state)
     return audit_id
+
+
+def _filter_count(result: C.CallResult) -> dict[str, int]:
+    """The activity row's ``privacy_filter``: how many details the privacy filter replaced in a cloud request (never which).
+    Nothing for a local AI, where the filter does not run."""
+    return {} if result.privacy_replaced is None else {"privacy_filter": int(result.privacy_replaced)}
 
 
 def _claim_reprobe(conn: sqlite3.Connection, state: AiState, provider_id: int) -> bool:
@@ -1085,7 +1092,8 @@ def _finish_chat(conn: sqlite3.Connection, state: AiState, user: User, prep: F.P
     (the server stores no transcript); the verdict names the step, the tool and the outcome."""
     K.add_tokens(conn, user.id, prep.cfg, result.usage)
     status = {"ok": "ok", "refused": "refused", "invalid": "invalid"}.get(result.status, f"error:{result.error}")
-    verdict = {**{k: v for k, v in info.items() if v is not None}, "repaired": result.repaired, "retried": result.retried}
+    verdict = {**{k: v for k, v in info.items() if v is not None}, "repaired": result.repaired, "retried": result.retried,
+               **_filter_count(result)}
     audit_id = K.write_audit(
         conn, user.id, feature="chat", cfg=prep.cfg, model=prep.model, prompt_version=PROMPT_VERSION, request=None,
         response_text=None, verdict=verdict, latency_ms=result.latency_ms, status=status, keep_bodies=False)
