@@ -38,6 +38,7 @@ MAX_BLOCK_CHARS = 1_048_576
 
 _TAG = re.compile(r"<[^>]*>")
 _SPACE = re.compile(r"\s+")
+_SPACE_BEFORE_MARK = re.compile(r" ([.,;:!?)])")
 _CONTROL = re.compile(r"[\u0000-\u001f\u007f-\u009f]")
 
 
@@ -48,7 +49,7 @@ def text_of(value: Any) -> str:
     text = str(value)[:MAX_TEXT_CHARS]
     text = html.unescape(_TAG.sub(" ", text))
     text = _CONTROL.sub(" ", text)
-    return _SPACE.sub(" ", text).strip()
+    return _SPACE_BEFORE_MARK.sub(r"\1", _SPACE.sub(" ", text)).strip()
 
 
 # --------------------------------------------------------------------------- #
