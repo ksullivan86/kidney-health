@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Accepted and built, 2026-10-30 (the smaller first version). Schema step **27**. |
+| Status | Accepted and built, 2026-10-30 (the smaller first version). Schema step **27**. §10's "later" items are built by [note 29](29-full-care-team.md) (schema step 31). |
 | Owner's words | "is it set so someone who already has an account can easily be invited as a caregiver or care helper (family member) can help meal plan. I didnt see where this is setup at all". The owner chose the smaller first version and the name **Care team** for every screen. |
 | Builds on | Note 19 (read-only sharing: the `shares` table, the one check `shared_owner`, links, the switch), note 22 (the shopping list), note 23 (Plan several days, Clear planned days). |
 | Scope | Settings → Care team as its own section; inviting someone who already has an account by user name (pending until they accept); two roles, **Viewer** and **Care helper**; a Care helper plans meals for the person and uses their shopping list; "Planning for" on the Plan tab. |

@@ -7,6 +7,33 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+The full **Care team** (design note 29, schema step 31).
+
+* **Switches for each person.** In Settings → Care team, **What they may see and do** has one switch for each thing a person may
+  see (food log, lab results, weight and blood pressure, symptoms, activity and recovery) and do (plan meals and use the shopping
+  list, log food you ate, use your saved meals, suggest meals). Each change is saved at once. Viewer, Care helper and the new
+  **Caregiver** are presets of these switches; any other mix shows as **Custom**. Planning, logging, saved meals and suggestions
+  need the food log, and the screen asks before sharing it.
+* **Caregiver.** Logs food the person ate, marks planned food eaten, and fixes or removes eaten food they added. Every entry says
+  "Added by" and their name. They never change food the person logged, targets, labs, profile or medicines.
+* **Low treatments stay the person's.** A Caregiver may log a low treatment as eaten, but nobody on a Care team changes,
+  removes, moves or marks eaten a low treatment, whoever logged it. The server refuses with one sentence. Nothing warns against
+  treating a low.
+* **Saved meals for helpers**, off until the person turns them on: list them, add one as planned or eaten, and use them in Plan
+  several days. Helpers never change saved meals.
+* **Meal suggestions** (design note 21), off until the person turns them on for someone, also for a Viewer such as a coach. A
+  suggestion is a day, a meal, foods and a note of up to 280 characters, and shows how it fits the person's day. It waits on the
+  person's Plan tab until **Add to my plan** or **No thanks**, or for 14 days. No food for treating a low, and no note about
+  lows, insulin, doses, medicines or lab results. At most 10 open from one person and 20 sent a day.
+* **Activity and export.** The person's activity shows switch changes, food logged by a helper (once a day) and each suggestion.
+  `export.json` gains `care_suggestions`; the import skips it.
+* **API.** `PUT /api/me/shares/{id}/switches`; `role` takes `caregiver`; `GET /api/shared/{id}/meals`,
+  `POST /api/shared/{id}/meals/{meal_id}/apply`, `POST`/`GET /api/shared/{id}/suggestions`, `GET /api/me/suggestions`,
+  `POST /api/me/suggestions/{id}/accept|decline`. A helper's `POST /api/shared/{id}/log` takes `status: "eaten"` when logging is
+  on. A helper changing or removing a low treatment now gets 403 with a sentence (was 404).
+* **Upgrading.** Schema step 31 adds four columns to `shares` and `care_invites` and a table `care_suggestions`. Every Care helper
+  stays a Care helper and every Viewer a Viewer. Going back to 0.17 keeps planning rights and drops the rest.
+
 ## 0.17.0 — 2026-10-31
 
 This version adds **Whoop** to Connected devices, an **Activity and recovery** card in Trends, and a choice to add Whoop's

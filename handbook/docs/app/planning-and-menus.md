@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-30
 fact_checked: 2026-10-05
-sources: [ARCH, NOTE06, NOTE08, NOTE25, FDC, Q20, A26-5, K24, DG23, JBDS22]
+sources: [ARCH, NOTE06, NOTE08, NOTE25, NOTE29, FDC, Q20, A26-5, K24, DG23, JBDS22]
 ---
 
 # Planning meals and using the menus
@@ -204,11 +204,15 @@ where it goes. Where the browser does not allow copying, the list appears as tex
 
 ## Planning for someone on your Care team
 
-If someone made you a **Care helper** on their Care team, the Plan tab shows **Planning for** at the top. Choose their name to
-see their week, with a banner that says whose plan you are changing. You can add, change and remove their planned food, plan
-several days for them and use their shopping list. Their saved meals are not used, and eaten food and a planned low treatment
-stay as they are. **Back to my own plan** takes you back. Food you add shows "Added by" and your name on their day
-([Care team](settings-and-keys.md#sharing), [design note 25][NOTE25]).
+If someone on your Care team lets you plan, log food or suggest meals for them, the Plan tab shows **Planning for** at the top.
+Choose their name to see their week, with a banner that says whose food you are changing. What you can do follows what they
+allow: add, change and remove planned food, plan several days and use their shopping list (a **Care helper**); also log food they
+ate and mark planned food eaten (a **Caregiver**); add their saved meals; or send them a meal suggestion. A low treatment stays
+as it is. **Back to my own plan** takes you back. Food you add shows "Added by" and your name on their day
+([Care team](settings-and-keys.md#sharing), [design notes 25][NOTE25] and [29][NOTE29]).
+
+**Suggestions for you.** When someone on your Care team suggests a meal, it waits at the top of your own Plan tab with what it
+adds to that day. **Add to my plan** adds it as planned food of your own; **No thanks** says no. Nothing changes until you choose.
 
 ## Using the handbook's sample menus
 
@@ -275,7 +279,7 @@ Your sessions are Monday, Wednesday and Friday. On Sunday evening:
 
 - [Project architecture contract][ARCH], v0.2: planned entries, saved meals, copy day, shopping list; planning several days.
 - [Design note 08][NOTE08]: the sample menus; [design note 06][NOTE06]: the plan builder (v0.3); [design note 25][NOTE25]: the
-  Care team.
+  Care team; [design note 29][NOTE29]: the Caregiver, saved meals and suggestions.
 - [USDA FoodData Central][FDC]: the food list behind the app and the menus.
 - [KDOQI 2020 nutrition guideline][Q20]; [ADA Standards of Care 2026, section 5][A26-5], Rec 5.28.
 - [KDIGO 2024 CKD guideline][K24], [DaVita: hemodialysis fluid intake][DG23] and [JBDS 2022][JBDS22]: no separate daily

@@ -277,15 +277,25 @@ person sees one line saying the admin can turn it on, and an admin sees where.
 
 Everything is in **Settings → Care team**, its own section near the top of Settings. **Profile → Open Care team** goes there too.
 
-**Two roles.** The person picks one when they invite someone, and can change it at any time in their Care team list.
+**Roles and switches.** Each person on a Care team has switches for what they may see and what they may do. A role is a quick
+way to set the "do" switches. The person picks a role when they invite someone, and can change the role or any switch at any
+time under **What they may see and do** in their Care team list. Each change is saved at once.
 
-* A **Viewer** can look at the parts the person ticked: food log, lab results, weight and blood pressure, symptoms, activity and recovery (from Whoop). They never
-  change anything.
-* A **Care helper** can also plan meals for the person and use their shopping list. A Care helper always sees the food log, so
-  choosing this role adds it. They never change eaten food, targets, the profile, labs, weight, symptoms, preferences, AI
-  settings or keys.
+* A **Viewer** can look at the parts the person ticked: food log, lab results, weight and blood pressure, symptoms, activity and
+  recovery (from Whoop). They never change anything.
+* A **Care helper** can also plan meals for the person and use their shopping list.
+* A **Caregiver** can also log food the person ate, mark planned food as eaten, and fix or remove eaten food they added
+  themselves.
+* Two more switches are off unless the person turns them on: **Use my saved meals** and **Suggest meals for me to add**. A
+  Viewer may have the suggestions switch too, for a coach or dietitian.
+* When the switches match no role, the role shows as **Custom**.
+* Planning, logging, saved meals and suggestions all need the food log. Turning one on asks first, then shares the food log.
 
-Shares made before this version are Viewers.
+Nobody on a Care team ever changes the person's targets, labs, profile, medicines, preferences, AI settings or keys, and nobody
+changes, removes or moves a low treatment, whoever logged it. A Caregiver may log a low treatment as eaten: recording what
+happened is never blocked. Nothing in the app warns against treating a low.
+
+Shares made before 0.14 are Viewers. Care helpers from 0.14 to 0.17 stay Care helpers.
 
 **Adding someone.**
 
@@ -303,32 +313,43 @@ Shares made before this version are Viewers.
 one day of food at a time, and **Trends** shows their Trends charts, with a banner that says whose data it is. A shared weight
 chart uses that person's dry weight; your own is never used on their chart. If a part cannot load, press **Retry**.
 
-**Planning for someone (Care helper).** **Plan meals**, or **Planning for** at the top of the Plan tab, shows the person's week
-with a banner: "You are planning for Ana. Changes go to Ana's plan, not yours." **Back to my own plan** returns to yours.
+**Helping someone.** **Plan meals** (or **Log food**, or **Suggest a meal**), or **Planning for** at the top of the Plan tab, shows
+the person's week with a banner such as "You are helping Ana. What you add goes into Ana's food log, not yours." **Back to my own
+plan** returns to yours. What shows follows the switches:
 
-* A day shows what was eaten (read only) and what is planned. A helper can change the amount of planned food, remove it, and
-  **Add food** from the foods the person can use.
-* A planned low treatment is never changed or removed by a helper. **Clear planned days** leaves it too, as it leaves eaten food.
-  Nothing in the app blocks or warns against treating a low.
-* **Plan several days** makes a plan against the person's targets, then **Add to Ana's plan**. The person's saved meals are not
-  used and are never shown.
-* The person's shopping list: tick, **Copy list** and **Share list**. Ticks stay on the helper's device, apart from their own list.
-* Food a helper adds says **Added by <name>** on the person's Today. Changes for someone else need a connection: they never wait
-  on the device, and they never go to the helper's own log.
+* A day shows eaten and planned food, with **Added by <name>** on what a helper added. **Add food** adds food the person can use,
+  as planned (planning on) or eaten (logging on).
+* With planning on: change the amount of planned food, remove it, **Plan several days**, **Clear planned days** and the person's
+  shopping list (tick, **Copy list** and **Share list**; ticks stay on the helper's device, apart from their own list).
+* With logging on: **Mark eaten** on planned food, and change or remove eaten food you added. The person's own eaten food stays theirs.
+* With saved meals on: the person's saved meals, each with **Add to plan** and **Add as eaten**. **Plan several days** can use
+  them. A helper never changes or deletes a saved meal.
+* With suggestions on: **Suggest a meal** (a day, a meal, foods and a note of up to 280 characters). The answer shows how it fits
+  the person's day. **Suggestions you sent** shows what the person chose, never why.
+* A low treatment says only the person changes it. **Clear planned days** leaves planned low treatments and eaten food.
+* Changes for someone else need a connection: they never wait on the device, and they never go to the helper's own log.
+
+**Suggestions, for the person.** Suggestions wait at the top of the Plan tab. Each card shows who sent it, the foods, what it
+adds to that day against the person's targets, and the note. **Add to my plan** adds planned food of their own; **No thanks**
+says no. A suggestion goes away by itself after 14 days. A suggestion never holds a food for treating a low, and a note about
+lows, insulin, doses, medicines or lab results is refused. Turning suggestions off keeps the ones already sent; removing the
+person closes them. At most 10 wait from one person, and one person sends at most 20 a day. Suggestions are in the person's
+export; the import leaves them out.
 
 **Control and records.**
 
-* Either side can stop at once: **Remove** or **Leave**. The person's list shows each role, when they last looked, and the helper's
-  changes that day.
-* The person's activity shows invites, answers, role changes, people leaving, the first look each day, and once a day that a
-  helper changed the plan.
+* Either side can stop at once: **Remove** or **Leave**. The person's list shows each role and what they may do, when they last
+  looked, and the helper's changes that day.
+* The person's activity shows invites, answers, role and switch changes, people leaving, the first look each day, once a day that
+  a helper changed the plan or logged food, and each suggestion sent, added, declined or expired.
 * A share with an end date stops by itself on that day.
 * At most 10 people on one Care team, 5 unused links and 5 waiting invites. Invites are limited to 20 tries an hour.
 * An admin can end everything for a person in **Server administration → People → End Care team**. Deleting either account
   deletes its shares and invites. While an account is turned off, nothing it shares can be seen or changed.
 * Not with `AUTH_MODE=none`, where there is only one person.
 
-How it works, and why: [design note 19](dev/research/19-sharing.md) and [design note 25](dev/research/25-care-team.md).
+How it works, and why: [design note 19](dev/research/19-sharing.md), [design note 25](dev/research/25-care-team.md) and
+[design note 29](dev/research/29-full-care-team.md).
 
 ## Test accounts
 

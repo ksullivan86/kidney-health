@@ -1667,6 +1667,13 @@ NOTE28:
   licence: "PolyForm Noncommercial 1.0.0 (project)"
   checked: 2026-10-31
   kind: project
+NOTE29:
+  cite: "kidney-health design note 29: the full Care team: switches, a Caregiver who logs eaten food, saved meals and meal suggestions."
+  short: "Design note 29"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/29-full-care-team.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-31
+  kind: project
 ODRISCOLL20:
   cite: "O'Driscoll R, Turicchi J, Beaulieu K, et al. How well do activity monitors estimate energy expenditure? A systematic review and meta-analysis of the validity of current technologies. Br J Sports Med 2020;54(6):332–340. doi:10.1136/bjsports-2018-099643"
   short: "O'Driscoll 2020: how well activity monitors estimate energy"

@@ -115,14 +115,34 @@ On a second phone or a computer, open the same address and sign in as **tester-h
 * As **tester**, open **Settings → Care team** and change Jo's **Role** to **Viewer**. On the second phone, can Jo still plan
   Sam's meals? (Jo should only be able to look.) Then change it back to **Care helper**.
 
-### 11. Without a connection (5 minutes)
+### 11. Jo logs food, uses a saved meal and suggests one (10 minutes)
+
+Sam and Jo stay on the same two phones. Sam chooses what Jo may do; Jo tries it.
+
+* As **tester**, open **Settings → Care team → What Jo may see and do**. Tick **Log food I ate**. Does the role now say
+  **Caregiver**? Then tick **Use my saved meals** and **Suggest meals for me to add**. The role should now say **Custom**.
+  Is it clear what each switch does?
+* As **tester-helper**, open the **Plan** tab and choose Sam under **Planning for**. Does the banner say that what Jo adds
+  goes into Sam's food log?
+* Pick today. Add a food and choose **Eaten**. On a planned food, press **Mark eaten**.
+* Under **Sam's saved meals**, press **Add to plan** on one meal.
+* If Sam has a low treatment on that day (glucose tablets or juice), does it say only Sam can change it, with no buttons?
+* Under **Suggest a meal**, add one or two foods for dinner tomorrow and a short note, then press **Send to Sam**. Does the app
+  show how it fits Sam's day? Try a note that mentions insulin. It should be refused with a plain reason.
+* As **tester**, open the **Plan** tab. Is Jo's suggestion at the top? Press **Add to my plan**. Is it now on tomorrow's plan?
+* As **tester**, open **Today**. Does the food Jo logged as eaten say **Added by Jo**?
+* As **tester-helper**, look at **Suggestions you sent**. Does it say Sam added it?
+* As **tester**, untick **Log food I ate** for Jo. On Jo's phone, try **Mark eaten** again. Jo should be told they can no longer
+  do that.
+
+### 12. Without a connection (5 minutes)
 
 As **tester**, turn on airplane mode.
 
 * Add a food. The top of the screen should say **Offline**, then how many entries wait to be sent.
 * Turn airplane mode off. Do they go to the server? Does anything get lost or added twice?
 
-### 12. Your data (2 minutes)
+### 13. Your data (2 minutes)
 
 Open **Settings**.
 

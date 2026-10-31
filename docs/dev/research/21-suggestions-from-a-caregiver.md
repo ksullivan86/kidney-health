@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Proposed, 2026-10-29. Not built. The owner asked: "is the caregiver able to suggest things?" and "this and that caregiver (coach) will be useful in the diet food log app". The choices in §8 are defaults the owner can change. |
+| Status | Built 2026-10-31 as part of the full Care team ([note 29](29-full-care-team.md) §5), with the §8 defaults; a suggestion is a meal (foods and a note), not a swap. Proposed 2026-10-29. The owner asked: "is the caregiver able to suggest things?" and "this and that caregiver (coach) will be useful in the diet food log app". The choices in §8 are defaults the owner can change. |
 | Scope | Someone a person shares their food log with (note 19) may **suggest** a meal, a food swap or a short note. A suggestion waits in the person's own app until the person adds it to their plan or says no. Nothing is ever written to the person's log, plan, targets or settings by someone else. |
 | Out of scope | Writing on someone's behalf. Changing targets (they come from the care team, entered by the person). Messages that are not about food (the app is not a chat app). Suggestions to someone who has not shared with you. Medicines and insulin, always. |
 | Builds on | Note 19 (shares, `shared_owner`, the activity log), note 16 (recipes and `fit-recipe`), the guidance engine's checks (`check_meal`, `food_warnings`), "Clinician accounts with notes" in ROADMAP. |
