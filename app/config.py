@@ -30,7 +30,8 @@ Keys (defaults in brackets):
 * ``ALLOW_INSECURE_HTTP`` [automatic: allowed while one account exists]
 * Sign-in with an OpenID Connect provider (design note 24; :class:`OidcEnv`, ``Settings.oidc``): ``OIDC_ENABLED`` [false],
   ``OIDC_ISSUER``, ``OIDC_CLIENT_ID``, ``OIDC_CLIENT_SECRET_FILE`` (only as a file: ``OIDC_CLIENT_SECRET`` is refused),
-  ``OIDC_SCOPES`` [``openid email profile``], ``OIDC_ALLOW_PRIVATE_ISSUER`` [false]. Env only: what the server connects to is never
+  ``OIDC_SCOPES`` [``openid email profile``], ``OIDC_ALLOW_PRIVATE_ISSUER`` [false]; ``OIDC_PROVIDERS`` (named providers, each with
+  ``OIDC_<NAME>_*``, at most four in all) and ``OIDC_ONLY`` [false] (note 24 §13). Env only: what the server connects to is never
   changed at run time. Who may sign in is in the settings registry (``auth.oidc.*``). On needs ``AUTH_MODE=local`` and ``PUBLIC_URL``.
 * Test accounts (design note 26): ``TEST_ACCOUNT_PASSWORD_FILE`` (only as a file: ``TEST_ACCOUNT_PASSWORD`` is refused). The file
   is read when the accounts are made or reset. The switches ``TEST_ACCOUNT_ENABLED`` and ``TEST_ACCOUNT_AI`` are settings
