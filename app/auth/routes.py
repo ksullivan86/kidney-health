@@ -264,13 +264,36 @@ def _login_succeeded(request: Request, response: Response, conn: sqlite3.Connect
     return {"user": me_dict(user), "notice": notice}
 
 
+PASSWORDS_OFF = ("This server signs people in with a sign-in provider only, not with a password. Use the button for your "
+                 "provider below.")
+SIGNUP_PASSWORDS_OFF = ("This server makes accounts with a sign-in provider only. Use the button for your provider below: no "
+                        "password to choose.")
+
+
+def _oidc_only(request: Request) -> bool:
+    from .oidc_api import only
+
+    return only(request)
+
+
+def _password_allowed_for(conn: sqlite3.Connection, username: str) -> bool:
+    """With ``OIDC_ONLY`` (design note 24 §13) only a test account may sign in with a password: the test accounts are switched
+    on separately, never admins, and have no provider. The answer is the same for an unknown name and a real account."""
+    norm = normalize_username(username)
+    row = find_local_user(conn, norm) if valid_local_username(norm) else None
+    return row is not None and bool(row["is_test_account"])
+
+
 @router.post("/login")
 async def login(body: LoginBody, request: Request, response: Response, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """Sign in. Database work runs in worker threads; the two waits (a slot of the instance-wide budget,
     then a hashing slot, up to 5 s each) are awaited on the event loop, so a flood of sign-ins holds no
-    worker thread and every other route keeps answering."""
+    worker thread and every other route keeps answering. With ``OIDC_ONLY`` only a test account may use a password (403
+    ``oidc_only`` for everyone else, before any work)."""
     ctx = auth_context(request)
     _only_modes(ctx, "local")
+    if _oidc_only(request) and not await run_in_threadpool(_password_allowed_for, conn, body.username):
+        raise ApiProblem(403, PASSWORDS_OFF, oidc_only=True)
     ip = request_ip(request)
     row, device, mac = await run_in_threadpool(_login_checks, request, conn, ctx, body.username, ip)
 
@@ -391,6 +414,8 @@ def _sync_test_accounts(conn: sqlite3.Connection, ctx: AuthContext) -> None:
 def register(body: RegisterBody, request: Request, response: Response, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     ctx = auth_context(request)
     _only_modes(ctx, "local")
+    if _oidc_only(request):  # accounts come from the provider (an invite redeemed with it, or its sign-up), note 24 §13
+        raise ApiProblem(403, SIGNUP_PASSWORDS_OFF, oidc_only=True)
     ensure_setup_done(conn, ctx)
     s = ctx.settings
     ip = request_ip(request)

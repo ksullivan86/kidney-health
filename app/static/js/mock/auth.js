@@ -192,7 +192,7 @@
         logout_url: null,
         no_login: false,
         passkeys: false, // the demo has no passkeys (design note 18): the sign-in page offers none
-        oidc: { enabled: false, label: null }, // nor a sign-in provider (design note 24): no button, nothing to go to
+        oidc: { enabled: false, label: null, providers: [], only: false, password: 'on' }, // nor a sign-in provider (design note 24): no button, nothing to go to
       };
     },
     _sessionView(s) {
@@ -387,7 +387,7 @@
   // the page, so there is no fake provider: the button is hidden and every route is the server's 404.
   route('GET', '/api/me/oidc', function () {
     this._currentUser();
-    return { available: false, enabled: false, label: null, links: [], can_link: false, has_password: true, passkeys: 0 };
+    return { available: false, enabled: false, label: null, providers: [], links: [], can_link: false, has_password: true, passkeys: 0 };
   });
   for (const [m, p] of [['POST', '/api/me/oidc/link'], ['DELETE', /^\/api\/me\/oidc\/(\d+)$/], ['POST', '/api/auth/reauth/oidc'],
     ['POST', '/api/auth/oidc/invite']]) {

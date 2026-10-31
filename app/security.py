@@ -22,7 +22,7 @@ the outermost middleware comes first:
    ``X-Requested-With: kidney-health`` on unsafe ``/api`` requests, and no cross-site or same-site
    reads of ``/api`` at all. The bearer-only paths (:data:`BEARER_PATHS`, exactly ``/mcp``,
    ``/push/v1/body`` and ``/push/v1/check``) get only the ``Origin`` check, on every method. One exception to the
-   cross-site read rule: the sign-in provider's way back (:data:`PROVIDER_RETURN_PATHS`), a top-level ``GET`` navigation only
+   cross-site read rule: the sign-in provider's way back (:data:`PROVIDER_RETURN_RE`), a top-level ``GET`` navigation only
    (design note 24 §3; its own state and cookie checks stop a forged one).
 
 Request state other code may read (``request.state.<name>``): ``peer`` (TCP peer), ``client_ip``
@@ -115,8 +115,9 @@ UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 BEARER_PATHS = frozenset({"/mcp", "/push/v1/body", "/push/v1/check"})
 # Where a sign-in provider sends the browser back (design note 24 §3): the provider is another site, so the browser says
 # Sec-Fetch-Site: cross-site (or same-site, for a provider on a sibling host). Allowed only as a top-level GET navigation, matched
-# exactly; the route itself refuses anything without the flow's single-use state and the cookie set by this browser at the start.
-PROVIDER_RETURN_PATHS = frozenset({"/api/auth/oidc/callback"})
+# exactly (the first provider at /api/auth/oidc/callback, a named one at .../callback/<name>, note 24 §13); the route itself
+# refuses anything without the flow's single-use state and the cookie set by this browser at the start.
+PROVIDER_RETURN_RE = re.compile(r"^/api/auth/oidc/callback(?:/[a-z][a-z0-9]{1,19})?$")  # a named provider: .../callback/<name>
 CSRF_HEADER = "X-Requested-With"
 CSRF_HEADER_VALUE = brand.CSRF_HEADER_VALUE
 PROXY_SECRET_HEADER = "X-Proxy-Secret"
@@ -620,7 +621,7 @@ class CsrfMiddleware:
         if site is not None:
             site = site.strip().lower()
         if api and site in ("cross-site", "same-site") and not (
-            path in PROVIDER_RETURN_PATHS and method == "GET" and (headers.get("sec-fetch-mode") or "").strip().lower() == "navigate"
+            PROVIDER_RETURN_RE.match(path) and method == "GET" and (headers.get("sec-fetch-mode") or "").strip().lower() == "navigate"
             and (headers.get("sec-fetch-dest") or "document").strip().lower() == "document"
         ):
             await _json_response(403, "Cross-site request refused")(scope, receive, send)

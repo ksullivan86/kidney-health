@@ -75,7 +75,8 @@ def link_admin(admin: TestClient, provider: FakeProvider, sub: str = "admin-sub"
 
 def test_status_shows_the_button_and_nothing_about_the_connection(anon, admin):
     st = anon.get("/api/auth/status").json()
-    assert st["oidc"] == {"enabled": True, "label": "Sign in with single sign-on"}
+    assert st["oidc"] == {"enabled": True, "label": "Sign in with single sign-on", "only": False, "password": "on",
+                          "providers": [{"id": "default", "label": "Sign in with single sign-on"}]}
     set_setting(admin, **{"auth.oidc.button_label": "Sign in with Authentik"})
     assert anon.get("/api/auth/status").json()["oidc"]["label"] == "Sign in with Authentik"
     text = anon.get("/api/auth/status").text
@@ -84,7 +85,8 @@ def test_status_shows_the_button_and_nothing_about_the_connection(anon, admin):
 
 def test_off_by_default_every_route_is_404(tmp_path, foods_json):
     with TestClient(create_app(make_settings(tmp_path, foods_json)), base_url=HTTPS_URL) as c:
-        assert c.get("/api/auth/status").json()["oidc"] == {"enabled": False, "label": None}
+        assert c.get("/api/auth/status").json()["oidc"] == {"enabled": False, "label": None, "providers": [], "only": False,
+                                                               "password": "on"}
         assert c.get("/api/auth/oidc/start", follow_redirects=False).status_code == 404
         assert c.get("/api/auth/oidc/callback?code=x&state=y", follow_redirects=False).status_code == 404
         assert c.post("/api/auth/oidc/invite", json={"token": "a.b"}).status_code == 404

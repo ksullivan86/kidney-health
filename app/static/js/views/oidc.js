@@ -1,11 +1,16 @@
-/* Kidney Diet Log — sign-in with a provider (OpenID Connect): the button on the sign-in page, "Create the account with …" on an invite,
-   Settings → Account → Linked sign-in, and "Confirm with …" in the re-auth sheet (design note 24; app/auth/oidc_api.py).
+/* Kidney Diet Log — sign-in with a provider (OpenID Connect): the buttons on the sign-in page, "Create the account with …" on an
+   invite, Settings → Account → Linked sign-in, and "Confirm with …" in the re-auth sheet (design note 24; app/auth/oidc_api.py).
 
-   The browser never talks to the provider itself: it follows the server's redirects. The sign-in button is a plain link to
-   /api/auth/oidc/start. Linking, confirming and an invite ask the server for the provider's address (POST … → {url}) and go there.
-   The provider sends the browser back to /api/auth/oidc/callback, and the server sends it on to "/" (signed in) or to
-   "#/oidc/<word>"; MESSAGES has the sentence for each word (tests/test_oidc.py checks that every word of app/auth/oidc.py RESULTS
-   is here). In the demo the server says "not set up", so nothing here shows (js/mock/auth.js). */
+   A server may have up to four providers (note 24 §13, for example Authentik and Google): each gets its own button everywhere, and
+   the server's status lists them as {id, label}. The browser never talks to a provider itself: it follows the server's redirects.
+   A sign-in button is a plain link to /api/auth/oidc/start (?provider=<id> for all but the first). Linking, confirming and an
+   invite ask the server for the provider's address (POST …?provider=<id> → {url}) and go there. The provider sends the browser back
+   to the server, which sends it on to "/" (signed in) or to "#/oidc/<word>" (the first provider) or "#/oidc/<word>/<id>" (another);
+   MESSAGES has the sentence for each word (tests/test_oidc.py checks that every word of app/auth/oidc.py RESULTS is here).
+
+   With OIDC_ONLY the server says password: 'off' (or 'test_accounts': only the test accounts use a password), and the password
+   fields of the sign-in and invite screens are hidden (js/views/auth.js asks passwordMode()). In the demo the server says "not set
+   up", so nothing here shows (js/mock/auth.js). */
 (() => {
   'use strict';
   const KH = window.KH;
@@ -18,10 +23,10 @@
     failed: { text: 'Signing in with {label} did not work. Try again. If it keeps failing, ask your admin to check the server\'s clock and the sign-in settings.' },
     expired: { text: 'That sign-in took too long, or it was finished in another tab. Try again.' },
     cancelled: { text: 'Sign-in was cancelled at {label}. Nothing was changed.' },
-    unavailable: { text: 'The server could not reach {label}. Try again later, or sign in with your password.' },
+    unavailable: { text: 'The server could not reach {label}. Try again later, or sign in another way.' },
     busy: { text: 'Too many sign-in attempts from here. Wait a few minutes and try again.' },
     full: { text: 'Too many sign-ins started. Try again soon.' },
-    no_account: { text: 'There is no account here for that sign-in. Ask your admin for an invite link, or sign in with your password and link {label} in Settings.' },
+    no_account: { text: 'There is no account here for that sign-in. Ask your admin for an invite link, or sign in another way and link {label} in Settings.' },
     domain: { text: 'This server does not let in accounts with that email address. Ask your admin which address to use.' },
     disabled: { text: 'This account is turned off. Ask your admin.' },
     taken: { text: 'That {label} account is already linked to another account here. Sign in to that account, or ask your admin.' },
@@ -43,30 +48,60 @@
     const item = MESSAGES[word];
     return item ? item.text.replace(/\{label\}/g, shortLabel(label)) : '';
   }
-  /** "#/oidc/<word>" → {word, text, ok}, or null. */
+  /** "#/oidc/<word>" or "#/oidc/<word>/<provider id>" → {word, ok, provider}, or null. */
   function parseResult(hash) {
-    const m = /^#\/oidc\/([a-z_]{1,30})$/.exec(String(hash || ''));
+    const m = /^#\/oidc\/([a-z_]{1,30})(?:\/([a-z][a-z0-9]{1,19}))?$/.exec(String(hash || ''));
     if (!m || !MESSAGES[m[1]]) return null;
-    return { word: m[1], ok: !!MESSAGES[m[1]].ok };
+    return { word: m[1], ok: !!MESSAGES[m[1]].ok, provider: m[2] || null };
   }
   function status() { return (state && state.authStatus && state.authStatus.oidc) || { enabled: false, label: null }; }
   function enabled() { return !!status().enabled; }
-
-  /** Show or hide the sign-in page's button and the invite page's one. */
-  function applyStatus() {
+  /** The providers the server offers, [{id, label}] (a server from before several providers sends only label). */
+  function providers() {
     const st = status();
-    const on = !!st.enabled;
+    if (!st.enabled) return [];
+    if (Array.isArray(st.providers) && st.providers.length) return st.providers;
+    return [{ id: 'default', label: st.label }];
+  }
+  /** The button words of a provider id (the first provider's for an unknown or missing id). */
+  function labelOf(id) {
+    const all = providers();
+    const found = all.find((p) => p.id === id) || all[0];
+    return found ? found.label : status().label;
+  }
+  /** 'on', 'off' (OIDC_ONLY) or 'test_accounts' (OIDC_ONLY, but the test accounts still use a password). */
+  function passwordMode() {
+    const st = status();
+    return st.enabled && st.password ? st.password : 'on';
+  }
+  /** The start link of a provider: the first one keeps the plain address, the others add ?provider=. */
+  function startHref(id, index) {
+    return index === 0 ? 'api/auth/oidc/start' : `api/auth/oidc/start?provider=${encodeURIComponent(id)}`;
+  }
+
+  /** Show or hide the sign-in page's buttons and the invite page's ones, one per provider. */
+  function applyStatus() {
+    const all = providers();
+    const on = all.length > 0;
     const box = $('#login-oidc');
     if (box) {
       box.hidden = !on;
-      const link = $('#login-oidc-btn');
-      if (link && on) link.textContent = st.label;
+      const list = $('#login-oidc-list');
+      if (list && on) {
+        clear(list);
+        all.forEach((p, i) => list.append(h('a', { class: 'btn secondary auth-passkey-btn', id: i === 0 ? 'login-oidc-btn' : `login-oidc-btn-${p.id}`,
+          href: startHref(p.id, i), 'data-provider': p.id }, p.label)));
+      }
     }
     const inv = $('#register-oidc');
     if (inv) {
       inv.hidden = !on;
-      const btn = $('#register-oidc-btn');
-      if (btn && on) btn.textContent = `Create the account with ${shortLabel(st.label)}`;
+      const list = $('#register-oidc-list');
+      if (list && on) {
+        clear(list);
+        all.forEach((p, i) => list.append(h('button', { class: 'btn secondary auth-passkey-btn', type: 'button',
+          id: i === 0 ? 'register-oidc-btn' : `register-oidc-btn-${p.id}`, 'data-provider': p.id }, `Create the account with ${shortLabel(p.label)}`)));
+      }
     }
   }
 
@@ -83,24 +118,30 @@
       return v || '';
     } catch (e) { return ''; }
   }
+  function withProvider(path, id) { return id ? `${path}?provider=${encodeURIComponent(id)}` : path; }
 
-  async function startInvite(token) {
-    const res = await request('POST', '/api/auth/oidc/invite', { token }, { quiet401: true });
+  async function startInvite(token, id) {
+    const res = await request('POST', withProvider('/api/auth/oidc/invite', id), { token }, { quiet401: true });
     go(res.url);
   }
 
   // ---------------------------------------------------------------------------
   // The re-auth sheet (js/views/auth.js)
   // ---------------------------------------------------------------------------
-  async function reauthAvailable() {
-    if (!enabled()) return false;
+  /** The providers this person can confirm with: linked and still in use, [{id, label}]. */
+  async function reauthProviders() {
+    if (!enabled()) return [];
     try {
       const st = await request('GET', '/api/me/oidc');
-      return !!(st.enabled && st.links.some((l) => l.current));
-    } catch (e) { return false; }
+      if (!st.enabled) return [];
+      const list = Array.isArray(st.providers) ? st.providers : [];
+      if (list.length) return list.filter((p) => p.linked).map((p) => ({ id: p.id, label: p.label }));
+      return st.links.some((l) => l.current) ? [{ id: null, label: st.label }] : [];
+    } catch (e) { return []; }
   }
-  async function reauth() {
-    const res = await request('POST', '/api/auth/reauth/oidc');
+  async function reauthAvailable() { return (await reauthProviders()).length > 0; }
+  async function reauth(id) {
+    const res = await request('POST', withProvider('/api/auth/reauth/oidc', id));
     go(res.url, state.view || 'settings');
   }
 
@@ -116,6 +157,11 @@
     if (l.last_used_at) parts.push(`last used ${dateText(l.last_used_at)}`);
     if (!l.current) parts.push('this server no longer uses it');
     return parts.join(' · ');
+  }
+  /** The heading of a link: the provider's name when the server still uses it, else its host name. */
+  function itemName(l, st) {
+    const name = l.name || (l.current ? shortLabel(st.label) : '');
+    return name && name !== 'single sign-on' ? name : l.provider;
   }
 
   function block() {
@@ -138,44 +184,56 @@
     render(wrap, body, st);
   }
 
+  function linkButton(p, first) {
+    const name = shortLabel(p.label);
+    const btn = h('button', { class: 'btn primary', type: 'button', id: first ? 'set-oidc-link' : `set-oidc-link-${p.id}`, 'data-provider': p.id }, `Link ${name}`);
+    btn.addEventListener('click', async () => {
+      if (btn.disabled) return;
+      btn.disabled = true;
+      try {
+        const res = await request('POST', withProvider('/api/me/oidc/link', p.id));
+        go(res.url, 'settings');
+      } catch (err) { if (!err.handled && !err.cancelled) toastError(err); } finally { if (document.contains(btn)) btn.disabled = false; }
+    });
+    return btn;
+  }
+
   function render(wrap, body, st) {
     clear(body);
-    const name = shortLabel(st.label);
+    const offered = Array.isArray(st.providers) && st.providers.length ? st.providers
+      : (st.enabled ? [{ id: null, label: st.label, linked: !st.can_link }] : []);
+    const names = offered.map((p) => shortLabel(p.label));
+    const nameList = names.length > 1 ? `${names.slice(0, -1).join(', ')} or ${names[names.length - 1]}` : (names[0] || 'single sign-on');
     body.append(h('p', {}, st.enabled
-      ? `Link your ${name} account to sign in with it, without your password here. Your password and passkeys keep working.`
+      ? `Link your ${nameList} account to sign in with it, without your password here. Your password and passkeys keep working.`
       : 'This server no longer offers sign-in with a provider. You can remove a link that is left.'));
     if (!st.has_password) {
       const pw = $('#set-password-form');
       if (pw) pw.replaceWith(h('p', { class: 'hint', id: 'set-password-none' },
-        `You sign in with ${name}, so this account has no password. To have one too, ask your admin for a link to set it.`));
+        `You sign in with ${nameList}, so this account has no password. To have one too, ask your admin for a link to set it.`));
     }
     const list = h('ul', { class: 'passkey-list', id: 'set-oidc-list' });
     for (const l of st.links) list.append(itemView(wrap, body, st, l));
     if (st.links.length) body.append(list);
     else body.append(h('p', { class: 'muted' }, 'Nothing linked yet.'));
-    if (st.can_link) {
-      const btn = h('button', { class: 'btn primary', type: 'button', id: 'set-oidc-link' }, `Link ${name}`);
-      btn.addEventListener('click', async () => {
-        if (btn.disabled) return;
-        btn.disabled = true;
-        try {
-          const res = await request('POST', '/api/me/oidc/link');
-          go(res.url, 'settings');
-        } catch (err) { if (!err.handled && !err.cancelled) toastError(err); } finally { if (document.contains(btn)) btn.disabled = false; }
-      });
-      body.append(h('div', { class: 'settings-actions' }, btn),
-        h('span', { class: 'hint' }, `You go to ${name} to sign in, then come back here.`));
+    const toLink = st.can_link ? offered.filter((p) => !p.linked) : [];
+    if (toLink.length) {
+      const actions = h('div', { class: 'settings-actions wrap' });
+      toLink.forEach((p) => actions.append(linkButton(p, offered.indexOf(p) === 0)));
+      const where = toLink.length > 1 ? 'that site' : shortLabel(toLink[0].label);
+      body.append(actions, h('span', { class: 'hint' }, `You go to ${where} to sign in, then come back here.`));
     }
   }
 
   function itemView(wrap, body, st, l) {
     const actions = h('div', { class: 'settings-actions wrap' });
+    const name = itemName(l, st);
     const li = h('li', { class: 'passkey-item', 'data-oidc-id': String(l.id) },
-      h('div', {}, h('strong', { class: 'passkey-name' }, shortLabel(st.label) === 'single sign-on' ? l.provider : shortLabel(st.label)),
+      h('div', {}, h('strong', { class: 'passkey-name' }, name),
         h('p', { class: 'hint passkey-meta' }, `${itemLine(l)}.`)), actions);
-    const remove = h('button', { class: 'btn danger', type: 'button', 'aria-label': `Remove the link to ${l.provider}` }, 'Remove');
+    const remove = h('button', { class: 'btn danger', type: 'button', 'aria-label': `Remove the link to ${name}` }, 'Remove');
     remove.addEventListener('click', () => confirm.inline(actions, remove, {
-      message: `Remove this link? You can no longer sign in with ${shortLabel(st.label)} until you link it again.`,
+      message: `Remove this link? You can no longer sign in with ${name} until you link it again.`,
       confirmText: 'Remove',
       onConfirm: async () => {
         await request('DELETE', `/api/me/oidc/${l.id}`);
@@ -188,5 +246,8 @@
     return li;
   }
 
-  KH.oidc = { MESSAGES, message, parseResult, shortLabel, applyStatus, enabled, startInvite, reauthAvailable, reauth, takeReturn, block, itemLine };
+  KH.oidc = {
+    MESSAGES, message, parseResult, shortLabel, applyStatus, enabled, providers, labelOf, passwordMode, startInvite,
+    reauthProviders, reauthAvailable, reauth, takeReturn, block, itemLine,
+  };
 })();

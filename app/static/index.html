@@ -182,11 +182,13 @@
       <div class="auth-error" id="auth-error" role="alert" aria-live="assertive"></div>
 
       <form id="form-login" class="auth-form" data-screen="login" novalidate hidden>
-        <div class="field">
+        <!-- OIDC_ONLY (design note 24 §13): the password parts (.pw-signin) are hidden; with the test accounts on, this shows them. -->
+        <p class="hint auth-help" id="login-only-note" hidden>This server signs you in with your sign-in provider. No password needed.</p>
+        <div class="field pw-signin">
           <label for="login-username">Username</label>
           <input id="login-username" name="username" type="text" autocomplete="username webauthn" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="64">
         </div>
-        <div class="field">
+        <div class="field pw-signin">
           <label for="login-password">Password</label>
           <div class="pw-wrap">
             <input id="login-password" name="password" type="password" autocomplete="current-password" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="1024">
@@ -199,20 +201,21 @@
           <input id="login-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" autocapitalize="none" autocorrect="off" spellcheck="false" maxlength="32" class="code-input" aria-describedby="login-code-hint">
           <span class="hint" id="login-code-hint">The 6 digits your app shows now. Lost your phone? Type one of your recovery codes instead.</span>
         </div>
-        <button class="btn primary auth-submit" type="submit" id="login-submit">Sign in</button>
+        <button class="btn primary auth-submit pw-signin" type="submit" id="login-submit">Sign in</button>
         <!-- Passkeys (design note 18 §6): shown when the server allows them here and the browser can use them (js/views/auth.js). -->
         <div class="auth-passkey" id="login-passkey" hidden>
-          <p class="auth-or" aria-hidden="true">or</p>
+          <p class="auth-or pw-signin" aria-hidden="true">or</p>
           <button class="btn secondary auth-passkey-btn" type="button" id="login-passkey-btn">Sign in with a passkey</button>
           <span class="hint">Your device asks for your fingerprint, face or PIN. No password needed.</span>
         </div>
-        <!-- Sign-in with a provider (design note 24): shown by js/views/oidc.js when the admin set one up. A plain link (relative: the app is always at its root): the server sends the browser on. -->
+        <!-- Sign-in with a provider (design note 24): shown by js/views/oidc.js when the admin set one up, one link per provider (§13). A plain link (relative: the app is always at its root): the server sends the browser on. -->
         <div class="auth-passkey" id="login-oidc" hidden>
           <p class="auth-or" aria-hidden="true">or</p>
-          <a class="btn secondary auth-passkey-btn" id="login-oidc-btn" href="api/auth/oidc/start">Sign in with single sign-on</a>
+          <div class="auth-oidc-list" id="login-oidc-list"><a class="btn secondary auth-passkey-btn" id="login-oidc-btn" href="api/auth/oidc/start">Sign in with single sign-on</a></div>
           <span class="hint">You sign in on that site, then come back here.</span>
         </div>
-        <p class="hint auth-help">Forgot your password? Ask your admin for a reset link; there is no email reset.</p>
+        <p class="hint auth-help pw-signin">Forgot your password? Ask your admin for a reset link; there is no email reset.</p>
+        <button class="btn secondary auth-alt" type="button" id="login-test-toggle" hidden>Sign in to a test account with its password</button>
         <p class="hint auth-help" id="login-demo" hidden>Demo: sign in as <b>sam</b> with any password of 15 or more characters. Nothing is sent anywhere.</p>
       </form>
 
@@ -254,16 +257,16 @@
 
       <form id="form-register" class="auth-form" data-screen="invite" novalidate hidden>
         <p class="auth-intro" id="register-intro">You have been invited. Choose a username and a password for your account.</p>
-        <div class="field">
+        <div class="field pw-signup">
           <label for="reg-username">Username</label>
           <input id="reg-username" name="username" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="64" aria-describedby="reg-username-hint">
           <span class="hint" id="reg-username-hint">3 to 64 characters: letters, digits and . _ @ + -</span>
         </div>
-        <div class="field">
+        <div class="field pw-signup">
           <label for="reg-display">Your name <span class="muted small">(optional)</span></label>
           <input id="reg-display" name="display_name" type="text" autocomplete="nickname" maxlength="80" placeholder="Shown in the app, e.g. Sam">
         </div>
-        <div class="field">
+        <div class="field pw-signup">
           <label for="reg-password">Password</label>
           <div class="pw-wrap">
             <input id="reg-password" name="password" type="password" autocomplete="new-password" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="128" minlength="15" aria-describedby="reg-password-hint">
@@ -271,11 +274,11 @@
           </div>
           <span class="hint" id="reg-password-hint">At least 15 characters. A short sentence you will remember works well; no symbols needed. A password manager and pasting are fine.</span>
         </div>
-        <button class="btn primary auth-submit" type="submit" id="reg-submit">Create account</button>
-        <!-- Or with the sign-in provider (design note 24 §6): no password to choose. -->
+        <button class="btn primary auth-submit pw-signup" type="submit" id="reg-submit">Create account</button>
+        <!-- Or with a sign-in provider (design note 24 §6): no password to choose. One button per provider (§13). -->
         <div class="auth-passkey" id="register-oidc" hidden>
-          <p class="auth-or" aria-hidden="true">or</p>
-          <button class="btn secondary auth-passkey-btn" type="button" id="register-oidc-btn">Create the account with single sign-on</button>
+          <p class="auth-or pw-signup" aria-hidden="true">or</p>
+          <div class="auth-oidc-list" id="register-oidc-list"><button class="btn secondary auth-passkey-btn" type="button" id="register-oidc-btn">Create the account with single sign-on</button></div>
           <span class="hint">No username or password to choose: you sign in on that site, then come back here.</span>
         </div>
         <p class="hint auth-help">The link works once. If it has expired, ask the person who sent it for a new one.</p>
@@ -2070,10 +2073,10 @@
         <p class="auth-or" aria-hidden="true">or</p>
         <button class="btn secondary auth-passkey-btn" type="button" id="reauth-passkey-btn">Use a passkey instead</button>
       </div>
-      <!-- Or the sign-in provider (design note 24 §8): shown when this person has linked it. The page goes there and comes back. -->
+      <!-- Or a sign-in provider (design note 24 §8): shown when this person has linked one, a button for each (§13). The page goes there and comes back. -->
       <div class="reauth-passkey" id="reauth-oidc" hidden>
         <p class="auth-or" aria-hidden="true">or</p>
-        <button class="btn secondary auth-passkey-btn" type="button" id="reauth-oidc-btn">Confirm with single sign-on</button>
+        <div class="auth-oidc-list" id="reauth-oidc-list"><button class="btn secondary auth-passkey-btn" type="button" id="reauth-oidc-btn">Confirm with single sign-on</button></div>
         <span class="hint">You come back here afterwards. Then do it again.</span>
       </div>
       <div class="auth-error" id="reauth-error" role="alert" aria-live="assertive"></div>

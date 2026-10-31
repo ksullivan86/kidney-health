@@ -7,9 +7,10 @@ private one only with ``OIDC_ALLOW_PRIVATE_ISSUER``, redirects are never followe
 
 * :class:`OidcClient` (``app.state.oidc``): the provider's metadata (cached an hour), its keys (cached an hour, fetched again for an
   unknown ``kid`` at most once a minute), the authorization URL, the code exchange and :meth:`OidcClient.verify_id_token`.
-* :class:`FlowStore`: the flows waiting at the provider, in memory, single use, 10 minutes (like the passkey challenges). At most
-  ``MAX_FLOWS`` wait at once and ``FLOWS_PER_KEY`` per address; when either is full a new start is refused (:class:`FlowStoreFull`),
-  so a flood never pushes out someone else's waiting sign-in.
+* :class:`FlowStore`: the flows waiting at the providers, in memory, single use, 10 minutes (like the passkey challenges), one
+  store for every provider. Each flow belongs to one provider and only that provider's way back can take it. At most
+  ``MAX_FLOWS`` wait at once, an equal share of that per provider, and ``FLOWS_PER_KEY`` per address; when any is full a new start
+  is refused (:class:`FlowStoreFull`), so a flood never pushes out someone else's waiting sign-in.
 * :class:`OidcError`: a refusal with one of the short result words of :data:`RESULTS` (what the page shows) and a log reason.
 
 Nothing here logs or keeps a token, a code, the state, the nonce or the client secret.
@@ -41,7 +42,8 @@ from . import clock
 
 log = logging.getLogger(f"{brand.LOGGER_NAME}.auth.oidc")
 
-CALLBACK_PATH = "/api/auth/oidc/callback"
+CALLBACK_PATH = "/api/auth/oidc/callback"  # the first provider's; a named one adds /<name> (note 24 §13)
+DEFAULT_ID = "default"
 FLOW_TTL_S = 600
 MAX_FLOWS = 10_000
 FLOWS_PER_KEY = 10  # flows one address (or one person, for link and re-auth) may have waiting at once
@@ -100,8 +102,14 @@ def discovery_url(issuer: str) -> str:
     return issuer[:-1] + "/.well-known/openid-configuration" if issuer.endswith("/") else issuer + "/.well-known/openid-configuration"
 
 
-def redirect_uri(public_origin: str) -> str:
-    return public_origin.rstrip("/") + CALLBACK_PATH
+def callback_path(name: str = "") -> str:
+    """The way back from a provider: ``/api/auth/oidc/callback`` for the first one, ``…/callback/<name>`` for a named one. Each
+    provider has its own exact redirect URI, so a code can only come back to the provider it was made for (RFC 9700 §4.4.2)."""
+    return f"{CALLBACK_PATH}/{name}" if name else CALLBACK_PATH
+
+
+def redirect_uri(public_origin: str, name: str = "") -> str:
+    return public_origin.rstrip("/") + callback_path(name)
 
 
 def _endpoint_ok(url: Any, issuer: str) -> bool:
@@ -136,6 +144,7 @@ class Flow:
     invite_id: str | None = None  # invite: the invite token's id
     expires: float = 0.0
     key: str = ""  # who started it, for the per-address cap
+    provider: str = DEFAULT_ID  # the provider it was started with; only that provider's way back takes it
 
 
 class FlowStoreFull(Exception):
@@ -143,44 +152,56 @@ class FlowStoreFull(Exception):
 
 
 class FlowStore:
-    """Flows by the SHA-256 of their ``state``. :meth:`take` returns one at most once, before it expires, and only to the browser
-    holding its cookie (a wrong or missing cookie leaves the flow waiting for its own browser). At most ``max_items`` wait in all
-    and ``per_key`` per address; beyond that :meth:`issue` raises :class:`FlowStoreFull`. Expired flows are dropped as new ones
-    come; a waiting flow is never pushed out by others."""
+    """Flows by the SHA-256 of their ``state``. :meth:`take` returns one at most once, before it expires, only to the browser
+    holding its cookie (a wrong or missing cookie leaves the flow waiting for its own browser) and only at the way back of the
+    provider it was started with (another provider's way back leaves it waiting too). At most ``max_items`` wait in all,
+    ``per_provider`` for one provider and ``per_key`` per address; beyond that :meth:`issue` raises :class:`FlowStoreFull`.
+    Expired flows are dropped as new ones come; a waiting flow is never pushed out by others."""
 
-    def __init__(self, max_items: int = MAX_FLOWS, ttl_s: float = FLOW_TTL_S, per_key: int = FLOWS_PER_KEY) -> None:
+    def __init__(self, max_items: int = MAX_FLOWS, ttl_s: float = FLOW_TTL_S, per_key: int = FLOWS_PER_KEY,
+                 per_provider: int | None = None) -> None:
         self._items: OrderedDict[bytes, Flow] = OrderedDict()
         self._per_key: dict[str, int] = {}
+        self._per_provider: dict[str, int] = {}
         self._lock = threading.Lock()
         self._max, self._ttl, self._cap = max_items, ttl_s, per_key
+        self._provider_cap = max_items if per_provider is None else per_provider
+
+    @staticmethod
+    def _drop(counts: dict[str, int], name: str) -> None:
+        left = counts.get(name, 0) - 1
+        if left > 0:
+            counts[name] = left
+        else:
+            counts.pop(name, None)
 
     def _forget(self, flow: Flow) -> None:
-        left = self._per_key.get(flow.key, 0) - 1
-        if left > 0:
-            self._per_key[flow.key] = left
-        else:
-            self._per_key.pop(flow.key, None)
+        self._drop(self._per_key, flow.key)
+        self._drop(self._per_provider, flow.provider)
 
     def issue(self, purpose: str, *, key: str = "", user_id: int | None = None, session_id: str | None = None,
-              invite_id: str | None = None) -> tuple[str, str, Flow]:
+              invite_id: str | None = None, provider: str = DEFAULT_ID) -> tuple[str, str, Flow]:
         """A new flow: ``(state, binder, flow)``. The binder goes into the cookie; only its hash is kept."""
         state = secrets.token_urlsafe(32)
         binder = secrets.token_urlsafe(32)
         now = clock.seconds()
         flow = Flow(purpose, secrets.token_urlsafe(32), secrets.token_urlsafe(32), hashlib.sha256(binder.encode()).digest(), now,
-                    user_id, session_id, invite_id, now + self._ttl, key)
+                    user_id, session_id, invite_id, now + self._ttl, key, provider)
         with self._lock:
             while self._items and next(iter(self._items.values())).expires < now:  # same lifetime for all: oldest first
                 self._forget(self._items.popitem(last=False)[1])
-            if len(self._items) >= self._max or self._per_key.get(key, 0) >= self._cap:
+            if (len(self._items) >= self._max or self._per_key.get(key, 0) >= self._cap
+                    or self._per_provider.get(provider, 0) >= self._provider_cap):
                 raise FlowStoreFull(key)
             self._items[hashlib.sha256(state.encode()).digest()] = flow
             self._per_key[key] = self._per_key.get(key, 0) + 1
+            self._per_provider[provider] = self._per_provider.get(provider, 0) + 1
         return state, binder, flow
 
-    def take(self, state: str | None, binder: str | None) -> Flow | None:
-        """The flow for ``state`` if the cookie's ``binder`` matches and it has not expired; it is gone afterwards. An unknown state
-        or a cookie that does not match returns None and changes nothing."""
+    def take(self, state: str | None, binder: str | None, provider: str = DEFAULT_ID) -> Flow | None:
+        """The flow for ``state`` if the cookie's ``binder`` matches, it was started with ``provider`` and it has not expired; it is
+        gone afterwards. An unknown state, a cookie that does not match or another provider's way back returns None and changes
+        nothing."""
         if not isinstance(state, str) or not state or len(state) > 200 or not isinstance(binder, str):
             return None
         digest = hashlib.sha256(state.encode()).digest()
@@ -191,13 +212,16 @@ class FlowStore:
             if flow.expires < clock.seconds():
                 self._forget(self._items.pop(digest))
                 return None
-            if not hmac.compare_digest(hashlib.sha256(binder.encode()).digest(), flow.binder_hash):
+            if not hmac.compare_digest(hashlib.sha256(binder.encode()).digest(), flow.binder_hash) or flow.provider != provider:
                 return None
             self._forget(self._items.pop(digest))
         return flow
 
     def __len__(self) -> int:
         return len(self._items)
+
+    def count(self, provider: str) -> int:
+        return self._per_provider.get(provider, 0)
 
 
 # --------------------------------------------------------------------------- #
@@ -297,7 +321,7 @@ class Metadata:
 
 @dataclass
 class OidcClient:
-    """One provider (``app.state.oidc``). Tests set ``resolver``, ``direct`` and ``use_env_proxy`` to talk to a fake provider through
+    """One provider (``app.state.oidc_providers``; the first is also ``app.state.oidc``). Tests set ``resolver``, ``direct`` and ``use_env_proxy`` to talk to a fake provider through
     the same SSRF-checked transport."""
 
     env: OidcEnv
@@ -322,8 +346,12 @@ class OidcClient:
         return self.env.issuer or ""
 
     @property
+    def id(self) -> str:
+        return self.env.id
+
+    @property
     def redirect_uri(self) -> str:
-        return redirect_uri(self.public_origin or "")
+        return redirect_uri(self.public_origin or "", self.env.name)
 
     # ------------------------------------------------------------------ HTTP
     def _client(self) -> httpx2.Client:

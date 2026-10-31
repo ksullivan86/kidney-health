@@ -2133,8 +2133,15 @@
     const secrets = sk.secrets || {};
     const proxy = a.proxy || {};
     const oidc = a.oidc || {};
-    const oidcDiscovery = { ok: 'reached', blocked_address: 'refused: a private address (OIDC_ALLOW_PRIVATE_ISSUER)', dns_failed: 'its name does not resolve',
-      unreachable: 'cannot be reached', issuer_mismatch: 'it names another issuer (check OIDC_ISSUER)' };
+    // Each sign-in provider (design note 24 §10, §13): its connection and whether the server reached it, never its client secret.
+    const oidcProviders = Array.isArray(oidc.providers) && oidc.providers.length ? oidc.providers
+      : (oidc.enabled ? [{ id: 'default', label: '', issuer: oidc.issuer, client_id: oidc.client_id, secret: oidc.secret, redirect_uri: oidc.redirect_uri, discovery: oidc.discovery }] : []);
+    const oidcVar = (p) => (p.id && p.id !== 'default' ? `OIDC_${p.id.toUpperCase()}_` : 'OIDC_');
+    const oidcDiscovery = (p) => ({ ok: 'reached', blocked_address: `refused: a private address (${oidcVar(p)}ALLOW_PRIVATE_ISSUER)`, dns_failed: 'its name does not resolve',
+      unreachable: 'cannot be reached', issuer_mismatch: `it names another issuer (check ${oidcVar(p)}ISSUER, with or without the slash at the end)` })[p.discovery]
+      || (p.discovery ? `not reached yet (${p.discovery})` : 'not asked yet');
+    const oidcRows = oidcProviders.map((p) => [`Single sign-on: ${p.label ? KH.oidc.shortLabel(p.label) : p.issuer}`,
+      `${p.issuer}, client ${p.client_id}, secret ${p.secret}, return address ${p.redirect_uri}, provider ${oidcDiscovery(p)}`]);
     box.append(kv([
       ['Server version', a.version],
       ['Database schema', String(a.schema_version)],
@@ -2145,9 +2152,8 @@
       ['Secret key', sk.source === 'auto' ? 'Generated on the data volume' : sk.source === 'env' ? 'From SECRET_KEY' : sk.source === 'file' ? 'From SECRET_KEY_FILE' : String(sk.source || '')],
       ['Stored keys', `${secrets.current || 0} current${secrets.older_key ? `, ${secrets.older_key} under an older key` : ''}${secrets.unreadable ? `, ${secrets.unreadable} unreadable` : ''}`],
       // Sign-in with a provider (design note 24 §10): the connection, never the client secret.
-      ['Single sign-on', oidc.enabled ? `On: ${oidc.issuer}` : 'Off (OIDC_ENABLED)'],
-      oidc.enabled ? ['Single sign-on details', `client ${oidc.client_id}, secret ${oidc.secret}, return address ${oidc.redirect_uri}`
-        + `, provider ${oidcDiscovery[oidc.discovery] || (oidc.discovery ? `not reached yet (${oidc.discovery})` : 'not asked yet')}`] : null,
+      ['Single sign-on', oidc.enabled ? `On, ${oidcProviders.length === 1 ? 'one provider' : `${oidcProviders.length} providers`}${oidc.only ? ', the only way in (OIDC_ONLY)' : ''}` : 'Off (OIDC_ENABLED)'],
+      ...oidcRows,
       proxy.ignored_identity_headers ? ['Identity headers ignored', `${proxy.ignored_identity_headers} from untrusted peers (check TRUSTED_PROXIES)`] : null,
       ['Last backup', a.last_backup_at ? fmtDateTime(a.last_backup_at) : 'None recorded (python -m app.admin backup)'],
       a.pre_v3_backup ? ['Pre-v0.3 backup', `${a.pre_v3_backup.path} (${fmtBytes(a.pre_v3_backup.bytes)}), deleted after ${fmtDate(a.pre_v3_backup.deleted_after)}`] : null,
@@ -2155,6 +2161,11 @@
     const due = backupDue(a.last_backup_at, a.backup_reminder_days ?? BACKUP_DUE_DAYS);
     if (due) box.append(due);
     if (sk.warning) box.append(note('caution', h('p', {}, sk.warning)));
+    if (oidc.only) {
+      box.append(note('caution', h('p', {}, 'Passwords are turned off (OIDC_ONLY): if the sign-in provider is down, nobody can sign in with a password. '
+        + 'To get back in, set OIDC_ONLY=false and restart the server (docs/accounts.md).'
+        + (oidc.admins_linked === 0 ? ' No admin has linked a provider yet: link yours in Settings → Account before you sign out.' : ''))));
+    }
     if (secrets.unreadable) box.append(note('caution', h('p', {}, 'Some stored keys can no longer be read (the secret key changed). Ask the people concerned to enter their keys again.')));
   }
 
