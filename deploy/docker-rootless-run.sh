@@ -4,10 +4,10 @@
 # Guide (setup tool, linger, source-IP caveat): docs/deployment.md, "Rootless Docker".
 #
 #   deploy/docker-rootless-run.sh            # first run creates the secret files, then starts
-#   IMAGE=ghcr.io/ksullivan86/kidney-health:0.13.0@sha256:... deploy/docker-rootless-run.sh
+#   IMAGE=ghcr.io/ksullivan86/kidney-health:0.14.0@sha256:... deploy/docker-rootless-run.sh
 #
 # Settings (environment variables of this script):
-#   IMAGE        image reference            [ghcr.io/ksullivan86/kidney-health:0.13]
+#   IMAGE        image reference            [ghcr.io/ksullivan86/kidney-health:0.14]
 #   SECRETS_DIR  where the secret files live [~/.config/kidney-health/secrets]
 #   HOST_PORT    port on 127.0.0.1           [8000]
 #   PUBLIC_URL   the URL people type, e.g. https://food.home.example.net   [unset]
@@ -21,7 +21,7 @@
 # kidney-health-data volume.
 set -euo pipefail
 
-IMAGE="${IMAGE:-ghcr.io/ksullivan86/kidney-health:0.13}"
+IMAGE="${IMAGE:-ghcr.io/ksullivan86/kidney-health:0.14}"
 SECRETS_DIR="${SECRETS_DIR:-$HOME/.config/kidney-health/secrets}"
 HOST_PORT="${HOST_PORT:-8000}"
 PUBLIC_URL="${PUBLIC_URL:-}"

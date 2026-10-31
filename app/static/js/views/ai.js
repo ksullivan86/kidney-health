@@ -1,6 +1,6 @@
 /* Kidney Diet Log — optional AI (KH.ai; ARCHITECTURE.md "M2 API: AI and photos", docs/ai.md).
 
-   * Settings → AI ideas (fills the #set-ai-slot that js/views/settings.js leaves for M2): the person's
+   * Settings → AI features (fills the #set-ai-slot that js/views/settings.js leaves for M2): the person's
      opt-in, provider choice, own provider and write-only key, age band and sex, preferences, consents,
      AI activity; for admins the providers ("Test connection"), AI_PRIVATE_HOSTS and usage counts.
    * The consent sheet (provider, destination host, policy line, the exact request) and "What will be
@@ -9,7 +9,7 @@
      Guidance can show AI ideas too: KH.ai.openIdeas({date, meal}) or KH.ai.mountIdeas(el, {date, meal}).
    * The Ask screen (js/views/ask.js) uses this file's consent flow (withConsent with purpose 'chat'), its API
      object (api.chat and the routes a saved card uses) and its alert cards (cardEl).
-   * How much the person trusts the assistant to save (Settings → AI ideas, assistant step 2 part C): the choice
+   * How much the person trusts the assistant to save (Settings → AI features, assistant step 2 part C): the choice
      (ask | conversation | always), and the warning sheet (confirmTrust) that comes before conversation or always.
 
    Rules: AI answers are rendered with textContent only (titles and sentences come from the server's
@@ -29,7 +29,7 @@
   const PURPOSE_TEXT = {
     text: 'your meal data (stage, targets, today\'s totals, candidate foods), the meal you describe, or the foods and amounts of a recipe (never its name, note, steps or link)',
     photos: 'your photo (location and camera data removed)',
-    chat: 'your messages in this conversation, and the app\'s own numbers the assistant looks up (your targets, today\'s totals, food names and nutrients)',
+    chat: 'your messages in this conversation, and the app\'s own numbers the AI assistant looks up (your targets, today\'s totals, food names and nutrients)',
     voice: 'your voice recording (up to a minute)',
     labs: 'your photo of a lab report (location and camera data removed)',
   };
@@ -40,10 +40,10 @@
     voice: 'Nothing but the recording is sent: no name, user name, e-mail or account details. The words come back into the question box for you to read and edit; '
       + 'nothing goes to the AI until you press Send. The recording is not kept on this device or on the server.',
   };
-  const FEATURE_TEXT = { next_meal: 'Meal ideas', parse_meal: 'Describe a meal', read_label: 'Read a label', plate: 'Plate photo', chat: 'Ask', voice: 'Voice',
+  const FEATURE_TEXT = { next_meal: 'Meal ideas', parse_meal: 'Describe a meal', read_label: 'Read a label', plate: 'Plate photo', chat: 'AI assistant', voice: 'Voice',
     read_lab_report: 'Read a lab report', recipes: 'AI recipes' };
-  const CONSENT_NAME = { text: 'Meal data', photos: 'Photos', chat: 'Ask conversations', voice: 'Voice recordings', labs: 'Lab report photos' };
-  const CONSENT_STOP = { text: 'meal data', photos: 'photos', chat: 'your Ask conversations', voice: 'your voice recordings', labs: 'your lab report photos' };
+  const CONSENT_NAME = { text: 'Meal data', photos: 'Photos', chat: 'AI assistant conversations', voice: 'Voice recordings', labs: 'Lab report photos' };
+  const CONSENT_STOP = { text: 'meal data', photos: 'photos', chat: 'your AI assistant conversations', voice: 'your voice recordings', labs: 'your lab report photos' };
   const CONFIDENCE_TEXT = { low: 'not sure', medium: 'fairly sure', high: 'sure' };
   // Why the rules left an AI idea out (app/guidance/ai_bridge.py, app/ai/guard.py reason codes).
   const DROP_TEXT = {
@@ -337,7 +337,7 @@
           : h('p', { class: 'hint' }, `You already agreed to send this to ${fb.host}.`)) : null,
       notice ? null : h('p', { class: 'hint' }, NEVER_SENT_TEXT[consent.purpose] || 'Never sent: your name, user name, e-mail, weight, height, exact age, dates or notes. AI never gives insulin doses or medicine advice, and every idea is checked against your targets before you see it.'),
       dry ? h('details', { class: 'settings-details' }, h('summary', {}, 'Exactly what will be sent'), h('div', { class: 'ai-dry' }, (() => { const box = h('div'); renderDryRun(box, dry); return box; })())) : null,
-      voice ? null : check('Show me the request before every AI call to this server', showEach, 'You can change this by withdrawing and giving consent again in Settings → AI ideas.')].filter(Boolean));
+      voice ? null : check('Show me the request before every AI call to this server', showEach, 'You can change this by withdrawing and giving consent again in Settings → AI features.')].filter(Boolean));
     const cancel = h('button', { class: 'btn secondary', type: 'button' }, 'Not now');
     cancel.addEventListener('click', () => consentEl.close());
     const ok = h('button', { class: 'btn primary', type: 'button' }, voice ? 'Agree and record' : 'Agree and send');
@@ -986,7 +986,7 @@
     clear(slot);
     if (!st || !st.enabled) { slot.hidden = true; return; }
     if (!st.available) {
-      slot.append(h('p', { class: 'muted small' }, st.reason === 'not_opted_in' ? 'AI ideas are off for you. ' : `${st.message || 'AI is not available.'} `,
+      slot.append(h('p', { class: 'muted small' }, st.reason === 'not_opted_in' ? 'AI features are off for you. ' : `${st.message || 'AI is not available.'} `,
         st.reason === 'not_opted_in' ? h('button', { class: 'link-btn', type: 'button', onclick: () => KH.router.show('settings') }, 'Turn them on in Settings') : null));
       slot.hidden = false;
       return;
@@ -1003,9 +1003,15 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Settings → AI ideas
+  // Settings → AI features
   // ---------------------------------------------------------------------------
   const isAdmin = () => !!(state.me && state.me.role === 'admin');
+  // The first thing Settings → AI features says, whatever the server's state: what an AI is, that it can be wrong, and where to
+  // read where it runs (the list "Where each AI feature runs" below, from the server's routing).
+  const WHAT_AI_IS = 'These features use an AI language model, a computer program that writes text. It can be wrong and it is not '
+    + 'medical advice. It is not allowed to give insulin or medicine doses, and the app checks its answers.';
+  const WHERE_AI_RUNS = ' "Where each AI feature runs" below says whether it runs on an AI on your own server or network, or at a cloud AI company.';
+  const whatAiIs = (where) => h('p', { class: 'hint ai-what', id: 'set-ai-what' }, where ? WHAT_AI_IS + WHERE_AI_RUNS : WHAT_AI_IS);
 
   // Renders overlap (the view is shown while an admin's AI switch change asks for a fresh one): each builds
   // its parts first and only the newest, after its last await, replaces the slot, so nothing shows twice.
@@ -1020,8 +1026,8 @@
     body.dataset.filled = '1';
     if (!slot.childElementCount) slot.append(h('p', { class: 'muted small' }, 'Loading…')); // a refresh keeps what is shown until it is ready
     if (MOCK) {
-      clear(slot).append(h('p', { class: 'setting-status' }, h('span', { class: 'state-pill off' }, 'Not in the preview')),
-        h('p', {}, `Optional AI ideas run in the installed app, with a provider your admin sets up and only after you opt in. The ${PREVIEW ? 'preview' : 'demo'} never sends anything to an AI service.`));
+      clear(slot).append(whatAiIs(false), h('p', { class: 'setting-status' }, h('span', { class: 'state-pill off' }, 'Not in the preview')),
+        h('p', {}, `Optional AI features run in the installed app, with an AI your admin sets up and only after you turn them on. The ${PREVIEW ? 'preview' : 'demo'} never sends anything to an AI.`));
       return;
     }
     let me;
@@ -1030,12 +1036,12 @@
       return;
     }
     if (!current()) return;
-    const parts = [];
+    const parts = [whatAiIs(!!me.enabled)];
     if (me.enabled) parts.push(setupIntro());
     if (!me.enabled) {
       parts.push(h('p', { class: 'setting-status' }, h('span', { class: 'state-pill off' }, 'Off on this server')),
         h('p', {}, 'Optional AI help (meal ideas, describing a meal, reading a label from a photo) is switched off on this server. Nothing you log is sent to an AI service.'));
-      if (isAdmin()) parts.push(h('p', { class: 'hint' }, 'Admins: switch "Optional AI ideas" on in Server administration → Server settings (or AI_ENABLED), and set up a provider under AI providers there (docs/ai.md).'));
+      if (isAdmin()) parts.push(h('p', { class: 'hint' }, 'Admins: switch "Optional AI features" on in Server administration → Server settings (or AI_ENABLED), and set up a provider under AI providers there (docs/ai.md).'));
     } else {
       parts.push(personalPart(me));
     }
@@ -1057,8 +1063,8 @@
         h('li', {}, h('b', {}, 'What may it do? '),
           'Only what you switch on below: meal ideas, swaps and day plans made from foods the app\'s rules already allowed '
           + '(and checked again), turning what you describe into search words, reading a label photo into a draft you check '
-          + 'and, if your admin allows it, naming the foods in a plate photo or answering a short question in Ask (the app checks '
-          + 'every answer before you see it). It cannot give insulin or medicine doses. In Ask it can propose saving food or a recipe; '
+          + 'and, if your admin allows it, naming the foods in a plate photo or answering a short question in the AI assistant (the app checks '
+          + 'every answer before you see it). It cannot give insulin or medicine doses. The AI assistant can propose saving food or a recipe; '
           + 'by default nothing is saved until you press Save, and you can choose to trust it to save without asking if your admin allows that.'),
         h('li', {}, h('b', {}, 'Whose key pays, and who can read the request? '),
           'With the server\'s shared provider, the server\'s key pays and your admin can read what is sent. With your own key, '
@@ -1072,18 +1078,18 @@
   // ---------------------------------------------------------------------------
   const TRUST_CHOICES = [
     ['ask', 'Ask me before every save (recommended)',
-      'Ask shows a card with what it would save. Nothing is saved until you press Save.'],
+      'The AI assistant shows a card with what it would save. Nothing is saved until you press Save.'],
     ['conversation', 'Trust it for this conversation',
-      'Ask saves food and recipes without asking while you chat. You turn this on in Ask; it ends when you start a new conversation or after 12 hours.'],
+      'The AI assistant saves food and recipes without asking while you chat. You turn this on in Ask AI; it ends when you start a new conversation or after 12 hours.'],
     ['always', 'Trust it always',
-      'Ask saves food and recipes without asking, every time, until you change this.'],
+      'The AI assistant saves food and recipes without asking, every time, until you change this.'],
   ];
   const TRUST_DONE = {
-    ask: 'Ask will ask you before every save.',
-    conversation: 'Ask can be trusted for one conversation at a time. Turn it on in Ask.',
-    always: 'Ask will save food and recipes without asking you. Each save can be undone.',
+    ask: 'The AI assistant will ask you before every save.',
+    conversation: 'The AI assistant can be trusted for one conversation at a time. Turn it on in Ask AI.',
+    always: 'The AI assistant will save food and recipes without asking you. Each save can be undone.',
   };
-  const TRUST_WARNING = 'The assistant will save food and recipes without asking you first. It can pick the wrong food or the wrong amount.';
+  const TRUST_WARNING = 'The AI assistant will save food and recipes without asking you first. It can pick the wrong food or the wrong amount.';
   const TRUST_POINTS = [
     'Every number still comes from the app. The low and emergency rules and the dose checks always stay on.',
     'You can undo each save, from the chat or from Today.',
@@ -1097,7 +1103,7 @@
   // me, Escape, the close button) is false and changes nothing. The focus starts on the safe button.
   async function confirmTrust(kind, trigger) {
     if (!trustEl) return false;
-    const { body, foot } = fillSheet(trustEl, 'Trust the assistant to save for you?',
+    const { body, foot } = fillSheet(trustEl, 'Trust the AI assistant to save for you?',
       kind === 'always' ? 'Trust it always' : 'Trust it for this conversation');
     body.append(note('caution', h('p', {}, TRUST_WARNING)),
       h('ul', { class: 'trust-points' }, TRUST_POINTS.map((t) => h('li', {}, t))),
@@ -1109,14 +1115,14 @@
     return awaitChoice(trustEl, ok, trigger, keep);
   }
 
-  // The choice in Settings → AI ideas. `save(patch, text)` is the section's own saver; the server writes the
+  // The choice in Settings → AI features. `save(patch, text)` is the section's own saver; the server writes the
   // activity-log row for every change. Shown only while the admin has the Ask chat on.
   function trustPart(me, save) {
     const current = () => (me.settings && me.settings.trust) || 'ask';
     const allowed = !!me.trusted_saves_allowed;
     const name = uid('ai-trust');
-    const fs = h('fieldset', { class: 'field ai-trust', id: 'set-ai-trust' }, h('legend', {}, 'How much do you trust the assistant?'));
-    fs.append(h('p', { class: 'hint' }, 'This is about Ask, the chat. Photo and label readings are always shown to you to check, whatever you choose.'));
+    const fs = h('fieldset', { class: 'field ai-trust', id: 'set-ai-trust' }, h('legend', {}, 'How much do you trust the AI assistant?'));
+    fs.append(h('p', { class: 'hint' }, 'This is about the AI assistant (Ask AI). Photo and label readings are always shown to you to check, whatever you choose.'));
     const radios = new Map();
     const show = () => { for (const [value, radio] of radios) radio.checked = value === current(); };
     for (const [value, label, hint] of TRUST_CHOICES) {
@@ -1138,8 +1144,8 @@
     if (!allowed) {
       const kept = TRUST_CHOICES.find((c) => c[0] === current())[1].replace(' (recommended)', '');
       fs.append(note('caution', h('p', {}, current() === 'ask'
-        ? 'Your admin has not turned on trusted saves, so Ask always asks you before it saves.'
-        : `Your admin turned trusted saves off, so Ask asks you before every save for now. Your choice (${kept}) is kept and applies again if your admin turns it back on.`)));
+        ? 'Your admin has not turned on trusted saves, so the AI assistant always asks you before it saves.'
+        : `Your admin turned trusted saves off, so the AI assistant asks you before every save for now. Your choice (${kept}) is kept and applies again if your admin turns it back on.`)));
     }
     return fs;
   }
@@ -1180,8 +1186,8 @@
     };
     const optId = uid('ai-opt');
     const opt = h('input', { type: 'checkbox', id: optId, checked: s.opt_in });
-    opt.addEventListener('change', () => save({ opt_in: opt.checked }, opt.checked ? 'AI ideas are on for you.' : 'AI ideas are off for you. Nothing is sent.').catch(() => { opt.checked = !opt.checked; }));
-    wrap.append(check('Use AI ideas', opt, 'Off by default. The app\'s own rules always run first and check every AI idea.'));
+    opt.addEventListener('change', () => save({ opt_in: opt.checked }, opt.checked ? 'AI features are on for you.' : 'AI features are off for you. Nothing is sent.').catch(() => { opt.checked = !opt.checked; }));
+    wrap.append(check('Use AI features', opt, 'Off by default. The app\'s own rules always run first and check every AI idea.'));
 
     // Provider choice. Once the admin has set up routing, which shared provider serves a feature is the admin's decision
     // (the lines below say where each runs); the person's choice is then the server's AI or their own provider.
@@ -1244,7 +1250,7 @@
     });
     pref.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); save.click(); } });
     return h('div', { class: 'field ai-pref' }, h('label', { for: id }, 'Food preferences for AI ideas'),
-      h('div', { class: 'inline-row' }, pref, save), h('span', { class: 'hint', id: `${id}-hint` }, 'Up to 200 characters, sent with meal ideas when AI ideas are on for you (Settings → AI ideas). The app’s own suggestions do not read it.'), msg, err);
+      h('div', { class: 'inline-row' }, pref, save), h('span', { class: 'hint', id: `${id}-hint` }, 'Up to 200 characters, sent with meal ideas when AI ideas are on for you (Settings → AI features). The app’s own suggestions do not read it.'), msg, err);
   }
 
   function ownProviderPart(me) {
@@ -1450,7 +1456,7 @@
   function voicePart(v) {
     const box = h('details', { class: 'settings-details ai-voice-admin' }, h('summary', {}, 'Speech to text (voice input)'));
     if (!v.configured) {
-      box.append(h('p', { class: 'hint' }, 'No transcription server is set. Voice input for Ask needs STT_BASE_URL and STT_MODEL in the environment (docs/ai.md, "Voice input").'));
+      box.append(h('p', { class: 'hint' }, 'No transcription server is set. Voice input for the AI assistant needs STT_BASE_URL and STT_MODEL in the environment (docs/ai.md, "Voice input").'));
       return box;
     }
     box.append(h('dl', { class: 'kv' },
@@ -1458,7 +1464,7 @@
       h('div', { class: 'kv-row' }, h('dt', {}, 'Model'), h('dd', {}, v.model)),
       h('div', { class: 'kv-row' }, h('dt', {}, 'Key'), h('dd', {}, v.key_set ? 'set (never shown)' : 'none')),
       h('div', { class: 'kv-row' }, h('dt', {}, 'Limits'), h('dd', {}, `${v.max_seconds} seconds per recording${v.daily_limit ? `, ${v.daily_limit} per person per day` : ', no daily limit'}`)),
-      h('div', { class: 'kv-row' }, h('dt', {}, 'Voice input'), h('dd', {}, v.enabled ? 'On' : 'Off (Server settings → Optional AI → Voice input for Ask)'))));
+      h('div', { class: 'kv-row' }, h('dt', {}, 'Voice input'), h('dd', {}, v.enabled ? 'On' : 'Off (Server settings → Optional AI → Voice input for the AI assistant)'))));
     box.append(h('p', { class: 'hint' }, 'Set with STT_BASE_URL, STT_MODEL and STT_API_KEY_FILE; the address follows the same rules as an AI provider (a private host must be listed in AI_PRIVATE_HOSTS). Recordings are transcribed and deleted, never stored.'));
     if (v.problem) box.append(note('caution', h('p', {}, `This server will be refused: ${v.problem}.`)));
     const msg = statusMsg();

@@ -31,7 +31,7 @@ the service worker and the camera are allowed):
                saved one" drops the change; an entry another device deleted: "This entry no longer exists", dropped; an
                entry made offline: edited (the queued create is rewritten) and deleted (nothing is sent); "Eaten" and a low
                treatment edited offline like any other entry; the profile still needs a connection.
-* ``ai``       Settings → AI ideas (opt in), AI meal ideas with consent and "What will be sent?", the cards labelled
+* ``ai``       Settings → AI features (opt in), AI meal ideas with consent and "What will be sent?", the cards labelled
                and next to the rule-based list, text only; Quick add's label photo beside the form, "Read the label
                for me": the browser sends a JPEG ≤ 1600 px without EXIF, fields marked "from photo", logged.
 * ``demo``     ``/?mock=1``: the demo's three recorded products (consent, attribution link, quality notes), a
@@ -1230,7 +1230,7 @@ def section_ai(hx: Harness, state: dict[str, Any], fake: FakeAi) -> None:
         if not page.is_checked("#set-ai-slot input[type=checkbox] >> nth=0"):
             page.click("#set-ai-slot label.check >> nth=0")
         page.wait_for_selector("#set-ai-slot >> text=AI ideas are on for you.")
-        check(area, "Settings → AI ideas: opted in", True)
+        check(area, "Settings → AI features: opted in", True)
         hx.shot(page, "ai-settings-1280")
         # AI meal ideas: consent once, cards labelled, next to the rule-based list.
         open_add(page, hx.base)
@@ -1349,7 +1349,7 @@ def section_ai(hx: Harness, state: dict[str, Any], fake: FakeAi) -> None:
               page.is_checked("#sheet-ai input[type=radio][value=planned]") and len(hx.entries()) == before)
         hx.shot(page, "ai-plate-1280")
         page.click("#sheet-ai .sheet-foot >> text=Close")
-        # Settings → AI ideas: the activity lists both calls; a personal provider's key is write-only; a private
+        # Settings → AI features: the activity lists both calls; a personal provider's key is write-only; a private
         # address is refused for a personal provider (only the admin's AI_PRIVATE_HOSTS may be private).
         page.goto(f"{hx.base}/#settings")
         activity = page.locator("#set-ai-slot summary", has_text="AI activity").locator("xpath=..")

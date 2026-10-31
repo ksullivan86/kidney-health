@@ -224,7 +224,7 @@
 
   // Why the card offers nothing: the server's own sentence for the lab report route, or the person's opt-in.
   function whyOff(st) {
-    if (st.opted_in === false) return 'Turn on AI ideas in Settings first: reading a lab report photo uses the AI on your own network.';
+    if (st.opted_in === false) return 'Turn on AI features in Settings first: reading a lab report photo uses the AI on your own network.';
     const labs = st.routes && st.routes.labs;
     if (labs && labs.available) return 'The local AI on this server cannot read photos yet: your admin has not given it a vision model.';
     return (labs && labs.text) || 'Needs a local AI on your own network, which is not set up on this server, so it is off.';

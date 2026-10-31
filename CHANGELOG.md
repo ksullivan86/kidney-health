@@ -7,6 +7,75 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+## 0.14.0 — 2026-10-31
+
+Version 0.14 adds the **Care team**: invite a family member or caregiver who already has an account, and let them help plan
+meals. It also adds **test accounts** for people who try the app on your server, and makes clear that the AI features are AI.
+Nothing new is switched on.
+
+**Before you upgrade, read [Upgrading from 0.13](#upgrading-from-013-read-this-first).** Two schema steps run at the first
+start.
+
+### Upgrading from 0.13 (read this first)
+
+1. **Back up first** (`podman exec kidney-health python -m app.admin backup /data/before-0.14.0.db`). Schema steps 27 and 28
+   run at the first start. Step 27 gives every existing share the Viewer role, so people keep seeing what they saw. Step 28
+   adds test accounts and the feedback table. Nothing that is there changes.
+2. **Coming from 0.12 or older**, read [Upgrading from 0.12](#upgrading-from-012-read-this-first) and the notes before it too.
+3. **Change the tag** to `:0.14`, or pin a digest from the release notes. The shipped files already say `:0.14`.
+4. **Nothing new is switched on.** The Care team needs `SHARING_ENABLED`, as sharing did. Test accounts need
+   `TEST_ACCOUNT_ENABLED` and a password in `TEST_ACCOUNT_PASSWORD_FILE` ([accounts.md](docs/accounts.md#test-accounts)).
+5. **"Sharing" is now "Care team"** on every screen. The API keeps its old route names.
+
+### Known limitations
+
+* A Care helper plans meals and uses the shopping list. A caregiver who logs eaten food, per-permission switches and using
+  the person's saved meals come later.
+* Planning for someone else needs a connection; it is not saved for later offline.
+* Test accounts need HTTPS, like any server with more than one account. A new test password takes effect at the next
+  restart or Reset.
+
+### Care team
+
+* **Settings → Care team** is now its own section near the top of Settings, and Profile links to it. It replaces "Sharing" on
+  every screen. When the admin has not turned it on, people see a line saying so, and admins see where to turn it on.
+* **Invite someone who already has an account here by user name.** They accept or decline in their own Settings → Care team.
+  The screen answers the same whether or not the name is an account. Links still work for everyone else.
+* **Two roles**, changed at any time: a **Viewer** looks, as before; a **Care helper** can also plan meals for the person and
+  use their shopping list. Existing shares become Viewers. A Care helper never changes eaten food, targets, the profile, labs,
+  weight, symptoms or settings, and never changes or removes a planned low treatment. Saved meals are not shared.
+* **Planning for someone**: on the Plan tab a Care helper picks "Planning for", sees a banner with whose plan it is, adds and
+  changes planned food, plans several days, clears planned days and uses the person's shopping list. Food a helper adds shows
+  "Added by" and their name on the person's Today. The person's activity shows invites, answers, role changes and, once a
+  day, that a helper changed the plan.
+* Schema step 27 runs at the first start: it adds a role to shares (all become Viewer), user name invites, and "added by" on
+  log entries. See [accounts.md](docs/accounts.md#care-team) and [design note 25](docs/dev/research/25-care-team.md).
+* The demo shows a sample Care team, and planning for a sample person.
+
+### Test accounts
+
+* **Test accounts for testers**, off until you turn them on (`TEST_ACCOUNT_ENABLED`, or Server administration → Server
+  settings → Test accounts). The server makes `tester`, who starts with the sample person Sam, and `tester-helper`, a Care
+  helper on Sam's Care team. Both use one password from a secret file, `TEST_ACCOUNT_PASSWORD_FILE`. If the file is missing or
+  the password is too weak, nothing is made and the log and Server administration say why.
+* Test accounts are never admins, can be on a Care team only with each other, and the server's AI is off for them unless you
+  set `TEST_ACCOUNT_AI`. Turning them off disables them and signs them out.
+* **Send feedback** at the top of every screen, for test accounts only. Only what the tester types is kept, with the screen's
+  name, the app version and the time. Admins read it, mark it done and export it in **Server administration → Feedback**.
+* **Reset test accounts** in Server administration, or `python -m app.admin reset-test-accounts`, starts both accounts again
+  from Sam's sample data. The feedback stays.
+* A walk-through for testers on your own server: [docs/test-the-full-app.md](docs/test-the-full-app.md). Schema step 28 runs at
+  the first start: it marks test accounts and adds the feedback table. See [accounts.md](docs/accounts.md#test-accounts) and
+  [design note 26](docs/dev/research/26-test-accounts.md).
+
+### AI features
+
+* **The AI features say they are AI.** The **Ask** tab is now **Ask AI**, and its screen is the **AI assistant**. Settings →
+  **AI ideas** is now **AI features**, and **Assistant access** (tokens for an AI chat app you run elsewhere) is now **Outside
+  AI apps**. Both screens say plainly that this is an AI language model, that it can be wrong, that it is not medical advice
+  and that it never gives insulin or medicine doses. The AI assistant also says whether it runs on your own server or at a
+  cloud AI company.
+
 ## 0.13.0 — 2026-10-30
 
 Version 0.13 lets people sign in with Authentik, Google or another OpenID Connect provider. It is off until the admin sets

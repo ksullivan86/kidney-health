@@ -33,10 +33,10 @@
         { name: 'preferences', type: 'str', maxLength: 200, default: '' },
         { name: 'trust', type: 'str', pattern: '^(ask|conversation|always)$', strip: false, default: 'ask' },
       ],
-      label: 'AI ideas', help: 'opt_in, provider (auto, own or shared:<id>), share_age_sex, preferences (at most 200 characters) and trust (ask, conversation or always).' },
+      label: 'AI features', help: 'opt_in, provider (auto, own or shared:<id>), share_age_sex, preferences (at most 200 characters) and trust (ask, conversation or always).' },
     { key: 'ai.allow_trusted_saves', type: 'bool', default: false, scope: 'instance', env: 'AI_ALLOW_TRUSTED_SAVES',
       label: 'Let people trust Ask to save without asking',
-      help: 'Off by default. Needs Ask on. When on, a person can choose in Settings → AI ideas to let Ask save food and recipes at once (for one conversation, or always), after a warning. '
+      help: 'Off by default. Needs the AI assistant (Ask AI) on. When on, a person can choose in Settings → AI features to let the AI assistant save food and recipes at once (for one conversation, or always), after a warning. '
         + 'Off: Ask always shows a card and saves only when the person presses Save. Either way the app\'s numbers, the low and emergency rules and the dose checks stay on, and every save can be undone.' },
     { key: 'ai.allow_user_base_url', type: 'bool', default: false, scope: 'instance', env: 'AI_ALLOW_USER_BASE_URL',
       label: 'People may enter their own AI server address', help: 'Only https on port 443 to public addresses. Off by default; always off when AI_HTTP_PROXY is set.' },
@@ -47,7 +47,7 @@
       help: 'Off by default. Needs AI on. When on, people who opted in get an Ask screen: they type a question, the AI looks up the app\'s own numbers, and the app checks the answer before it is shown. '
         + 'Lows and emergencies are answered by the app\'s rules without asking the AI. Each question can use several AI calls.' },
     { key: 'ai.enabled', type: 'bool', default: false, scope: 'instance', env: 'AI_ENABLED',
-      label: 'Optional AI ideas', help: 'Off by default. When on, people who opt in can ask an AI provider you set up for meal ideas and photo help. The rules always run first and check every AI idea; nothing is sent anywhere while this is off.' },
+      label: 'Optional AI features', help: 'Off by default. When on, people who opt in can ask an AI provider you set up for meal ideas and photo help. The rules always run first and check every AI idea; nothing is sent anywhere while this is off.' },
     { key: 'ai.max_concurrency', type: 'int', min: 1, max: 32, default: 2, scope: 'instance', env: 'AI_MAX_CONCURRENCY',
       label: 'AI calls at the same time (whole server)', help: 'Each person has at most one call running. Extra calls are told to try again in a few seconds.' },
     { key: 'ai.recipe_steps', type: 'bool', default: false, scope: 'instance', env: 'AI_RECIPE_STEPS',
@@ -81,13 +81,13 @@
       label: 'Plate photos (AI estimate of what is on a plate)', help: 'Off by default. Needs a provider with a vision model. Portion estimates from photos are rough: the app says so on every result and never logs them without a tap.' },
     { key: 'ai.voice_enabled', type: 'bool', default: false, scope: 'instance', env: 'AI_VOICE_ENABLED',
       label: 'Voice input for Ask (a microphone button)',
-      help: 'Off by default. Needs Ask on and a transcription server set with STT_BASE_URL. When on, people can record a question; the recording goes to that server to become text, '
+      help: 'Off by default. Needs the AI assistant (Ask AI) on and a transcription server set with STT_BASE_URL. When on, people can record a question; the recording goes to that server to become text, '
         + 'is deleted at once, and the text appears in the box for them to read and edit before anything is sent to the AI.' },
     // Assistant access (docs/dev/plans/assistant-step1.md part A; app/auth/api_tokens.py). The tokens are rows of
     // api_tokens, never settings.
     { key: 'assistant.enabled', type: 'bool', default: false, scope: 'instance', env: 'ASSISTANT_ENABLED',
-      label: 'Assistant access (personal tokens for a chat assistant)',
-      help: 'Off by default. When on, each person can make tokens in Settings → Assistant access that let a chat assistant they connect read their own food log and targets and, if the person allows it for that token, also save food and recipes. '
+      label: 'Outside AI apps (personal tokens for an AI chat app)',
+      help: 'Off by default. When on, each person can make tokens in Settings → Outside AI apps that let a chat assistant they connect read their own food log and targets and, if the person allows it for that token, also save food and recipes. '
         + 'While off, no token can be made or used; turned on again, tokens that have not expired or been revoked work again.' },
     { key: 'audit.retention_days', type: 'int', min: 1, max: 3650, default: 365, scope: 'instance', env: 'AUDIT_RETENTION_DAYS',
       label: 'Keep the activity log for (days)', help: '' },
@@ -227,11 +227,12 @@
     { key: 'registration.mode', type: 'choice', options: ['invite', 'closed', 'open'], default: 'invite', scope: 'instance', env: 'REGISTRATION_MODE',
       label: 'Registration',
       help: 'invite: admins send single-use links. closed: admins create accounts. open: anyone who reaches the page can register (HTTPS required).' },
-    // Read-only sharing (design note 19; app/sharing.py). The shares are rows of the shares table, never settings.
+    // The Care team (design notes 19 and 25; app/sharing.py). The shares are rows of the shares table, never settings.
     { key: 'sharing.enabled', type: 'bool', default: false, scope: 'instance', env: 'SHARING_ENABLED',
-      label: 'Let people share their log, read-only, with someone else on this server',
-      help: 'Off by default. When on, each person can make a link in Settings → Account → Sharing and send it to a caregiver or dietitian with an account here. '
-        + 'Once they accept it, they can read the parts that were ticked (food log, lab results, weight and blood pressure, symptoms) and never change anything. Either side can stop it at any time. While off, nobody can see anyone else\'s data; turned on again, shares that were not stopped work again.' },
+      label: 'Turn on the Care team: people can let family or a dietitian on this server see their log, or help plan meals',
+      help: 'Off by default. When on, each person can add someone with an account here to their Care team in Settings → Care team, by user name or with a link. '
+        + 'A Viewer can read the parts that were ticked (food log, lab results, weight and blood pressure, symptoms) and never change anything. A Care helper can also plan meals and use the shopping list. '
+        + 'Either side can stop it at any time. While off, nobody can see anyone else\'s data; turned on again, Care teams that were not stopped work again.' },
     // Personalised targets and labs (note 05 §4.9; app/settings_registry.py).
     { key: 'targets.default_activity', type: 'choice', options: ['inactive', 'low_active', 'active', 'very_active'], default: 'inactive', scope: 'instance', env: 'DEFAULT_ACTIVITY',
       label: 'Activity level used until a person chooses theirs', help: 'Used for the calorie estimate (2023 Dietary Reference Intakes).' },
@@ -247,6 +248,15 @@
       label: 'Let lab results change suggested targets',
       help: 'Off: potassium and phosphorus suggestions use the stage defaults and lab notes are left out. The warning for a very high '
         + 'potassium result is always shown. Keep it off on public demo servers until a clinician has reviewed the lab rules.' },
+    // Test accounts (design note 26; app/test_accounts.py). The password is env only (TEST_ACCOUNT_PASSWORD_FILE), never a setting.
+    { key: 'test_accounts.ai', type: 'bool', default: false, scope: 'instance', env: 'TEST_ACCOUNT_AI',
+      label: 'Let the test accounts use the server\'s AI',
+      help: 'Off by default: the AI features are off for test accounts, whatever else is set. When on, they work for test accounts as for everyone else (AI must also be on).' },
+    { key: 'test_accounts.enabled', type: 'bool', default: false, scope: 'instance', env: 'TEST_ACCOUNT_ENABLED',
+      label: 'Test accounts: let testers sign in as tester and tester-helper',
+      help: 'Off by default. When on, the server makes two accounts if they are missing: tester, who starts with the sample person Sam\'s food log, lab results and weights, '
+        + 'and tester-helper, a Care helper on tester\'s Care team. Both use the password in the file TEST_ACCOUNT_PASSWORD_FILE. They are never admins, can only be on a Care team '
+        + 'with each other, and get a Send feedback button. Turned off, they are disabled and signed out (not deleted); turned on again, they work again. Turn on the Care team too, to test it.' },
     { key: 'ui.theme', type: 'choice', options: ['system', 'light', 'dark'], default: 'system', scope: 'user_default', env: 'UI_THEME',
       label: 'Theme', help: '' },
     { key: 'user.units.labs', type: 'choice', options: ['us', 'si'], default: 'us', scope: 'user_default', env: 'LAB_UNITS',

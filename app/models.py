@@ -495,6 +495,8 @@ class Entry(BaseModel):
     updated_at: str
     # v0.4: a hash of the stored content; PUT / DELETE take it back as If-Match, and a mismatch is a 412 (app/log.py).
     version: str
+    # Schema step 27 (design note 25): the name of the Care helper who planned it for the person, else null.
+    added_by: str | None = None
 
 
 class LogBatchResult(BaseModel):

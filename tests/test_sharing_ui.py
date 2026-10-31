@@ -32,27 +32,29 @@ def test_the_view_draws_with_elements_and_calls_only_its_routes():
     assert "innerHTML" not in CODE and "insertAdjacentHTML" not in CODE and "import(" not in CODE
     assert not re.search(r"localStorage|sessionStorage|indexedDB|document\.cookie", CODE), "nothing about a link is kept in the browser"
     routes = set(re.findall(r"'(/api/[^'`$]+)", CODE))
-    assert routes == {"/api/me/shares", "/api/shared", "/api/shared/info", "/api/shared/accept"}
+    assert routes == {"/api/me/shares", "/api/me/shares/invite", "/api/shared", "/api/shared/info", "/api/shared/accept"}
     templated = set(re.findall(r"`(/api/[^`]+)`", CODE))
-    assert templated == {"/api/me/shares/${id}", "/api/shared/${id}", "/api/shared/${encodeURIComponent(id)}"}
+    assert templated == {"/api/me/shares/${id}", "/api/me/shares/invites/${id}", "/api/me/shares/${id}/role", "/api/shared/${id}",
+                         "/api/shared/invites/${id}/${yes ? 'accept' : 'decline'}", "/api/shared/${encodeURIComponent(id)}"}
     methods = re.findall(r"request\('(\w+)'", CODE)
-    assert set(methods) == {"GET", "POST", "DELETE"}
+    assert set(methods) == {"GET", "POST", "PUT", "DELETE"}  # PUT: the role (design note 25); nothing here writes to a log
     reads = CODE[CODE.index("function reads(id)"):CODE.index("// Pure helpers")]
     assert set(re.findall(r"request\('(\w+)'", reads)) == {"GET"}, "the shared reads are reads only"
 
 
 def test_settings_shows_the_block_outside_no_sign_in_mode_and_the_admin_can_end_sharing():
     settings = (STATIC / "js" / "views" / "settings.js").read_text(encoding="utf-8")
-    assert "if (authMode() !== 'none' && KH.sharing) body.append(KH.sharing.block());" in settings
+    # Settings → Care team, its own section (design note 25; tests/test_care_team_ui.py checks where it sits)
+    assert "sec.hidden = authMode() === 'none' || !KH.sharing;" in settings and "KH.sharing.block()" in settings
     assert "endUserShares: (id) => request('DELETE', `/api/admin/users/${id}/shares`)" in settings
-    assert "if (u.shares)" in settings and "'End sharing'" in settings
-    assert "['Sharing', ['sharing.enabled']]," in settings
+    assert "if (u.shares)" in settings and "'End Care team'" in settings
+    assert "['Care team', ['sharing.enabled']]," in settings
 
 
 def test_the_form_offers_how_long_a_share_lasts():
     assert "const DAY_CHOICES = [['', 'Until I stop it'], ['7', '1 week'], ['30', '30 days'], ['90', '90 days'], ['365', '1 year']];" in CODE
-    assert "A.make(areas, Number(lasts.value) || null)" in CODE
-    assert "make: (areas, days) => request('POST', '/api/me/shares', { areas, days: days || null })," in CODE
+    assert "days: Number(lasts.value) || null" in CODE and "A.make(areas, days, role)" in CODE
+    assert "make: (areas, days, role) => request('POST', '/api/me/shares', { areas, days: days || null, role: role || 'viewer' })," in CODE
     settings = (STATIC / "js" / "views" / "settings.js").read_text(encoding="utf-8")
     assert "time: 'on the end date you chose'" in settings
 
@@ -98,10 +100,12 @@ def test_trends_show_a_share_read_only():
             assert word not in shared_part or "source ? source.reads : api" in code, word
 
 
-def test_the_demo_answers_as_a_server_with_sharing_off():
-    mock = (STATIC / "js" / "mock" / "auth.js").read_text(encoding="utf-8")
-    assert "route('GET', '/api/me/shares', function () { this._currentUser(); return { enabled: false," in mock
-    assert "shares: 0 }" in mock and "route('DELETE', userIdRoute('/shares')" in mock
+def test_the_demo_shows_a_sample_care_team():
+    """Design note 25: the demo answers with a sample Care team (js/mock/care.js; run in Node by tests/test_care_team_ui.py)."""
+    auth = (STATIC / "js" / "mock" / "auth.js").read_text(encoding="utf-8")
+    care = (STATIC / "js" / "mock" / "care.js").read_text(encoding="utf-8")
+    assert "'/api/me/shares'" not in auth and "route('GET', '/api/me/shares', function () {" in care
+    assert "shares: 0 }" in auth and "route('DELETE', userIdRoute('/shares')" in auth
 
 
 def test_the_activity_list_names_every_share_event_in_words():
@@ -109,8 +113,9 @@ def test_the_activity_list_names_every_share_event_in_words():
 
     settings = (STATIC / "js" / "views" / "settings.js").read_text(encoding="utf-8")
     labels = settings[settings.index("const ACTION_LABEL = {"):settings.index("};", settings.index("const ACTION_LABEL = {"))]
-    actions = sorted(a for a in ACTIONS if a.startswith("share."))
-    assert actions == ["share.accepted", "share.code_cancelled", "share.code_created", "share.ended", "share.viewed"]
+    actions = sorted(a for a in ACTIONS if a.startswith(("share.", "care.")))
+    assert actions == ["care.invite_answered", "care.invite_cancelled", "care.invited", "care.plan_changed", "care.role_changed",
+                       "share.accepted", "share.code_cancelled", "share.code_created", "share.ended", "share.viewed"]
     for action in actions:
         assert action in USER_VISIBLE_ACTIONS and f"'{action}':" in labels, action
 
@@ -155,9 +160,9 @@ def test_the_pure_helpers():
     assert got["all"] == "food log, lab results, weight and blood pressure and symptoms"
     assert got["today"] == "looked today" and got["never"] == "has not looked yet" and got["before"].startswith("last looked Oct 27")
     assert got["who"] == ["Ana (ana)", "ana"]
-    assert got["question"] == ("Ana (ana2) wants to share their food log and lab results with you. You can look, but not change "
+    assert got["question"] == ("Ana (ana2) wants to add you to their Care team and share their food log and lab results with you. You can look, but not change "
                                "anything. Ana (ana2) can stop this at any time, and so can you.")
-    assert got["line"].startswith("food log · since Oct 29") and got["line"].endswith("has not looked yet · their account is turned off")
+    assert got["line"].startswith("Viewer · food log · since Oct 29") and got["line"].endswith("has not looked yet · their account is turned off")
     assert "until" not in got["line"] and " · until Nov 28, 2026 · has not looked yet" in got["dated"]
     assert got["person"].endswith(" · until Nov 28, 2026")
     assert got["lasts"] == ["until one of you stops it", "for 1 day", "for 30 days"]

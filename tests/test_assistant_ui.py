@@ -1,4 +1,4 @@
-"""Settings → Assistant access: the second tick, "Also let it remember tastes (likes and dislikes)" (note 09 §4.8b;
+"""Settings → Outside AI apps: the second tick, "Also let it remember tastes (likes and dislikes)" (note 09 §4.8b;
 ``app/static/js/views/settings.js``, ``app/auth/api_tokens.py``).
 
 The new-token form and the token list are run in Node against a tiny fake page and a fake server (``tests/js/assistant_page.mjs``):

@@ -168,7 +168,7 @@ def test_the_card_is_offered_only_when_the_server_says_so_and_says_why_when_it_i
     assert page["aiOff"]["section"] is True  # AI is off on this server (or this is the demo): the card is not there at all
     assert page["noLocalAi"] == {"section": False, "controls": True, "why": False,
                                  "whyText": "Needs a local AI on your own network, which is not set up on this server, so it is off."}
-    assert "Turn on AI ideas in Settings" in page["notOptedIn"]["whyText"] and page["notOptedIn"]["controls"] is True
+    assert "Turn on AI features in Settings" in page["notOptedIn"]["whyText"] and page["notOptedIn"]["controls"] is True
     assert "cannot read photos yet" in page["noVisionModel"]["whyText"]
     assert page["switchedOff"]["whyText"] == "Switched off by your admin." and page["switchedOff"]["controls"] is True
     assert page["offeredAgain"]["controls"] is False and page["offeredAgain"]["section"] is False

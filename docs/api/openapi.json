@@ -1308,6 +1308,61 @@
         "title": "CarbRoom",
         "type": "object"
       },
+      "CareInviteCreate": {
+        "additionalProperties": false,
+        "description": "``POST /api/me/shares/invite``: someone who already has an account here, by user name (design note 25 §3).",
+        "properties": {
+          "areas": {
+            "items": {
+              "enum": [
+                "food",
+                "labs",
+                "body",
+                "symptoms"
+              ],
+              "type": "string"
+            },
+            "maxItems": 4,
+            "minItems": 1,
+            "title": "Areas",
+            "type": "array"
+          },
+          "days": {
+            "anyOf": [
+              {
+                "maximum": 365.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Days"
+          },
+          "role": {
+            "default": "viewer",
+            "enum": [
+              "viewer",
+              "care_helper"
+            ],
+            "title": "Role",
+            "type": "string"
+          },
+          "username": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username",
+          "areas"
+        ],
+        "title": "CareInviteCreate",
+        "type": "object"
+      },
       "Categories": {
         "properties": {
           "categories": {
@@ -2305,6 +2360,17 @@
       },
       "Entry": {
         "properties": {
+          "added_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Added By"
+          },
           "client_id": {
             "anyOf": [
               {
@@ -2578,6 +2644,71 @@
           "note"
         ],
         "title": "FamiliarMeal",
+        "type": "object"
+      },
+      "FeedbackCreate": {
+        "additionalProperties": false,
+        "description": "What a tester typed. ``screen`` is the name of the screen the app was on (the app fills it in).",
+        "properties": {
+          "happened": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Happened",
+            "type": "string"
+          },
+          "screen": {
+            "maxLength": 60,
+            "minLength": 1,
+            "pattern": "^[^\\x00-\\x1f\\x7f<>]+$",
+            "title": "Screen",
+            "type": "string"
+          },
+          "trying": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Trying",
+            "type": "string"
+          },
+          "unsafe": {
+            "default": false,
+            "title": "Unsafe",
+            "type": "boolean"
+          },
+          "useful": {
+            "anyOf": [
+              {
+                "enum": [
+                  "yes",
+                  "somewhat",
+                  "no"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Useful"
+          }
+        },
+        "required": [
+          "screen"
+        ],
+        "title": "FeedbackCreate",
+        "type": "object"
+      },
+      "FeedbackDone": {
+        "additionalProperties": false,
+        "properties": {
+          "done": {
+            "title": "Done",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "done"
+        ],
+        "title": "FeedbackDone",
         "type": "object"
       },
       "FitRecipeItem": {
@@ -3638,6 +3769,201 @@
           "url"
         ],
         "title": "HandbookPage",
+        "type": "object"
+      },
+      "HelperBatch": {
+        "additionalProperties": false,
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/HelperEntry"
+            },
+            "maxItems": 40,
+            "minItems": 1,
+            "title": "Entries",
+            "type": "array"
+          }
+        },
+        "required": [
+          "entries"
+        ],
+        "title": "HelperBatch",
+        "type": "object"
+      },
+      "HelperEntry": {
+        "description": "One entry a Care helper adds: always planned. ``client_id`` is not used (the helper's device never queues it).",
+        "properties": {
+          "client_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "food_id": {
+            "maximum": 9.223372036854776e+18,
+            "minimum": 1.0,
+            "title": "Food Id",
+            "type": "integer"
+          },
+          "grams": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 100000.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grams"
+          },
+          "meal": {
+            "enum": [
+              "breakfast",
+              "lunch",
+              "dinner",
+              "snack"
+            ],
+            "title": "Meal",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "purpose": {
+            "anyOf": [
+              {
+                "enum": [
+                  "hypo",
+                  "none"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purpose"
+          },
+          "servings": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1000.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Servings"
+          },
+          "status": {
+            "const": "planned",
+            "default": "planned",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "date",
+          "meal",
+          "food_id"
+        ],
+        "title": "HelperEntry",
+        "type": "object"
+      },
+      "HelperUpdate": {
+        "additionalProperties": false,
+        "description": "What a Care helper may change on a planned entry: the amount, the meal, the day and the note. Never the status or\nwhether it treats a low.",
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "grams": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 100000.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grams"
+          },
+          "meal": {
+            "anyOf": [
+              {
+                "enum": [
+                  "breakfast",
+                  "lunch",
+                  "dinner",
+                  "snack"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meal"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "servings": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 1000.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Servings"
+          }
+        },
+        "title": "HelperUpdate",
         "type": "object"
       },
       "HypoOption": {
@@ -9046,6 +9372,24 @@
         "title": "ResetBody",
         "type": "object"
       },
+      "RoleChange": {
+        "additionalProperties": false,
+        "properties": {
+          "role": {
+            "enum": [
+              "viewer",
+              "care_helper"
+            ],
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "role"
+        ],
+        "title": "RoleChange",
+        "type": "object"
+      },
       "RoutingBody": {
         "additionalProperties": false,
         "description": "Any subset: a route per feature, and the shared provider holding each role (0 clears it).",
@@ -9392,6 +9736,15 @@
               }
             ],
             "title": "Days"
+          },
+          "role": {
+            "default": "viewer",
+            "enum": [
+              "viewer",
+              "care_helper"
+            ],
+            "title": "Role",
+            "type": "string"
           }
         },
         "required": [
@@ -11020,7 +11373,7 @@
     "securitySchemes": {
       "assistantToken": {
         "bearerFormat": "kha_ followed by 43 characters",
-        "description": "An assistant access token (`Authorization: Bearer kha_...`), made in Settings, Assistant access, with the scope `assistant:read` and optionally `assistant:log`. It works only at `/mcp`, and only while the instance switch `assistant.enabled` is on. No cookie is read there, and the cookie checks of `/api` do not apply.",
+        "description": "An assistant access token (`Authorization: Bearer kha_...`), made in Settings, Outside AI apps, with the scope `assistant:read` and optionally `assistant:log`. It works only at `/mcp`, and only while the instance switch `assistant.enabled` is on. No cookie is read there, and the cookie checks of `/api` do not apply.",
         "scheme": "bearer",
         "type": "http"
       },
@@ -11041,7 +11394,7 @@
   "info": {
     "description": "Self-hosted food log with renal-diet and type 1 diabetes nutrient warnings, meal planning and period summaries.\n\nThis document is checked in as `docs/api/openapi.json`. `info.version` is the app's version; `info.x-api-version` is the API version, an integer that is raised only for a breaking change. Every error answer is `{\"detail\": string, ...}`; request validation is **400** with `errors`, never 422. Sign in with `POST /api/auth/login` (a cookie, see the `session` scheme); `/mcp` and `/push/v1/body` take bearer tokens.",
     "title": "Kidney Health Food Log",
-    "version": "0.13.0",
+    "version": "0.14.0",
     "x-api-version": 1
   },
   "openapi": "3.1.0",
@@ -11666,6 +12019,276 @@
         ]
       }
     },
+    "/api/admin/feedback": {
+      "get": {
+        "description": "``{feedback, counts}``: what testers sent, newest first, filtered by ``state`` (``open``, ``done``, ``all``) and\n``unsafe`` (only \"looked wrong or unsafe\"); ``before`` pages back. ``counts``: ``open``, ``done``, ``unsafe_open``.",
+        "operationId": "admin_list_feedback",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "default": "open",
+              "enum": [
+                "open",
+                "done",
+                "all"
+              ],
+              "title": "State",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "unsafe",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Unsafe",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 9223372036854775807,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Admin List Feedback",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "List Feedback",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/feedback.csv": {
+      "get": {
+        "description": "Feedback as CSV (oldest first), with the same filters. Cells a spreadsheet would run as a formula are escaped.",
+        "operationId": "admin_export_feedback",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "open",
+                "done",
+                "all"
+              ],
+              "title": "State",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "unsafe",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Unsafe",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Export Feedback",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/feedback/done": {
+      "delete": {
+        "description": "Delete every item marked done (export it first if you want to keep it). ``{deleted}``.",
+        "operationId": "admin_delete_done_feedback",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Admin Delete Done Feedback",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Delete Done Feedback",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/feedback/{feedback_id}": {
+      "patch": {
+        "description": "Mark one item done (or open again). Unknown is ``404``.",
+        "operationId": "admin_mark_feedback",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "feedback_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Feedback Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackDone"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Admin Mark Feedback",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Mark Feedback",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/admin/invites": {
       "get": {
         "operationId": "admin_list_invites",
@@ -12047,6 +12670,85 @@
           }
         ],
         "summary": "Update Instance Settings",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/test-accounts": {
+      "get": {
+        "description": "``{enabled, ai, problem, accounts}``: the two switches, why the accounts could not be made (or null), and each test\naccount's ``{id, username, status, last_login_at}``. Never the password or its file's contents.",
+        "operationId": "admin_test_accounts_status",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Admin Test Accounts Status",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Test Accounts Status",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/test-accounts/reset": {
+      "post": {
+        "description": "Delete everything both test accounts made and start them again: Sam's sample data, tester-helper on tester's Care team,\nthe password from the file. Both are signed out. The feedback stays. ``409`` while test accounts are off or cannot be made.",
+        "operationId": "admin_reset_test_accounts",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Admin Reset Test Accounts",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Reset Test Accounts",
         "tags": [
           "admin"
         ]
@@ -14857,6 +15559,96 @@
         "summary": "Update Weight",
         "tags": [
           "body"
+        ]
+      }
+    },
+    "/api/feedback": {
+      "get": {
+        "description": "``{feedback, max_length}``: what you sent, newest first, and whether the admin marked each one done. Test accounts\nonly (``404`` for everyone else).",
+        "operationId": "feedback_my_feedback",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Feedback My Feedback",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "My Feedback",
+        "tags": [
+          "feedback"
+        ]
+      },
+      "post": {
+        "description": "Send feedback about the screen you are on. Only what you typed is kept, with the screen name, the app version and the\ntime. At least one of ``trying`` and ``happened``. 50 a day; ``409`` when the server already keeps 5,000. Test accounts\nonly (``404`` for everyone else).",
+        "operationId": "feedback_send_feedback",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Feedback Send Feedback",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Send Feedback",
+        "tags": [
+          "feedback"
         ]
       }
     },
@@ -19131,7 +19923,7 @@
     },
     "/api/me/shares": {
       "get": {
-        "description": "``{enabled, areas, max, sharing, codes}``: who can see your data and your unused links. ``enabled`` is false (and the lists\nempty) while the admin has sharing off.",
+        "description": "``{enabled, areas, roles, max, sharing, codes, invites}``: your Care team (each with its ``role``), your unused links and\nyour user name invites waiting for an answer. ``enabled`` is false (and the lists empty) while the admin has sharing off.",
         "operationId": "me_list_my_shares",
         "responses": {
           "200": {
@@ -19167,7 +19959,7 @@
         ]
       },
       "post": {
-        "description": "A new link for the areas ticked (``food``, ``labs``, ``body``, ``symptoms``), in this answer only (``link``). It works once,\nfor 7 days. ``days`` (1 to 365) makes the share end that many days after it is accepted; without it the share lasts until\nsomeone stops it. Needs a recent password, like making a token.",
+        "description": "A new link for the areas ticked (``food``, ``labs``, ``body``, ``symptoms``), in this answer only (``link``). It works once,\nfor 7 days. ``days`` (1 to 365) makes the share end that many days after it is accepted; without it the share lasts until\nsomeone stops it. ``role`` (``viewer`` or ``care_helper``) is the role the share starts with. Needs a recent password, like\nmaking a token.",
         "operationId": "me_create_share_link",
         "requestBody": {
           "content": {
@@ -19222,6 +20014,114 @@
         ]
       }
     },
+    "/api/me/shares/invite": {
+      "post": {
+        "description": "Invite someone who already has an account here to your Care team, by their user name (design note 25 §3). The answer is\nthe same whether or not the name belongs to an active account: the invite as your list shows it, waiting 7 days for an\nanswer. Only an active account with that name sees it, in their own Settings → Care team. A second invite to the same name\nreplaces the first. Your own name is ``400``. 20 tries an hour; at most 5 waiting. Needs a recent password, like a link.",
+        "operationId": "me_invite_by_username",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CareInviteCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Me Invite By Username",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Invite By Username",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/me/shares/invites/{invite_id}": {
+      "delete": {
+        "description": "Cancel a user name invite that is still waiting. Not yours, answered or lapsed is ``404``.",
+        "operationId": "me_cancel_invite",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invite_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Invite Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Cancel Invite",
+        "tags": [
+          "me"
+        ]
+      }
+    },
     "/api/me/shares/{share_id}": {
       "delete": {
         "description": "Stop sharing with someone, or cancel a link nobody used. Not yours, or already ended, is ``404``.",
@@ -19265,6 +20165,76 @@
           }
         ],
         "summary": "End My Share",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/me/shares/{share_id}/role": {
+      "put": {
+        "description": "Change what someone on your Care team may do: ``viewer`` (look only) or ``care_helper`` (also plan your meals and use\nyour shopping list). A Care helper always sees your food log, so it is added. The next request they make uses the new\nrole. Not yours or ended is ``404``.",
+        "operationId": "me_change_role",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Share Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Me Change Role",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Change Role",
         "tags": [
           "me"
         ]
@@ -20336,7 +21306,7 @@
     },
     "/api/shared": {
       "get": {
-        "description": "``{people}``: the people who share with you and what, while their account is active.",
+        "description": "``{people, invites}``: the people whose Care team you are on (what they share and your ``role``), and the user name\ninvites waiting for your answer, while the other account is active.",
         "operationId": "shared_list_shared_with_me",
         "responses": {
           "200": {
@@ -20484,6 +21454,120 @@
           }
         ],
         "summary": "Share Link Info",
+        "tags": [
+          "shared"
+        ]
+      }
+    },
+    "/api/shared/invites/{invite_id}/accept": {
+      "post": {
+        "description": "Join someone's Care team: from now on you can see what they share and, as a Care helper, plan their meals. A newer\ninvite from someone whose team you are already on replaces the old share. Not yours, answered or lapsed is ``404``.",
+        "operationId": "shared_accept_invite",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invite_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Invite Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Shared Accept Invite",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Accept Invite",
+        "tags": [
+          "shared"
+        ]
+      }
+    },
+    "/api/shared/invites/{invite_id}/decline": {
+      "post": {
+        "description": "Say no to an invite. The person who sent it sees that you declined in their activity. Not yours is ``404``.",
+        "operationId": "shared_decline_invite",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invite_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Invite Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Decline Invite",
         "tags": [
           "shared"
         ]
@@ -20782,6 +21866,160 @@
         ]
       }
     },
+    "/api/shared/{share_id}/foods": {
+      "get": {
+        "description": "Food search as the person sees it (their own foods too), so a food the helper plans is one the person can use.",
+        "operationId": "shared_helper_foods",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Share Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "Q",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FoodList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Helper Foods",
+        "tags": [
+          "shared"
+        ]
+      }
+    },
+    "/api/shared/{share_id}/guidance/plan-days": {
+      "post": {
+        "description": "Plan several days for the person against their targets (computes only; \"Add to plan\" sends the entries to\n``POST …/log/batch``). The person's saved meals are never used, so a plan never shows them (design note 25 §7).",
+        "operationId": "shared_helper_plan_days",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Share Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanDaysRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PlanDaysResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/GuidanceUnavailable"
+                    }
+                  ],
+                  "title": "Response Shared Helper Plan Days"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Helper Plan Days",
+        "tags": [
+          "shared"
+        ]
+      }
+    },
     "/api/shared/{share_id}/labs": {
       "get": {
         "description": "The owner's lab results, as ``GET /api/labs``.",
@@ -20942,6 +22180,208 @@
           }
         ],
         "summary": "Shared Day",
+        "tags": [
+          "shared"
+        ]
+      },
+      "post": {
+        "description": "Plan one food on the person's day. It is always ``planned`` and records the helper (``added_by``). The food must be one\nthe person can use (``404`` otherwise). A planned low treatment may be added, like any food.",
+        "operationId": "shared_helper_add",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Share Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HelperEntry"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Entry"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Helper Add",
+        "tags": [
+          "shared"
+        ]
+      }
+    },
+    "/api/shared/{share_id}/log/batch": {
+      "post": {
+        "description": "Plan 1 to 40 foods on the person's days in one go (\"Add to plan\"), all or nothing, each as ``POST …/log``.",
+        "operationId": "shared_helper_add_batch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Share Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HelperBatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogBatchResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Helper Add Batch",
+        "tags": [
+          "shared"
+        ]
+      }
+    },
+    "/api/shared/{share_id}/log/clear-planned": {
+      "post": {
+        "description": "Clear planned days for the person, exactly as their own route: eaten food and planned low treatments always stay.",
+        "operationId": "shared_helper_clear",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Share Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClearPlanned"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClearPlannedResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Helper Clear",
         "tags": [
           "shared"
         ]
@@ -21116,6 +22556,285 @@
           }
         ],
         "summary": "Shared Period",
+        "tags": [
+          "shared"
+        ]
+      }
+    },
+    "/api/shared/{share_id}/log/{entry_id}": {
+      "delete": {
+        "description": "Take one of the person's planned entries off their plan. Eaten food and planned low treatments are ``404``.",
+        "operationId": "shared_helper_remove",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Share Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Entry Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The entry's `version`, quoted: \"<version>\". When it is not the entry's version now the answer is 412 and nothing changes.",
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The entry's `version`, quoted: \"<version>\". When it is not the entry's version now the answer is 412 and nothing changes.",
+              "title": "If-Match"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryConflictProblem"
+                }
+              }
+            },
+            "description": "If-Match is not the entry's version now: the entry was changed since the client read it. The body is {detail, current: Entry}; nothing was changed."
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Helper Remove",
+        "tags": [
+          "shared"
+        ]
+      },
+      "put": {
+        "description": "Change the amount, meal, day or note of one of the person's planned entries. Eaten food and planned low treatments are\n``404``: only the person changes those. ``If-Match`` works as on the person's own route.",
+        "operationId": "shared_helper_change",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Share Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Entry Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The entry's `version`, quoted: \"<version>\". When it is not the entry's version now the answer is 412 and nothing changes.",
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The entry's `version`, quoted: \"<version>\". When it is not the entry's version now the answer is 412 and nothing changes.",
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HelperUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Entry"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryConflictProblem"
+                }
+              }
+            },
+            "description": "If-Match is not the entry's version now: the entry was changed since the client read it. The body is {detail, current: Entry}; nothing was changed."
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Helper Change",
+        "tags": [
+          "shared"
+        ]
+      }
+    },
+    "/api/shared/{share_id}/plan/shopping": {
+      "get": {
+        "description": "The person's shopping list, as ``GET /api/plan/shopping`` answers it to them. Ticks stay on the helper's device.",
+        "operationId": "shared_helper_shopping",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Share Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShoppingList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Helper Shopping",
         "tags": [
           "shared"
         ]

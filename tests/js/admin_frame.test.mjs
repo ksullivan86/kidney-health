@@ -26,6 +26,7 @@ function setup({ blocked = false } = {}) {
     loadServerSettings: () => { loads.push('settings'); return Promise.resolve(); }, loadPeople: () => { loads.push('people'); return Promise.resolve(); },
     loadSharedKeys: () => loads.push('keys'), loadUsage: () => loads.push('usage'), loadAudit: () => loads.push('audit'),
     loadServerAbout: () => loads.push('about'), console, Promise,
+    MOCK: false, KH: { feedback: { loadAdmin: () => loads.push('testers') } }, // design note 26: Test accounts and Feedback
   });
   vm.runInContext(`${code}\nglobalThis.renderAdminFrame = renderAdminFrame;`, context);
   const count = (id) => page.find($('#set-admin-body'), (e) => e.id === id).length;
@@ -42,7 +43,7 @@ for (const order of ['in order', 'newest first']) {
     if (order === 'in order') { s.answer(0); s.answer(1); } else { s.answer(1); await settle(); s.answer(0); }
     await Promise.all([first, second]);
     await settle();
-    for (const id of ['set-people', 'set-server', 'set-shared', 'set-usage', 'set-audit', 'set-server-about']) assert.equal(s.count(id), 1, id);
+    for (const id of ['set-people', 'set-server', 'set-shared', 'set-usage', 'set-testers', 'set-feedback', 'set-audit', 'set-server-about']) assert.equal(s.count(id), 1, id);
     assert.equal(s.loads.filter((l) => l === 'people').length, 1, 'the people list is read once');
   });
 }
@@ -52,8 +53,8 @@ test('one load builds every part and starts each read', async () => {
   const done = s.context.renderAdminFrame();
   s.answer(0);
   await done;
-  for (const id of ['set-people', 'set-server', 'set-shared', 'set-usage', 'set-audit', 'set-server-about']) assert.equal(s.count(id), 1, id);
-  assert.deepEqual(s.loads.sort(), ['about', 'audit', 'keys', 'people', 'settings', 'usage']);
+  for (const id of ['set-people', 'set-server', 'set-shared', 'set-usage', 'set-testers', 'set-feedback', 'set-audit', 'set-server-about']) assert.equal(s.count(id), 1, id);
+  assert.deepEqual(s.loads.sort(), ['about', 'audit', 'keys', 'people', 'settings', 'testers', 'usage']);
 });
 
 test('the two-step note shows once when both loads are told to turn it on first', async () => {

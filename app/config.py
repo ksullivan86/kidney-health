@@ -32,6 +32,9 @@ Keys (defaults in brackets):
   ``OIDC_ISSUER``, ``OIDC_CLIENT_ID``, ``OIDC_CLIENT_SECRET_FILE`` (only as a file: ``OIDC_CLIENT_SECRET`` is refused),
   ``OIDC_SCOPES`` [``openid email profile``], ``OIDC_ALLOW_PRIVATE_ISSUER`` [false]. Env only: what the server connects to is never
   changed at run time. Who may sign in is in the settings registry (``auth.oidc.*``). On needs ``AUTH_MODE=local`` and ``PUBLIC_URL``.
+* Test accounts (design note 26): ``TEST_ACCOUNT_PASSWORD_FILE`` (only as a file: ``TEST_ACCOUNT_PASSWORD`` is refused). The file
+  is read when the accounts are made or reset. The switches ``TEST_ACCOUNT_ENABLED`` and ``TEST_ACCOUNT_AI`` are settings
+  (``test_accounts.*``).
 * ``SECRET_KEY[_FILE]`` [auto-generated ``$DATA_DIR/secret.key``, mode 0600, with a warning]
 * ``ENABLE_API_DOCS`` (alias ``DOCS_ENABLED``) [false], ``MAX_BODY_BYTES`` [1 MiB],
   ``MAX_IMAGE_BYTES`` [4 MiB], ``MAX_IMPORT_BYTES`` [16 MiB: only ``POST /api/me/import``],
@@ -409,6 +412,9 @@ class Settings:
     login_ip_max_failures: int = 20
     proxy_auto_create_users: bool = False
     proxy_logout_url: str | None = None
+    # Test accounts (design note 26): the path of the file that holds their one password, read when they are made or reset,
+    # never the password itself (TEST_ACCOUNT_PASSWORD is refused). The switches are settings (test_accounts.*).
+    test_account_password_file: Path | None = None
 
     # Network edge (note 01 §5.5 and §10 S1, S2, S4).
     allowed_hosts: tuple[str, ...] = ()
@@ -735,6 +741,11 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
             "reach (for example AI_PRIVATE_HOSTS=ollama.lan:11434). Remove ALLOW_PRIVATE_AI_HOSTS."
         )
 
+    if env.get("TEST_ACCOUNT_PASSWORD"):
+        raise ConfigError("Give the test accounts' password as a file: put it in a file and set TEST_ACCOUNT_PASSWORD_FILE to its path. "
+                          "Remove TEST_ACCOUNT_PASSWORD.")
+    test_password_file = _raw(env, "TEST_ACCOUNT_PASSWORD_FILE")
+
     data_dir = Path(env.get("DATA_DIR") or default_data_dir())
     usda_key, _, _ = read_secret(env, "USDA_API_KEY")
     usda_key = (usda_key or "").strip() or None
@@ -777,6 +788,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         login_ip_max_failures=parse_int(env, "LOGIN_IP_MAX_FAILURES", 20, 1, 100_000),
         proxy_auto_create_users=parse_bool(env, "PROXY_AUTO_CREATE_USERS", False),
         proxy_logout_url=_raw(env, "PROXY_LOGOUT_URL"),
+        test_account_password_file=Path(test_password_file) if test_password_file else None,
         allowed_hosts=_split_list(env.get("ALLOWED_HOSTS")),
         public_url=_raw(env, "PUBLIC_URL"),
         trusted_proxies=tuple(trusted),

@@ -193,41 +193,113 @@ a LAN name), or when some people should keep a password.
 
 The design and its reasoning: [design note 24](dev/research/24-oidc-sign-in.md).
 
-## Sharing with a caregiver
+## Care team
 
-A person can let someone else with an account on the same server **see** parts of their log: a partner who helps with food, a
-parent, an adult child, a dietitian. The other person reads and never changes anything. It is off until you turn it on:
-`SHARING_ENABLED=true`, or **Server administration → Server settings → Sharing**.
+<a id="sharing-with-a-caregiver"></a>
 
-1. In **Settings → Account → Sharing**, the person ticks what to share (food log, lab results, weight and blood pressure,
-   symptoms), picks how long (until they stop it, a week, 30 days, 90 days or a year) and presses **Make a link**. It asks for
-   the password again, like making a token.
-2. They send the link. It works once and for 7 days. Whoever opens it first while signed in can accept it, so it should go only to
-   the right person. The link stays on the screen while Settings is open, until it is used or cancelled.
-   The **Accept** button appears only after the app has checked that link. Opening another link replaces the question;
-   a slow reply from the earlier link cannot change it back.
-3. The other person opens it, sees who is sharing what, and presses **Accept**. Then **Settings → Account → Sharing → Shared with
-   you → Open** shows the person's summary (the Visit prep page) and one day of food at a time, and **Trends** shows their Trends
-   charts, both with a banner that says it is read-only.
-   A shared weight chart uses that person's dry weight. If their profile cannot be loaded, the dry-weight line is left out;
-   your own dry weight is never used on their chart.
-   While Trends loads, the food charts, symptoms and weight and blood pressure cards clear first, so the previous person's data
-   is never left under the new heading. If a part cannot load, press **Retry**.
+A person can add family, a caregiver or a dietitian who has an account on the same server to their **Care team**. It is off
+until you turn it on: `SHARING_ENABLED=true`, or **Server administration → Server settings → Care team**. While it is off, a
+person sees one line saying the admin can turn it on, and an admin sees where.
 
-* Never shared: notes about tastes, saved meals and recipes, AI settings and activity, keys, tokens, passkeys, sign-in activity,
-  the date of birth and other profile details. The weight saved in the profile is shared only with weight and blood pressure.
-* A share with an end date stops by itself on that day, and the person's activity says so.
-* Either side can stop at once: **Stop sharing** or **Stop seeing**. The person's list says who can see their data and when they
-  last looked. The first look each day goes to the person's activity.
-* At most 10 people can see one person's data, and a person can have 5 unused links.
-* You can end every share of a person in **Server administration → People → End sharing**. Deleting either account deletes its
-  shares. While an account is turned off, nothing it shares can be seen.
+Everything is in **Settings → Care team**, its own section near the top of Settings. **Profile → Open Care team** goes there too.
+
+**Two roles.** The person picks one when they invite someone, and can change it at any time in their Care team list.
+
+* A **Viewer** can look at the parts the person ticked: food log, lab results, weight and blood pressure, symptoms. They never
+  change anything.
+* A **Care helper** can also plan meals for the person and use their shopping list. A Care helper always sees the food log, so
+  choosing this role adds it. They never change eaten food, targets, the profile, labs, weight, symptoms, preferences, AI
+  settings or keys.
+
+Shares made before this version are Viewers.
+
+**Adding someone.**
+
+1. **By user name**, for someone who already has an account here. Type their user name, pick the role, what they see and for how
+   long (until you stop it, a week, 30 days, 90 days or a year), and press **Send invite**. It asks for your password again.
+   The screen says the same thing whether or not that name is an account, so nobody can use it to find out who has one.
+   The invite waits 7 days under **Waiting for an answer**, where you can cancel it.
+2. The other person sees it in their own **Settings → Care team → Invites for you** and presses **Accept** or **Decline**.
+   Nothing changes until they press one.
+3. **With a link**, for anyone else: open **Make a link instead**, choose the same things and press **Make a link**. It works once
+   and for 7 days. Whoever opens it first while signed in can accept it, so send it only to the right person. The **Accept**
+   button appears only after the app has checked the link.
+
+**What the other person sees.** Under **Care teams you are on**, **Open** shows the person's summary (the Visit prep page) and
+one day of food at a time, and **Trends** shows their Trends charts, with a banner that says whose data it is. A shared weight
+chart uses that person's dry weight; your own is never used on their chart. If a part cannot load, press **Retry**.
+
+**Planning for someone (Care helper).** **Plan meals**, or **Planning for** at the top of the Plan tab, shows the person's week
+with a banner: "You are planning for Ana. Changes go to Ana's plan, not yours." **Back to my own plan** returns to yours.
+
+* A day shows what was eaten (read only) and what is planned. A helper can change the amount of planned food, remove it, and
+  **Add food** from the foods the person can use.
+* A planned low treatment is never changed or removed by a helper. **Clear planned days** leaves it too, as it leaves eaten food.
+  Nothing in the app blocks or warns against treating a low.
+* **Plan several days** makes a plan against the person's targets, then **Add to Ana's plan**. The person's saved meals are not
+  used and are never shown.
+* The person's shopping list: tick, **Copy list** and **Share list**. Ticks stay on the helper's device, apart from their own list.
+* Food a helper adds says **Added by <name>** on the person's Today. Changes for someone else need a connection: they never wait
+  on the device, and they never go to the helper's own log.
+
+**Control and records.**
+
+* Either side can stop at once: **Remove** or **Leave**. The person's list shows each role, when they last looked, and the helper's
+  changes that day.
+* The person's activity shows invites, answers, role changes, people leaving, the first look each day, and once a day that a
+  helper changed the plan.
+* A share with an end date stops by itself on that day.
+* At most 10 people on one Care team, 5 unused links and 5 waiting invites. Invites are limited to 20 tries an hour.
+* An admin can end everything for a person in **Server administration → People → End Care team**. Deleting either account
+  deletes its shares and invites. While an account is turned off, nothing it shares can be seen or changed.
 * Not with `AUTH_MODE=none`, where there is only one person.
 
-How it works, and why: [design note 19](dev/research/19-sharing.md).
+How it works, and why: [design note 19](dev/research/19-sharing.md) and [design note 25](dev/research/25-care-team.md).
 
-The shared food-day card loads without waiting for the rest of the summary. Changing the date or person
-discards older replies, so a slow response cannot replace the day you chose. If loading fails, press **Retry**.
+## Test accounts
+
+Test accounts let someone try the whole app on your server without an account of their own, and send you feedback as they go.
+They are off until you turn them on.
+
+**Turn them on.**
+
+1. Put a long password in a file, as a secret (Podman `podman secret create`, or `deploy/secrets/test_account_password` with
+   compose). Set `TEST_ACCOUNT_PASSWORD_FILE` to where the container sees it. The password itself is never an environment
+   variable: `TEST_ACCOUNT_PASSWORD` stops the start.
+2. Set `TEST_ACCOUNT_ENABLED=true`, or turn on **Server administration → Server settings → Test accounts**. To test the Care team,
+   turn on `SHARING_ENABLED` too.
+3. Restart. The server makes two accounts, both with that password:
+   * `tester`, the patient. It starts with the sample person Sam: CKD stage 4, type 1 diabetes, a month of meals, two treated
+     lows, lab results, two weeks of weights and blood pressure, and a few days planned.
+   * `tester-helper`, a family member, already a **Care helper** on Sam's Care team.
+
+If the password file is missing, cannot be read or is too weak for the password policy, nothing is made. The log and
+**Server administration → Test accounts** say why. The same happens if a real account already uses one of the two names.
+Test accounts need `AUTH_MODE=local`, and HTTPS like any server with more than one account.
+
+**What is different about them.**
+
+* They are never admins. **Make admin** is refused, and groups from single sign-on are ignored for them.
+* They can be on a Care team only with each other. An invite by user name between a test account and a real account answers
+  as if the name did not exist, and a link between them does not work. They never show in a real person's lists.
+* The server's AI is off for them, unless you also set `TEST_ACCOUNT_AI=true` (or the switch next to it).
+* Their password stays the one in the file: testers cannot change it, turn on two-step sign-in or delete the account.
+* They see a **Send feedback** button at the top of every screen.
+
+**Feedback.** The sheet asks what the tester was trying to do, what happened, whether the screen was useful, and whether
+something looked wrong or unsafe. Only what they type is kept, with the screen's name, the app version and the time: no
+screenshot and nothing from the log. Read it in **Server administration → Feedback**: show open, done or all, or only "wrong or
+unsafe"; **Mark done**; **Export CSV**; **Delete done**. Testers see what they sent themselves. Limits: 2,000 characters a box,
+20 an hour and 50 a day for each account, 5,000 kept on the server.
+
+**Between testers.** **Server administration → Test accounts → Reset test accounts** deletes everything both accounts did and
+starts them again from Sam's sample data, with the Care team link. Both are signed out. The feedback stays. From the command
+line: `python -m app.admin reset-test-accounts`.
+
+**Turning them off** disables both accounts and signs them out. Nothing is deleted. Turned on again, they work again.
+
+The walk-through to give testers is [test-the-full-app.md](test-the-full-app.md). Why it works this way:
+[design note 26](dev/research/26-test-accounts.md).
 
 ## Adding people
 
@@ -330,7 +402,7 @@ their account (including what an admin did to it), never an admin's actions on o
 `python -m app.admin` `create-admin USER` · `reset-password USER [--stdin]` · `list-users [--json]` ·
 `setup-code` · `revoke-sessions USER|--all` · `remove-two-step USER` (lost phone and recovery codes) · `remove-passkeys USER` (lost or stolen device) · `export-user USER FILE|-` (that person's data export, for
 someone who cannot sign in) · `disable-user USER` (never the only admin; signs out their devices; enable
-it again in Settings → People) · `purge-pre-v3-backup` · `vacuum` · `backup FILE|-` ·
+it again in Settings → People) · `reset-test-accounts` (start tester and tester-helper again) · `purge-pre-v3-backup` · `vacuum` · `backup FILE|-` ·
 `check` · `restore-check FILE [--revoke-sessions]` · `rotate-secret-key` · `reencrypt` · `settings
 list|get|set|unset`. `backup` writes its copy in SQLite's rollback-journal mode, and `restore-check`
 opens a read-only file as immutable, so a backup can be checked on a read-only mount

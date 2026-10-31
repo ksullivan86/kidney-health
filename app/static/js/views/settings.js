@@ -26,7 +26,7 @@
   const REG = KH.settings;
 
   // Kept equal to APP_VERSION in app/main.py (tests/test_settings_ui.py).
-  const APP_VERSION = '0.13.0';
+  const APP_VERSION = '0.14.0';
 
   const A = {
     sessions: () => request('GET', '/api/me/sessions'),
@@ -357,7 +357,6 @@
     if (hasLocalPassword() && KH.twoStep) body.append(KH.twoStep.block()); // js/views/two_step.js (design note 17)
     if (hasLocalPassword() && KH.passkeys) body.append(KH.passkeys.block()); // js/views/passkeys.js (design note 18)
     if (hasLocalPassword() && KH.oidc) body.append(KH.oidc.block()); // js/views/oidc.js (design note 24): hidden without a provider
-    if (authMode() !== 'none' && KH.sharing) body.append(KH.sharing.block()); // js/views/sharing.js (design note 19)
 
     body.append(subtitle('Signed-in devices', 'set-devices-h'), h('div', { id: 'set-devices', 'aria-labelledby': 'set-devices-h', role: 'region' }, loading()));
     body.append(subtitle('Your data', 'set-data-h'), dataBlock(me));
@@ -752,9 +751,13 @@
     'totp.enabled': 'Two-step sign-in turned on', 'totp.disabled': 'Two-step sign-in turned off', 'totp.recovery_codes_renewed': 'New recovery codes made',
     'totp.recovery_code_used': 'Signed in with a recovery code',
     'passkey.added': 'Passkey added', 'passkey.removed': 'Passkey removed', 'passkey.counter_went_back': 'Copied passkey refused',
-    'share.code_created': 'Share link made', 'share.code_cancelled': 'Share link cancelled', 'share.accepted': 'Someone accepted your share link',
-    'share.ended': 'Sharing stopped', 'share.viewed': 'Someone looked at what you share',
+    'share.code_created': 'Care team link made', 'share.code_cancelled': 'Care team link cancelled', 'share.accepted': 'Someone joined your Care team with a link',
+    'share.ended': 'Someone left your Care team', 'share.viewed': 'Someone on your Care team looked at what you share',
+    'care.invited': 'Care team invite sent', 'care.invite_cancelled': 'Care team invite cancelled', 'care.invite_answered': 'Someone answered your Care team invite',
+    'care.role_changed': 'Care team role changed', 'care.plan_changed': 'Your Care helper changed your plan',
     'oidc.linked': 'Sign-in provider linked', 'oidc.unlinked': 'Sign-in provider link removed',
+    'test_accounts.created': 'Test account made', 'test_accounts.enabled': 'Test account turned on', 'test_accounts.disabled': 'Test account turned off',
+    'test_accounts.reset': 'Test accounts reset',
   };
   // The row's label. Tokens come in two families and the details say which one made or lost a token (phone shortcut tokens: family
   // "device"); a revoke of everything a person had at once (an admin, a password change) names no family and says how many.
@@ -768,7 +771,7 @@
     if (ev.action === 'login.succeeded' && d.via === 'passkey') return 'Signed in with a passkey';
     return ACTION_LABEL[ev.action] || ev.action;
   }
-  // The choices of Settings → AI ideas (js/views/ai.js): the activity list names them the way the choice does.
+  // The choices of Settings → AI features (js/views/ai.js): the activity list names them the way the choice does.
   // The words of Settings → Meal guidance → Your food preferences (a food group's "Not for me" is "Never suggest" there).
   const TASTE_WORD = { none: 'nothing saved', like: 'more like this', less: 'less often', not_for_me: 'not for me', neutral: 'stop learning' };
   const tasteWord = (value, kind) => (kind === 'group' && value === 'not_for_me' ? 'never suggest' : TASTE_WORD[value] || value);
@@ -809,7 +812,9 @@
     if (ev.action === 'login.succeeded' && d.via === 'oidc') return 'with the sign-in provider';
     if (ev.action === 'passkey.counter_went_back') return 'a passkey answered like an old copy of itself, so the sign-in was refused';
     if ((ev.action === 'share.code_created' || ev.action === 'share.accepted') && KH.sharing && d.areas) return KH.sharing.areasText(d.areas);
-    if (ev.action === 'share.ended') return { owner: 'by you', grantee: 'by the person you shared with', admin: 'by an admin', time: 'on the end date you chose' }[d.by] || '';
+    if (ev.action === 'share.ended') return { owner: 'you removed them', grantee: 'they left', admin: 'an admin ended it', time: 'on the end date you chose' }[d.by] || '';
+    if (ev.action === 'care.invite_answered') return d.answer === 'declined' ? 'declined' : `accepted, as a ${KH.sharing ? KH.sharing.roleText(d.role) : d.role}`;
+    if (ev.action === 'care.role_changed' || ev.action === 'care.invited') return KH.sharing ? `as a ${KH.sharing.roleText(d.role)}` : '';
     if (d.links_revoked) return d.links_revoked === 1 ? '1 open link revoked' : `${d.links_revoked} open links revoked`;
     return '';
   }
@@ -1364,7 +1369,7 @@
     if (!res.enabled) {
       parts.push(h('p', { class: 'setting-status' }, h('span', { class: 'state-pill off' }, 'Turned off on this server')));
       if (active) parts.push(h('p', { class: 'hint' }, 'Your tokens do not work while assistant access is off. You can still revoke them.'));
-      if (isAdmin()) parts.push(h('p', { class: 'hint' }, 'Admins: switch "Assistant access" on in Server administration → Server settings (or ASSISTANT_ENABLED). See docs/assistant.md.'));
+      if (isAdmin()) parts.push(h('p', { class: 'hint' }, 'Admins: switch "Outside AI apps" on in Server administration → Server settings (or ASSISTANT_ENABLED). See docs/assistant.md.'));
     }
     parts.push(subtitle('Your tokens'), tokenList(tokens));
     const fresh = takeUnshownToken();
@@ -1490,6 +1495,12 @@
     body.append(subtitle('Server settings', 'set-server-h'), h('div', { id: 'set-server' }, loading()));
     body.append(subtitle('Shared keys', 'set-shared-h'), h('div', { id: 'set-shared' }, loading()));
     body.append(subtitle('Usage, last 30 days', 'set-usage-h'), h('div', { id: 'set-usage' }, loading()));
+    // Design note 26 (js/views/feedback.js): the test accounts and what testers sent. Not in the demo.
+    const testers = !none && !MOCK && KH.feedback;
+    if (testers) {
+      body.append(subtitle('Test accounts', 'set-testers-h'), h('div', { id: 'set-testers' }, loading()));
+      body.append(subtitle('Feedback', 'set-feedback-h'), h('div', { id: 'set-feedback' }, loading()));
+    }
     body.append(subtitle('Activity log', 'set-audit-h'), h('div', { id: 'set-audit' }, loading()));
     body.append(subtitle('About this server', 'set-server-about-h'), h('div', { id: 'set-server-about' }, loading()));
     adminSettingsReady = loadServerSettings();
@@ -1498,6 +1509,7 @@
     loadUsage();
     loadAudit();
     loadServerAbout();
+    if (testers) KH.feedback.loadAdmin();
   }
 
   // ---- People: accounts and invites
@@ -1530,7 +1542,8 @@
     if (u.two_step) badges.push(h('span', { class: 'badge two-step-on' }, 'Two-step sign-in'));
     if (u.passkeys) badges.push(h('span', { class: 'badge passkeys-on' }, u.passkeys === 1 ? '1 passkey' : `${u.passkeys} passkeys`));
     if (u.oidc_links) badges.push(h('span', { class: 'badge passkeys-on' }, 'Linked sign-in'));
-    if (u.shares) badges.push(h('span', { class: 'badge shares-on' }, `Sharing: ${u.shares}`));
+    if (u.shares) badges.push(h('span', { class: 'badge shares-on' }, `Care team: ${u.shares}`));
+    if (u.test_account) badges.push(h('span', { class: 'badge test-account' }, 'Test account'));
     if (self) badges.push(h('span', { class: 'badge this-device' }, 'You'));
     const sub = [u.last_login_at ? `Last signed in ${relTime(u.last_login_at)}` : 'Never signed in', `joined ${fmtDate(u.created_at)}`,
       u.auth_source === 'proxy' ? 'signs in through the proxy' : null].filter(Boolean).join(' · ');
@@ -1567,9 +1580,10 @@
       clear(err);
       try { await A.updateUser(u.id, b); await done(message); } catch (e) { if (!e.handled) showFormError(err, e); }
     };
-    // Role
+    // Role (a test account is never an admin: design note 26)
     const roleId = uid('role');
     const roleSel = selectEl(roleId, [['user', 'Member'], ['admin', 'Admin']], u.role);
+    if (u.test_account) roleSel.disabled = true;
     panel.append(h('div', { class: 'field' }, h('label', { for: roleId }, 'Role'),
       h('div', { class: 'inline-row' }, roleSel, action('Save role', 'secondary', async () => {
         if (roleSel.value === u.role) return;
@@ -1675,16 +1689,16 @@
       }));
       actions.append(rm);
     }
-    // Sharing (design note 19 §5): when a caregiver relationship has ended badly.
+    // The Care team (design notes 19 §5 and 25): when a caregiver relationship has ended badly.
     if (u.shares) {
-      const end = h('button', { class: 'btn secondary', type: 'button' }, 'End sharing');
+      const end = h('button', { class: 'btn secondary', type: 'button' }, 'End Care team');
       end.addEventListener('click', () => confirm.inline(actions, end, {
-        message: self ? 'End every share and share link of yours, both what you share and what is shared with you?'
-          : `End every share and share link of ${name}, both what they share and what is shared with them?`,
-        confirmText: 'End sharing',
+        message: self ? 'End your whole Care team, its links and invites, and every Care team you are on?'
+          : `End ${name}'s whole Care team, its links and invites, and every Care team they are on?`,
+        confirmText: 'End Care team',
         onConfirm: async () => {
           await A.endUserShares(u.id);
-          await done(self ? 'Your sharing was ended' : `Sharing ended for ${name}`);
+          await done(self ? 'Your Care team was ended' : `Care team ended for ${name}`);
           return true;
         },
       }));
@@ -1868,7 +1882,7 @@
     ['Personalised targets and lab results', ['targets.lab_rules_enabled', 'targets.default_activity', 'targets.lab_fresh_days.potassium',
       'targets.lab_fresh_days.phosphate', 'targets.lab_fresh_days.albumin', 'targets.lab_fresh_days.bicarbonate']],
     ['Meal guidance', ['guidance.enabled', 'guidance.pool_per_role', 'guidance.beam_width', 'guidance.plan_days_max', 'guidance.plan_days_ai_max']],
-    // The master switch first: Settings → AI ideas sends admins here to turn it on.
+    // The master switch first: Settings → AI features sends admins here to turn it on.
     ['Optional AI', ['ai.enabled', 'ai.user_keys_allowed', 'ai.allow_user_base_url', 'ai.shared_daily_limit', 'ai.max_concurrency',
       'ai.vision_plate_enabled', 'ai.vision_allow_agent', 'ai.chat_enabled', 'ai.voice_enabled', 'ai.allow_trusted_saves', 'ai.recipe_steps', 'ai.audit_retention_days', 'assistant.enabled']],
     // Drawn by js/views/ai_routing.js in Server administration → AI providers (a provider must be private to be local, so these
@@ -1876,7 +1890,9 @@
     ['Which AI each feature uses', ['ai.route.photos', 'ai.route.meal_ideas', 'ai.route.describe', 'ai.route.chat', 'ai.route.labs',
       'ai.route.recipes', 'ai.route.local_provider', 'ai.route.cloud_provider']],
     ['Phone shortcuts', ['push.enabled']],
-    ['Sharing', ['sharing.enabled']],
+    ['Care team', ['sharing.enabled']],
+    // Design note 26: not in the demo (it has no accounts of its own to make).
+    ['Test accounts', ['test_accounts.enabled', 'test_accounts.ai']],
     ['Activity log', ['audit.retention_days']],
   ];
   const ROUTING_GROUP = 'Which AI each feature uses';
@@ -1908,8 +1924,9 @@
     if (!all) { box.append(loading()); return; }
     box.append(h('p', { class: 'hint' }, 'Each setting shows where its value comes from. "Set by the server" means an environment variable fixes it; change it in the server configuration and restart.'));
     const seen = new Set();
-    const groups = GROUPS.map(([title, keys]) => [title, keys.filter((k) => all[k])]);
-    const other = Object.keys(all).filter((k) => !GROUPS.some(([, keys]) => keys.includes(k)));
+    const shown = (k) => all[k] && !(MOCK && k.startsWith('test_accounts.')); // the demo has no test accounts (design note 26)
+    const groups = GROUPS.map(([title, keys]) => [title, keys.filter(shown)]);
+    const other = Object.keys(all).filter((k) => shown(k) && !GROUPS.some(([, keys]) => keys.includes(k)));
     if (other.length) groups.push(['Other', other]);
     for (const [title, keys] of groups) {
       if (!keys.length) continue;
@@ -1940,7 +1957,7 @@
         toast(value === null ? `${def.label}: back to the default` : `${def.label}: saved`, 'ok');
         renderServerSettings(control ? control.id : id);
         renderFood();
-        // An AI switch changes Settings → AI ideas, the AI providers below and the Add view's AI buttons: ask again, now.
+        // An AI switch changes Settings → AI features, the AI providers below and the Add view's AI buttons: ask again, now.
         if (key.startsWith('ai.') && KH.ai) {
           if (typeof KH.ai.forget === 'function') KH.ai.forget();
           KH.ai.renderSettings().catch((e2) => console.warn('AI settings:', e2));
@@ -1954,6 +1971,10 @@
         if (key === 'push.enabled') {
           if (pushHost) renderPush(pushHost).catch((e2) => console.warn('Phone shortcuts:', e2));
           loadPeople();
+        }
+        if (key.startsWith('test_accounts.') && KH.feedback) { // the accounts were made, turned on or turned off just now
+          loadPeople();
+          KH.feedback.loadAdmin();
         }
         if (key === 'registration.mode' || key === 'instance.name' || key === 'registration.invite_ttl_days') {
           KH.auth.loadStatus().then(() => { renderAbout(); renderWho(); }).catch(() => null);
@@ -2213,7 +2234,14 @@
   // ---------------------------------------------------------------------------
   function renderWho() {
     const me = state.me;
-    $('#settings-who').textContent = me ? `Signed in as ${me.display_name ? `${me.display_name} (${me.username})` : me.username}${me.role === 'admin' ? ' · admin' : ''}` : '';
+    $('#settings-who').textContent = me ? `Signed in as ${me.display_name ? `${me.display_name} (${me.username})` : me.username}${me.role === 'admin' ? ' · admin' : ''}${me.test_account ? ' · test account' : ''}` : '';
+  }
+  // Settings → Care team (js/views/sharing.js, design note 25): its own section, near the top. Without sign-in there is one person.
+  function renderCare() {
+    const sec = $('#set-care');
+    if (!sec) return;
+    sec.hidden = authMode() === 'none' || !KH.sharing;
+    if (!sec.hidden) clear($('#set-care-body')).append(KH.sharing.block());
   }
   function renderNav() {
     const nav = $('#settings-nav');
@@ -2264,6 +2292,7 @@
     if (!state.me) return;
     renderWho();
     syncAdminEntry();
+    renderCare();
     renderNav();
     renderAccount();
     renderPrefs();
@@ -2310,5 +2339,16 @@
     loadAdmin().catch(toastError);
     setTimeout(() => { const t = $('#admin-title'); if (t && state.view === 'admin') t.focus({ preventScroll: true }); }, 0);
   });
-  KH.views.settings = { load, loadAdmin, onSignedIn, keyWidget, APP_VERSION };
+  /** Open Settings at one section (Profile → Care team uses it). */
+  function openSection(id) {
+    router.show('settings');
+    setTimeout(() => {
+      const sec = $(`#${id}`);
+      if (!sec || sec.hidden || state.view !== 'settings') return;
+      sec.scrollIntoView({ block: 'start' });
+      const head = $('h2', sec);
+      if (head) { head.setAttribute('tabindex', '-1'); head.focus({ preventScroll: true }); }
+    }, 50);
+  }
+  KH.views.settings = { load, loadAdmin, onSignedIn, keyWidget, openSection, APP_VERSION };
 })();

@@ -74,7 +74,7 @@
         <!-- Ask (js/views/ask.js): hidden until the server says the chat is available; always shown in the demo. -->
         <button role="tab" class="tab" id="tab-ask" aria-controls="view-ask" aria-selected="false" tabindex="-1" data-view="ask" hidden>
           <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8a2.5 2.5 0 0 1-2.5 2.5H11l-4.5 4v-4h0A2.5 2.5 0 0 1 4 13.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8.5 8.5h7M8.5 11.5h4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-          <span>Ask</span>
+          <span>Ask AI</span>
         </button>
         <button role="tab" class="tab" id="tab-profile" aria-controls="view-profile" aria-selected="false" tabindex="-1" data-view="profile">
           <svg class="tab-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="8" r="4" fill="none" stroke="currentColor" stroke-width="2"/><path d="M4 20c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
@@ -99,6 +99,11 @@
     <button id="theme-toggle" class="icon-btn" type="button" aria-label="Switch to dark theme" title="Switch theme">
       <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+    </button>
+    <!-- Design note 26: test accounts only (js/views/auth.js shows it for a test account; js/views/feedback.js opens the sheet). -->
+    <button id="feedback-open" class="icon-btn feedback-open" type="button" aria-label="Send feedback" title="Send feedback about this screen" data-signed-in data-test-only hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 5.5h15v10h-9l-4.5 3.5v-3.5h-1.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8.5 9.5h7M8.5 12.5h4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <span class="feedback-text">Feedback</span>
     </button>
     <!-- v0.3.1: admins only (js/views/auth.js shows it for role "admin"); every /api/admin route also checks the role. -->
     <button id="admin-open" class="icon-btn" type="button" aria-label="Server administration" title="Server administration" data-signed-in data-admin-only hidden>
@@ -489,6 +494,12 @@
 
   <!-- ===================== PLAN ===================== -->
   <section id="view-plan" class="view" role="tabpanel" aria-labelledby="tab-plan" hidden>
+    <!-- js/views/careplan.js (design note 25): shown only to a Care helper. Choosing a person hides your own plan below. -->
+    <div id="care-for" class="care-for" hidden>
+      <label for="care-for-select" class="label">Planning for</label>
+      <select id="care-for-select"></select>
+    </div>
+    <div id="care-plan" class="care-plan" hidden></div>
     <div class="date-nav week-nav">
       <button class="icon-btn" type="button" id="week-prev" aria-label="Previous week">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -624,10 +635,11 @@
        notices come from the server's checked answer (POST /api/ai/chat). -->
   <section id="view-ask" class="view ask-view" role="tabpanel" aria-labelledby="tab-ask" hidden>
     <div class="ask-head">
-      <h2 class="card-title" id="ask-title">Ask</h2>
+      <h2 class="card-title" id="ask-title">AI assistant</h2>
       <button class="btn secondary" type="button" id="ask-new" hidden>New conversation</button>
     </div>
-    <p class="muted small" id="ask-intro">Ask about today's numbers, a food, or what fits in the rest of your day. You can also ask it to log or plan a food, or to save a recipe. The assistant looks up your own targets and food log, and the app checks its answer before you see it.</p>
+    <p class="muted small" id="ask-intro">This is an AI language model, a computer program that writes text. It can be wrong and it is not medical advice. It is not allowed to give insulin or medicine doses. Ask about today's numbers, a food, or what fits in the rest of your day, or ask it to log or plan a food or save a recipe. It looks up your own targets and food log, and the app checks its answer before you see it.</p>
+    <p class="hint ask-where" id="ask-where" hidden></p>
     <div class="settings-note caution" id="ask-demo" role="note" hidden></div>
     <!-- Saving from the chat (js/views/ask.js): what the person chose, and the way to change it. -->
     <div class="ask-trust" id="ask-trust" hidden>
@@ -891,6 +903,12 @@
       </div>
       <div id="profile-form-error" class="form-error" role="alert"></div>
     </form>
+
+    <section class="card profile-care" id="profile-care" aria-labelledby="profile-care-heading" hidden>
+      <h2 class="card-title" id="profile-care-heading">Care team</h2>
+      <p class="hint">Let family, a caregiver or a dietitian with an account here see your log, or help plan your meals and shopping.</p>
+      <button class="btn secondary" type="button" id="profile-open-care">Open Care team</button>
+    </section>
 
     <section class="card profile-settings" aria-labelledby="profile-settings-heading">
       <div class="card-head">
@@ -1156,6 +1174,11 @@
       <div id="set-account-body" class="settings-body"></div>
     </section>
 
+    <section class="card settings-section" id="set-care" data-title="Care team" aria-labelledby="set-care-h" hidden>
+      <h2 class="card-title" id="set-care-h">Care team</h2>
+      <div id="set-care-body" class="settings-body"></div>
+    </section>
+
     <section class="card settings-section" id="set-prefs" data-title="Preferences" aria-labelledby="set-prefs-h">
       <h2 class="card-title" id="set-prefs-h">Preferences</h2>
       <div class="settings-body">
@@ -1207,15 +1230,15 @@
       <div id="set-food-body" class="settings-body"></div>
     </section>
 
-    <section class="card settings-section" id="set-ai" data-title="AI ideas" aria-labelledby="set-ai-h">
-      <h2 class="card-title" id="set-ai-h">AI ideas</h2>
+    <section class="card settings-section" id="set-ai" data-title="AI features" aria-labelledby="set-ai-h">
+      <h2 class="card-title" id="set-ai-h">AI features</h2>
       <div id="set-ai-body" class="settings-body"></div>
     </section>
 
-    <!-- Assistant access tokens (app/auth/api_tokens.py): shown by settings.js while the admin switch is on, and
-         while it is off to admins and to a person who still has active tokens. -->
-    <section class="card settings-section" id="set-assistant" data-title="Assistant access" aria-labelledby="set-assistant-h" hidden>
-      <h2 class="card-title" id="set-assistant-h">Assistant access</h2>
+    <!-- Outside AI apps: assistant access tokens (app/auth/api_tokens.py) for an AI chat app the person runs elsewhere, over MCP.
+         Shown by settings.js while the admin switch is on, and while it is off to admins and to a person who still has active tokens. -->
+    <section class="card settings-section" id="set-assistant" data-title="Outside AI apps" aria-labelledby="set-assistant-h" hidden>
+      <h2 class="card-title" id="set-assistant-h">Outside AI apps</h2>
       <div id="set-assistant-body" class="settings-body"></div>
     </section>
 
@@ -1620,6 +1643,54 @@
       <span class="spacer"></span>
       <button class="btn secondary" type="button" data-close>Cancel</button>
       <button class="btn primary" type="submit" id="copy-save">Copy</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ===================== SEND FEEDBACK (test accounts only; js/views/feedback.js, design note 26) =====================
+     Only what the tester types is sent, with the screen name; the server adds the app version and the time. -->
+<dialog id="sheet-feedback" class="sheet" aria-labelledby="sheet-feedback-title" aria-describedby="sheet-feedback-sub">
+  <form method="dialog" class="sheet-form" id="feedback-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-feedback-title" class="sheet-title">Send feedback</h2>
+        <div class="sheet-sub" id="sheet-feedback-sub">Only what you type here is sent, with the name of this screen, the app version and the time. No screenshot, and nothing from the log.</div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <p class="hint" id="feedback-screen"></p>
+      <div class="field">
+        <label for="feedback-trying">What were you trying to do?</label>
+        <textarea id="feedback-trying" rows="3" maxlength="2000"></textarea>
+      </div>
+      <div class="field">
+        <label for="feedback-happened">What happened?</label>
+        <textarea id="feedback-happened" rows="4" maxlength="2000" aria-describedby="feedback-happened-hint"></textarea>
+        <span class="hint" id="feedback-happened-hint">Say what you expected and what you saw instead.</span>
+      </div>
+      <fieldset class="field">
+        <legend>Was this screen useful?</legend>
+        <div class="segmented meal-seg" id="feedback-useful">
+          <input type="radio" name="fuseful" id="fuseful-yes" value="yes"><label for="fuseful-yes">Useful</label>
+          <input type="radio" name="fuseful" id="fuseful-somewhat" value="somewhat"><label for="fuseful-somewhat">A little</label>
+          <input type="radio" name="fuseful" id="fuseful-no" value="no"><label for="fuseful-no">Not useful</label>
+        </div>
+      </fieldset>
+      <div class="field">
+        <label class="check" for="feedback-unsafe"><input type="checkbox" id="feedback-unsafe" aria-describedby="feedback-unsafe-hint"><span class="check-text">This looked wrong or unsafe</span></label>
+        <span class="hint" id="feedback-unsafe-hint">Tick it if anything blocked or warned against treating a low, or if the AI gave an insulin or medicine dose.</span>
+      </div>
+      <div class="form-error" id="feedback-error" role="alert"></div>
+      <h3 class="settings-subtitle" id="feedback-mine-h">What you sent</h3>
+      <div id="feedback-mine" aria-labelledby="feedback-mine-h"></div>
+    </div>
+    <div class="sheet-foot">
+      <span class="spacer"></span>
+      <button class="btn secondary" type="button" data-close>Cancel</button>
+      <button class="btn primary" type="submit" id="feedback-send">Send</button>
     </div>
   </form>
 </dialog>
@@ -2263,13 +2334,13 @@
     <div class="sheet-foot"></div>
   </form>
 </dialog>
-<!-- The warning before the assistant is trusted to save without asking (js/views/ai.js confirmTrust): Settings → AI ideas
-     and the Ask screen's "Trust it for this conversation". -->
+<!-- The warning before the assistant is trusted to save without asking (js/views/ai.js confirmTrust): Settings → AI features
+     and the Ask AI screen's "Trust it for this conversation". -->
 <dialog id="sheet-ai-trust" class="sheet" aria-labelledby="sheet-ai-trust-title">
   <form method="dialog" class="sheet-form" novalidate>
     <div class="sheet-head">
       <div>
-        <h2 id="sheet-ai-trust-title" class="sheet-title">Trust the assistant to save for you?</h2>
+        <h2 id="sheet-ai-trust-title" class="sheet-title">Trust the AI assistant to save for you?</h2>
         <div class="sheet-sub"></div>
       </div>
       <button class="icon-btn" type="button" data-close aria-label="Close">
@@ -2353,6 +2424,7 @@
 <script src="js/mock/guidance.js"></script>
 <script src="js/mock/auth.js"></script>
 <script src="js/mock/settings.js"></script>
+<script src="js/mock/care.js"></script>
 <script src="js/mock/handbook.js"></script>
 <script src="js/mock/meta.js"></script>
 <script src="js/mock/ai.js"></script>
@@ -2386,9 +2458,12 @@
 <script src="js/views/ai_quality.js"></script>
 <script src="js/views/guidance.js"></script>
 <script src="js/views/plandays.js"></script>
+<script src="js/views/careplan.js"></script>
 <script src="js/views/ask.js"></script>
 <script src="js/views/ask-voice.js"></script>
 <script src="js/views/demo_local.js"></script>
+<!-- Design note 26: Send feedback and Server administration → Test accounts and Feedback. Not in the preview (no accounts there). -->
+<script src="js/views/feedback.js" data-preview="omit"></script>
 <!-- The barcode ponyfill (vendor/README.md): a static deferred script, never injected (Trusted Types); its 1 MB
      WebAssembly reader is fetched only on the first scan without a native BarcodeDetector. Not in the preview. -->
 <script src="vendor/barcode-detector-3.2.2/ponyfill.iife.js" defer data-preview="omit"></script>

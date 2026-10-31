@@ -571,7 +571,7 @@ TRUST_CHOICES: tuple[str, ...] = ("ask", "conversation", "always")
 
 
 class AiPreferences(BaseModel):
-    """The person's AI choices (note 04 R4 "User settings"; Settings → AI ideas). No key field (§9 A6):
+    """The person's AI choices (note 04 R4 "User settings"; Settings → AI features). No key field (§9 A6):
     a personal key goes only to ``ai_providers.api_key_enc`` through ``PUT /api/me/ai/provider``."""
 
     model_config = ConfigDict(extra="forbid")
@@ -590,7 +590,7 @@ register(
         default=False,
         scope="instance",
         env="AI_ENABLED",
-        label="Optional AI ideas",
+        label="Optional AI features",
         help="Off by default. When on, people who opt in can ask an AI provider you set up for meal ideas and photo help. "
         "The rules always run first and check every AI idea; nothing is sent anywhere while this is off.",
     ),
@@ -678,7 +678,7 @@ register(
         scope="instance",
         env="AI_VOICE_ENABLED",
         label="Voice input for Ask (a microphone button)",
-        help="Off by default. Needs Ask on and a transcription server set with STT_BASE_URL. When on, people can record "
+        help="Off by default. Needs the AI assistant (Ask AI) on and a transcription server set with STT_BASE_URL. When on, people can record "
         "a question; the recording goes to that server to become text, is deleted at once, and the text appears in the "
         "box for them to read and edit before anything is sent to the AI.",
     ),
@@ -689,7 +689,7 @@ register(
         scope="instance",
         env="AI_ALLOW_TRUSTED_SAVES",
         label="Let people trust Ask to save without asking",
-        help="Off by default. Needs Ask on. When on, a person can choose in Settings → AI ideas to let Ask save food and "
+        help="Off by default. Needs the AI assistant (Ask AI) on. When on, a person can choose in Settings → AI features to let the AI assistant save food and "
         "recipes at once (for one conversation, or always), after a warning. Off: Ask always shows a card and saves only "
         "when the person presses Save. Either way the app's numbers, the low and emergency rules and the dose checks stay "
         "on, and every save can be undone.",
@@ -699,7 +699,7 @@ register(
         model=AiPreferences,
         default=AiPreferences(),
         scope="user",
-        label="AI ideas",
+        label="AI features",
         help="opt_in, provider (auto, own or shared:<id>), share_age_sex, preferences (at most 200 characters) and trust "
         "(ask, conversation or always).",
     ),
@@ -835,8 +835,8 @@ register(
         default=False,
         scope="instance",
         env="ASSISTANT_ENABLED",
-        label="Assistant access (personal tokens for a chat assistant)",
-        help="Off by default. When on, each person can make tokens in Settings → Assistant access that let a chat "
+        label="Outside AI apps (personal tokens for an AI chat app)",
+        help="Off by default. When on, each person can make tokens in Settings → Outside AI apps that let a chat "
         "assistant they connect read their own food log and targets and, if the person allows it for that token, "
         "also save food and recipes. While off, no token can be made or used; "
         "turned on again, tokens that have not expired or been revoked work again.",
@@ -938,11 +938,12 @@ register(
         default=False,
         scope="instance",
         env="SHARING_ENABLED",
-        label="Let people share their log, read-only, with someone else on this server",
-        help="Off by default. When on, each person can make a link in Settings → Account → Sharing and send it to a caregiver "
-        "or dietitian with an account here. Once they accept it, they can read the parts that were ticked (food log, lab results, "
-        "weight and blood pressure, symptoms) and never change anything. Either side can stop it at any time. While off, nobody "
-        "can see anyone else's data; turned on again, shares that were not stopped work again.",
+        label="Turn on the Care team: people can let family or a dietitian on this server see their log, or help plan meals",
+        help="Off by default. When on, each person can add someone with an account here to their Care team in Settings → Care "
+        "team, by user name or with a link. A Viewer can read the parts that were ticked (food log, lab results, weight and blood "
+        "pressure, symptoms) and never change anything. A Care helper can also plan meals and use the shopping list. Either side "
+        "can stop it at any time. While off, nobody can see anyone else's data; turned on again, Care teams that were not stopped "
+        "work again.",
     ),
 )
 register(
@@ -957,5 +958,35 @@ register(
         "can use one to add weights and blood pressure readings to that person's own log. A token can only add: it cannot "
         "read or change anything. While off, no token can be made or used; turned on again, tokens that have not expired "
         "or been revoked work again.",
+    ),
+)
+# --------------------------------------------------------------------------- #
+# Test accounts (design note 26; read by app/test_accounts.py). The one password is env only (TEST_ACCOUNT_PASSWORD_FILE in
+# app/config.py), never a setting: it is a secret, and the API never returns a secret.
+# --------------------------------------------------------------------------- #
+
+register(
+    SettingDef(
+        key="test_accounts.enabled",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="TEST_ACCOUNT_ENABLED",
+        label="Test accounts: let testers sign in as tester and tester-helper",
+        help="Off by default. When on, the server makes two accounts if they are missing: tester, who starts with the sample "
+        "person Sam's food log, lab results and weights, and tester-helper, a Care helper on tester's Care team. Both use the "
+        "password in the file TEST_ACCOUNT_PASSWORD_FILE. They are never admins, can only be on a Care team with each other, "
+        "and get a Send feedback button. Turned off, they are disabled and signed out (not deleted); turned on again, they work "
+        "again. Turn on the Care team too, to test it.",
+    ),
+    SettingDef(
+        key="test_accounts.ai",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="TEST_ACCOUNT_AI",
+        label="Let the test accounts use the server's AI",
+        help="Off by default: the AI features are off for test accounts, whatever else is set. When on, they work for test "
+        "accounts as for everyone else (AI must also be on).",
     ),
 )

@@ -31,7 +31,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from typing import Any, Literal, Mapping
 
-from .. import brand
+from .. import brand, test_accounts
 from ..audit import audit
 from ..config import AiCloudEnv, ConfigError, Settings
 from ..crypto import InvalidToken, Keyring
@@ -644,7 +644,7 @@ class Resolved:
 
 MESSAGES = {
     "disabled": "AI is switched off on this server.",
-    "not_opted_in": "Turn on AI ideas in Settings → AI ideas first.",
+    "not_opted_in": "Turn on AI features in Settings → AI features first.",
     "not_configured": "No AI provider is set up on this server.",
     "not_allowed": "Your admin has not shared an AI provider with your account.",
     "own_unavailable": "Your own AI provider is switched off or not allowed on this server; it is never replaced by the shared one.",
@@ -685,7 +685,7 @@ def usable(row: Mapping[str, Any]) -> bool:
 def resolve(conn: sqlite3.Connection, store: SettingsStore, keyring: Keyring, settings: Settings, *, user_id: int,
             can_use_shared: bool, require_opt_in: bool = True) -> Resolved:
     """Which provider serves ``user_id`` now (no quota is taken here)."""
-    if not store.get(conn, "ai.enabled"):
+    if not store.get(conn, "ai.enabled") or not test_accounts.ai_allowed(conn, store, user_id):
         return Resolved(None, None, "disabled")
     prefs = ai_prefs(conn, store, user_id)
     if require_opt_in and not prefs.get("opt_in"):

@@ -249,7 +249,7 @@
       if (head) { head.setAttribute('tabindex', '-1'); head.scrollIntoView({ block: 'start' }); head.focus({ preventScroll: true }); }
     }, 60);
   }
-  // From Settings → AI ideas: the text for AI ideas now lives in Settings → Meal guidance → Your food preferences.
+  // From Settings → AI features: the text for AI ideas now lives in Settings → Meal guidance → Your food preferences.
   function openPreferences() {
     const go = (tries) => {
       const head = $('#set-g-prefs-h');
@@ -1475,7 +1475,7 @@
       KH.ai.status().then((st) => {
         if (!st || !st.enabled || !document.contains(slot)) return;
         slot.append(check('ai_enrich', 'Let AI re-order and explain suggestions',
-          'Adds “AI order”, “Ask AI to pick” and “Let AI choose” next to the app’s own suggestions, once AI ideas are on in Settings → AI ideas. The app still checks every number.'));
+          'Adds “AI order”, “Ask AI to pick” and “Let AI choose” next to the app’s own suggestions, once AI ideas are on in Settings → AI features. The app still checks every number.'));
       }).catch(() => null);
     }
     return slot;

@@ -7,9 +7,9 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-30
+last_checked: 2026-10-31
 fact_checked: 2026-10-05
-sources: [NOTE07, NOTE04, DEPLOY, SECDOC, NIST-63B4, FDC-API, NOTE24]
+sources: [NOTE07, NOTE04, DEPLOY, SECDOC, NIST-63B4, FDC-API, NOTE24, NOTE26]
 ---
 
 # Users and keys
@@ -171,6 +171,27 @@ link under **Server administration → People** and send them a reset link.
 A sign-in proxy in front of the app (the section below) is the other way to use Authentik. Use the proxy when nobody should see
 the app before signing in; use the button for Google, for a VPN or LAN address, or when some people keep a password.
 
+## Test accounts for testers
+
+To let someone try the whole app on your server without an account of their own, turn on test accounts
+([design note 26][NOTE26]). Put a long password in a file, as a Podman or compose secret, and set
+`TEST_ACCOUNT_PASSWORD_FILE` to it; then set `TEST_ACCOUNT_ENABLED=true` (or the switch in **Server administration → Server
+settings → Test accounts**) and restart. Turn on the Care team too.
+
+The server makes two accounts with that password:
+
+- **tester**, the patient: the sample person Sam, with a month of meals, lab results and weights.
+- **tester-helper**, a family member who is already a Care helper on Sam's Care team.
+
+They are never admins, they can be on a Care team only with each other, and the server's AI is off for them unless you also
+set `TEST_ACCOUNT_AI=true`. They see a **Send feedback** button on every screen; you read what they send in **Server
+administration → Feedback**. Only what they type is kept, with the screen's name. **Reset test accounts** puts both back to the
+start between testers, and keeps the feedback. If the password file is missing or too weak, nothing is made, and **Server
+administration → Test accounts** says why.
+
+Give testers the walk-through
+[Test the full app](https://github.com/ksullivan86/kidney-health/blob/main/docs/test-the-full-app.md).
+
 ## If something goes wrong
 
 - **No `FIRST-RUN SETUP` line**: an admin already exists, or `ADMIN_PASSWORD_FILE` was used. Check
@@ -191,3 +212,4 @@ the app before signing in; use the button for Google, for a VPN or LAN address, 
 - [Design note 04][NOTE04] (AI providers); [deployment guide][DEPLOY]; [operator security guide][SECDOC].
 - [NIST SP 800-63B-4][NIST-63B4]; [USDA FoodData Central API guide][FDC-API].
 - [Design note 24: sign in with another account][NOTE24].
+- [Design note 26: test accounts][NOTE26].

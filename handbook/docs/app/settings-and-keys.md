@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-14
 fact_checked: 2026-10-05
-sources: [NOTE07, NOTE03, NOTE04, NOTE06, NOTE02, FDC-API, NOTE17, NOTE18, NOTE19]
+sources: [NOTE07, NOTE03, NOTE04, NOTE06, NOTE02, FDC-API, NOTE17, NOTE18, NOTE19, NOTE25]
 ---
 
 # Settings and keys
@@ -22,7 +22,8 @@ can be shared by your admin or added by you ([design note 07][NOTE07]).
 
 | Section | What you find there |
 |---|---|
-| **Account** | your name, user name, **Change password**, **Two-step sign-in**, **Passkeys**, **Sharing** (let a caregiver or dietitian look at your log: [Sharing with a caregiver](#sharing)), **Signed-in devices**, **Your data** (export, import, **Phone shortcuts** for an iPhone Shortcut that sends your weight and blood pressure: [Weight and blood pressure](weight-and-blood-pressure.md#from-a-phone-shortcut); delete account), your recent sign-in activity, **Sign out** |
+| **Account** | your name, user name, **Change password**, **Two-step sign-in**, **Passkeys**, **Signed-in devices**, **Your data** (export, import, **Phone shortcuts** for an iPhone Shortcut that sends your weight and blood pressure: [Weight and blood pressure](weight-and-blood-pressure.md#from-a-phone-shortcut); delete account), your recent sign-in activity, **Sign out** |
+| **Care team** | family, a caregiver or a dietitian on your server who can look at your log (**Viewer**) or also plan your meals and use your shopping list (**Care helper**); invites for you; the Care teams you are on ([Care team](#sharing)) |
 | **Preferences** | theme (match device, light, dark), the day your week starts on, **Units for lab results** (US or SI: the unit offered first) |
 | **Meal guidance** | on or off, carbohydrate tolerance, low-treatment amount, foods to leave out, your "Not for me" foods ([Meal guidance](guidance.md)) |
 | **Food data** | your own USDA key, the shared key's status and today's remaining lookups, **Send barcodes I scan to Open Food Facts** ([Barcodes and label photos](barcode-and-photo.md)) |
@@ -161,43 +162,59 @@ computers you can also tap the user name box: your passkey is listed there, and 
 - Passkeys need your server's name, like `kidney.example.org`. If you open the app by a number address, Settings says so; ask
   your admin.
 
-## Sharing with a caregiver {#sharing}
+## Care team {#sharing}
 
-A partner, parent, adult child or dietitian can look at parts of your log if they have their own account on your server. They can
-look, but never change anything, and you can stop at any time ([design note 19][NOTE19]). Your admin turns sharing on first; until
-then, Settings says so.
+Your **Care team** is family, a caregiver or a dietitian who has their own account on your server. You choose what each person
+can do, and you can change it or stop it at any time ([design notes 19][NOTE19] and [25][NOTE25]). Your admin turns the Care
+team on first; until then, Settings says so. **Profile → Open Care team** takes you there too.
 
-To share:
+There are two roles:
 
-1. **Settings → Account → Sharing**. Tick what to share: your food log, lab results, weight and blood pressure, symptoms. Under
-   **For how long**, pick until you stop it, a week, 30 days, 90 days or a year. Tap **Make a link**. The app may ask for your
-   password again.
-2. Copy the link and send it to the person, for example in a text message. It works once, for 7 days. Send it only to them:
-   whoever opens it first can accept it. The link stays on the screen while Settings is open, until it is used or you
-   cancel it.
-3. They open it while signed in, see your name and what you share, and tap **Accept**.
+- A **Viewer** can look at the parts you tick: your food log, lab results, weight and blood pressure, symptoms. They never change
+  anything.
+- A **Care helper** can also plan your meals and use your shopping list. They see your food log so they can plan. They never
+  change what you ate, your targets, your profile, your labs, your weight, your symptoms or your settings.
 
-They then see your summary page (the same page as Visit prep) and what you ate on any day, with a note at the top that it is
-yours and read-only. They never see your saved meals, your recipes, your food preferences, your AI settings, your keys or your
-sign-in activity. They see the weight in your profile only if you shared weight and blood pressure.
+To add someone:
 
-- Your list in **Sharing** shows who can see your data, until when, and when they last looked. **Stop sharing** ends it at once.
-- A share with an end date stops by itself on that day. Your activity says so.
-- When someone shares with you, they are under **Shared with you**. **Open** shows their page, **Trends** their charts over 7, 14
-  or 30 days; **Stop seeing** ends it.
-  Their weight chart uses their dry weight, never yours. If their profile cannot be loaded, that line is left out.
-  When you open their Trends, the previous person's charts clear while the new ones load. If a chart cannot load, tap **Retry**.
-- A link nobody has used yet can be cancelled from the same list.
+1. **Settings → Care team → Add someone**. Type their user name on this server, pick **Viewer** or **Care helper**, tick what
+   they can see and pick how long: until you stop it, a week, 30 days, 90 days or a year. Tap **Send invite**. The app may ask
+   for your password again.
+2. They see your invite in their own **Settings → Care team** and tap **Accept** or **Decline**. Nothing changes until they do.
+   Your invite waits 7 days under **Waiting for an answer**, where you can cancel it.
+3. If you do not know their user name, open **Make a link instead**, make a link and send it to them. It works once, for 7 days.
+   Send it only to them: whoever opens it first can accept it.
 
-On a shared summary, the food day loads on its own. If you change the date while it loads, you see the day you picked.
-If it cannot load, tap **Retry**.
+They never see your saved meals, your recipes, your food preferences, your AI settings, your keys or your sign-in activity. They
+see the weight in your profile only if you shared weight and blood pressure.
 
-After you open a sharing link, **Accept** appears once the app has checked who is sharing. If you open another link while
-you wait, the question is about the newer link.
+- **Your Care team** lists each person, their role, until when, when they last looked, and what a Care helper changed in your
+  plan that day. Change the role in the list. **Remove** ends it at once.
+- Food a Care helper planned for you says **Added by** and their name on your Today. You can change or remove it like any
+  planned food.
+- Your activity shows invites, answers, role changes, and once a day that a Care helper changed your plan.
+- A share with an end date stops by itself on that day.
+
+**When you are on someone's Care team**, they are under **Care teams you are on**. **Open** shows their summary page, **Trends**
+their charts; **Leave** ends it. Their weight chart uses their dry weight, never yours. If a part cannot load, tap **Retry**.
+
+**Planning meals for someone (Care helper).** Tap **Plan meals**, or choose their name under **Planning for** at the top of the
+Plan tab. A banner says whose plan you are changing. **Back to my own plan** takes you back; your own plan is never mixed with
+theirs.
+
+- Pick a day to see what they ate and what is planned. Change an amount and tap **Save**, or **Remove** a planned food.
+- **Add food** searches the foods they can use.
+- **Plan several days** makes a plan that follows their targets. Look it over, then tap **Add to their plan**. Their saved meals
+  are not used.
+- **Clear planned days** takes planned food off. Eaten food and a planned low treatment always stay. Only the person changes a
+  planned low treatment, and nothing in the app ever warns against treating a low.
+- Their **shopping list** works like yours: tick items, **Copy list** or **Share list**. Ticks stay on your device, apart from
+  your own list.
+- Planning for someone needs a connection to your server. Changes for them never wait on your phone.
 
 ## Assistant access
 
-When your admin turns assistant access on, **Settings → Assistant access** makes personal **tokens** for a chat
+When your admin turns assistant access on, **Settings → Outside AI apps** makes personal **tokens** for a chat
 assistant you connect. A token lets that assistant read your own food log and targets; it cannot change
 anything, and it never sees anyone else's data, unless you tick **Can also save food and recipes** when you make
 it. Then the assistant can also add food to your log and save recipes as saved meals (it still cannot edit or
@@ -249,5 +266,5 @@ change is listed in your activity, and a food it set shows in **Settings → Mea
 - [Design note 07: accounts, settings and secrets][NOTE07], sections 4.11, 4.12 and 4.17.
 - [Design note 02][NOTE02] (This device); [design note 03][NOTE03] (barcode settings); [design note 04][NOTE04] (AI keys);
   [design note 06][NOTE06] (guidance settings).
-- [Design note 19][NOTE19]: read-only sharing.
+- [Design note 19][NOTE19]: read-only sharing. [Design note 25][NOTE25]: the Care team.
 - [USDA FoodData Central API guide][FDC-API]: free keys and rate limits.

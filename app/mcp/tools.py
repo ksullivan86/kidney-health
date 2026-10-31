@@ -850,8 +850,8 @@ def safety_check(call: Call, args: SafetyArgs) -> dict[str, Any]:
 # log_food and save_recipe (a token with the assistant:log scope)
 # --------------------------------------------------------------------------- #
 
-READ_ONLY = ("This token can only read. The person can make a token that can also save in Settings → Assistant "
-             "access.")
+READ_ONLY = ("This token can only read. The person can make a token that can also save in Settings → Outside AI "
+             "apps.")
 RECIPE_NAME_MAX = 60
 
 

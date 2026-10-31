@@ -23,7 +23,7 @@ as "2 eggs, toast with butter, tea" into food searches, or read the numbers from
 
 ## How the setup fits together
 
-Three choices make up every AI setup (Settings → AI ideas starts with the same three questions):
+Three choices make up every AI setup (Settings → AI features starts with the same three questions):
 
 1. **Which AI answers.** Your admin chooses it: a model running at home, a company's AI over the
    internet (such as OpenAI or OpenRouter), or a home "Hermes" agent. Your admin may also let you add
@@ -48,7 +48,7 @@ company's AI only when your admin chooses that, and the admin screen says what i
 **Reading a photo of a lab report** is stricter still: it runs only on the AI at home, never on a company's AI and never on
 a key of your own, and it is off if there is no AI at home.
 
-**Settings → AI ideas** shows one line per feature, such as "Runs on your local AI" or "Runs on a cloud AI outside your
+**Settings → AI features** shows one line per feature, such as "Runs on your local AI" or "Runs on a cloud AI outside your
 network". If your admin moves a feature to a different AI, the app asks for your consent again for that AI. Your own
 key, if you add one, is your own choice and goes to that company. If your admin switches a feature off, it is off for
 everyone.
@@ -136,7 +136,7 @@ Your admin chooses which providers are offered. Typical ones:
 | **OpenRouter** | OpenRouter, then the model's host | "routed only to providers that do not collect data" ([OpenRouter][OPENROUTER-ROUTING]) |
 
 A model your admin runs at home keeps your data in the house and is the most private choice. If you
-have your own OpenAI, OpenRouter or Nous Portal key, you may be able to add it in **Settings → AI ideas →
+have your own OpenAI, OpenRouter or Nous Portal key, you may be able to add it in **Settings → AI features →
 My own AI provider** (and, if your admin allows it, the address of another AI server that uses HTTPS).
 Your key is encrypted on the server and never shown again; changing it asks for your password. If your
 own provider fails, the app never sends your data to the shared one instead
@@ -195,7 +195,7 @@ Most lab websites give you the report as a PDF. Choose that file in the same car
 
 ## Turn it on
 
-1. Check that your admin has switched AI on (**Settings → AI ideas** says whether it is on).
+1. Check that your admin has switched AI on (**Settings → AI features** says whether it is on).
 2. Tick **Use AI ideas**.
 3. Choose the provider your admin offers, or your own key if allowed.
 4. Decide whether to share age band and sex. It is off by default.
@@ -206,7 +206,7 @@ Most lab websites give you the report as a PDF. Choose that file in the same car
 ## Take it back
 
 - Untick **Use AI ideas** to stop all AI calls for your account.
-- **Settings → AI ideas → AI activity** lists what was sent and what came back. What came back is the AI
+- **Settings → AI features → AI activity** lists what was sent and what came back. What came back is the AI
   server's own answer, before the app checked it: the app used only the parts that passed, so words it never
   shows you, such as anything about insulin, doses or medicines, read [hidden] there. It is not advice. Your
   data export keeps the full text. **Delete my AI history** removes it. **What you agreed to send** has **Withdraw** for each server.
@@ -242,7 +242,7 @@ for example "How much potassium do I have left today?" or "Can I have a banana a
   save it by itself. By default it shows a **card**: the foods the app found, the amounts and the app's totals,
   with the words "Nothing has been saved yet". Press **Save as eaten**, **Save as planned** or **Cancel**; only your
   press saves. You can also use the **Add** screen as always.
-- **How much do you trust the assistant?** In **Settings → AI ideas** you can choose **Ask me before every save**
+- **How much do you trust the assistant?** In **Settings → AI features** you can choose **Ask me before every save**
   (the default, and the one we recommend), **Trust it for this conversation** or **Trust it always**. The last two
   save at once without asking, so you do not have to confirm every time, and they come with a warning first: the
   assistant can pick the wrong food or the wrong amount. Every number still comes from the app, the low and emergency
@@ -284,7 +284,7 @@ If your admin has set up speech to text, a **microphone** button sits next to **
 
 Some people like to ask about food in a chat, by typing or by talking. If your admin turns on **assistant
 access**, you can connect a chat assistant you already use (for example Open WebUI, or a Hermes Agent profile) to
-the app with a personal token from **Settings → Assistant access**
+the app with a personal token from **Settings → Outside AI apps**
 ([Settings and keys](settings-and-keys.md#assistant-access)).
 
 - The assistant **asks the app** for your targets, what is left of today, the values of a food, and how a meal

@@ -89,6 +89,11 @@ ACTIONS: set[str] = {
     "share.accepted",
     "share.ended",
     "share.viewed",
+    "care.invited",  # the Care team (note 25; app/sharing.py)
+    "care.invite_cancelled",
+    "care.invite_answered",
+    "care.role_changed",
+    "care.plan_changed",
     "oidc.linked",  # sign-in with a provider (design note 24; app/auth/oidc_api.py, admin_api.py)
     "oidc.unlinked",
 }
@@ -126,6 +131,11 @@ USER_VISIBLE_ACTIONS = frozenset(
         "share.accepted",
         "share.ended",
         "share.viewed",
+        "care.invited",
+        "care.invite_cancelled",
+        "care.invite_answered",
+        "care.role_changed",
+        "care.plan_changed",
         "oidc.linked",
         "oidc.unlinked",
     }

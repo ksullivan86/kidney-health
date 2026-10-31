@@ -192,7 +192,7 @@ def test_the_switches_are_independent(admin):
     assert push(admin.app, device, {"weights": [weight(f"{DAY}T09:00:00Z")]}).status_code == 401  # revoked while it was off
     switch(admin, False)
     r = admin.post("/api/me/tokens", json={"name": "late"})
-    assert r.status_code == 409 and "Assistant access is turned off" in r.json()["detail"]
+    assert r.status_code == 409 and "Outside AI apps are turned off" in r.json()["detail"]
 
 
 def test_bearer_helper_of_the_assistant_surface_still_refuses_a_device_token(admin):

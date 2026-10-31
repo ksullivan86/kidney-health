@@ -36643,7 +36643,8 @@
         }
        ],
        "kidney_rating": "red",
-       "purpose": null
+       "purpose": null,
+       "added_by": null
       },
       {
        "date": "2026-10-05",
@@ -36691,7 +36692,8 @@
         }
        ],
        "kidney_rating": "red",
-       "purpose": null
+       "purpose": null,
+       "added_by": null
       },
       {
        "date": "2026-10-05",
@@ -36725,7 +36727,8 @@
         }
        ],
        "kidney_rating": "yellow",
-       "purpose": null
+       "purpose": null,
+       "added_by": null
       },
       {
        "date": "2026-10-05",
@@ -36751,7 +36754,8 @@
        },
        "warnings": [],
        "kidney_rating": "green",
-       "purpose": "hypo"
+       "purpose": "hypo",
+       "added_by": null
       },
       {
        "date": "2026-10-05",
@@ -36777,7 +36781,8 @@
        },
        "warnings": [],
        "kidney_rating": "green",
-       "purpose": "hypo"
+       "purpose": "hypo",
+       "added_by": null
       }
      ],
      "totals": {
@@ -37098,7 +37103,8 @@
         }
        ],
        "kidney_rating": "red",
-       "purpose": null
+       "purpose": null,
+       "added_by": null
       },
       {
        "date": "2026-10-06",
@@ -37132,7 +37138,8 @@
         }
        ],
        "kidney_rating": "red",
-       "purpose": null
+       "purpose": null,
+       "added_by": null
       }
      ],
      "totals": {

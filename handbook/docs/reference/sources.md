@@ -562,6 +562,10 @@ Pages cite these by id, for example `[KDIGO 2024 CKD guideline][K24]`. The list 
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-29.
 - **NOTE24**: kidney-health design note 24: sign in with another account (OpenID Connect): Authentik, Google and others. <https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/24-oidc-sign-in.md>  
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-30.
+- **NOTE25**: kidney-health design note 25: the Care team, invites by user name and a Care helper who plans meals. <https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/25-care-team.md>  
+  Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-30.
+- **NOTE26**: kidney-health design note 26: test accounts (tester and tester-helper), Reset and Send feedback. <https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/26-test-accounts.md>  
+  Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-31.
 - **DEPLOY**: kidney-health project. docs/deployment.md: Podman, Quadlet and Kubernetes. <https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md>  
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-05.
 - **ASSISTANT-DOC**: kidney-health project. docs/assistant.md: the assistant (access tokens, the MCP server, connecting Open WebUI or a Hermes Agent profile, the system prompt, honest limits). <https://github.com/ksullivan86/kidney-health/blob/main/docs/assistant.md>  

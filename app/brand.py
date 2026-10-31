@@ -85,7 +85,7 @@ CSRF_HEADER_VALUE = "kidney-health"
 # Compatibility: a page cached before a change would stop noticing updates.
 VERSION_HEADER = "X-KDL-Version"
 
-# The start of an assistant access token (``kha_`` and 43 characters; Settings → Assistant access) and of a device token
+# The start of an assistant access token (``kha_`` and 43 characters; Settings → Outside AI apps) and of a device token
 # (``khd_``; Settings → Phone shortcuts).
 # Compatibility: tokens people already made, the check of their shape and the log redaction all depend on them.
 ASSISTANT_TOKEN_PREFIX = "kha_"

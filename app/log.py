@@ -103,9 +103,11 @@ _NUTRIENT_COLS = ", ".join(NUTRIENT_KEYS)
 _NUTRIENT_PLACEHOLDERS = ", ".join("?" for _ in NUTRIENT_KEYS)
 _ENTRY_SELECT = """
     SELECT e.*, f.flags_json AS food_flags_json, f.kidney_notes AS food_kidney_notes,
-           f.source AS food_source, f.source_license AS food_source_license
+           f.source AS food_source, f.source_license AS food_source_license,
+           COALESCE(NULLIF(TRIM(ab.display_name), ''), ab.username) AS added_by_name
     FROM log_entries e
     JOIN foods f ON f.id = e.food_id
+    LEFT JOIN users ab ON ab.id = e.added_by_user_id
 """
 # Contract order: meal, then status (eaten before planned), then created_at.
 _ENTRY_ORDER = f" ORDER BY e.date, {_MEAL_ORDER_SQL}, {_STATUS_ORDER_SQL}, e.created_at, e.id"
@@ -219,6 +221,8 @@ def version_conflict(entry: Mapping[str, Any]) -> ApiProblem:
 def row_to_entry(row: sqlite3.Row) -> dict[str, Any]:
     entry = entry_fields(row)
     entry["version"] = entry_version(entry)
+    # Schema step 27 (design note 25): the Care helper who added it, by name. Not part of the version or the export.
+    entry["added_by"] = _column(row, "added_by_name")
     return entry
 
 
@@ -365,10 +369,12 @@ def insert_entry(
     client_id: str | None = None,
     created_at: str | None = None,
     updated_at: str | None = None,
+    added_by: int | None = None,
 ) -> int:
     """Insert one entry with its nutrient snapshot; the caller commits. A ``client_id`` the person
     already used raises ``sqlite3.IntegrityError`` (index ``log_client_id``). ``created_at`` and ``updated_at``
-    are for an import of the person's own export (``app/data_import.py``); left out they are now."""
+    are for an import of the person's own export (``app/data_import.py``); left out they are now. ``added_by`` is the
+    Care helper who planned it for the person (``app/sharing.py``, design note 25)."""
     if status not in ENTRY_STATUSES:
         raise ValueError(f"status must be one of {', '.join(ENTRY_STATUSES)}")
     if purpose not in (None, HYPO_PURPOSE):
@@ -378,10 +384,10 @@ def insert_entry(
     created = created_at or now
     cur = conn.execute(
         f"""INSERT INTO log_entries (user_id, date, meal, food_id, food_name, servings, grams, note, status,
-                {_NUTRIENT_COLS}, purpose, client_id, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, {_NUTRIENT_PLACEHOLDERS}, ?, ?, ?, ?)""",
+                {_NUTRIENT_COLS}, purpose, client_id, created_at, updated_at, added_by_user_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, {_NUTRIENT_PLACEHOLDERS}, ?, ?, ?, ?, ?)""",
         (int(user_id), date, meal, food["id"], food["name"], servings, grams, note, status,
-         *[snapshot[k] for k in NUTRIENT_KEYS], purpose, client_id, created, updated_at or created),
+         *[snapshot[k] for k in NUTRIENT_KEYS], purpose, client_id, created, updated_at or created, added_by),
     )
     return int(cur.lastrowid)
 
@@ -840,7 +846,7 @@ def _replayed(conn: sqlite3.Connection, user_id: int, client_id: str | None, res
     return row_to_entry(existing)
 
 
-def insert_logged(conn: sqlite3.Connection, user_id: int, body: LogCreate, where: str = "") -> int:
+def insert_logged(conn: sqlite3.Connection, user_id: int, body: LogCreate, where: str = "", added_by: int | None = None) -> int:
     """Validate visibility (404) and insert one ``POST /api/log`` item; the caller commits. Also what the
     assistant's ``log_food`` (``app/mcp``) saves through, so an entry made there is an entry made here."""
     food = fetch_user_food(conn, user_id, body.food_id)
@@ -850,6 +856,7 @@ def insert_logged(conn: sqlite3.Connection, user_id: int, body: LogCreate, where
     return insert_entry(
         conn, user_id=user_id, date=body.date, meal=body.meal, food=food, servings=servings, grams=grams,
         note=body.note, status=body.status, purpose=resolve_purpose(food, body.purpose), client_id=body.client_id,
+        added_by=added_by,
     )
 
 
