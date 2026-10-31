@@ -7,6 +7,19 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+## 0.15.0 — 2026-10-31
+
+Version 0.15 lets people sign in with Authentik and Google on the same server, adds a choice to sign in only through them,
+and lets a token for an outside AI app or a phone shortcut last until you remove it. Nothing new is switched on.
+
+### Upgrading from 0.14 (read this first)
+
+1. **Back up first** (`podman exec kidney-health python -m app.admin backup /data/before-0.15.0.db`). There is no schema step.
+2. **Coming from 0.13 or older**, read [Upgrading from 0.13](#upgrading-from-013-read-this-first) and the notes before it too.
+3. **Change the tag** to `:0.15`, or pin a digest from the release notes. The shipped files already say `:0.15`.
+4. **Nothing changes for your current sign-in.** The `OIDC_ISSUER` variables keep working as the first provider. A second
+   provider, `OIDC_ONLY` and never-ending tokens are all off until you set them ([accounts.md](docs/accounts.md)).
+
 ### Sign-in with providers
 
 * **Authentik and Google at the same time.** List up to four providers in `OIDC_PROVIDERS`, for example `authentik,google`, and
