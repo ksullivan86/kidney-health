@@ -132,14 +132,12 @@
       ],
       label: 'My weight-gain alarm (from my care team)',
       help: 'amount_kg (0.2–10, or null for none), over (between_sessions, on hemodialysis, or days) and days (1–7). The app never suggests a number: enter the one your team gave you.' },
-    // Connected devices (design note 27; app/devices/). The provider apps (WITHINGS_*) are env only, never settings.
+    // Connected devices (design notes 27 and 28; app/devices/). The provider apps (WITHINGS_*, WHOOP_*) are env only, never settings.
     { key: 'devices.enabled', type: 'bool', default: false, scope: 'instance', env: 'DEVICES_ENABLED',
-      label: 'Let people connect a Withings scale or blood pressure monitor',
-      help: 'Off by default. When on, each person can connect their own Withings account in Settings → Connected devices. '
-        + 'The server then fetches that person\'s weight, blood pressure and pulse from Withings every few hours and adds them to their log. Nothing about the person is sent to Withings. '
-        + 'The server owner sets up a Withings developer app first (WITHINGS_ENABLED; see docs/devices.md). While off, nothing is fetched and the section is hidden; turned on again, connections that were not removed work again.' },
+      label: 'Let people connect a Withings scale, a blood pressure monitor or a Whoop strap',
+      help: 'Off by default. When on, each person can connect their own Withings or Whoop account in Settings → Connected devices. The server then fetches that person\'s weight, blood pressure and pulse from Withings, and their calories burned, strain, recovery, heart rate variability, sleep and workouts from Whoop, every few hours. Nothing about the person is sent to either company. The server owner sets up a developer app with each company first (WITHINGS_ENABLED, WHOOP_ENABLED; see docs/devices.md). While off, nothing is fetched and the section is hidden; turned on again, connections that were not removed work again.' },
     { key: 'devices.sync_hours', type: 'int', min: 1, max: 24, default: 4, scope: 'instance', env: 'DEVICES_SYNC_HOURS',
-      label: 'Fetch from connected devices every (hours)', help: 'How often the server asks Withings for new readings. People can also press Sync now.' },
+      label: 'Fetch from connected devices every (hours)', help: 'How often the server asks Withings and Whoop for new data. People can also press Sync now.' },
     { key: 'food.barcode_negative_ttl_hours', type: 'int', min: 1, max: 720, default: 24, scope: 'instance', env: 'BARCODE_NEGATIVE_TTL_HOURS',
       label: 'Remember barcodes that were not found for (hours)',
       help: 'A barcode that Open Food Facts or USDA did not know is not asked again for this long.' },
