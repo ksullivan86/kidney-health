@@ -22,6 +22,8 @@ from app.config import ConfigError, OidcEnv, load_settings
 from app.main import create_app
 from conftest import ADMIN_PASSWORD, ADMIN_USERNAME, HTTPS_URL, TestClient, invite_token, make_settings, sign_in
 from oidc_support import CLIENT_ID, CLIENT_SECRET, FakeProvider, attach, come_back, named_env, sign_in_with_provider
+from test_test_accounts import PASSWORD as TESTER_PHRASE
+from test_test_accounts import pw_file  # noqa: F401  (a fixture: the test accounts' password file, as there)
 
 PUBLIC_URL = "https://localhost"
 REPO = Path(__file__).resolve().parents[1]
@@ -409,10 +411,8 @@ def test_oidc_only_refuses_passwords_and_lets_the_provider_in(only_app, authenti
         assert back.headers["location"] == "/" and anon.get("/api/me").json()["username"] == "ann@example.org"
 
 
-def test_oidc_only_lets_the_test_accounts_keep_their_password(tmp_path, foods_json, authentik, google):
-    password = "lantern-meadow-quartz-91"
-    pw_file = tmp_path / "test-account-password"
-    pw_file.write_text(password + "\n", encoding="utf-8")
+def test_oidc_only_lets_the_test_accounts_keep_their_password(tmp_path, foods_json, authentik, google, pw_file):  # noqa: F811
+    """The test accounts' password file comes from tests/test_test_accounts.py (its pw_file fixture, imported above)."""
     application = create_app(make_settings(tmp_path, foods_json, public_url=PUBLIC_URL, oidc=two_env(only=True),
                                            test_account_password_file=pw_file))
     attach(application, authentik, "authentik")
@@ -422,7 +422,7 @@ def test_oidc_only_lets_the_test_accounts_keep_their_password(tmp_path, foods_js
         set_setting(c, **{"test_accounts.enabled": True})
         anon = TestClient(application, base_url=HTTPS_URL)
         assert anon.get("/api/auth/status").json()["oidc"]["password"] == "test_accounts"
-        r = anon.post("/api/auth/login", json={"username": "tester", "password": password})
+        r = anon.post("/api/auth/login", json={"username": "tester", "password": TESTER_PHRASE})
         assert r.status_code == 200, r.text
         assert anon.get("/api/me").json()["username"] == "tester"
         r = anon.post("/api/auth/login", json={"username": ADMIN_USERNAME, "password": ADMIN_PASSWORD})

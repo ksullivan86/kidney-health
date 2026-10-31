@@ -182,7 +182,7 @@ def _known(conn: sqlite3.Connection, ctx: AuthContext, found: list[oidc.OidcClie
     return {oc.issuer: (oc.id, short_label(label(conn, ctx, oc))) for oc in found}
 
 
-def _password_mode(request: Request, conn: sqlite3.Connection) -> str:
+def _form_mode(request: Request, conn: sqlite3.Connection) -> str:
     """``on``; or with ``OIDC_ONLY`` ``off``, or ``test_accounts`` while the test accounts are on (they sign in with a password)."""
     if not only(request):
         return "on"
@@ -199,7 +199,7 @@ def status_view(request: Request, conn: sqlite3.Connection) -> dict[str, Any]:
     found = providers(request)
     items = [{"id": oc.id, "label": label(conn, ctx, oc)} for oc in found]
     return {"enabled": bool(found), "label": items[0]["label"] if items else None, "providers": items,
-            "only": only(request), "password": _password_mode(request, conn)}
+            "only": only(request), "password": _form_mode(request, conn)}
 
 
 def _about_one(oc: oidc.OidcClient, conn: sqlite3.Connection, ctx: AuthContext) -> dict[str, Any]:

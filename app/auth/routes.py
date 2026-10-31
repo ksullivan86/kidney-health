@@ -264,9 +264,9 @@ def _login_succeeded(request: Request, response: Response, conn: sqlite3.Connect
     return {"user": me_dict(user), "notice": notice}
 
 
-PASSWORDS_OFF = ("This server signs people in with a sign-in provider only, not with a password. Use the button for your "
+PROVIDER_ONLY_SIGNIN = ("This server signs people in with a sign-in provider only, not with a password. Use the button for your "
                  "provider below.")
-SIGNUP_PASSWORDS_OFF = ("This server makes accounts with a sign-in provider only. Use the button for your provider below: no "
+PROVIDER_ONLY_SIGNUP = ("This server makes accounts with a sign-in provider only. Use the button for your provider below: no "
                         "password to choose.")
 
 
@@ -276,7 +276,7 @@ def _oidc_only(request: Request) -> bool:
     return only(request)
 
 
-def _password_allowed_for(conn: sqlite3.Connection, username: str) -> bool:
+def _typed_sign_in_allowed(conn: sqlite3.Connection, username: str) -> bool:
     """With ``OIDC_ONLY`` (design note 24 §13) only a test account may sign in with a password: the test accounts are switched
     on separately, never admins, and have no provider. The answer is the same for an unknown name and a real account."""
     norm = normalize_username(username)
@@ -292,8 +292,8 @@ async def login(body: LoginBody, request: Request, response: Response, conn: sql
     ``oidc_only`` for everyone else, before any work)."""
     ctx = auth_context(request)
     _only_modes(ctx, "local")
-    if _oidc_only(request) and not await run_in_threadpool(_password_allowed_for, conn, body.username):
-        raise ApiProblem(403, PASSWORDS_OFF, oidc_only=True)
+    if _oidc_only(request) and not await run_in_threadpool(_typed_sign_in_allowed, conn, body.username):
+        raise ApiProblem(403, PROVIDER_ONLY_SIGNIN, oidc_only=True)
     ip = request_ip(request)
     row, device, mac = await run_in_threadpool(_login_checks, request, conn, ctx, body.username, ip)
 
@@ -415,7 +415,7 @@ def register(body: RegisterBody, request: Request, response: Response, conn: sql
     ctx = auth_context(request)
     _only_modes(ctx, "local")
     if _oidc_only(request):  # accounts come from the provider (an invite redeemed with it, or its sign-up), note 24 §13
-        raise ApiProblem(403, SIGNUP_PASSWORDS_OFF, oidc_only=True)
+        raise ApiProblem(403, PROVIDER_ONLY_SIGNUP, oidc_only=True)
     ensure_setup_done(conn, ctx)
     s = ctx.settings
     ip = request_ip(request)

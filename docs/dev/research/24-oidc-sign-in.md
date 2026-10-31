@@ -328,6 +328,8 @@ answers 403 (an invite is redeemed with a provider instead). The status says `oi
   testers can get in; the sign-in page offers "Sign in to a test account with its password" while they are on.
 * **Reset and setup links still work once** (only an admin or the command line makes them). The password set that way cannot be
   used to sign in again while `OIDC_ONLY` is on. First-run setup still works: there is no other way to make the first admin.
+  Typing the password again for a sensitive action (re-auth) still works for someone who has one: it needs a session already, so
+  it is not a way in.
 * **Start-up refuses** `OIDC_ONLY=true` without a provider (`ConfigError`, a one-line message, no traceback), and warns when it is
   on.
 * **The way back in** when the provider is down: set `OIDC_ONLY=false`, restart, sign in with a password; an admin with no
