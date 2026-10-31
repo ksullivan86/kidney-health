@@ -174,7 +174,29 @@
   const NUM = '[0-9]{1,3}(?:,[0-9]{3})+(?![0-9])|[0-9]+(?:\\.[0-9]+|,[0-9]{1,2}(?![0-9]))?'; // "1,000", "1.5", "1,5"
   const THOUSANDS = /^[0-9]{1,3}(?:,[0-9]{3})+$/;
   const QTY = new RegExp(`^(?:([0-9]+)\\s+([0-9]+)\\s*/\\s*([0-9]+)|([0-9]+)\\s*/\\s*([0-9]+)|(${NUM}))`);
-  const RANGE = /^\s*(?:-|–|—|to|or)\s*(?=[0-9])/;
+  const RANGE_WORDS = ['-', '–', '—', 'to', 'or'];
+  const PARENS = /\([^()]*\)/g; // twin of parse._PARENS
+  // twin of parse._range_end: where a range's second number starts, or null (no regex, so spaces cannot make it slow)
+  function rangeEnd(rest) {
+    const s = rest.trimStart();
+    const start = rest.length - s.length;
+    for (const sep of RANGE_WORDS) {
+      if (!s.startsWith(sep)) continue;
+      const after = s.slice(sep.length);
+      const tail = after.trimStart();
+      if (tail && '0123456789'.includes(tail[0])) return start + sep.length + after.length - tail.length;
+    }
+    return null;
+  }
+  // twin of parse._leading_word: [word, end] for ASCII letters followed by a word break, end past the spaces after it
+  function leadingWord(text) {
+    const m = /^[A-Za-z]+/.exec(text);
+    if (!m) return null;
+    const end = m[0].length;
+    if (end < text.length && /\w/.test(text[end])) return null;
+    const after = text.slice(end);
+    return [m[0], end + after.length - after.trimStart().length];
+  }
   const BULLET = /^[\s\-*•▢□☐·]+/;
 
   function normaliseLine(raw) {
@@ -193,10 +215,10 @@
     if (!m) return [null, text];
     const value = numberOf(m);
     let rest = text.slice(m[0].length);
-    const ranged = RANGE.exec(rest);
-    if (ranged) {
-      const second = QTY.exec(rest.slice(ranged[0].length));
-      if (second) rest = rest.slice(ranged[0].length + second[0].length);
+    const ranged = rangeEnd(rest);
+    if (ranged != null) {
+      const second = QTY.exec(rest.slice(ranged));
+      if (second) rest = rest.slice(ranged + second[0].length);
     }
     return [value, rest.replace(/^\s+/, '')];
   }
@@ -215,17 +237,17 @@
     return [null, text];
   }
   function wordNumber(text) {
-    const m = /^([A-Za-z]+)\b\s*/.exec(text);
-    if (!m) return [null, text, false];
-    const word = m[1].toLowerCase();
-    if (has(NUMBER_WORDS, word)) return [NUMBER_WORDS[word], text.slice(m[0].length), false];
-    if (ARTICLE_WORDS.includes(word)) return [1, text.slice(m[0].length), true];
+    const found = leadingWord(text);
+    if (!found) return [null, text, false];
+    const word = found[0].toLowerCase();
+    if (has(NUMBER_WORDS, word)) return [NUMBER_WORDS[word], text.slice(found[1]), false];
+    if (ARTICLE_WORDS.includes(word)) return [1, text.slice(found[1]), true];
     return [null, text, false];
   }
   function packageSize(text) {
-    const m = /^\(\s*([^()]*?)\s*\)\s*/.exec(text);
-    const inner = m ? m[1] : text;
-    let rest = m ? text.slice(m[0].length) : '';
+    const m = /^\([^()]*\)/.exec(text);
+    const inner = m ? m[0].slice(1, -1).trim() : text;
+    let rest = m ? text.slice(m[0].length).trimStart() : '';
     let [size, after] = takeQuantity(inner);
     if (size == null) return null;
     if (after.startsWith('-')) after = after.slice(1).replace(/^\s+/, '');
@@ -234,9 +256,9 @@
     if (unit == null || (!has(MASS_G, unit) && !has(VOLUME_ML, unit))) return null;
     if (!m) rest = after;
     else if (after.trim()) return null;
-    const word = /^([A-Za-z]+)\b\s*/.exec(rest);
-    if (!word || !CONTAINERS.includes(word[1].toLowerCase())) return null;
-    return [size, unit, rest.slice(word[0].length)];
+    const word = leadingWord(rest);
+    if (!word || !CONTAINERS.includes(word[0].toLowerCase())) return null;
+    return [size, unit, rest.slice(word[1])];
   }
   function stripChars(text, chars) {
     let a = 0, b = text.length;
@@ -264,7 +286,7 @@
     const comma = rest.indexOf(',');
     const head = comma < 0 ? rest : rest.slice(0, comma);
     const tail = comma < 0 ? '' : rest.slice(comma + 1);
-    let food = stripChars(head.replace(/\([^)]*\)/g, ' ').replace(SPACE, ' '), ' .;:-');
+    let food = stripChars(head.replace(PARENS, ' ').replace(SPACE, ' '), ' .;:-');
     let note = tail.trim() || null;
     if (!food && note) { food = note; note = null; }
     return { text, amount, unit, food_text: food, note };
@@ -292,7 +314,7 @@
   }
   function searchTerms(foodText) {
     let text = (foodText || '').toLowerCase();
-    text = text.replace(/\([^)]*\)/g, ' ');
+    text = text.replace(PARENS, ' ');
     text = text.split(',')[0].split('/')[0];
     const or = /\bor\b/.exec(text);
     if (or) text = text.slice(0, or.index);

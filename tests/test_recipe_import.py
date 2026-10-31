@@ -401,3 +401,15 @@ def test_tag_stripping_stays_fast_on_text_full_of_angle_brackets() -> None:
         P.text_of("<" * 3996 + "rice")
     assert time.monotonic() - started < 1.0  # the old pattern took about 4 seconds here
     assert P.text_of("1 <b>cup</b> rice") == "1 cup rice"
+
+
+@pytest.mark.parametrize("line", ["(" * 300, "(" + " " * 299, "A" * 299 + "1", "2" + " " * 298 + "x", "(" * 150 + "1 cup)" * 20])
+def test_hostile_ingredient_lines_stay_fast(line: str) -> None:
+    """Lines CodeQL flagged as possibly slow for a regex (code scanning 31-36): each parses at once."""
+    import time
+
+    started = time.monotonic()
+    for _ in range(50):
+        P.parse_line(line)
+        P.search_terms(line)
+    assert time.monotonic() - started < 1.0

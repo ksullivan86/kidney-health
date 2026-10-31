@@ -294,7 +294,35 @@ COUNT_UNITS = ("piece", "slice", "clove", "can")
 _NUM = r"[0-9]{1,3}(?:,[0-9]{3})+(?![0-9])|[0-9]+(?:\.[0-9]+|,[0-9]{1,2}(?![0-9]))?"  # "1,000", "1.5", "1,5"
 _THOUSANDS = re.compile(r"[0-9]{1,3}(?:,[0-9]{3})+")
 _QTY = re.compile(r"(?:([0-9]+)\s+([0-9]+)\s*/\s*([0-9]+)|([0-9]+)\s*/\s*([0-9]+)|(" + _NUM + r"))")
-_RANGE = re.compile(r"\s*(?:-|–|—|to|or)\s*(?=[0-9])")
+_RANGE_WORDS = ("-", "–", "—", "to", "or")
+_LETTERS = re.compile(r"[A-Za-z]+")
+_PARENS = re.compile(r"\([^()]*\)")  # [^()] keeps it linear on text full of "("
+
+
+def _range_end(rest: str) -> int | None:
+    """Where the second number of a range starts ("2 to 3", "2-3"), or ``None``. Written without a regex so a line full of
+    spaces cannot make it slow."""
+    s = rest.lstrip()
+    start = len(rest) - len(s)
+    for sep in _RANGE_WORDS:
+        if s.startswith(sep):
+            after = s[len(sep):]
+            tail = after.lstrip()
+            if tail[:1] in "0123456789" and tail[:1]:
+                return start + len(sep) + len(after) - len(tail)
+    return None
+
+
+def _leading_word(text: str) -> tuple[str, int] | None:
+    """``(word, end)`` for ASCII letters at the start of ``text`` followed by a word break, ``end`` past the spaces after it."""
+    match = _LETTERS.match(text)
+    if match is None:
+        return None
+    end = match.end()
+    if end < len(text) and (text[end].isalnum() or text[end] == "_"):
+        return None  # no word break after the letters
+    after = text[end:]
+    return match.group(0), end + len(after) - len(after.lstrip())
 _BULLET = re.compile(r"^[\s\-*•▢□☐·]+")
 
 
@@ -324,11 +352,11 @@ def take_quantity(text: str) -> tuple[float | None, str]:
         return None, text
     value = _number(match)
     rest = text[match.end():]
-    ranged = _RANGE.match(rest)
+    ranged = _range_end(rest)
     if ranged is not None:
-        second = _QTY.match(rest[ranged.end():])
+        second = _QTY.match(rest[ranged:])
         if second is not None:
-            rest = rest[ranged.end() + second.end():]
+            rest = rest[ranged + second.end():]
     return value, rest.lstrip()
 
 
@@ -349,21 +377,21 @@ def take_unit(text: str) -> tuple[str | None, str]:
 
 
 def _word_number(text: str) -> tuple[float | None, str, bool]:
-    match = re.match(r"([A-Za-z]+)\b\s*", text)
-    if match is None:
+    found = _leading_word(text)
+    if found is None:
         return None, text, False
-    word = match.group(1).lower()
+    word, end = found[0].lower(), found[1]
     if word in NUMBER_WORDS:
-        return float(NUMBER_WORDS[word]), text[match.end():], False
+        return float(NUMBER_WORDS[word]), text[end:], False
     if word in ARTICLE_WORDS:
-        return 1.0, text[match.end():], True
+        return 1.0, text[end:], True
     return None, text, False
 
 
 def _package(text: str) -> tuple[float, str, str] | None:
     """``(size, unit, rest)`` for a package size before a container: ``(14.5 oz) can …`` or ``15-ounce cans …``."""
-    match = re.match(r"\(\s*([^()]*?)\s*\)\s*", text)
-    inner, rest = (match.group(1), text[match.end():]) if match else (text, "")
+    match = _PARENS.match(text)
+    inner, rest = (match.group(0)[1:-1].strip(), text[match.end():].lstrip()) if match else (text, "")
     size, after = take_quantity(inner)
     if size is None:
         return None
@@ -375,10 +403,10 @@ def _package(text: str) -> tuple[float, str, str] | None:
         rest = after
     elif after.strip():
         return None
-    word = re.match(r"([A-Za-z]+)\b\s*", rest)
-    if word is None or word.group(1).lower() not in CONTAINERS:
+    word = _leading_word(rest)
+    if word is None or word[0].lower() not in CONTAINERS:
         return None
-    return size, unit, rest[word.end():]
+    return size, unit, rest[word[1]:]
 
 
 def parse_line(raw: str) -> dict[str, Any]:
@@ -406,7 +434,7 @@ def parse_line(raw: str) -> dict[str, Any]:
     else:
         unit, rest = None, text
     head, _, tail = rest.partition(",")
-    food = _SPACE.sub(" ", re.sub(r"\([^)]*\)", " ", head)).strip(" .;:-")
+    food = _SPACE.sub(" ", _PARENS.sub(" ", head)).strip(" .;:-")
     note = tail.strip() or None
     if not food and note:
         food, note = note, None
@@ -447,7 +475,7 @@ def stem(word: str) -> str:
 def search_terms(food_text: str) -> list[str]:
     """The searches to try for an ingredient's food words, best first: all words, the last two, the last one, the first one."""
     text = (food_text or "").lower()
-    text = re.sub(r"\([^)]*\)", " ", text)
+    text = _PARENS.sub(" ", text)
     text = text.split(",", 1)[0].split("/", 1)[0]
     text = re.split(r"\bor\b", text, maxsplit=1)[0]
     for phrase in DROP_PHRASES:
