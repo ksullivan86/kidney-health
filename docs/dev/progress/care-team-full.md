@@ -1,4 +1,4 @@
-Status: in progress (all built and checked; the full suite is the last step)
+Status: complete
 
 # Full Care team (design note 29, release 0.18 work)
 
@@ -27,8 +27,14 @@ CHANGELOG release heading (only "Unreleased").
   docs/accounts.md, handbook (settings-and-keys, planning-and-menus, caregivers, sources NOTE29), docs/test-the-full-app.md step 11,
   docs/try-it-for-ckd.md, ROADMAP, notes 21 and 25 status lines, CHANGELOG Unreleased.
 
-## Next
-- Full pytest run, then mark complete.
+- Full suite (2026-10-31): 7064 passed, 2 skipped, 1 failed (tests/data/README.md did not list `about` for care_vectors.json);
+  fixed, and `tests/test_vectors_readme.py` then 28 passed. Targeted set (27 files): 506 passed.
+- Seen, not mine: `mkdocs build --strict` in handbook/ stops on two warnings about `#assistant-access` (app/ai.md and
+  settings-and-keys.md), present on next-8 already.
+
+## Left for later (note 29 "Out of scope")
+The person approving each change before it lands; notes from a clinician; suggestions to several people at once; a food swap as a
+suggestion.
 
 ## Commands
 PY=/tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/venv312/bin/python

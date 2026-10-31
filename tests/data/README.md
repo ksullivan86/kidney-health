@@ -207,6 +207,7 @@ The full Care team (design note 29): the switches, the roles over them, the sugg
 
 Top-level keys:
 
+* `about`: where the file comes from.
 * `constants`: `switches`, `roles`, `presets` (`{role: {switch: bool}}`), `areas`, `suggest_days`, `max_open_per_share`, `max_per_day`,
   `max_note`, `max_items`, `banned_pattern` (the source of `messages.BANNED_PATTERN`) and `texts` (each fixed sentence, for a person
   named Ana).
