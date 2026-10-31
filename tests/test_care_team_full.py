@@ -488,3 +488,16 @@ def test_a_helper_of_ana_never_reaches_kims_meals_or_suggestions(team):
 def test_the_date_constants():
     assert care_suggestions.SUGGEST_DAYS == 14 and care_suggestions.MAX_NOTE == 280
     assert (date.fromisoformat(TOMORROW) - timedelta(days=1)).isoformat() == TODAY
+
+
+def test_the_care_vectors_are_current():
+    """tests/data/care_vectors.json is what app/sharing.py and app/care_suggestions.py answer now; node tests/js/run_vectors.mjs
+    replays it against the demo's twin (js/mock/care.js)."""
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    r = subprocess.run([sys.executable, str(root / "tests" / "data" / "gen_care_vectors.py"), "--check"], capture_output=True, text=True,
+                       timeout=120)
+    assert r.returncode == 0, r.stderr

@@ -1,0 +1,279 @@
+{
+ "about": "Made by tests/data/gen_care_vectors.py from app/sharing.py and app/care_suggestions.py (design note 29).",
+ "constants": {
+  "switches": [
+   "may_plan",
+   "may_log",
+   "may_use_saved_meals",
+   "may_suggest"
+  ],
+  "roles": [
+   "viewer",
+   "care_helper",
+   "caregiver"
+  ],
+  "presets": {
+   "viewer": {
+    "may_plan": false,
+    "may_log": false,
+    "may_use_saved_meals": false,
+    "may_suggest": false
+   },
+   "care_helper": {
+    "may_plan": true,
+    "may_log": false,
+    "may_use_saved_meals": false,
+    "may_suggest": false
+   },
+   "caregiver": {
+    "may_plan": true,
+    "may_log": true,
+    "may_use_saved_meals": false,
+    "may_suggest": false
+   }
+  },
+  "areas": [
+   "food",
+   "labs",
+   "body",
+   "symptoms",
+   "activity"
+  ],
+  "suggest_days": 14,
+  "max_open_per_share": 10,
+  "max_per_day": 20,
+  "max_note": 280,
+  "max_items": 30,
+  "banned_pattern": "\\b(safe|bad|cheat|failed|unlimited|don't worry|insulin|bolus|basal|units?|ratios?|correction|doses?|dosing|pump|binders?|sevelamer|lanthanum|calcium acetate|patiromer|zirconium|supplements?|diagnos\\w*|lab results?|as much as|no need to)\\b",
+  "texts": {
+   "not_shared": "Not shared with you.",
+   "low_treatment": "Only Ana can change or remove a low treatment.",
+   "not_your_eaten": "You can change only the eaten food you added.",
+   "no_suggestion": "That suggestion is no longer open.",
+   "none_left": "None of these foods is on your list any more, so nothing was added. You can say no thanks instead.",
+   "too_many_open": "Ana already has 10 suggestions from you waiting for an answer. Wait for an answer first.",
+   "too_many_today": "You have sent 20 suggestions in the last 24 hours, the most allowed. Try again tomorrow.",
+   "low_food": "Glucose tablets is for treating a low. Suggestions leave those out: how to treat a low stays Ana's choice."
+  }
+ },
+ "role_cases": [
+  {
+   "switches": {
+    "may_plan": false,
+    "may_log": false,
+    "may_use_saved_meals": false,
+    "may_suggest": false
+   },
+   "role": "viewer"
+  },
+  {
+   "switches": {
+    "may_plan": false,
+    "may_log": false,
+    "may_use_saved_meals": false,
+    "may_suggest": true
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": false,
+    "may_log": false,
+    "may_use_saved_meals": true,
+    "may_suggest": false
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": false,
+    "may_log": false,
+    "may_use_saved_meals": true,
+    "may_suggest": true
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": false,
+    "may_log": true,
+    "may_use_saved_meals": false,
+    "may_suggest": false
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": false,
+    "may_log": true,
+    "may_use_saved_meals": false,
+    "may_suggest": true
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": false,
+    "may_log": true,
+    "may_use_saved_meals": true,
+    "may_suggest": false
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": false,
+    "may_log": true,
+    "may_use_saved_meals": true,
+    "may_suggest": true
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": true,
+    "may_log": false,
+    "may_use_saved_meals": false,
+    "may_suggest": false
+   },
+   "role": "care_helper"
+  },
+  {
+   "switches": {
+    "may_plan": true,
+    "may_log": false,
+    "may_use_saved_meals": false,
+    "may_suggest": true
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": true,
+    "may_log": false,
+    "may_use_saved_meals": true,
+    "may_suggest": false
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": true,
+    "may_log": false,
+    "may_use_saved_meals": true,
+    "may_suggest": true
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": true,
+    "may_log": true,
+    "may_use_saved_meals": false,
+    "may_suggest": false
+   },
+   "role": "caregiver"
+  },
+  {
+   "switches": {
+    "may_plan": true,
+    "may_log": true,
+    "may_use_saved_meals": false,
+    "may_suggest": true
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": true,
+    "may_log": true,
+    "may_use_saved_meals": true,
+    "may_suggest": false
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": true,
+    "may_log": true,
+    "may_use_saved_meals": true,
+    "may_suggest": true
+   },
+   "role": "custom"
+  }
+ ],
+ "note_cases": [
+  {
+   "note": null,
+   "problem": null
+  },
+  {
+   "note": "",
+   "problem": null
+  },
+  {
+   "note": "The low-sodium broth is in the pantry.",
+   "problem": null
+  },
+  {
+   "note": "Half a cup of rice, about 60 g.",
+   "problem": null
+  },
+  {
+   "note": "Try the low-fat yogurt",
+   "problem": null
+  },
+  {
+   "note": "Take 2 units of insulin first",
+   "problem": "Please leave out \"units\". Notes are about food: never insulin, doses, medicines or lab results, and never call food \"safe\" or \"bad\"."
+  },
+  {
+   "note": "If you feel shaky have this",
+   "problem": "Notes cannot be about lows. How to treat a low stays Ana's choice."
+  },
+  {
+   "note": "This one is safe for you",
+   "problem": "Please leave out \"safe\". Notes are about food: never insulin, doses, medicines or lab results, and never call food \"safe\" or \"bad\"."
+  },
+  {
+   "note": "Not bad at all",
+   "problem": "Please leave out \"bad\". Notes are about food: never insulin, doses, medicines or lab results, and never call food \"safe\" or \"bad\"."
+  },
+  {
+   "note": "Your lab results said so",
+   "problem": "Please leave out \"lab results\". Notes are about food: never insulin, doses, medicines or lab results, and never call food \"safe\" or \"bad\"."
+  },
+  {
+   "note": "Sugar was 3.2 earlier",
+   "problem": "Notes cannot be about lows. How to treat a low stays Ana's choice."
+  },
+  {
+   "note": "I'm low, eat this",
+   "problem": "Notes cannot be about lows. How to treat a low stays Ana's choice."
+  },
+  {
+   "note": "no need to count it",
+   "problem": "Please leave out \"no need to\". Notes are about food: never insulin, doses, medicines or lab results, and never call food \"safe\" or \"bad\"."
+  },
+  {
+   "note": "Skip the binder today",
+   "problem": "Please leave out \"binder\". Notes are about food: never insulin, doses, medicines or lab results, and never call food \"safe\" or \"bad\"."
+  },
+  {
+   "note": "ｉｎｓｕｌｉｎ in full-width letters",
+   "problem": "Please leave out \"insulin\". Notes are about food: never insulin, doses, medicines or lab results, and never call food \"safe\" or \"bad\"."
+  },
+  {
+   "note": "Dinner at 6 with Sam",
+   "problem": null
+  },
+  {
+   "note": "Good for dialysis days",
+   "problem": null
+  },
+  {
+   "note": "A correction for lunch",
+   "problem": "Please leave out \"correction\". Notes are about food: never insulin, doses, medicines or lab results, and never call food \"safe\" or \"bad\"."
+  }
+ ]
+}

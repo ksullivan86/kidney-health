@@ -36,6 +36,7 @@ Run the commands from the repository root.
 | `apple_health_vectors.json` | `node tests/js/gen_apple_health_vectors.mjs` |
 | `barcode_vectors.json` | `python3 tests/data/gen_barcode_vectors.py` |
 | `body_vectors.json` | `python3 tests/data/gen_body_vectors.py` |
+| `care_vectors.json` | `python3 tests/data/gen_care_vectors.py` |
 | `ccda_labs_vectors.json` | `node tests/js/gen_ccda_labs_vectors.mjs` |
 | `entry_version_vectors.json` | `python3 tests/data/gen_entry_version_vectors.py` |
 | `fhir_labs_vectors.json` | `node tests/js/gen_fhir_labs_vectors.mjs` |
@@ -195,6 +196,27 @@ What a replayer must get right:
 * The alarm and the goal are numbers the person's care team gave them. The app never suggests either. With none set, the summary has no verdict.
 * A flagged reading and a weight over the alarm carry handbook text and a link to Get help now (`red_flags`, `flag`). Show that text and keep the `prominent` setting. Do not shorten or soften it.
 * `context_cases` and `watch_cases` are also replayed against the Apple Health reader, so a reading gets the same context by every way in. `minutes: null` is a reading with no time, and the server gives it the context `other`. The Apple Health reader always has a time, so the runner skips those cases for it.
+
+## care_vectors.json
+
+The full Care team (design note 29): the switches, the roles over them, the suggestion limits and the check of a suggestion's note.
+
+* Server: `app/sharing.py` and `app/care_suggestions.py`.
+* Browser twin: the demo's `app/static/js/mock/care.js` (`KH.mock.care`).
+* Made by `tests/data/gen_care_vectors.py`.
+
+Top-level keys:
+
+* `constants`: `switches`, `roles`, `presets` (`{role: {switch: bool}}`), `areas`, `suggest_days`, `max_open_per_share`, `max_per_day`,
+  `max_note`, `max_items`, `banned_pattern` (the source of `messages.BANNED_PATTERN`) and `texts` (each fixed sentence, for a person
+  named Ana).
+* `role_cases`: `{switches: object, role: string}`, every mix of the four switches.
+* `note_cases`: `{note: string | null, problem: string | null}`.
+
+What a replayer must get right:
+
+* A role is shown only when the four switches match its preset exactly; anything else is `custom`.
+* A note about lows is refused before the word check; the word check runs on the folded text, so full-width letters count.
 
 ## ccda_labs_vectors.json
 

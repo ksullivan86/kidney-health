@@ -34,7 +34,8 @@ def test_the_view_draws_with_elements_and_calls_only_its_routes():
     routes = set(re.findall(r"'(/api/[^'`$]+)", CODE))
     assert routes == {"/api/me/shares", "/api/me/shares/invite", "/api/shared", "/api/shared/info", "/api/shared/accept"}
     templated = set(re.findall(r"`(/api/[^`]+)`", CODE))
-    assert templated == {"/api/me/shares/${id}", "/api/me/shares/invites/${id}", "/api/me/shares/${id}/role", "/api/shared/${id}",
+    assert templated == {"/api/me/shares/${id}", "/api/me/shares/invites/${id}", "/api/me/shares/${id}/role",
+                         "/api/me/shares/${id}/switches", "/api/shared/${id}",
                          "/api/shared/invites/${id}/${yes ? 'accept' : 'decline'}", "/api/shared/${encodeURIComponent(id)}"}
     methods = re.findall(r"request\('(\w+)'", CODE)
     assert set(methods) == {"GET", "POST", "PUT", "DELETE"}  # PUT: the role (design note 25); nothing here writes to a log
@@ -113,9 +114,11 @@ def test_the_activity_list_names_every_share_event_in_words():
 
     settings = (STATIC / "js" / "views" / "settings.js").read_text(encoding="utf-8")
     labels = settings[settings.index("const ACTION_LABEL = {"):settings.index("};", settings.index("const ACTION_LABEL = {"))]
-    actions = sorted(a for a in ACTIONS if a.startswith(("share.", "care.")))
-    assert actions == ["care.invite_answered", "care.invite_cancelled", "care.invited", "care.plan_changed", "care.role_changed",
-                       "share.accepted", "share.code_cancelled", "share.code_created", "share.ended", "share.viewed"]
+    actions = sorted(a for a in ACTIONS if a.startswith(("share.", "care.", "suggestion.")))
+    assert actions == ["care.food_logged", "care.invite_answered", "care.invite_cancelled", "care.invited", "care.plan_changed",
+                       "care.role_changed", "care.switches_changed",
+                       "share.accepted", "share.code_cancelled", "share.code_created", "share.ended", "share.viewed",
+                       "suggestion.accepted", "suggestion.declined", "suggestion.expired", "suggestion.sent"]
     for action in actions:
         assert action in USER_VISIBLE_ACTIONS and f"'{action}':" in labels, action
 

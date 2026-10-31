@@ -138,6 +138,7 @@ const SHELL_URLS = [
   '/js/views/guidance.js',
   '/js/views/plandays.js',
   '/js/views/careplan.js',
+  '/js/views/suggestions.js',
   '/js/views/ask.js',
   '/js/views/ask-voice.js',
   '/js/views/demo_local.js',

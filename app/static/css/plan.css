@@ -119,4 +119,10 @@
 .care-entries .device { flex-wrap: wrap; }
 .care-amount { width: 5.5rem; }
 .care-results { margin: 4px 0; }
+/* Suggestions (design note 29 §5): a card for each on your Plan tab; the helper's form and what they sent. */
+.care-suggestion { border-top: 1px solid var(--border, currentColor); padding-top: 0.6rem; margin-top: 0.6rem; }
+.care-suggestion:first-of-type { border-top: 0; margin-top: 0; }
+.care-note { font-style: italic; overflow-wrap: anywhere; }
+.care-suggest textarea { width: 100%; max-width: 100%; }
+.care-suggest-items .device, .care-saved-meals .device { flex-wrap: wrap; }
 .entry-added-by { color: var(--text-2); }

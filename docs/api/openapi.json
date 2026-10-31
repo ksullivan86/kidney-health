@@ -138,6 +138,27 @@
       }
     },
     "schemas": {
+      "AcceptResult": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/Entry"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "skipped": {
+            "title": "Skipped",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "entries",
+          "skipped"
+        ],
+        "title": "AcceptResult",
+        "type": "object"
+      },
       "ActivityDayOut": {
         "properties": {
           "date": {
@@ -1567,7 +1588,8 @@
             "default": "viewer",
             "enum": [
               "viewer",
-              "care_helper"
+              "care_helper",
+              "caregiver"
             ],
             "title": "Role",
             "type": "string"
@@ -4161,7 +4183,7 @@
         "type": "object"
       },
       "HelperEntry": {
-        "description": "One entry a Care helper adds: always planned. ``client_id`` is not used (the helper's device never queues it).",
+        "description": "One entry a helper adds: ``planned`` (needs ``may_plan``) or ``eaten`` (needs ``may_log``). ``client_id`` is not used (the\nhelper's device never queues it).",
         "properties": {
           "client_id": {
             "anyOf": [
@@ -4248,8 +4270,11 @@
             "title": "Servings"
           },
           "status": {
-            "const": "planned",
             "default": "planned",
+            "enum": [
+              "planned",
+              "eaten"
+            ],
             "title": "Status",
             "type": "string"
           }
@@ -4264,7 +4289,7 @@
       },
       "HelperUpdate": {
         "additionalProperties": false,
-        "description": "What a Care helper may change on a planned entry: the amount, the meal, the day and the note. Never the status or\nwhether it treats a low.",
+        "description": "What a helper may change on an entry: the amount, the meal, the day and the note; and ``status: \"eaten\"`` to mark a\nplanned food eaten (needs ``may_log``). Never back to planned, and never whether it treats a low.",
         "properties": {
           "date": {
             "anyOf": [
@@ -4331,6 +4356,18 @@
               }
             ],
             "title": "Servings"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "const": "eaten",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
           }
         },
         "title": "HelperUpdate",
@@ -9818,7 +9855,8 @@
           "role": {
             "enum": [
               "viewer",
-              "care_helper"
+              "care_helper",
+              "caregiver"
             ],
             "title": "Role",
             "type": "string"
@@ -10064,6 +10102,115 @@
         "title": "SafetyAlert",
         "type": "object"
       },
+      "SentList": {
+        "properties": {
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/SentSuggestion"
+            },
+            "title": "Suggestions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "suggestions"
+        ],
+        "title": "SentList",
+        "type": "object"
+      },
+      "SentSuggestion": {
+        "properties": {
+          "answer": {
+            "enum": [
+              "open",
+              "accepted",
+              "declined",
+              "expired",
+              "ended"
+            ],
+            "title": "Answer",
+            "type": "string"
+          },
+          "answered_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Answered At"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          },
+          "fit": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SuggestionFit"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SuggestionItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "meal": {
+            "enum": [
+              "breakfast",
+              "lunch",
+              "dinner",
+              "snack"
+            ],
+            "title": "Meal",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "id",
+          "date",
+          "meal",
+          "items",
+          "note",
+          "created_at",
+          "expires_at",
+          "answer",
+          "answered_at"
+        ],
+        "title": "SentSuggestion",
+        "type": "object"
+      },
       "SetupBody": {
         "properties": {
           "code": {
@@ -10182,7 +10329,8 @@
             "default": "viewer",
             "enum": [
               "viewer",
-              "care_helper"
+              "care_helper",
+              "caregiver"
             ],
             "title": "Role",
             "type": "string"
@@ -10443,6 +10591,251 @@
           "notes"
         ],
         "title": "SuggestedTargets",
+        "type": "object"
+      },
+      "SuggestionCreate": {
+        "additionalProperties": false,
+        "description": "``POST /api/shared/{id}/suggestions``: a meal for one day, from foods the person can use, and an optional short note.",
+        "properties": {
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SuggestionItemIn"
+            },
+            "maxItems": 30,
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "meal": {
+            "enum": [
+              "breakfast",
+              "lunch",
+              "dinner",
+              "snack"
+            ],
+            "title": "Meal",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 280,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "date",
+          "meal",
+          "items"
+        ],
+        "title": "SuggestionCreate",
+        "type": "object"
+      },
+      "SuggestionFit": {
+        "description": "What the suggestion adds to that day against the person's targets, the way Today counts it: ``totals`` of the suggested\nfoods (``unknown``: how many foods miss each value), and ``day_status``, the day's projected status with it added.",
+        "properties": {
+          "day_status": {
+            "additionalProperties": true,
+            "title": "Day Status",
+            "type": "object"
+          },
+          "totals": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Totals",
+            "type": "object"
+          },
+          "unknown": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Unknown",
+            "type": "object"
+          }
+        },
+        "required": [
+          "totals",
+          "unknown",
+          "day_status"
+        ],
+        "title": "SuggestionFit",
+        "type": "object"
+      },
+      "SuggestionForMe": {
+        "properties": {
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "expires_at": {
+            "title": "Expires At",
+            "type": "string"
+          },
+          "fit": {
+            "$ref": "#/components/schemas/SuggestionFit"
+          },
+          "from_name": {
+            "title": "From Name",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/SuggestionItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "meal": {
+            "enum": [
+              "breakfast",
+              "lunch",
+              "dinner",
+              "snack"
+            ],
+            "title": "Meal",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "share_id": {
+            "title": "Share Id",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "share_id",
+          "from_name",
+          "date",
+          "meal",
+          "items",
+          "note",
+          "created_at",
+          "expires_at",
+          "fit"
+        ],
+        "title": "SuggestionForMe",
+        "type": "object"
+      },
+      "SuggestionItem": {
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "food_id": {
+            "title": "Food Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "serving_desc": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Serving Desc"
+          },
+          "servings": {
+            "title": "Servings",
+            "type": "number"
+          }
+        },
+        "required": [
+          "food_id",
+          "name",
+          "servings",
+          "available"
+        ],
+        "title": "SuggestionItem",
+        "type": "object"
+      },
+      "SuggestionItemIn": {
+        "additionalProperties": false,
+        "properties": {
+          "food_id": {
+            "maximum": 9.223372036854776e+18,
+            "minimum": 1.0,
+            "title": "Food Id",
+            "type": "integer"
+          },
+          "servings": {
+            "exclusiveMinimum": 0.0,
+            "maximum": 1000.0,
+            "title": "Servings",
+            "type": "number"
+          }
+        },
+        "required": [
+          "food_id",
+          "servings"
+        ],
+        "title": "SuggestionItemIn",
+        "type": "object"
+      },
+      "SuggestionsForMe": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "suggestions": {
+            "items": {
+              "$ref": "#/components/schemas/SuggestionForMe"
+            },
+            "title": "Suggestions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "enabled",
+          "suggestions"
+        ],
+        "title": "SuggestionsForMe",
         "type": "object"
       },
       "SwapFood": {
@@ -10811,6 +11204,81 @@
           "notes"
         ],
         "title": "SwapResponse",
+        "type": "object"
+      },
+      "SwitchChange": {
+        "additionalProperties": false,
+        "description": "``PUT /api/me/shares/{id}/switches``: what someone on your Care team may see and do. Only what is sent changes. Any \"Do\"\nswitch on adds the food log (design note 29 §2).",
+        "properties": {
+          "areas": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "food",
+                    "labs",
+                    "body",
+                    "symptoms",
+                    "activity"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 5,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Areas"
+          },
+          "may_log": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "May Log"
+          },
+          "may_plan": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "May Plan"
+          },
+          "may_suggest": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "May Suggest"
+          },
+          "may_use_saved_meals": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "May Use Saved Meals"
+          }
+        },
+        "title": "SwitchChange",
         "type": "object"
       },
       "SymptomCreate": {
@@ -21402,7 +21870,7 @@
     },
     "/api/me/shares/{share_id}/role": {
       "put": {
-        "description": "Change what someone on your Care team may do: ``viewer`` (look only) or ``care_helper`` (also plan your meals and use\nyour shopping list). A Care helper always sees your food log, so it is added. The next request they make uses the new\nrole. Not yours or ended is ``404``.",
+        "description": "Choose a role for someone on your Care team: ``viewer`` (look only), ``care_helper`` (also plan your meals and use your\nshopping list) or ``caregiver`` (also log food you ate). A role sets the four switches (design note 29 §2); what you share\nstays, and the food log is added when the role needs it. The next request they make uses it. Not yours or ended is ``404``.",
         "operationId": "me_change_role",
         "parameters": [
           {
@@ -21465,6 +21933,224 @@
           }
         ],
         "summary": "Change Role",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/me/shares/{share_id}/switches": {
+      "put": {
+        "description": "Change what someone on your Care team may see (``areas``) and do (``may_plan``, ``may_log``, ``may_use_saved_meals``,\n``may_suggest``). Only what you send changes, at once: their next request uses it. Any \"Do\" switch on adds the food log. The\nrole is worked out from the switches (``custom`` when they match no role). Not yours or ended is ``404``.",
+        "operationId": "me_change_switches",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Share Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwitchChange"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Me Change Switches",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Change Switches",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/me/suggestions": {
+      "get": {
+        "description": "Suggestions from your Care team waiting for your answer, oldest first, each with what it adds to that day against your\ntargets (worked out now). While sharing is off: ``enabled: false`` and an empty list.",
+        "operationId": "me_my_suggestions",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SuggestionsForMe"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "My Suggestions",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/me/suggestions/{suggestion_id}/accept": {
+      "post": {
+        "description": "Add a suggestion to your plan: one planned entry for each food you can still use (``skipped`` counts the others). They are\nyour own entries, which you can change like any other. ``409`` when none of the foods is left. Not yours, answered, expired\nor from a share that ended is ``404``.",
+        "operationId": "me_accept_suggestion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "suggestion_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Suggestion Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AcceptResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Accept Suggestion",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/me/suggestions/{suggestion_id}/decline": {
+      "post": {
+        "description": "No thanks: the suggestion goes away. The person who sent it sees \"declined\", never why. Not yours or no longer open is\n``404``.",
+        "operationId": "me_decline_suggestion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "suggestion_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Suggestion Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Decline Suggestion",
         "tags": [
           "me"
         ]
@@ -23185,7 +23871,7 @@
     },
     "/api/shared/{share_id}/foods": {
       "get": {
-        "description": "Food search as the person sees it (their own foods too), so a food the helper plans is one the person can use.",
+        "description": "Food search as the person sees it (their own foods too), so a food the helper plans, logs or suggests is one the person\ncan use.",
         "operationId": "shared_helper_foods",
         "parameters": [
           {
@@ -23263,7 +23949,7 @@
     },
     "/api/shared/{share_id}/guidance/plan-days": {
       "post": {
-        "description": "Plan several days for the person against their targets (computes only; \"Add to plan\" sends the entries to\n``POST …/log/batch``). The person's saved meals are never used, so a plan never shows them (design note 25 §7), and without the\nactivity area the plan uses the base calorie target (design note 28): the active-day extra would tell how active they were.",
+        "description": "Plan several days for the person against their targets (computes only; \"Add to plan\" sends the entries to\n``POST …/log/batch``). The person's saved meals are used only when the helper asks and the person turned on\n``may_use_saved_meals`` (design note 29 §4); without the activity area the plan uses the base calorie target (design note\n28): the active-day extra would tell how active they were.",
         "operationId": "shared_helper_plan_days",
         "parameters": [
           {
@@ -23502,7 +24188,7 @@
         ]
       },
       "post": {
-        "description": "Plan one food on the person's day. It is always ``planned`` and records the helper (``added_by``). The food must be one\nthe person can use (``404`` otherwise). A planned low treatment may be added, like any food.",
+        "description": "Add one food to the person's day: ``planned`` (needs ``may_plan``) or ``eaten`` (needs ``may_log``). It records the helper\n(``added_by``). The food must be one the person can use (``404`` otherwise). A low treatment may be added, planned or eaten:\nrecording what happened is never blocked.",
         "operationId": "shared_helper_add",
         "parameters": [
           {
@@ -23570,7 +24256,7 @@
     },
     "/api/shared/{share_id}/log/batch": {
       "post": {
-        "description": "Plan 1 to 40 foods on the person's days in one go (\"Add to plan\"), all or nothing, each as ``POST …/log``.",
+        "description": "Add 1 to 40 foods to the person's days in one go (\"Add to plan\"), all or nothing, each as ``POST …/log``.",
         "operationId": "shared_helper_add_batch",
         "parameters": [
           {
@@ -23880,7 +24566,7 @@
     },
     "/api/shared/{share_id}/log/{entry_id}": {
       "delete": {
-        "description": "Take one of the person's planned entries off their plan. Eaten food and planned low treatments are ``404``.",
+        "description": "Take one of the person's entries off: planned food with ``may_plan``, eaten food the helper added with ``may_log``. A low\ntreatment is ``403``.",
         "operationId": "shared_helper_remove",
         "parameters": [
           {
@@ -23935,7 +24621,14 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "$ref": "#/components/responses/Forbidden"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A low treatment (only the person changes or removes it), or eaten food this helper did not add."
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
@@ -23965,7 +24658,7 @@
         ]
       },
       "put": {
-        "description": "Change the amount, meal, day or note of one of the person's planned entries. Eaten food and planned low treatments are\n``404``: only the person changes those. ``If-Match`` works as on the person's own route.",
+        "description": "Change the amount, meal, day or note of one of the person's entries, or mark a planned one eaten (``status: \"eaten\"``,\nneeds ``may_log``). Planned food needs ``may_plan``; eaten food only the helper added, with ``may_log``. A low treatment is\n``403``: only the person changes it. ``If-Match`` works as on the person's own route.",
         "operationId": "shared_helper_change",
         "parameters": [
           {
@@ -24037,7 +24730,14 @@
             "$ref": "#/components/responses/Unauthorized"
           },
           "403": {
-            "$ref": "#/components/responses/Forbidden"
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "A low treatment (only the person changes or removes it), or eaten food this helper did not add."
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
@@ -24065,6 +24765,140 @@
           }
         ],
         "summary": "Helper Change",
+        "tags": [
+          "shared"
+        ]
+      }
+    },
+    "/api/shared/{share_id}/meals": {
+      "get": {
+        "description": "The person's saved meals, as ``GET /api/meals`` answers them, when they turned on ``may_use_saved_meals``. A helper never\nchanges or deletes them: there is no route for it.",
+        "operationId": "shared_helper_saved_meals",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Share Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Helper Saved Meals",
+        "tags": [
+          "shared"
+        ]
+      }
+    },
+    "/api/shared/{share_id}/meals/{meal_id}/apply": {
+      "post": {
+        "description": "Add one of the person's saved meals to a day, as ``POST /api/meals/{id}/apply``: ``planned`` needs ``may_plan``, ``eaten``\nneeds ``may_log``. Each entry records the helper (``added_by``).",
+        "operationId": "shared_helper_apply_meal",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Share Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "meal_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Meal Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MealApply"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MealApplyResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Helper Apply Meal",
         "tags": [
           "shared"
         ]
@@ -24207,6 +25041,133 @@
           }
         ],
         "summary": "Shared Profile",
+        "tags": [
+          "shared"
+        ]
+      }
+    },
+    "/api/shared/{share_id}/suggestions": {
+      "get": {
+        "description": "What you suggested to this person, newest first (at most 50), and their answer: ``open``, ``accepted``, ``declined``,\n``expired`` or ``ended``. Never why. Any active share may read it, so the answers stay visible after the switch is off.",
+        "operationId": "shared_sent_suggestions",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Share Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SentList"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Sent Suggestions",
+        "tags": [
+          "shared"
+        ]
+      },
+      "post": {
+        "description": "Suggest a meal for the person (``may_suggest`` on, checked now). The foods must be ones the person can use (``404``) and\nnone may be for treating a low (``400``); the note is checked like AI text (``400`` with the reason). At most 10 open per\nshare (``409``) and 20 sent in 24 hours (``429``). The answer has ``fit``: the person's day with it, against their targets.\nIt never stops a suggestion: the person decides.",
+        "operationId": "shared_send_suggestion",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Share Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SuggestionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SentSuggestion"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Send Suggestion",
         "tags": [
           "shared"
         ]

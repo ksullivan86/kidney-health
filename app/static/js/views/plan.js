@@ -755,7 +755,8 @@
   }
 
   // Planning for someone as their Care helper (js/views/careplan.js) shows their plan instead; your own does not load then.
-  router.register('plan', () => { if (KH.carePlan && KH.carePlan.onShow()) return; loadPlan(); });
+  // Suggestions from your Care team (js/views/suggestions.js) show above your own plan.
+  router.register('plan', () => { if (KH.carePlan && KH.carePlan.onShow()) return; loadPlan(); if (KH.suggestions) KH.suggestions.load(); });
   KH.views.plan = { loadPlan, afterLogChange, openCopySheet, openApplySheet, openSaveMealSheet, openMealEditor, openFitSheet,
     shoppingText, copyShopping, weekStartPref };
 })();
