@@ -53,6 +53,8 @@ using the app; the pages below are for the people who run, maintain and check it
 * [The online demo](demo.md): the Pages demo, and **Keep my data in this browser** (IndexedDB, off until you choose it): what is
   stored, export and import of `export.json`, when it cannot work.
 * [Try the app: a walk-through for people who know kidney disease](try-it-for-ckd.md): 45 minutes in the demo, with questions to answer. For testers who are not developers.
+* [Test the full app](test-the-full-app.md): about an hour on your own server with the two test accounts (tester and tester-helper):
+  turning them on, then everything from Today to the Care team, offline use and Send feedback. For testers who are not developers.
 * [Diet guide (moved)](diet-guide.md): a pointer from the old diet guide's sections to the handbook pages.
 
 ## Contributing and maintaining

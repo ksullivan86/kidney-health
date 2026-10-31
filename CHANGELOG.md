@@ -24,6 +24,22 @@ the API. Security fixes are released as patch versions of the newest minor versi
   log entries. See [accounts.md](docs/accounts.md#care-team) and [design note 25](docs/dev/research/25-care-team.md).
 * The demo shows a sample Care team, and planning for a sample person.
 
+### Test accounts
+
+* **Test accounts for testers**, off until you turn them on (`TEST_ACCOUNT_ENABLED`, or Server administration → Server
+  settings → Test accounts). The server makes `tester`, who starts with the sample person Sam, and `tester-helper`, a Care
+  helper on Sam's Care team. Both use one password from a secret file, `TEST_ACCOUNT_PASSWORD_FILE`. If the file is missing or
+  the password is too weak, nothing is made and the log and Server administration say why.
+* Test accounts are never admins, can be on a Care team only with each other, and the server's AI is off for them unless you
+  set `TEST_ACCOUNT_AI`. Turning them off disables them and signs them out.
+* **Send feedback** at the top of every screen, for test accounts only. Only what the tester types is kept, with the screen's
+  name, the app version and the time. Admins read it, mark it done and export it in **Server administration → Feedback**.
+* **Reset test accounts** in Server administration, or `python -m app.admin reset-test-accounts`, starts both accounts again
+  from Sam's sample data. The feedback stays.
+* A walk-through for testers on your own server: [docs/test-the-full-app.md](docs/test-the-full-app.md). Schema step 28 runs at
+  the first start: it marks test accounts and adds the feedback table. See [accounts.md](docs/accounts.md#test-accounts) and
+  [design note 26](docs/dev/research/26-test-accounts.md).
+
 ### AI features
 
 * **The AI features say they are AI.** The **Ask** tab is now **Ask AI**, and its screen is the **AI assistant**. Settings →

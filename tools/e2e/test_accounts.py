@@ -27,7 +27,6 @@ import sys
 import tempfile
 import traceback
 from pathlib import Path
-from typing import Any
 
 import khserver
 import sharing

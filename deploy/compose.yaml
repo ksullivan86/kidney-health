@@ -128,6 +128,10 @@ services:
       ASSISTANT_ENABLED: ${ASSISTANT_ENABLED:-}
       PUSH_ENABLED: ${PUSH_ENABLED:-}
       SHARING_ENABLED: ${SHARING_ENABLED:-}
+      TEST_ACCOUNT_ENABLED: ${TEST_ACCOUNT_ENABLED:-}
+      TEST_ACCOUNT_AI: ${TEST_ACCOUNT_AI:-}
+      # The test accounts' one password is a file secret only (TEST_ACCOUNT_PASSWORD is refused; docs/test-the-full-app.md):
+      # TEST_ACCOUNT_PASSWORD_FILE: /run/secrets/test_account_password   # and add test_account_password below
       AUTH_REQUIRE_TWO_STEP_ADMINS: ${AUTH_REQUIRE_TWO_STEP_ADMINS:-}
       HANDBOOK_PUBLIC_URL: ${HANDBOOK_PUBLIC_URL:-}
       PASSWORD_BREACH_CHECK: ${PASSWORD_BREACH_CHECK:-}
@@ -158,6 +162,7 @@ services:
       # - ai_api_key
       # - ai_cloud_api_key
       # - oidc_client_secret
+      # - test_account_password
 
     volumes:
       # Named volume: starts empty and is populated from the image's /data (owner 10001, group 0,
@@ -198,6 +203,9 @@ secrets:
   #   x-podman.relabel: Z
   # oidc_client_secret:                 # only for sign-in with a provider (OIDC_ENABLED; docs/accounts.md)
   #   file: ./secrets/oidc_client_secret
+  #   x-podman.relabel: Z
+  # test_account_password:              # only for test accounts (TEST_ACCOUNT_ENABLED; docs/test-the-full-app.md)
+  #   file: ./secrets/test_account_password
   #   x-podman.relabel: Z
 
 volumes:

@@ -202,6 +202,7 @@
 [NOTE20]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/20-setup-by-code.md "Design note 20"
 [NOTE24]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/24-oidc-sign-in.md "Design note 24"
 [NOTE25]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/25-care-team.md "Design note 25"
+[NOTE26]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/26-test-accounts.md "Design note 26"
 [APPLE-SHORTCUTS]: https://support.apple.com/guide/shortcuts/welcome/ios "Apple: Shortcuts User Guide"
 [DEPLOY]: https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md "Deployment guide"
 [ASSISTANT-DOC]: https://github.com/ksullivan86/kidney-health/blob/main/docs/assistant.md "Assistant guide"

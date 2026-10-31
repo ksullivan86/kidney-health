@@ -840,6 +840,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 25 | `m025_share_time_limit.py` | a share can end on a date (note 19 §11) | `shares.lasts_days` (1 to 365, or NULL: until stopped) and `shares.ends_at` (set on accept). Existing rows get NULL in both and last until stopped, as before. |
 | 26 | `m026_oidc.py` | sign-in with a provider (note 24) | `oidc_links` (`user_id` `ON DELETE CASCADE`, `issuer`, `subject` (the `sub` claim, 1 to 255 characters), `email`, `created_at`, `last_used_at`; `UNIQUE (issuer, subject)` and `UNIQUE (user_id, issuer)`; no token is ever stored) and `sessions.signed_in_with` (`oidc` or NULL; NULL for every earlier session). Nobody is linked after the upgrade. |
 | 27 | `m027_care_team.py` | the Care team (note 25 §4) | `shares.role` (`viewer` or `care_helper`, default `viewer`: every existing share becomes a Viewer), `shares.helper_changes` (JSON `{day, added, changed, removed}` or NULL), `log_entries.added_by_user_id` (`ON DELETE SET NULL`; set only when a Care helper adds a planned entry) and a new table `care_invites` (`owner_user_id`, `invitee_user_id` NULL when no active account had the name, `username` as typed, `areas`, `role`, `lasts_days`, `created_at`, `expires_at`, `answered_at`, `answer` (`accepted`, `declined`, `cancelled`, `replaced`), `share_id`; `ON DELETE CASCADE` on both accounts; never yourself). Nothing else changes. |
+| 28 | `m028_test_accounts.py` | test accounts (note 26 §4) | `users.is_test_account` (0 or 1, default 0: every existing account is real), two triggers that refuse a row with `role = 'admin'` and `is_test_account = 1` (insert or update), and a new table `feedback` (`user_id` `ON DELETE SET NULL`, `username` kept as text, `screen`, `trying`, `happened`, `useful` (`yes`, `somewhat`, `no` or NULL), `unsafe`, `app_version`, `created_at`, `done_at`, `done_by`). Nothing else changes. |
 | 23 | `m023_passkeys.py` | passkeys (note 18) | `passkeys` (one row per passkey: `credential_id` BLOB, unique, 1 to 1,023 bytes; `public_key`, the COSE key as sent; `alg`; `user_handle`, 32 random bytes shared by one person's passkeys; `sign_count`; `name`; `backed_up`; `created_at`; `last_used_at`). `ON DELETE CASCADE`. Nothing is sealed: a public key is not a secret. Nobody has a passkey after the upgrade. |
 
 ## Backend file ownership
@@ -1450,7 +1451,7 @@ note 17), `remove-passkeys USERNAME` (deletes the account's passkeys; audited `p
 file with mode 0600, never overwritten; audited `export.created` via `cli`), `disable-user USERNAME` (as
 `PATCH /api/admin/users/{id}` `status: disabled`: never the only active admin; signs out the account's
 sessions, voids its reset links and, for an admin, the invites and links it issued; audited `user.disabled`
-via `cli`), `purge-pre-v3-backup`, `vacuum`, plus the platform's `backup`, `check`,
+via `cli`), `reset-test-accounts` (as `POST /api/admin/test-accounts/reset`; design note 26), `purge-pre-v3-backup`, `vacuum`, plus the platform's `backup`, `check`,
 `restore-check`, `rotate-secret-key`, `reencrypt`, `settings`. `backup` (to a file or `-`) writes the
 copy in rollback-journal mode, so it opens read-only anywhere; `restore-check` opens a read-only file
 with `immutable=1` (unless a `-wal` file sits next to it) and says when it could not check the stored
@@ -4335,6 +4336,47 @@ changes it in place (`PUT /api/me/shares/{id}/role`). Someone with an account ca
   person's list are kept under `kdl-shop:care:<share id>:<week>`. A 404 "Not shared with you." goes back to the helper's own plan.
   `js/views/today.js` shows "Added by <name>". The demo (`js/mock/care.js`) has a sample Care team and Ana's days as a second set
   of entries with the demo's own twins swapped in.
+
+### Test accounts and Send feedback (`app/test_accounts.py`, `app/feedback.py`, design note 26)
+
+`test_accounts.enabled` (`TEST_ACCOUNT_ENABLED`, off) makes two accounts, `tester` (display name Sam, seeded with the demo's
+sample person: a port of `seedSampleData` in `js/mock/seed.js`, same foods, meals, random numbers, profile, labs, weights,
+alarm and goal, dates from today) and `tester-helper` (Jo, a `care_helper` share from tester with all four areas). Their one
+password is read from `TEST_ACCOUNT_PASSWORD_FILE` (env only; `TEST_ACCOUNT_PASSWORD` is a `ConfigError`), checked against the
+password policy for both names. `users.is_test_account` (schema step 28) marks them.
+
+* **`sync()`** runs at start-up (after `auth_bootstrap.startup`), after first-run setup and when an admin changes the switch. On,
+  `AUTH_MODE=local` and set up: make the missing accounts (seed, link), enable disabled or locked ones, set the password again
+  when the file changed. Off: disable, revoke sessions, tokens and reset links (`test_accounts.disabled`). A missing, unreadable
+  or weak file, a real account with one of the names, or another `AUTH_MODE` makes nothing: logged, and shown by
+  `GET /api/admin/test-accounts`. It never stops the start.
+* **Rules.** Never an admin: `PATCH /api/admin/users/{id}` with `role: admin` is 409, single sign-on groups are skipped, and two
+  triggers of step 28 abort any row with both. The Care team only between test accounts: `app/sharing.py` treats a name of the
+  other kind as a name nobody has, answers the generic 404 for a link of the other kind, and leaves such rows out of the check and
+  both lists. AI: `test_accounts.ai` (`TEST_ACCOUNT_AI`, off) or `resolve`/`resolve_feature` answer `disabled` and
+  `require_ai_enabled` is 404 (`ai_on_for`). One shared password: `POST /api/me/password`, `POST /api/me/totp/setup`,
+  `DELETE /api/me`, an admin reset link and "must change password" are 409 for a test account.
+* **Reset** (`POST /api/admin/test-accounts/reset`, re-auth; `python -m app.admin reset-test-accounts`): 409 while off or when the
+  accounts could not be made again (checked before anything is deleted); else delete both users (cascade) and `sync()`. One
+  `test_accounts.reset` row.
+
+| Method and path | Auth | Body → response |
+|---|---|---|
+| `GET /api/feedback` | test account (else 404) | `{feedback: [{id, screen, trying, happened, useful, unsafe, app_version, created_at, done}], max_length}`, own only, newest first |
+| `POST /api/feedback` | test account (else 404) | `{screen, trying?, happened?, useful?, unsafe?}` (`extra="forbid"`; ≤ 2,000 characters a box; one of the two texts) → 201 the item. 20 an hour, 50 a day per account (409), 5,000 kept (409) |
+| `GET /api/admin/feedback?state=open\|done\|all&unsafe=&before=&limit=` | admin | `{feedback: [... + username, done_at], counts: {open, done, unsafe_open}}` |
+| `PATCH /api/admin/feedback/{id}` | admin, re-auth | `{done}` → the item; unknown 404 |
+| `DELETE /api/admin/feedback/done` | admin, re-auth | `{deleted}` |
+| `GET /api/admin/feedback.csv?state=&unsafe=` | admin | CSV, oldest first, formula cells escaped |
+| `GET /api/admin/test-accounts` | admin | `{enabled, ai, problem, accounts: [{id, username, status, last_login_at}]}` |
+| `POST /api/admin/test-accounts/reset` | admin, re-auth | the same shape |
+
+`feedback.user_id` is `ON DELETE SET NULL` and `username` is kept, so a reset keeps the feedback for the admin and the fresh
+accounts see none. The server adds `app_version` (the FastAPI app's version) and `created_at`; nothing else is copied in.
+`Me.test_account` and the People list's `test_account` tell the page. **Screens:** `js/views/feedback.js` (not in the preview
+build): the header button `#feedback-open` (`data-test-only`, shown by `js/views/auth.js`), the sheet `#sheet-feedback`, and
+Server administration → Test accounts and Feedback; `js/views/settings.js` adds the settings group (hidden with `?mock=1`), a
+"Test account" badge, no admin role choice, and "· test account" in Settings' first line.
 
 ### Pairing the iPhone app (`app/pairing.py`, note 15 §4.3)
 

@@ -149,6 +149,12 @@ Environment=TRUSTED_PROXIES=127.0.0.1,::1
 # Environment=PUSH_ENABLED=true
 # Read-only sharing (docs/accounts.md): a person may let someone else with an account here read parts of their log. Off by default.
 # Environment=SHARING_ENABLED=true
+# Test accounts for testers (docs/test-the-full-app.md): tester and tester-helper, never admins. Their one password is a Podman
+# secret (printf '%s' 'a long password' | podman secret create kidney-test-password -). Off by default.
+# Environment=TEST_ACCOUNT_ENABLED=true
+# Secret=kidney-test-password,type=mount,target=test_account_password,uid=10001,gid=10001,mode=0400
+# Environment=TEST_ACCOUNT_PASSWORD_FILE=/run/secrets/test_account_password
+# Environment=TEST_ACCOUNT_AI=false
 # Names listed here are first values, not locks: written once, then changeable in the app (docs/deployment.md).
 # Environment=SETTINGS_INITIAL_ONLY=SHARING_ENABLED,PUSH_ENABLED
 # Admins must use two-step sign-in before they can open Server administration (docs/accounts.md). Off by default.

@@ -256,6 +256,51 @@ with a banner: "You are planning for Ana. Changes go to Ana's plan, not yours." 
 
 How it works, and why: [design note 19](dev/research/19-sharing.md) and [design note 25](dev/research/25-care-team.md).
 
+## Test accounts
+
+Test accounts let someone try the whole app on your server without an account of their own, and send you feedback as they go.
+They are off until you turn them on.
+
+**Turn them on.**
+
+1. Put a long password in a file, as a secret (Podman `podman secret create`, or `deploy/secrets/test_account_password` with
+   compose). Set `TEST_ACCOUNT_PASSWORD_FILE` to where the container sees it. The password itself is never an environment
+   variable: `TEST_ACCOUNT_PASSWORD` stops the start.
+2. Set `TEST_ACCOUNT_ENABLED=true`, or turn on **Server administration → Server settings → Test accounts**. To test the Care team,
+   turn on `SHARING_ENABLED` too.
+3. Restart. The server makes two accounts, both with that password:
+   * `tester`, the patient. It starts with the sample person Sam: CKD stage 4, type 1 diabetes, a month of meals, two treated
+     lows, lab results, two weeks of weights and blood pressure, and a few days planned.
+   * `tester-helper`, a family member, already a **Care helper** on Sam's Care team.
+
+If the password file is missing, cannot be read or is too weak for the password policy, nothing is made. The log and
+**Server administration → Test accounts** say why. The same happens if a real account already uses one of the two names.
+Test accounts need `AUTH_MODE=local`, and HTTPS like any server with more than one account.
+
+**What is different about them.**
+
+* They are never admins. **Make admin** is refused, and groups from single sign-on are ignored for them.
+* They can be on a Care team only with each other. An invite by user name between a test account and a real account answers
+  as if the name did not exist, and a link between them does not work. They never show in a real person's lists.
+* The server's AI is off for them, unless you also set `TEST_ACCOUNT_AI=true` (or the switch next to it).
+* Their password stays the one in the file: testers cannot change it, turn on two-step sign-in or delete the account.
+* They see a **Send feedback** button at the top of every screen.
+
+**Feedback.** The sheet asks what the tester was trying to do, what happened, whether the screen was useful, and whether
+something looked wrong or unsafe. Only what they type is kept, with the screen's name, the app version and the time: no
+screenshot and nothing from the log. Read it in **Server administration → Feedback**: show open, done or all, or only "wrong or
+unsafe"; **Mark done**; **Export CSV**; **Delete done**. Testers see what they sent themselves. Limits: 2,000 characters a box,
+20 an hour and 50 a day for each account, 5,000 kept on the server.
+
+**Between testers.** **Server administration → Test accounts → Reset test accounts** deletes everything both accounts did and
+starts them again from Sam's sample data, with the Care team link. Both are signed out. The feedback stays. From the command
+line: `python -m app.admin reset-test-accounts`.
+
+**Turning them off** disables both accounts and signs them out. Nothing is deleted. Turned on again, they work again.
+
+The walk-through to give testers is [test-the-full-app.md](test-the-full-app.md). Why it works this way:
+[design note 26](dev/research/26-test-accounts.md).
+
 ## Adding people
 
 * **Invite (default, `registration.mode = invite`).** Server administration → People → Invite.
@@ -357,7 +402,7 @@ their account (including what an admin did to it), never an admin's actions on o
 `python -m app.admin` `create-admin USER` · `reset-password USER [--stdin]` · `list-users [--json]` ·
 `setup-code` · `revoke-sessions USER|--all` · `remove-two-step USER` (lost phone and recovery codes) · `remove-passkeys USER` (lost or stolen device) · `export-user USER FILE|-` (that person's data export, for
 someone who cannot sign in) · `disable-user USER` (never the only admin; signs out their devices; enable
-it again in Settings → People) · `purge-pre-v3-backup` · `vacuum` · `backup FILE|-` ·
+it again in Settings → People) · `reset-test-accounts` (start tester and tester-helper again) · `purge-pre-v3-backup` · `vacuum` · `backup FILE|-` ·
 `check` · `restore-check FILE [--revoke-sessions]` · `rotate-secret-key` · `reencrypt` · `settings
 list|get|set|unset`. `backup` writes its copy in SQLite's rollback-journal mode, and `restore-check`
 opens a read-only file as immutable, so a backup can be checked on a read-only mount
