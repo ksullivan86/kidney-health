@@ -290,8 +290,8 @@ def link_helper(conn: sqlite3.Connection, owner_id: int, helper_id: int) -> None
     if found is not None:
         return
     now = clock.now_iso()
-    conn.execute("INSERT INTO shares (owner_user_id, grantee_user_id, areas, created_at, accepted_at, role) VALUES (?, ?, ?, ?, ?, ?)",
-                 (owner_id, helper_id, json.dumps(HELPER_AREAS), now, now, "care_helper"))
+    conn.execute("INSERT INTO shares (owner_user_id, grantee_user_id, areas, created_at, accepted_at, role, may_plan) "
+                 "VALUES (?, ?, ?, ?, ?, ?, 1)", (owner_id, helper_id, json.dumps(HELPER_AREAS), now, now, "care_helper"))
 
 
 # --------------------------------------------------------------------------- #

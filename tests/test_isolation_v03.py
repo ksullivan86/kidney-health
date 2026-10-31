@@ -37,11 +37,13 @@ import test_sharing
 import test_totp
 import test_body
 import test_care_team
+import test_care_team_full
 import test_symptoms
 import test_test_accounts
 import test_connected_devices
 import test_activity
 import test_migration_m030
+import test_migration_m031
 import test_whoop
 from ai_support import FakeProvider, attach, chat
 from conftest import DAY, HTTPS_URL, TestClient, add_user, find_food, sign_in
@@ -110,6 +112,10 @@ MATRIX: dict[str, tuple[str, ...]] = {
     "care_invites": ("test_care_team.test_cancel_accept_decline_and_lapse",  # the Care team, step 27 (note 25)
                      "test_care_team.test_isolation_a_helper_of_ana_reaches_neither_kim_nor_their_own_log",
                      "test_care_team.test_the_migration_makes_old_shares_viewers"),
+    "care_suggestions": ("test_care_team_full.test_a_helper_of_ana_never_reaches_kims_meals_or_suggestions",  # step 31 (note 29)
+                         "test_care_team_full.test_no_thanks_and_what_the_suggester_sees",
+                         "test_care_team_full.test_every_new_route_is_the_same_404_when_it_is_not_yours_now",
+                         "test_migration_m031.test_suggestions_check_and_cascade"),
     "feedback": ("test_test_accounts.test_feedback_is_for_test_accounts_and_admins_only",  # test accounts, step 28 (note 26)
                  "test_test_accounts.test_reset_deletes_what_they_made_and_starts_again"),
     "oidc_links": ("test_oidc.test_another_persons_link_is_404",  # sign-in with a provider, step 26 (note 24)
@@ -146,7 +152,8 @@ MODULES = {"test_isolation": test_isolation, "test_export_delete": test_export_d
            "test_log_if_match": test_log_if_match, "test_totp": test_totp,
            "test_passkeys": test_passkeys, "test_sharing": test_sharing, "test_oidc": test_oidc, "test_care_team": test_care_team,
            "test_test_accounts": test_test_accounts, "test_connected_devices": test_connected_devices,
-           "test_whoop": test_whoop, "test_activity": test_activity, "test_migration_m030": test_migration_m030}
+           "test_whoop": test_whoop, "test_activity": test_activity, "test_migration_m030": test_migration_m030,
+           "test_care_team_full": test_care_team_full, "test_migration_m031": test_migration_m031}
 
 
 def _tables_with_people(conn: sqlite3.Connection) -> dict[str, list[str]]:

@@ -94,6 +94,12 @@ ACTIONS: set[str] = {
     "care.invite_answered",
     "care.role_changed",
     "care.plan_changed",
+    "care.switches_changed",  # the full Care team (note 29; app/sharing.py, app/care_suggestions.py)
+    "care.food_logged",
+    "suggestion.sent",
+    "suggestion.accepted",
+    "suggestion.declined",
+    "suggestion.expired",
     "oidc.linked",  # sign-in with a provider (design note 24; app/auth/oidc_api.py, admin_api.py)
     "oidc.unlinked",
     "device.connected",  # connected devices (design note 27; app/devices/)
@@ -141,6 +147,12 @@ USER_VISIBLE_ACTIONS = frozenset(
         "care.invite_answered",
         "care.role_changed",
         "care.plan_changed",
+        "care.switches_changed",
+        "care.food_logged",
+        "suggestion.sent",
+        "suggestion.accepted",
+        "suggestion.declined",
+        "suggestion.expired",
         "oidc.linked",
         "oidc.unlinked",
         "device.connected",

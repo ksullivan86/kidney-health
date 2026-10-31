@@ -552,7 +552,7 @@
     browser: 'This browser cannot open a .zip here. Open the .zip on your device and choose the export.json inside it.',
   };
   // Parts of an export the import never reads (AI activity, sign-in activity, the account itself): not even sent.
-  const IMPORT_NEVER_SENT = ['user', 'ai_audit', 'activity', 'ai_usage', 'ai_consents', 'ai_provider', 'activity_days', 'activity_workouts', 'activity_extra'];
+  const IMPORT_NEVER_SENT = ['user', 'ai_audit', 'activity', 'ai_usage', 'ai_consents', 'ai_provider', 'activity_days', 'activity_workouts', 'activity_extra', 'care_suggestions'];
   const IMPORT_KINDS = [
     ['log_entries', 'log entry', 'log entries'],
     ['custom_foods', 'food of yours', 'foods of yours'],

@@ -24,16 +24,24 @@ from test_sharing import db as open_db
 TODAY = date.today().isoformat()
 TOMORROW = (date.today() + timedelta(days=1)).isoformat()
 
-# Every write a Care helper can make on someone else's data; each must go through sharing.care_helper.
-HELPER_WRITES = {
-    ("post", "/api/shared/{share_id}/log"),
-    ("post", "/api/shared/{share_id}/log/batch"),
-    ("put", "/api/shared/{share_id}/log/{entry_id}"),
-    ("delete", "/api/shared/{share_id}/log/{entry_id}"),
-    ("post", "/api/shared/{share_id}/log/clear-planned"),
-    ("post", "/api/shared/{share_id}/guidance/plan-days"),
+# Every write a helper can make on someone else's data, and the one check (a sharing.care_* dependency) each must go through.
+WRITE_CHECKS = {
+    ("post", "/api/shared/{share_id}/log"): sharing.care_helper,
+    ("post", "/api/shared/{share_id}/log/batch"): sharing.care_helper,
+    ("put", "/api/shared/{share_id}/log/{entry_id}"): sharing.care_helper,
+    ("delete", "/api/shared/{share_id}/log/{entry_id}"): sharing.care_helper,
+    ("post", "/api/shared/{share_id}/log/clear-planned"): sharing.care_planner,
+    ("post", "/api/shared/{share_id}/guidance/plan-days"): sharing.care_planner,
+    ("post", "/api/shared/{share_id}/meals/{meal_id}/apply"): sharing.care_saved_meals,  # design note 29 §4
+    ("post", "/api/shared/{share_id}/suggestions"): sharing.care_suggester,  # design note 29 §5
 }
-HELPER_READS = {("get", "/api/shared/{share_id}/foods"), ("get", "/api/shared/{share_id}/plan/shopping")}
+READ_CHECKS = {
+    ("get", "/api/shared/{share_id}/foods"): sharing.care_food_search,
+    ("get", "/api/shared/{share_id}/plan/shopping"): sharing.care_planner,
+    ("get", "/api/shared/{share_id}/meals"): sharing.care_saved_meals,
+}
+HELPER_WRITES = set(WRITE_CHECKS)
+HELPER_READS = set(READ_CHECKS)
 
 
 @pytest.fixture
@@ -77,7 +85,7 @@ def test_an_invite_answers_the_same_whether_or_not_the_name_is_an_account(team):
     ghost = ana.post("/api/me/shares/invite", json={"username": "nobody-here", "role": "viewer", "areas": ["labs"]})
     assert real.status_code == ghost.status_code == 201
     a, b = real.json(), ghost.json()
-    assert set(a) == set(b) == {"id", "username", "areas", "role", "days", "created_at", "expires_at"}
+    assert set(a) == set(b) == {"id", "username", "areas", "role", "days", "created_at", "expires_at", *sharing.SWITCHES}
     assert (a["username"], b["username"]) == ("sam", "nobody-here")
     assert {k: v for k, v in a.items() if k not in ("id", "username", "created_at", "expires_at")} == \
         {k: v for k, v in b.items() if k not in ("id", "username", "created_at", "expires_at")}
@@ -157,7 +165,7 @@ def test_accepting_makes_a_share_with_the_role_and_the_food_log(team):
     assert person["id"] == sid and person["role"] == "care_helper" and person["areas"] == ["food", "labs"] and person["until"]
     mine = ana.get("/api/me/shares").json()
     assert mine["invites"] == [] and [(s["username"], s["role"]) for s in mine["sharing"]] == [("sam", "care_helper")]
-    assert mine["roles"] == ["viewer", "care_helper"]
+    assert mine["roles"] == ["viewer", "care_helper", "caregiver"]
     # a newer invite replaces the share, as a newer link does
     sid2 = join(ana, sam, role="viewer", areas=["body"])
     people = sam.get("/api/shared").json()["people"]
@@ -202,7 +210,7 @@ def test_the_person_changes_the_role_in_one_place(team):
     assert sam.post(f"/api/shared/{sid}/log", json=_entry(ana)).status_code == 404  # the very next request
     assert kim.put(f"/api/me/shares/{sid}/role", json={"role": "care_helper"}).status_code == 404
     assert sam.put(f"/api/me/shares/{sid}/role", json={"role": "care_helper"}).status_code == 404
-    assert ana.put(f"/api/me/shares/{sid}/role", json={"role": "caregiver"}).status_code == 400
+    assert ana.put(f"/api/me/shares/{sid}/role", json={"role": "custom"}).status_code == 400  # Custom is never chosen, only seen
     rows = audit_rows(ana, "care.role_changed")
     assert len(rows) == 2 and '"food_added":true' in rows[0]["details_json"]
 
@@ -246,17 +254,20 @@ def _entry(owner: TestClient, query: str = "apple", day: str = TOMORROW, **extra
 
 
 def test_every_helper_write_goes_through_the_one_check():
+    from app import care_suggestions
+
+    wanted = {**WRITE_CHECKS, **READ_CHECKS}
     seen = {}
-    for route in sharing.shared_router.routes:
+    for route in [*sharing.shared_router.routes, *care_suggestions.shared_router.routes]:
         for method in route.methods:
-            if (method.lower(), route.path) in HELPER_WRITES | HELPER_READS:
+            if (method.lower(), route.path) in wanted:
                 deps, stack = [], [route.dependant]
                 while stack:
                     d = stack.pop()
                     deps.append(d.call)
                     stack.extend(d.dependencies)
-                seen[(method.lower(), route.path)] = sharing.care_helper in deps
-    assert seen == {k: True for k in HELPER_WRITES | HELPER_READS}
+                seen[(method.lower(), route.path)] = wanted[(method.lower(), route.path)] in deps
+    assert seen == {k: True for k in wanted}
 
 
 def test_a_care_helper_plans_changes_and_removes_planned_food(team):
@@ -276,7 +287,8 @@ def test_a_care_helper_plans_changes_and_removes_planned_food(team):
     assert changed.json()["status"] == "planned"
     stale = sam.put(f"/api/shared/{sid}/log/{e['id']}", json={"servings": 3}, headers={"If-Match": f'"{e["version"]}"'})
     assert stale.status_code == 412
-    assert sam.put(f"/api/shared/{sid}/log/{e['id']}", json={"status": "eaten"}).status_code == 400
+    assert sam.put(f"/api/shared/{sid}/log/{e['id']}", json={"status": "eaten"}).status_code == 404  # a Care helper never logs eaten food
+    assert sam.put(f"/api/shared/{sid}/log/{e['id']}", json={"status": "planned"}).status_code == 400  # nothing ever goes back to planned
     assert sam.put(f"/api/shared/{sid}/log/{e['id']}", json={"purpose": "none"}).status_code == 400
     assert sam.delete(f"/api/shared/{sid}/log/{e['id']}").status_code == 204
     assert ana.get("/api/log", params={"date": TOMORROW}).json()["entries"] == []
@@ -295,9 +307,9 @@ def test_a_care_helper_never_adds_or_changes_eaten_food(team):
     ana, sam, _ = team
     sid = join(ana, sam)
     r = sam.post(f"/api/shared/{sid}/log", json=_entry(ana, status="eaten"))
-    assert r.status_code == 400
+    assert r.status_code == 404 and r.json()["detail"] == sharing.NOT_SHARED  # logging eaten food is a Caregiver's switch
     r = sam.post(f"/api/shared/{sid}/log/batch", json={"entries": [_entry(ana), _entry(ana, status="eaten")]})
-    assert r.status_code == 400
+    assert r.status_code == 404 and ana.get("/api/log", params={"date": TOMORROW}).json()["entries"] == []
     eaten = log_food(ana, "banana", date=TODAY)
     assert sam.put(f"/api/shared/{sid}/log/{eaten['id']}", json={"servings": 2}).status_code == 404
     assert sam.delete(f"/api/shared/{sid}/log/{eaten['id']}").status_code == 404
@@ -311,8 +323,8 @@ def test_a_planned_low_treatment_is_never_changed_or_removed_by_a_helper(team):
     low = planned(ana, "glucose")
     assert low["purpose"] == "hypo"
     other = planned(ana, "apple")
-    assert sam.put(f"/api/shared/{sid}/log/{low['id']}", json={"servings": 0.5}).status_code == 404
-    assert sam.delete(f"/api/shared/{sid}/log/{low['id']}").status_code == 404
+    for r in (sam.put(f"/api/shared/{sid}/log/{low['id']}", json={"servings": 0.5}), sam.delete(f"/api/shared/{sid}/log/{low['id']}")):
+        assert r.status_code == 403 and r.json()["detail"] == "Only admin can change or remove a low treatment."
     cleared = sam.post(f"/api/shared/{sid}/log/clear-planned", json={"start": TOMORROW, "end": TOMORROW})
     assert cleared.status_code == 200 and cleared.json() == {"deleted": 1}
     ids = sam.post(f"/api/shared/{sid}/log/clear-planned", json={"start": TOMORROW, "end": TOMORROW, "ids": [low["id"]]})
@@ -408,7 +420,8 @@ def test_every_write_is_refused_unless_the_share_is_a_care_helper_now(team, fake
     elif how == "food_not_shared":  # a Viewer of labs only; a Care helper role cannot exist without the food log
         with open_db(ana) as conn:
             assert conn.execute("SELECT areas FROM shares WHERE id = ?", (sid,)).fetchone()[0] == '["labs"]'
-            conn.execute("UPDATE shares SET role = 'care_helper' WHERE id = ?", (sid,))
+            conn.execute("UPDATE shares SET role = 'care_helper', may_plan = 1, may_log = 1, may_suggest = 1, "
+                         "may_use_saved_meals = 1 WHERE id = ?", (sid,))
             conn.commit()
     got = _all_writes(sam, sid, entry["id"], body)
     assert got == [404] * len(got), (how, got)
