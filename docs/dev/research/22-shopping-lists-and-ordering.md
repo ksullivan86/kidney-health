@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Proposed, 2026-10-29. Part A (share and copy) is built; B and C are not. The owner asked for "integration with shopping list apps (open source) or ordering online or delivery (whatever makes it easy for someone to follow the guidance)". The choices in §6 are defaults the owner can change. |
+| Status | Proposed, 2026-10-29. Part A (share and copy) is built; B is built for 0.19 ([note 30](30-list-sync-and-recipe-import.md), which changes some of §3); C is not. The owner asked for "integration with shopping list apps (open source) or ordering online or delivery (whatever makes it easy for someone to follow the guidance)". The choices in §6 are defaults the owner can change. |
 | Scope | The week's shopping list that Plan already builds from planned entries (`GET /api/plan/shopping`) leaves the app in three ways, cheapest first: (A) share or copy it as text, (B) send it to a self-hosted, open-source list app, (C) open it at a grocery delivery service. |
 | Out of scope | Prices, stock and store choice (the app has no data for them). Buying anything from inside the app. Sending the person's log, targets or health data anywhere: only the food names and amounts on the list leave. |
 | Builds on | `app/meals.py` (`/api/plan/shopping`), `js/views/plan.js` (the list, ticks kept on the device), the SSRF-checked transport and write-only secrets used by AI providers (`app/ai/transport.py`, `app/credentials.py`), the settings registry (every setting an environment variable). |
