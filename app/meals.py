@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from .auth.deps import CurrentUser, current_user
 from .db import get_db, utcnow
 from .foods import fetch_food, fetch_user_food, get_food_or_404, parse_flags, raw_nutrients
-from .log import fetch_entries, fetch_entry, insert_entry, parse_range, row_to_entry
+from .log import fetch_entries, fetch_entry, insert_entry, parse_range, resolve_purpose, row_to_entry
 from .models import (
     MealApply,
     MealApplyResult,
@@ -292,6 +292,8 @@ def apply_template(conn: sqlite3.Connection, user_id: int, meal_id: int, body: M
             insert_entry(
                 conn, user_id=user_id, date=body.date, meal=body.meal, food=food, servings=item["servings"] * body.scale,
                 grams=None, note=None, status=body.status, added_by=added_by,
+                # A food for treating a low stays marked as one, so nobody else can change it (note 29 §3).
+                purpose=resolve_purpose(food, None),
             )
         )
     conn.commit()

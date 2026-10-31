@@ -33,6 +33,9 @@ The full **Care team** (design note 29, schema step 31).
   on. A helper changing or removing a low treatment now gets 403 with a sentence (was 404).
 * **Upgrading.** Schema step 31 adds four columns to `shares` and `care_invites` and a table `care_suggestions`. Every Care helper
   stays a Care helper and every Viewer a Viewer. Going back to 0.17 keeps planning rights and drops the rest.
+* **Fixed.** Adding a saved meal that holds a food for treating a low now marks that entry as a low treatment, as logging it
+  directly does. Before, it was an ordinary entry, so the Care team rules for low treatments did not cover it. Tapping
+  **No thanks** just as **Add to my plan** finishes now records only one answer.
 
 ## 0.17.0 — 2026-10-31
 

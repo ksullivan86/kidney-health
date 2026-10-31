@@ -361,8 +361,12 @@ def decline_suggestion(suggestion_id: SuggestionId, request: Request, user: Curr
     ``404``."""
     _available(request, conn)
     row = _open_for_me(conn, user.id, suggestion_id)
-    conn.execute("UPDATE care_suggestions SET answer = 'declined', answered_at = ? WHERE id = ? AND answer IS NULL",
-                 (clock.now_iso(), suggestion_id))
+    cur = conn.execute("UPDATE care_suggestions SET answer = 'declined', answered_at = ? WHERE id = ? AND answer IS NULL",
+                       (clock.now_iso(), suggestion_id))
+    if cur.rowcount != 1:
+        # Answered a moment ago (Add, or another tap): only one answer is ever recorded.
+        conn.rollback()
+        raise ApiProblem(404, NO_SUGGESTION)
     audit(conn, user.id, "suggestion.declined", "care_suggestion", suggestion_id, ip=request_ip(request), share=int(row["share_id"]))
     conn.commit()
     return Response(status_code=204)

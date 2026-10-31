@@ -149,7 +149,7 @@
     for (const it of t.items) {
       const food = this._food(it.food_id);
       if (!food) fail(404, `food ${it.food_id} used by this saved meal no longer exists; edit the meal first`);
-      created.push(this._insertEntry({ date: b.date, meal: b.meal, food, servings: it.servings * b.scale, grams: null, note: null, status: b.status }));
+      created.push(this._insertEntry({ date: b.date, meal: b.meal, food, servings: it.servings * b.scale, grams: null, note: null, status: b.status, purpose: KH.mock.resolvePurpose(food, null) }));
     }
     return { entries: created.map((r) => this._entryView(r)) };
   });

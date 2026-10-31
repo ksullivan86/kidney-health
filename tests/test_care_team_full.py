@@ -172,6 +172,30 @@ def test_no_helper_ever_changes_removes_or_moves_a_low_treatment(team):
     assert ana.delete(f"/api/log/{by_helper['id']}").status_code == 204
 
 
+def test_a_low_treatment_from_a_saved_meal_stays_marked_and_locked(team):
+    """A saved meal holding a food for treating a low logs it with purpose "hypo", whoever applies it, so no helper can change,
+    remove or clear it (found in review: apply used to store no purpose)."""
+    ana, sam, _ = team
+    sid = join(ana, sam, role="caregiver")
+    glucose = find_food(ana, "glucose")
+    meal = ana.post("/api/meals", json={"name": "Low kit", "items": [{"food_id": glucose["id"], "servings": 1}]}).json()
+    set_switches(ana, sid, may_use_saved_meals=True)
+    own = ana.post(f"/api/meals/{meal['id']}/apply", json={"date": TOMORROW, "meal": "snack", "status": "planned"})
+    assert own.status_code == 201 and own.json()["entries"][0]["purpose"] == "hypo"
+    out = sam.post(f"/api/shared/{sid}/meals/{meal['id']}/apply", json={"date": TOMORROW, "meal": "snack", "status": "planned"})
+    assert out.status_code == 201, out.text
+    by_helper = out.json()["entries"][0]
+    assert by_helper["purpose"] == "hypo"
+    for e in (own.json()["entries"][0], by_helper):
+        for body in ({"servings": 2}, {"date": TODAY}, {"status": "eaten"}):
+            r = sam.put(f"/api/shared/{sid}/log/{e['id']}", json=body)
+            assert r.status_code == 403 and r.json()["detail"] == LOW_SENTENCE, (e["id"], body)
+        r = sam.delete(f"/api/shared/{sid}/log/{e['id']}")
+        assert r.status_code == 403 and r.json()["detail"] == LOW_SENTENCE
+    assert sam.post(f"/api/shared/{sid}/log/clear-planned", json={"start": TOMORROW, "end": TOMORROW}).json() == {"deleted": 0}
+    assert len(ana.get("/api/log", params={"date": TOMORROW}).json()["entries"]) == 2
+
+
 def test_a_custom_share_with_logging_only(team):
     ana, sam, _ = team
     sid = join(ana, sam, role="viewer")
@@ -295,6 +319,20 @@ def test_no_thanks_and_what_the_suggester_sees(team):
                                                          "answered_at", "fit"}
     assert ana.get("/api/log", params={"date": TOMORROW}).json()["entries"] == []
     assert audit_rows(ana, "suggestion.declined")
+
+
+def test_only_one_answer_is_ever_recorded(team, monkeypatch):
+    """A No thanks that arrives while Add is finishing finds the suggestion already answered: 404, and no "declined" row."""
+    ana, sam, _ = team
+    sid = join(ana, sam)
+    set_switches(ana, sid, may_suggest=True)
+    sent = sam.post(f"/api/shared/{sid}/suggestions", json=suggestion(ana)).json()
+    assert ana.post(f"/api/me/suggestions/{sent['id']}/accept").status_code == 200
+    # The decline read the suggestion as open just before the accept wrote its answer.
+    monkeypatch.setattr(care_suggestions, "_open_for_me", lambda conn, user_id, suggestion_id: {"share_id": sid})
+    assert ana.post(f"/api/me/suggestions/{sent['id']}/decline").status_code == 404
+    assert len(audit_rows(ana, "suggestion.accepted")) == 1 and audit_rows(ana, "suggestion.declined") == []
+    assert sam.get(f"/api/shared/{sid}/suggestions").json()["suggestions"][0]["answer"] == "accepted"
 
 
 def test_a_suggestion_expires_after_14_days(team, fake_clock):
