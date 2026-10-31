@@ -93,34 +93,49 @@ def _rows(conn: sqlite3.Connection) -> list[sqlite3.Row]:
 # --------------------------------------------------------------------------- #
 
 
-def read_password(conn: sqlite3.Connection, settings: Settings, store: SettingsStore) -> tuple[str | None, str | None]:
-    """``(password, None)``, or ``(None, why not)`` when the file is not set, cannot be read or fails the password policy."""
+UNREADABLE = ("TEST_ACCOUNT_PASSWORD_FILE could not be read. Check that the file exists and that the app can read it; "
+              "the server log says more.")
+
+
+def _load_password(settings: Settings) -> str | None:
+    """The test accounts' password from ``TEST_ACCOUNT_PASSWORD_FILE``, or ``None`` when it cannot be read
+    (:func:`password_problem` says why). Used only to hash it; it is never returned to a screen or logged."""
+    path = settings.test_account_password_file
+    if path is None:
+        return None
+    try:
+        value, _, _ = read_secret({"TEST_ACCOUNT_PASSWORD_FILE": str(path)}, "TEST_ACCOUNT_PASSWORD")
+    except ConfigError:
+        return None
+    return value or None
+
+
+def password_problem(conn: sqlite3.Connection, settings: Settings, store: SettingsStore) -> str | None:
+    """Why the test accounts cannot be made from the password file, or ``None``. Only fixed sentences, so nothing taken
+    from the password, its path or a file error reaches a screen or the log (the file error goes to the log on its own)."""
     from .auth import policy
 
     path = settings.test_account_password_file
     if path is None:
-        return None, ("Set TEST_ACCOUNT_PASSWORD_FILE to a file that holds the test accounts' password "
-                      "(a Podman or compose secret), then restart.")
+        return ("Set TEST_ACCOUNT_PASSWORD_FILE to a file that holds the test accounts' password "
+                "(a Podman or compose secret), then restart.")
     try:
-        password, _, _ = read_secret({"TEST_ACCOUNT_PASSWORD_FILE": str(path)}, "TEST_ACCOUNT_PASSWORD")
+        secret, _, _ = read_secret({"TEST_ACCOUNT_PASSWORD_FILE": str(path)}, "TEST_ACCOUNT_PASSWORD")
     except ConfigError as exc:
-        # The detail (path, operating-system error) goes to the server log only; the admin screen gets a fixed sentence.
         log.warning("TEST_ACCOUNT_PASSWORD_FILE could not be read: %s", exc)
-        return None, ("TEST_ACCOUNT_PASSWORD_FILE could not be read. Check that the file exists and that the app can read it; "
-                      "the server log says more.")
-    if not password:
-        return None, f"TEST_ACCOUNT_PASSWORD_FILE: {path} is empty. Put the test accounts' password in it."
+        return UNREADABLE
+    if not secret:
+        return "TEST_ACCOUNT_PASSWORD_FILE is empty. Put the test accounts' password in it."
     instance = str(store.get(conn, "instance.name"))
+    known = (policy.MSG_TOO_SHORT.format(n=settings.password_min_length), policy.MSG_TOO_LONG, policy.MSG_CONTEXT,
+             policy.MSG_COMMON, policy.MSG_PATTERN, policy.MSG_BREACHED)
     for name in NAMES:
-        problems = policy.validate_new_password(password, username=name, display_name=DISPLAY[name], instance_name=instance,
+        problems = policy.validate_new_password(secret, username=name, display_name=DISPLAY[name], instance_name=instance,
                                                 min_length=settings.password_min_length)
         if problems:
-            # Only the policy's own fixed sentences, never anything taken from the password itself.
-            known = (policy.MSG_TOO_SHORT.format(n=settings.password_min_length), policy.MSG_TOO_LONG, policy.MSG_CONTEXT,
-                     policy.MSG_COMMON, policy.MSG_PATTERN, policy.MSG_BREACHED)
             why = " ".join(msg for msg in known if msg in problems) or "Choose another password."
-            return None, "The password in TEST_ACCOUNT_PASSWORD_FILE does not meet the password policy: " + why
-    return password, None
+            return "The password in TEST_ACCOUNT_PASSWORD_FILE does not meet the password policy: " + why
+    return None
 
 
 # --------------------------------------------------------------------------- #
@@ -186,11 +201,13 @@ def sync(conn: sqlite3.Connection, settings: Settings, store: SettingsStore, *, 
             conn.commit()
         log.warning("test accounts: %s", problem)
         return problem
-    password, problem = read_password(conn, settings, store)
-    existing = {r["username_norm"]: r for r in _rows(conn)}
+    problem = password_problem(conn, settings, store)
+    password = None if problem else _load_password(settings)
     if password is None:
+        problem = problem or UNREADABLE  # the file changed between the check and the read
         log.warning("test accounts were not made: %s", problem)
         return problem
+    existing = {r["username_norm"]: r for r in _rows(conn)}
     made: dict[str, int] = {}
     for name in NAMES:
         row = existing.get(name)
@@ -229,7 +246,7 @@ def reset(conn: sqlite3.Connection, settings: Settings, store: SettingsStore, *,
         raise ResetRefused("Turn on test accounts first (Server settings → Test accounts, or TEST_ACCOUNT_ENABLED).")
     problem = _blocked(conn, settings)
     if problem is None:
-        _, problem = read_password(conn, settings, store)
+        problem = password_problem(conn, settings, store)
     if problem:
         raise ResetRefused(problem)
     names = []
@@ -250,7 +267,7 @@ def status(conn: sqlite3.Connection, settings: Settings, store: SettingsStore) -
     if enabled:
         problem = _blocked(conn, settings)
         if problem is None:
-            _, problem = read_password(conn, settings, store)
+            problem = password_problem(conn, settings, store)
     accounts = [{"id": int(r["id"]), "username": r["username"], "status": r["status"], "last_login_at": r["last_login_at"]}
                 for r in _rows(conn)]
     return {"enabled": enabled, "ai": bool(store.get(conn, AI_SWITCH)), "problem": problem, "accounts": accounts}
