@@ -1,4 +1,4 @@
-Status: in progress (2026-10-31)
+Status: complete (2026-10-31)
 
 # Test accounts (`tester`, `tester-helper`), Send feedback, Reset
 
@@ -31,9 +31,15 @@ Branch: this helper's worktree branch (commit locally, no push; the owner merges
    ARCHITECTURE.md (step 28 row, section, CLI), CHANGELOG Unreleased, docs/test-the-full-app.md, README + docs/README links.
    Checked: handbook content, compose env, deploy, research notes tests; ruff; OpenAPI and settings vectors --check.
 
-## Next
+4. Full run: `python -m pytest` 6891 passed, 2 skipped (26 min, no network). `node tests/js/run_vectors.mjs` and
+   `node --test tests/js/*.test.mjs` (172) pass; ruff clean; OpenAPI and settings vectors `--check` pass;
+   `python3 tools/e2e/test_accounts.py` 34/34.
 
-The full pytest run (log: scratchpad full.log), then "Status: complete".
+## For the owner to decide
+
+* Display names Sam and Jo; the helper sees all four areas. Easy to change in app/test_accounts.py (DISPLAY, HELPER_AREAS).
+* Feedback limits (2,000 characters, 20 an hour, 50 a day, 5,000 kept).
+* docs/dev/progress/0.14-plan.md still lists the test account as a plan; not edited here (shared file).
 
 ## Decisions
 
