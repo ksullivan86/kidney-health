@@ -70,7 +70,9 @@ Uncertain, and what we do about it:
    groups are left out: a guest on the scale must not land in the person's log. Weight from type 1; a blood pressure reading
    needs both 10 and 9, with 11 as its pulse. A pulse alone is not imported.
 8. **Where it goes**: the existing `weights` and `blood_pressures` tables with `source = 'withings'` and
-   `source_key = 'withings:<grpid>'`. The date and time are the person's clock in the `timezone` Withings gives. The context
+   `source_key = 'withings:<grpid>'`. The date and time are the person's clock in the `timezone` Withings gives. The Chainguard
+   runtime has no system time-zone files, so the app depends on `tzdata` (added to `requirements.in` for 0.16); without it
+   every reading would fall back to UTC and an evening reading in California would land on the next day. The context
    follows the phone-shortcut rule (`app.body.context_for`). Values outside the app's plausibility ranges are skipped.
 9. **Never overwrite**: the sync only adds rows. It skips a reading the person already has at the same date and minute with the
    same numbers, from any source, typed ones included (a typed copy of the cuff's display is the same reading). Editing an

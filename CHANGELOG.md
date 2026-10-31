@@ -22,6 +22,7 @@ the API. Security fixes are released as patch versions of the newest minor versi
   The server then needs to reach `wbsapi.withings.net`.
 * Test accounts cannot connect a device. The demo shows a sample Withings connection.
 * Schema step 29 adds two tables. Back up before you upgrade, as always.
+* New dependency `tzdata`: the image had no time-zone data, so imported readings would have shown in UTC time.
 
 ## 0.15.0 — 2026-10-31
 

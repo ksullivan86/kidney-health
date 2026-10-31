@@ -4549,6 +4549,9 @@ this route does before sending, because one refused row makes the whole request 
 
 ## Connected devices (schema step 29; design note 27)
 
+**New runtime dependency: `tzdata`** (Apache-2.0, pure data, no code). `zoneinfo` needs time-zone files and the Chainguard
+runtime image has none, so without it a Withings reading's time would fall back to UTC. Locked with hashes in `requirements.lock`.
+
 The server signs in to a device company with the person's consent and fetches only that person's own readings into their log.
 Nothing about the person is sent out. 0.16 has Withings (weight, blood pressure, pulse); Whoop (0.17) adds a provider module.
 
