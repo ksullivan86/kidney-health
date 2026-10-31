@@ -169,6 +169,23 @@ Environment=TRUSTED_PROXIES=127.0.0.1,::1
 # Environment=OIDC_CLIENT_SECRET_FILE=/run/secrets/oidc_client_secret
 # Environment=OIDC_BUTTON_LABEL=Sign in with Authentik
 # Environment=OIDC_ALLOW_PRIVATE_ISSUER=true
+# Or Authentik and Google together, each with its own button, secret and return address <PUBLIC_URL>/api/auth/oidc/callback/<name>:
+# Environment=OIDC_ENABLED=true
+# Environment=OIDC_PROVIDERS=authentik,google
+# Environment=OIDC_AUTHENTIK_ISSUER=https://auth.example.org/application/o/kidney-health/
+# Environment=OIDC_AUTHENTIK_CLIENT_ID=your-authentik-client-id
+# Secret=kidney-oidc-authentik,type=mount,target=oidc_authentik_secret,uid=10001,gid=10001,mode=0400
+# Environment=OIDC_AUTHENTIK_CLIENT_SECRET_FILE=/run/secrets/oidc_authentik_secret
+# Environment=OIDC_AUTHENTIK_ALLOW_PRIVATE_ISSUER=true
+# Environment=OIDC_GOOGLE_ISSUER=https://accounts.google.com
+# Environment=OIDC_GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+# Secret=kidney-oidc-google,type=mount,target=oidc_google_secret,uid=10001,gid=10001,mode=0400
+# Environment=OIDC_GOOGLE_CLIENT_SECRET_FILE=/run/secrets/oidc_google_secret
+# Environment=OIDC_GOOGLE_ALLOWED_DOMAINS=example.org
+# Only the provider buttons and passkeys, no passwords (first link your own admin account; docs/accounts.md):
+# Environment=OIDC_ONLY=true
+# Tokens for outside AI apps and phone shortcuts always expire (by default people may choose "Never"):
+# Environment=TOKENS_ALLOW_NEVER_EXPIRING=false
 
 # Health: exec form (JSON array). A plain string would run through /bin/sh, which the image does
 # not have, and the check would always fail.

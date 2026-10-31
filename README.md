@@ -181,6 +181,7 @@ Settings are environment variables, and secrets are read from files. These are t
 | `PUBLIC_URL` | not set | The address people type, like `https://food.home.example.net`. Set it whenever you use a host name. |
 | `TRUSTED_PROXIES` | `127.0.0.1,::1` | Which reverse proxies to trust. It depends on your setup ([docs/security.md](docs/security.md#4-proxy-trust-trusted_proxies-per-topology)). |
 | `AUTH_MODE` | `local` | `local` for normal logins, `proxy` if a sign-in proxy handles it, `none` for one trusted device with no login. |
+| `OIDC_ENABLED` | `false` | Sign in with Authentik, Google or another provider, one or several at once ([docs/accounts.md](docs/accounts.md#sign-in-with-authentik-google-or-another-provider)). |
 | `SECRET_KEY_FILE` | made for you in the data folder | Used to encrypt saved API keys. Keep a copy with your backups. |
 | `USDA_API_KEY_FILE` | not set | A shared key for USDA food search. People can also add their own. |
 | `OFF_ENABLED` | `false` | Barcode lookups in Open Food Facts. |

@@ -353,6 +353,14 @@ class OidcClient:
     def redirect_uri(self) -> str:
         return redirect_uri(self.public_origin or "", self.env.name)
 
+    @property
+    def discovery_state(self) -> str | None:
+        """For the admin's About page: ``ok`` once the provider was reached, the short reason of the last failure, or None
+        before anyone pressed the button (discovery runs at the first sign-in, not at start-up)."""
+        if self.last_error:
+            return self.last_error
+        return "ok" if self._metadata is not None else None
+
     # ------------------------------------------------------------------ HTTP
     def _client(self) -> httpx2.Client:
         transport = egress.CheckedTransport(allow_private=self.env.allow_private_issuer, resolver=self.resolver,

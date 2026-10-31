@@ -127,6 +127,7 @@ services:
       AI_EVAL_REPORTS_DIR: ${AI_EVAL_REPORTS_DIR:-}   # a path inside the container; mount the reports under volumes: below
       ASSISTANT_ENABLED: ${ASSISTANT_ENABLED:-}
       PUSH_ENABLED: ${PUSH_ENABLED:-}
+      TOKENS_ALLOW_NEVER_EXPIRING: ${TOKENS_ALLOW_NEVER_EXPIRING:-}
       SHARING_ENABLED: ${SHARING_ENABLED:-}
       TEST_ACCOUNT_ENABLED: ${TEST_ACCOUNT_ENABLED:-}
       TEST_ACCOUNT_AI: ${TEST_ACCOUNT_AI:-}
@@ -148,6 +149,19 @@ services:
       OIDC_LINK_BY_EMAIL: ${OIDC_LINK_BY_EMAIL:-}
       OIDC_ALLOWED_DOMAINS: ${OIDC_ALLOWED_DOMAINS:-}
       OIDC_ADMIN_GROUPS: ${OIDC_ADMIN_GROUPS:-}
+      OIDC_ONLY: ${OIDC_ONLY:-}
+      OIDC_PROVIDERS: ${OIDC_PROVIDERS:-}
+      # Authentik and Google together (OIDC_PROVIDERS=authentik,google): uncomment, fill in deploy/.env, and add the two
+      # secrets below. Each provider's return address is <PUBLIC_URL>/api/auth/oidc/callback/<name>.
+      # OIDC_AUTHENTIK_ISSUER: ${OIDC_AUTHENTIK_ISSUER:-}
+      # OIDC_AUTHENTIK_CLIENT_ID: ${OIDC_AUTHENTIK_CLIENT_ID:-}
+      # OIDC_AUTHENTIK_ALLOW_PRIVATE_ISSUER: ${OIDC_AUTHENTIK_ALLOW_PRIVATE_ISSUER:-}
+      # OIDC_AUTHENTIK_ADMIN_GROUPS: ${OIDC_AUTHENTIK_ADMIN_GROUPS:-}
+      # OIDC_AUTHENTIK_CLIENT_SECRET_FILE: /run/secrets/oidc_authentik_secret
+      # OIDC_GOOGLE_ISSUER: ${OIDC_GOOGLE_ISSUER:-}
+      # OIDC_GOOGLE_CLIENT_ID: ${OIDC_GOOGLE_CLIENT_ID:-}
+      # OIDC_GOOGLE_ALLOWED_DOMAINS: ${OIDC_GOOGLE_ALLOWED_DOMAINS:-}
+      # OIDC_GOOGLE_CLIENT_SECRET_FILE: /run/secrets/oidc_google_secret
       # A cloud AI provider's key is a file secret like the others (never an env var):
       # AI_API_KEY_FILE: /run/secrets/ai_api_key                # and add ai_api_key below
       # AI_CLOUD_API_KEY_FILE: /run/secrets/ai_cloud_api_key    # the key of AI_CLOUD_PROVIDER; add ai_cloud_api_key below
@@ -162,6 +176,8 @@ services:
       # - ai_api_key
       # - ai_cloud_api_key
       # - oidc_client_secret
+      # - oidc_authentik_secret
+      # - oidc_google_secret
       # - test_account_password
 
     volumes:
@@ -203,6 +219,10 @@ secrets:
   #   x-podman.relabel: Z
   # oidc_client_secret:                 # only for sign-in with a provider (OIDC_ENABLED; docs/accounts.md)
   #   file: ./secrets/oidc_client_secret
+  # oidc_authentik_secret:              # only with OIDC_PROVIDERS=authentik,... (one file per provider)
+  #   file: ./secrets/oidc_authentik_secret
+  # oidc_google_secret:
+  #   file: ./secrets/oidc_google_secret
   #   x-podman.relabel: Z
   # test_account_password:              # only for test accounts (TEST_ACCOUNT_ENABLED; docs/test-the-full-app.md)
   #   file: ./secrets/test_account_password

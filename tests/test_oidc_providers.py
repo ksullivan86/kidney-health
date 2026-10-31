@@ -260,6 +260,7 @@ def test_the_about_page_shows_each_provider_without_its_secret(admin, authentik)
         ("authentik", ISSUER_A, "https://localhost/api/auth/oidc/callback/authentik", "set"),
         ("google", ISSUER_G, "https://localhost/api/auth/oidc/callback/google", "set")]
     assert o["providers"][0]["discovery"] == "ok" and o["issuer"] == ISSUER_A  # the top level is the first provider, as before
+    assert o["providers"][1]["discovery"] is None  # nobody pressed the Google button yet: not asked, not "reached"
     assert CLIENT_SECRET not in about.text
 
 
