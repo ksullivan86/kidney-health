@@ -233,6 +233,55 @@ your own plan is never mixed with theirs. What you see follows what they allow:
 - A low treatment says only they change it.
 - Helping someone needs a connection to your server. Changes for them never wait on your phone.
 
+## Assistant access
+
+When your admin turns assistant access on, **Settings → Outside AI apps** makes personal **tokens** for a chat
+assistant you connect. A token lets that assistant read your own food log and targets; it cannot change
+anything, and it never sees anyone else's data, unless you tick **Can also save food and recipes** when you make
+it. Then the assistant can also add food to your log and save recipes as saved meals (it still cannot edit or
+delete anything). The box is off by default, and a token's choice cannot be changed later: make a new token. The
+list says **Read only**, **Read and save**, **Read and tastes** or **Read, save and tastes** for each token, and your
+activity lists what an assistant saved.
+
+A second box, **Also let it remember tastes (likes and dislikes)**, is separate and also off by default. Ticked, the
+assistant can remember that you like a food or a kind of food, want it less often or do not want it, or forget one of
+these, after it asks you. It cannot do anything else with that box, and it never changes **Treating a low**. Each
+change is listed in your activity, and a food it set shows in **Settings → Meal guidance → Your food preferences** as
+"from your assistant", where you can remove or change it.
+
+- Give the token a name (the app or device it is for) and choose when it expires: 30 days, 90 days or 1 year.
+- The token is shown **once**, with **Copy token**. Paste it into the assistant straight away: it is not shown
+  again. If it is lost, **Revoke** it and make a new one.
+- You can have 5 at a time. **Revoke** ends one at once. Changing your password, a password reset, or your
+  account being disabled revokes all of them, and so does an admin who uses **Revoke tokens** on your
+  account (your activity says so). That ends your phone shortcut tokens too. If your admin changes how the
+  server signs people in, every token ends and you make new ones.
+- If an assistant retries a save, it is not saved twice: the app answers the repeat with what was saved the first time.
+- Treat a token like a password: never send it by text message or email.
+
+## What to do
+
+- [ ] Check **Food data**: do you have shared lookups, or do you need your own USDA key?
+- [ ] Look at **Signed-in devices** after you get a new phone, and sign out the old one.
+- [ ] Turn on **Two-step sign-in**, and keep the recovery codes somewhere safe.
+- [ ] Add a **passkey** on the phone you use most, so signing in is a fingerprint or a glance.
+- [ ] Never send a key by text message or email to anyone; paste it only into the app.
+
+## If something goes wrong
+
+- **"Key rejected" after Test.** Copy it again, without spaces, and check you used the right service.
+- **"Today's shared lookups are used up."** Wait until tomorrow, use the builtin foods and Quick add, or
+  add your own key.
+- **"Please enter your password again."** This is normal for sensitive actions; enter it and the app
+  carries on.
+- **"That code is not right."** The codes depend on the phone's clock. Set the phone's date and time to set
+  automatically, wait for a new code, and try again. Or type a recovery code.
+
+## Related pages
+
+- [Privacy and your data](privacy.md) · [Optional AI](ai.md) · [Logging food](logging.md)
+- For admins: [Users and keys](../self-hosting/users-and-keys.md) · [Configuration](../self-hosting/configuration.md)
+
 ## Sources
 
 - [Design note 07: accounts, settings and secrets][NOTE07], sections 4.11, 4.12 and 4.17.
