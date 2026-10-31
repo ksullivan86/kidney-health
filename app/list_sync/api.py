@@ -258,10 +258,9 @@ def put_list_sync(body: ListSyncIn, request: Request, user: CurrentUser, conn: s
     _require_on(request, conn)
     if user.is_test_account:
         raise ApiProblem(403, TEST_ACCOUNT_REFUSAL)
-    try:
-        base_url = check_base_url(body.base_url, allowlist_of(request))
-    except ValueError as exc:
-        raise ApiProblem(400, str(exc)) from None
+    base_url, problem = check_base_url(body.base_url, allowlist_of(request))
+    if base_url is None:
+        raise ApiProblem(400, problem or "That address cannot be used.")
     row = row_of(conn, user.id)
     same_place = row is not None and row["app"] == body.app and row["base_url"] == base_url
     if body.key is None and not (same_place and row is not None and row["key_enc"] is not None):
@@ -317,7 +316,7 @@ def test_list_sync(request: Request, user: CurrentUser, conn: sqlite3.Connection
         code = "no_key"
     else:
         try:
-            lists = [{"id": x.id, "name": x.name} for x in client.test()]
+            lists = [{"id": x.id, "name": x.name} for x in client.test() if valid_list_id(row["app"], x.id)]
         except ListAppError as exc:
             code = exc.code
     list_id, list_name = row["list_id"], row["list_name"]

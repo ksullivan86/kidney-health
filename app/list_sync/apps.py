@@ -127,25 +127,25 @@ class ListTransport(egress.CheckedTransport):
         return addresses
 
 
-def check_base_url(raw: str, allowlist: HostAllowlist) -> str:
-    """The list app's address, without a trailing slash. ``ValueError`` (a plain sentence) when it cannot be used."""
+def check_base_url(raw: str, allowlist: HostAllowlist) -> tuple[str | None, str | None]:
+    """``(address, None)``: the list app's address without a trailing slash; or ``(None, problem)``, a plain sentence."""
     text = (raw or "").strip()
     if not text or len(text) > 500 or any(ch.isspace() or not ch.isprintable() for ch in text):
-        raise ValueError("Enter the address of your list app, such as https://grocy.example.com.")
+        return None, "Enter the address of your list app, such as https://grocy.example.com."
     try:
         parts = urlsplit(text)
         port = parts.port
     except ValueError:
-        raise ValueError("That address cannot be read. Enter it as https://your-server or http://192.168.1.20:9283.") from None
+        return None, "That address cannot be read. Enter it as https://your-server or http://192.168.1.20:9283."
     if parts.scheme.lower() not in ("http", "https") or not parts.hostname or port == 0:
-        raise ValueError("The address must start with http:// or https:// and name a server.")
+        return None, "The address must start with http:// or https:// and name a server."
     if parts.username or parts.password:
-        raise ValueError("Leave the user name and password out of the address. The key goes in its own box.")
+        return None, "Leave the user name and password out of the address. The key goes in its own box."
     if parts.query or parts.fragment:
-        raise ValueError("Leave anything after ? or # out of the address.")
+        return None, "Leave anything after ? or # out of the address."
     if parts.scheme.lower() == "http" and allowlist.empty:
-        raise ValueError("Plain http works only for a home address your admin allowed. Use https, or ask your admin.")
-    return f"{parts.scheme.lower()}://{parts.netloc}{parts.path.rstrip('/')}"
+        return None, "Plain http works only for a home address your admin allowed. Use https, or ask your admin."
+    return f"{parts.scheme.lower()}://{parts.netloc}{parts.path.rstrip('/')}", None
 
 
 # --------------------------------------------------------------------------- #
