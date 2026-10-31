@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete (2026-10-31)
 
 # Connected devices groundwork + Withings (0.16)
 
@@ -22,9 +22,16 @@ Branch: this helper's worktree branch, started from `next-8` (commit locally, no
    README index, ARCHITECTURE (migration row, section, egress list, status), CHANGELOG Unreleased, handbook (weight page section
    "From a Withings scale or monitor", settings table, self-hosting configuration, NOTE27 source; build_handbook.py run).
 
-## Next
+6. Checks: ruff clean; gen_openapi --check, settings/body/import vectors --check, build_handbook --check all current;
+   node tests/js/run_vectors.mjs no failures; full suite 6979 passed, 2 skipped (29 min). The two small commits after the
+   full run (the way back names the server's provider; devices.md line) were checked with the devices tests (48 passed).
 
-Checks: ruff, gen_openapi --check, settings vectors --check, node vectors, full suite once.
+## For the owner
+
+* Register a free Withings developer app (Public API integration) with the callback `<PUBLIC_URL>/api/devices/withings/callback`,
+  then set DEVICES_ENABLED, WITHINGS_ENABLED, WITHINGS_CLIENT_ID, WITHINGS_CLIENT_SECRET_FILE (docs/devices.md).
+* Not tried against the real Withings: revoke for a Public API app (best effort), whether the dashboard checks the callback,
+  and whether the Chainguard runtime image has time-zone data (without it times fall back to UTC).
 
 ## Commands
 
