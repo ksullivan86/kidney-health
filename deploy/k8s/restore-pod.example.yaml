@@ -26,7 +26,7 @@ spec:
   containers:
     - name: restore
       # Use the same image (tag and digest) as the Deployment, so restore-check knows the schema.
-      image: ghcr.io/ksullivan86/kidney-health:0.19
+      image: ghcr.io/ksullivan86/kidney-health:0.20
       imagePullPolicy: IfNotPresent
       command: ["python", "-c", "import time; time.sleep(3600)"]
       env:

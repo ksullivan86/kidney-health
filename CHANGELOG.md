@@ -5,7 +5,13 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
-## Unreleased
+## 0.20.0 — 2026-10-31
+
+### Upgrading from 0.19 (read this first)
+
+* Back up first. There is no database change.
+* Change the image tag to `:0.20`. The shipped deployment files already say `:0.20`.
+* The privacy filter is on by itself for every request to a cloud AI. Requests to a local AI are unchanged.
 
 ### The privacy filter for cloud AI
 

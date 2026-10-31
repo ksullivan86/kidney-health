@@ -1091,11 +1091,11 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
 
-**v0.20 work (2026-10-31, in progress, no version change yet).** The privacy filter (note 31, ROADMAP "Privacy tiers", tier 2):
+**Status (2026-10-31): v0.20.0 is prepared.** The privacy filter (note 31, ROADMAP "Privacy tiers", tier 2):
 names, places, dates and other identifiers are taken out of every request to a cloud AI and put back into its reply; requests
 to the local AI and the local-only rule for lab reports are unchanged. See "Privacy tiers, tier 2: the privacy filter" below.
 
-**Status (2026-10-31): v0.19.0 is prepared.** Your own list app and recipe import (note 30, schema
+**v0.19.0 (2026-10-31)** adds your own list app and recipe import (note 30, schema
 step 32): send the Plan's shopping list to a person's own Grocy, KitchenOwl or Mealie (`/api/list-sync`, off until
 `LIST_SYNC_ENABLED`; home addresses only through `LIST_SYNC_ALLOWED_HOSTS`), and import a recipe from pasted ingredients (always)
 or a web page the server reads (`/api/recipe-import`, pages off until `RECIPE_IMPORT_ENABLED`); see "Your own list app" and
@@ -4905,7 +4905,7 @@ Signed in only (`current_user`; an anonymous caller gets the generic `401`, so a
 (`no-store` like every `/api` answer). The answer:
 
 ```json
-{"app_version": "0.19.0", "api_version": 1,
+{"app_version": "0.20.0", "api_version": 1,
  "capabilities": {"ai": false, "ai_next_meal": false, "ai_parse_meal": false, "ai_label": false, "ai_plate": false, "ai_lab_report": false,
                   "chat": false, "voice": false, "assistant": false, "push": false,
                   "barcode": false, "barcode_off": false, "barcode_usda": false, "handbook": false},
