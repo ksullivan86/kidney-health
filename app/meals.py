@@ -310,6 +310,11 @@ def shopping_list(user: CurrentUser, start: str | None = None, end: str | None =
                   conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """The person's planned entries in ``[start, end]`` aggregated by food, ordered by name."""
     start_s, end_s = parse_range(start, end)
+    return {"items": shopping_items(conn, user.id, start_s, end_s)}
+
+
+def shopping_items(conn: sqlite3.Connection, user_id: int, start_s: str, end_s: str) -> list[dict[str, Any]]:
+    """The shopping list of ``user_id`` for checked dates (also what list sync sends, ``app/list_sync/api.py``)."""
     rows = conn.execute(
         """
         SELECT e.food_id, f.name AS food_name, f.serving_desc, f.serving_g,
@@ -320,7 +325,7 @@ def shopping_list(user: CurrentUser, start: str | None = None, end: str | None =
         GROUP BY e.food_id
         ORDER BY f.name COLLATE NOCASE, e.food_id
         """,
-        (user.id, start_s, end_s),
+        (int(user_id), start_s, end_s),
     ).fetchall()
     items = []
     for row in rows:
@@ -335,4 +340,4 @@ def shopping_list(user: CurrentUser, start: str | None = None, end: str | None =
                 "days": int(row["days"]),
             }
         )
-    return {"items": items}
+    return items

@@ -107,6 +107,9 @@ ACTIONS: set[str] = {
     "device.sync_failed",
     "activity.extra_on",  # the active-day calorie extra (design note 28; app/activity.py)
     "activity.extra_off",
+    "list_sync.set_up",  # your own list app (design note 30; app/list_sync/)
+    "list_sync.removed",
+    "list_sync.sent",
 }
 USER_VISIBLE_ACTIONS = frozenset(
     {
@@ -160,6 +163,9 @@ USER_VISIBLE_ACTIONS = frozenset(
         "device.sync_failed",
         "activity.extra_on",
         "activity.extra_off",
+        "list_sync.set_up",
+        "list_sync.removed",
+        "list_sync.sent",
     }
 )
 _ACTION = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")

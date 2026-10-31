@@ -62,12 +62,13 @@ AUTO_KEY_WARNING = (
 
 # Columns holding Keyring tokens: (table, primary key, token column, key-id column or None).
 # app.admin rotate-secret-key / reencrypt walks these; note 04 appends ai_providers.api_key_enc, note 17 totp_factors.secret_enc,
-# note 27 device_connections.tokens_enc.
+# note 27 device_connections.tokens_enc, note 30 list_sync.key_enc.
 ENCRYPTED_COLUMNS: list[tuple[str, str, str, str | None]] = [
     ("secrets", "id", "ciphertext", "key_id"),
     ("ai_providers", "id", "api_key_enc", None),
     ("totp_factors", "user_id", "secret_enc", "key_id"),
     ("device_connections", "id", "tokens_enc", "key_id"),  # connected devices (design note 27)
+    ("list_sync", "user_id", "key_enc", "key_id"),  # your own list app (design note 30)
 ]
 
 

@@ -987,6 +987,33 @@ register(
         help="How often the server asks Withings and Whoop for new data. People can also press Sync now.",
     ),
 )
+# Your own list app and recipe import (design note 30; read by app/list_sync/ and app/recipe_import/). Which private hosts a list app
+# may be on is env only (LIST_SYNC_ALLOWED_HOSTS in app/config.py): an outbound allowlist is never changed at run time.
+register(
+    SettingDef(
+        key="lists.sync_enabled",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="LIST_SYNC_ENABLED",
+        label="Let people send the shopping list to their own Grocy, KitchenOwl or Mealie",
+        help="Off by default. When on, each person can add their own list app's address and key in Settings → Shopping list "
+        "app, then send the Plan's shopping list to it. Only the foods' names and amounts are sent. A list app on a home "
+        "address works only when the server lists it in LIST_SYNC_ALLOWED_HOSTS (see docs/list-sync.md). While off, nothing is "
+        "sent and the section is hidden; turned on again, saved addresses work again.",
+    ),
+    SettingDef(
+        key="recipes.import_enabled",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="RECIPE_IMPORT_ENABLED",
+        label="Let people import a recipe from a web page",
+        help="Off by default. When on, a person can paste a recipe page's link in Plan → Import a recipe, and this server "
+        "reads that page from the internet (never a private address) to find its ingredients and steps. Pasting the "
+        "ingredients works either way, with no network.",
+    ),
+)
 # Tokens that never expire (design note 24 §13, the owner's question 7; read by app/auth/api_tokens.py). Both families.
 register(
     SettingDef(

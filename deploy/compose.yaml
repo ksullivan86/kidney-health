@@ -144,6 +144,10 @@ services:
       WITHINGS_CLIENT_ID: ${WITHINGS_CLIENT_ID:-}
       WHOOP_ENABLED: ${WHOOP_ENABLED:-}
       WHOOP_CLIENT_ID: ${WHOOP_CLIENT_ID:-}
+      # Your own list app and recipe pages (docs/list-sync.md, docs/recipe-import.md). A home list app needs LIST_SYNC_ALLOWED_HOSTS.
+      LIST_SYNC_ENABLED: ${LIST_SYNC_ENABLED:-}
+      LIST_SYNC_ALLOWED_HOSTS: ${LIST_SYNC_ALLOWED_HOSTS:-}
+      RECIPE_IMPORT_ENABLED: ${RECIPE_IMPORT_ENABLED:-}
       HANDBOOK_PUBLIC_URL: ${HANDBOOK_PUBLIC_URL:-}
       PASSWORD_BREACH_CHECK: ${PASSWORD_BREACH_CHECK:-}
       # Sign in with Authentik, Google or another OpenID Connect provider (docs/accounts.md). Off unless OIDC_ENABLED=true;

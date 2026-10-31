@@ -1674,6 +1674,21 @@ NOTE29:
   licence: "PolyForm Noncommercial 1.0.0 (project)"
   checked: 2026-10-31
   kind: project
+NOTE30:
+  cite: "kidney-health design note 30: the shopping list in your own list app (Grocy, KitchenOwl, Mealie), and recipes from a web page or pasted ingredients."
+  short: "Design note 30"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/30-list-sync-and-recipe-import.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-31
+  kind: project
+SCHEMA-NUTRITION:
+  cite: "schema.org. NutritionInformation (the nutrition data a recipe page can carry)."
+  short: "schema.org NutritionInformation"
+  url: https://schema.org/NutritionInformation
+  licence: "CC BY-SA 3.0: cite and paraphrase"
+  checked: 2026-10-31
+  kind: tool
+  note: "Its properties are calories, carbohydrate, cholesterol, fat, fiber, protein, saturated fat, serving size, sodium, sugar, trans fat and unsaturated fat: there is none for potassium or phosphorus."
 ODRISCOLL20:
   cite: "O'Driscoll R, Turicchi J, Beaulieu K, et al. How well do activity monitors estimate energy expenditure? A systematic review and meta-analysis of the validity of current technologies. Br J Sports Med 2020;54(6):332–340. doi:10.1136/bjsports-2018-099643"
   short: "O'Driscoll 2020: how well activity monitors estimate energy"

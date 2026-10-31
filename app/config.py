@@ -39,6 +39,9 @@ Keys (defaults in brackets):
   ``DEVICES_ENABLED`` and ``DEVICES_SYNC_HOURS`` are settings (``devices.*``). Whoop (design note 28; :class:`WhoopEnv`,
   ``Settings.whoop``): ``WHOOP_ENABLED`` [false], ``WHOOP_CLIENT_ID``, ``WHOOP_CLIENT_SECRET_FILE`` (only as a file:
   ``WHOOP_CLIENT_SECRET`` is refused), the same way; the return address is ``<PUBLIC_URL>/api/devices/whoop/callback``.
+* Your own list app (design note 30): ``LIST_SYNC_ALLOWED_HOSTS`` [empty]: the private host names, addresses and networks (CIDR)
+  a person's Grocy, KitchenOwl or Mealie may be on (``Settings.list_sync_allowed_hosts``). Env only, like every outbound allowlist.
+  The switches ``LIST_SYNC_ENABLED`` and ``RECIPE_IMPORT_ENABLED`` are settings (``lists.sync_enabled``, ``recipes.import_enabled``).
 * Test accounts (design note 26): ``TEST_ACCOUNT_PASSWORD_FILE`` (only as a file: ``TEST_ACCOUNT_PASSWORD`` is refused). The file
   is read when the accounts are made or reset. The switches ``TEST_ACCOUNT_ENABLED`` and ``TEST_ACCOUNT_AI`` are settings
   (``test_accounts.*``).
@@ -614,6 +617,8 @@ class Settings:
     withings: WithingsEnv = field(default_factory=WithingsEnv, repr=False)
     # Whoop (design note 28): the server's Whoop developer app; off for Settings built in code.
     whoop: WhoopEnv = field(default_factory=WhoopEnv, repr=False)
+    # Your own list app (design note 30): private hosts, addresses and networks a list app may be on (LIST_SYNC_ALLOWED_HOSTS).
+    list_sync_allowed_hosts: tuple[str, ...] = ()
 
     # Secrets at rest (note 07 §4.12). ``secret_key`` holds the raw SECRET_KEY text (one key per
     # line); None means "use or create $DATA_DIR/secret.key" (see app.crypto.load_keyring).
@@ -999,6 +1004,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         oidc=load_oidc_env(env),
         withings=load_withings_env(env),
         whoop=load_whoop_env(env),
+        list_sync_allowed_hosts=tuple(h.lower() for h in _split_list(env.get("LIST_SYNC_ALLOWED_HOSTS"))),
     )
     extra: list[str] = []
     if env.get("FORWARDED_ALLOW_IPS"):
@@ -1037,6 +1043,8 @@ def _validate(s: Settings) -> list[str]:
     if s.handbook_public_url:
         _check_handbook_public_url(s.handbook_public_url)
     _check_off_base_url(s.off_base_url)
+    for entry in s.list_sync_allowed_hosts:
+        _check_list_host(entry)
     for name in ("trusted_proxy_user_header", "trusted_proxy_groups_header", "trusted_proxy_name_header"):
         _check_header_name(name.upper(), getattr(s, name))
 
@@ -1099,6 +1107,24 @@ def _validate(s: Settings) -> list[str]:
     if s.docs_enabled:
         warnings.append("ENABLE_API_DOCS=true: /docs, /redoc and /openapi.json are served with a relaxed CSP.")
     return warnings
+
+
+_HOST_NAME = re.compile(r"^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*\.?$")
+
+
+def _check_list_host(entry: str) -> None:
+    """One ``LIST_SYNC_ALLOWED_HOSTS`` entry: a host name, an IP address or a network (CIDR); no port, no wildcard."""
+    try:
+        network = ipaddress.ip_network(entry, strict=False)
+    except ValueError:
+        network = None
+    if network is not None:
+        if network.prefixlen == 0:
+            raise ConfigError(f"LIST_SYNC_ALLOWED_HOSTS: {entry!r} would allow every address. List your list app's host or network.")
+        return
+    if not _HOST_NAME.match(entry):
+        raise ConfigError(f"LIST_SYNC_ALLOWED_HOSTS: {entry!r} is not a host name, an IP address or a network such as 192.168.1.0/24 "
+                          "(no port, no wildcard).")
 
 
 def _is_ip(value: str) -> bool:

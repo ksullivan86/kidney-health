@@ -47,7 +47,7 @@ def test_old_shares_and_invites_keep_their_meaning(tmp_path):
     build_v30(path)
     conn = db.connect(path)
     before = {t: [tuple(r) for r in conn.execute(f"SELECT * FROM {t} ORDER BY id")] for t in ("shares", "care_invites")}
-    assert db.migrate(conn) == [31]
+    assert db.migrate(conn) == list(range(31, db.SCHEMA_VERSION + 1))  # step 31, then any later step
     assert switches(conn, "shares") == {7: (1, 0, 0, 0), 8: (0, 0, 0, 0), 9: (1, 0, 0, 0)}
     assert switches(conn, "care_invites") == {3: (1, 0, 0, 0), 4: (0, 0, 0, 0)}
     after = {t: [tuple(r)[:len(before[t][0])] for r in conn.execute(f"SELECT * FROM {t} ORDER BY id")] for t in before}

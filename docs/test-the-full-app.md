@@ -21,6 +21,10 @@ It takes about an hour. You can stop at any point and still send what you have.
    accounts back to the start and signs them out. The feedback stays.
 6. When testing is over, turn the switch off. The accounts are turned off and signed out, not deleted.
 
+To let testers import recipes from web pages too, set `RECIPE_IMPORT_ENABLED=true` (pasting ingredients works without it). Sending
+the list to a list app (`LIST_SYNC_ENABLED`, [list-sync.md](list-sync.md)) is for real accounts only: try it yourself with your
+own Grocy, KitchenOwl or Mealie.
+
 More detail: [accounts.md](accounts.md#test-accounts).
 
 ## For the tester
@@ -80,6 +84,19 @@ Go to **Plan** and find **Plan several days…**. Plan a week.
 * Do the planned meals look like real kidney-friendly meals? Is there enough variety?
 * Open the **Shopping list**. Could you take it to the store? Try **Copy list** or **Share list**.
 * If you plan days by mistake, can you clear them again?
+
+**Import a recipe.** Under **Saved meals**, press **Import a recipe**. Paste a few ingredient lines from a recipe you like, one on
+each line (for example `1 lb chicken breast`, `2 cups cooked white rice`, `1 tsp dried thyme`), give it a name and how many
+servings it makes, and press **Read ingredients**. If the server can read recipe pages, try a recipe page's link instead.
+
+* Did the app pick the right food for each line? Fix one with **Search for another food…**, and leave one out.
+* Is it clear that you must tick **Checked** on every line before you can save, and why?
+* Read the sentence about estimates under the numbers. Is it clear?
+* Save it. Does it show up under Saved meals, with its link if it came from a page?
+
+**Your own list app.** Test accounts cannot send the list to a list app (a real key must not end up in a shared account), so
+**Settings → Shopping list app** says so. If you use Grocy, KitchenOwl or Mealie, try it on the demo page or with your own
+account on a server where it is turned on: **Test**, then Plan → Shopping list → **Send**. Is it clear what is sent?
 
 ### 7. Lab results and suggested targets (7 minutes)
 

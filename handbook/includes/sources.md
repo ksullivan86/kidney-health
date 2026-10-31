@@ -206,6 +206,8 @@
 [NOTE27]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/27-connected-devices.md "Design note 27"
 [NOTE28]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/28-whoop-activity.md "Design note 28"
 [NOTE29]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/29-full-care-team.md "Design note 29"
+[NOTE30]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/30-list-sync-and-recipe-import.md "Design note 30"
+[SCHEMA-NUTRITION]: https://schema.org/NutritionInformation "schema.org NutritionInformation"
 [ODRISCOLL20]: https://bjsm.bmj.com/content/54/6/332 "O'Driscoll 2020: how well activity monitors estimate energy"
 [GERMINI22]: https://www.jmir.org/2022/1/e30791 "Germini 2022: accuracy of wrist trackers"
 [WHOOP-API]: https://developer.whoop.com/api "WHOOP developer documentation"
