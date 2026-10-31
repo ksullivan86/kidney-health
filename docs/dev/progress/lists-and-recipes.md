@@ -1,4 +1,4 @@
-Status: in progress (2026-10-31): everything built and checked; the full suite is running
+Status: complete (2026-10-31)
 
 # Lists and recipes (0.19): list sync to Grocy/KitchenOwl/Mealie, recipe import
 
@@ -33,8 +33,13 @@ section yet (it names the tag): the integrator adds it (schema step 32 adds one 
    No removed headings (git diff checked).
 8. Chromium walk tools/e2e/lists_recipes.py (+ lists_recipes_app.py): 42 passed, 0 failed.
 
-## Next
-- Full suite result; mark complete.
+9. Full suite (7203 collected): 1 failure, `tests/test_recipes_ui.py` pinned the old handbook words "never opens" (the link is
+   now opened on import); the test now pins the new sentence. 2 skipped. After the fix: the changed files and the doc tests
+   (824 passed), ruff clean, vectors, settings vectors, OpenAPI and handbook checks current.
+
+## Left for the owner or the integrator
+- Version bump, CHANGELOG release heading, and a "From v0.18 to v0.19" section in docs/deployment.md (one new table, nothing on).
+- A try against real Grocy, KitchenOwl and Mealie servers (tests use fakes built from each project's source).
 
 ## Commands
     S=/tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad
