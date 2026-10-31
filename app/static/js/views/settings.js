@@ -756,6 +756,8 @@
     'care.invited': 'Care team invite sent', 'care.invite_cancelled': 'Care team invite cancelled', 'care.invite_answered': 'Someone answered your Care team invite',
     'care.role_changed': 'Care team role changed', 'care.plan_changed': 'Your Care helper changed your plan',
     'oidc.linked': 'Sign-in provider linked', 'oidc.unlinked': 'Sign-in provider link removed',
+    'test_accounts.created': 'Test account made', 'test_accounts.enabled': 'Test account turned on', 'test_accounts.disabled': 'Test account turned off',
+    'test_accounts.reset': 'Test accounts reset',
   };
   // The row's label. Tokens come in two families and the details say which one made or lost a token (phone shortcut tokens: family
   // "device"); a revoke of everything a person had at once (an admin, a password change) names no family and says how many.
@@ -1493,6 +1495,12 @@
     body.append(subtitle('Server settings', 'set-server-h'), h('div', { id: 'set-server' }, loading()));
     body.append(subtitle('Shared keys', 'set-shared-h'), h('div', { id: 'set-shared' }, loading()));
     body.append(subtitle('Usage, last 30 days', 'set-usage-h'), h('div', { id: 'set-usage' }, loading()));
+    // Design note 26 (js/views/feedback.js): the test accounts and what testers sent. Not in the demo.
+    const testers = !none && !MOCK && KH.feedback;
+    if (testers) {
+      body.append(subtitle('Test accounts', 'set-testers-h'), h('div', { id: 'set-testers' }, loading()));
+      body.append(subtitle('Feedback', 'set-feedback-h'), h('div', { id: 'set-feedback' }, loading()));
+    }
     body.append(subtitle('Activity log', 'set-audit-h'), h('div', { id: 'set-audit' }, loading()));
     body.append(subtitle('About this server', 'set-server-about-h'), h('div', { id: 'set-server-about' }, loading()));
     adminSettingsReady = loadServerSettings();
@@ -1501,6 +1509,7 @@
     loadUsage();
     loadAudit();
     loadServerAbout();
+    if (testers) KH.feedback.loadAdmin();
   }
 
   // ---- People: accounts and invites
@@ -1534,6 +1543,7 @@
     if (u.passkeys) badges.push(h('span', { class: 'badge passkeys-on' }, u.passkeys === 1 ? '1 passkey' : `${u.passkeys} passkeys`));
     if (u.oidc_links) badges.push(h('span', { class: 'badge passkeys-on' }, 'Linked sign-in'));
     if (u.shares) badges.push(h('span', { class: 'badge shares-on' }, `Care team: ${u.shares}`));
+    if (u.test_account) badges.push(h('span', { class: 'badge test-account' }, 'Test account'));
     if (self) badges.push(h('span', { class: 'badge this-device' }, 'You'));
     const sub = [u.last_login_at ? `Last signed in ${relTime(u.last_login_at)}` : 'Never signed in', `joined ${fmtDate(u.created_at)}`,
       u.auth_source === 'proxy' ? 'signs in through the proxy' : null].filter(Boolean).join(' · ');
@@ -1570,9 +1580,10 @@
       clear(err);
       try { await A.updateUser(u.id, b); await done(message); } catch (e) { if (!e.handled) showFormError(err, e); }
     };
-    // Role
+    // Role (a test account is never an admin: design note 26)
     const roleId = uid('role');
     const roleSel = selectEl(roleId, [['user', 'Member'], ['admin', 'Admin']], u.role);
+    if (u.test_account) roleSel.disabled = true;
     panel.append(h('div', { class: 'field' }, h('label', { for: roleId }, 'Role'),
       h('div', { class: 'inline-row' }, roleSel, action('Save role', 'secondary', async () => {
         if (roleSel.value === u.role) return;
@@ -1880,6 +1891,8 @@
       'ai.route.recipes', 'ai.route.local_provider', 'ai.route.cloud_provider']],
     ['Phone shortcuts', ['push.enabled']],
     ['Care team', ['sharing.enabled']],
+    // Design note 26: not in the demo (it has no accounts of its own to make).
+    ['Test accounts', ['test_accounts.enabled', 'test_accounts.ai']],
     ['Activity log', ['audit.retention_days']],
   ];
   const ROUTING_GROUP = 'Which AI each feature uses';
@@ -1911,8 +1924,9 @@
     if (!all) { box.append(loading()); return; }
     box.append(h('p', { class: 'hint' }, 'Each setting shows where its value comes from. "Set by the server" means an environment variable fixes it; change it in the server configuration and restart.'));
     const seen = new Set();
-    const groups = GROUPS.map(([title, keys]) => [title, keys.filter((k) => all[k])]);
-    const other = Object.keys(all).filter((k) => !GROUPS.some(([, keys]) => keys.includes(k)));
+    const shown = (k) => all[k] && !(MOCK && k.startsWith('test_accounts.')); // the demo has no test accounts (design note 26)
+    const groups = GROUPS.map(([title, keys]) => [title, keys.filter(shown)]);
+    const other = Object.keys(all).filter((k) => shown(k) && !GROUPS.some(([, keys]) => keys.includes(k)));
     if (other.length) groups.push(['Other', other]);
     for (const [title, keys] of groups) {
       if (!keys.length) continue;
@@ -1957,6 +1971,10 @@
         if (key === 'push.enabled') {
           if (pushHost) renderPush(pushHost).catch((e2) => console.warn('Phone shortcuts:', e2));
           loadPeople();
+        }
+        if (key.startsWith('test_accounts.') && KH.feedback) { // the accounts were made, turned on or turned off just now
+          loadPeople();
+          KH.feedback.loadAdmin();
         }
         if (key === 'registration.mode' || key === 'instance.name' || key === 'registration.invite_ttl_days') {
           KH.auth.loadStatus().then(() => { renderAbout(); renderWho(); }).catch(() => null);
@@ -2216,7 +2234,7 @@
   // ---------------------------------------------------------------------------
   function renderWho() {
     const me = state.me;
-    $('#settings-who').textContent = me ? `Signed in as ${me.display_name ? `${me.display_name} (${me.username})` : me.username}${me.role === 'admin' ? ' · admin' : ''}` : '';
+    $('#settings-who').textContent = me ? `Signed in as ${me.display_name ? `${me.display_name} (${me.username})` : me.username}${me.role === 'admin' ? ' · admin' : ''}${me.test_account ? ' · test account' : ''}` : '';
   }
   // Settings → Care team (js/views/sharing.js, design note 25): its own section, near the top. Without sign-in there is one person.
   function renderCare() {

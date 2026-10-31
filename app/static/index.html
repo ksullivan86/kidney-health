@@ -100,6 +100,11 @@
       <svg class="icon-sun" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><circle cx="12" cy="12" r="4.5" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
       <svg class="icon-moon" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
     </button>
+    <!-- Design note 26: test accounts only (js/views/auth.js shows it for a test account; js/views/feedback.js opens the sheet). -->
+    <button id="feedback-open" class="icon-btn feedback-open" type="button" aria-label="Send feedback" title="Send feedback about this screen" data-signed-in data-test-only hidden>
+      <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4.5 5.5h15v10h-9l-4.5 3.5v-3.5h-1.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8.5 9.5h7M8.5 12.5h4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+      <span class="feedback-text">Feedback</span>
+    </button>
     <!-- v0.3.1: admins only (js/views/auth.js shows it for role "admin"); every /api/admin route also checks the role. -->
     <button id="admin-open" class="icon-btn" type="button" aria-label="Server administration" title="Server administration" data-signed-in data-admin-only hidden>
       <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.6l7.4 2.9v5.7c0 4.5-3.1 8.4-7.4 10.2-4.3-1.8-7.4-5.7-7.4-10.2V5.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M8.9 12.1l2.1 2.1 4.1-4.4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -1642,6 +1647,54 @@
   </form>
 </dialog>
 
+<!-- ===================== SEND FEEDBACK (test accounts only; js/views/feedback.js, design note 26) =====================
+     Only what the tester types is sent, with the screen name; the server adds the app version and the time. -->
+<dialog id="sheet-feedback" class="sheet" aria-labelledby="sheet-feedback-title" aria-describedby="sheet-feedback-sub">
+  <form method="dialog" class="sheet-form" id="feedback-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-feedback-title" class="sheet-title">Send feedback</h2>
+        <div class="sheet-sub" id="sheet-feedback-sub">Only what you type here is sent, with the name of this screen, the app version and the time. No screenshot, and nothing from the log.</div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <p class="hint" id="feedback-screen"></p>
+      <div class="field">
+        <label for="feedback-trying">What were you trying to do?</label>
+        <textarea id="feedback-trying" rows="3" maxlength="2000"></textarea>
+      </div>
+      <div class="field">
+        <label for="feedback-happened">What happened?</label>
+        <textarea id="feedback-happened" rows="4" maxlength="2000" aria-describedby="feedback-happened-hint"></textarea>
+        <span class="hint" id="feedback-happened-hint">Say what you expected and what you saw instead.</span>
+      </div>
+      <fieldset class="field">
+        <legend>Was this screen useful?</legend>
+        <div class="segmented meal-seg" id="feedback-useful">
+          <input type="radio" name="fuseful" id="fuseful-yes" value="yes"><label for="fuseful-yes">Useful</label>
+          <input type="radio" name="fuseful" id="fuseful-somewhat" value="somewhat"><label for="fuseful-somewhat">A little</label>
+          <input type="radio" name="fuseful" id="fuseful-no" value="no"><label for="fuseful-no">Not useful</label>
+        </div>
+      </fieldset>
+      <div class="field">
+        <label class="check" for="feedback-unsafe"><input type="checkbox" id="feedback-unsafe" aria-describedby="feedback-unsafe-hint"><span class="check-text">This looked wrong or unsafe</span></label>
+        <span class="hint" id="feedback-unsafe-hint">Tick it if anything blocked or warned against treating a low, or if the AI gave an insulin or medicine dose.</span>
+      </div>
+      <div class="form-error" id="feedback-error" role="alert"></div>
+      <h3 class="settings-subtitle" id="feedback-mine-h">What you sent</h3>
+      <div id="feedback-mine" aria-labelledby="feedback-mine-h"></div>
+    </div>
+    <div class="sheet-foot">
+      <span class="spacer"></span>
+      <button class="btn secondary" type="button" data-close>Cancel</button>
+      <button class="btn primary" type="submit" id="feedback-send">Send</button>
+    </div>
+  </form>
+</dialog>
+
 <!-- ===================== SAVED MEAL EDITOR SHEET ===================== -->
 <dialog id="sheet-meal" class="sheet" aria-labelledby="sheet-meal-title">
   <form method="dialog" class="sheet-form" id="meal-form" novalidate>
@@ -2409,6 +2462,8 @@
 <script src="js/views/ask.js"></script>
 <script src="js/views/ask-voice.js"></script>
 <script src="js/views/demo_local.js"></script>
+<!-- Design note 26: Send feedback and Server administration → Test accounts and Feedback. Not in the preview (no accounts there). -->
+<script src="js/views/feedback.js" data-preview="omit"></script>
 <!-- The barcode ponyfill (vendor/README.md): a static deferred script, never injected (Trusted Types); its 1 MB
      WebAssembly reader is fetched only on the first scan without a native BarcodeDetector. Not in the preview. -->
 <script src="vendor/barcode-detector-3.2.2/ponyfill.iife.js" defer data-preview="omit"></script>

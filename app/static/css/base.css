@@ -263,6 +263,10 @@ svg { display: inline-block; vertical-align: middle; }
 .learn-link .learn-text {
   position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
 }
+/* Send feedback (test accounts only, design note 26): an icon like the gear; the word is for screen readers and the tooltip. */
+.feedback-open .feedback-text {
+  position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap;
+}
 /* "Learn: Potassium" after a warning, an alert or the target notes (opens in a new tab). */
 .learn-more { display: inline-block; margin-top: 2px; padding: 2px 0; font-weight: 600; font-size: 0.85rem; text-underline-offset: 2px; } /* ≥ 24 px tall: WCAG 2.2 target size; 44 px on touch screens (touch.css) */
 .learn-more::after { content: "\00a0\2197"; content: "\00a0\2197" / ""; font-weight: 400; } /* arrow: leaves the app; not read aloud; a no-break space keeps it on the line of the last word */

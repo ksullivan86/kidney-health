@@ -17,11 +17,37 @@ Branch: this helper's worktree branch (commit locally, no push; the owner merges
 
 ## Done
 
-(nothing yet)
+1. Server side (commit "server side"): m028, settings + JS twin + vectors, app/test_accounts.py (sync/reset/seed port),
+   app/feedback.py, hooks (start-up, setup, settings PATCH, People, OIDC groups, Care team, AI, own password, TOTP, delete me),
+   CLI `reset-test-accounts`. tests/test_test_accounts.py 26 pass; isolation matrix has `feedback`; OpenAPI regenerated.
+   Ran: test_care_team, test_sharing(_security), test_oidc, test_ai_routes, test_ai_routing, test_totp, test_export_delete,
+   test_admin_page, test_auth_hardening (383 passed); auth coverage, migrations, admin CLI, settings, compose env, meta, auth.
+2. UI: js/views/feedback.js (sheet + admin parts), header button (data-test-only), sheet markup in index.html, sw.js, CSS,
+   settings.js (group, badge, admin parts, who line, activity labels), auth.js. tests/test_test_accounts_ui.py; admin_frame
+   node test updated; tools/e2e/test_accounts.py 34/34 PASS (system python3, port 8094).
+
+## Next
+
+Docs: note 26, docs/accounts.md, docs/deployment.md + deploy examples, handbook self-hosting users page, ARCHITECTURE.md,
+CHANGELOG, docs/test-the-full-app.md, README + docs/README links. Then the full pytest run.
 
 ## Decisions
 
-(added as they are made)
+* Display names: tester is "Sam" (as the demo), tester-helper is "Jo". The helper sees all four areas as a Care helper.
+* Password: only TEST_ACCOUNT_PASSWORD_FILE (TEST_ACCOUNT_PASSWORD stops the start, like OIDC_CLIENT_SECRET). Read when the
+  accounts are made, at start-up and on Reset, so a changed file applies after a restart. Checked against the policy for
+  both names. A missing or weak file: nothing made, the reason logged and shown in Server administration → Test accounts.
+* Only with AUTH_MODE=local, and only after the first admin exists (start-up, first-run setup and the settings PATCH sync).
+* Reset deletes both users (cascade) and makes them again: new ids. Feedback rows keep the text username (user_id SET NULL),
+  so the admin keeps them; the fresh account sees none. One activity row `test_accounts.reset`.
+* Shared account protections: no password change, no two-step sign-in, no delete-my-account, no admin reset link or
+  "must change password" for a test account. Locked or disabled ones are enabled again at start-up while the switch is on.
+* AI: `test_accounts.ai` off makes every AI resolve "disabled" for a test account and /api/ai/* 404 (ai_on_for).
+* Care team: test and real accounts never meet: invite by name answers as for an unknown name, links are the generic 404,
+  rows filtered from both lists, the share check 404s. Sharing must be on (SHARING_ENABLED) for the Care team part.
+* Feedback limits: 2,000 characters a box, 20 an hour (rate limit), 50 a day per account, 5,000 kept (then 409; admins
+  "Delete done"). The server adds the app version (FastAPI app version) and the time.
+* Demo: feedback.js is data-preview="omit"; with ?mock=1 the admin parts and the Test accounts settings group are hidden.
 
 ## Commands
 

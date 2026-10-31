@@ -210,7 +210,11 @@
   function setSignedInChrome(on) {
     // data-admin-only (the Server administration button, v0.3.1): shown to admins only; the server checks the role anyway.
     const admin = !!(state.me && state.me.role === 'admin');
-    $$('[data-signed-in]').forEach((el) => { el.hidden = !on || (el.hasAttribute('data-admin-only') && !admin); });
+    // data-test-only (Send feedback, design note 26): shown to test accounts only; the server answers 404 to anyone else.
+    const tester = !!(state.me && state.me.test_account);
+    $$('[data-signed-in]').forEach((el) => {
+      el.hidden = !on || (el.hasAttribute('data-admin-only') && !admin) || (el.hasAttribute('data-test-only') && !tester);
+    });
     document.body.classList.toggle('signed-out', !on);
   }
   function applyBanners(st) {

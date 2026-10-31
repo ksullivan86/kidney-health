@@ -2646,6 +2646,71 @@
         "title": "FamiliarMeal",
         "type": "object"
       },
+      "FeedbackCreate": {
+        "additionalProperties": false,
+        "description": "What a tester typed. ``screen`` is the name of the screen the app was on (the app fills it in).",
+        "properties": {
+          "happened": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Happened",
+            "type": "string"
+          },
+          "screen": {
+            "maxLength": 60,
+            "minLength": 1,
+            "pattern": "^[^\\x00-\\x1f\\x7f<>]+$",
+            "title": "Screen",
+            "type": "string"
+          },
+          "trying": {
+            "default": "",
+            "maxLength": 2000,
+            "title": "Trying",
+            "type": "string"
+          },
+          "unsafe": {
+            "default": false,
+            "title": "Unsafe",
+            "type": "boolean"
+          },
+          "useful": {
+            "anyOf": [
+              {
+                "enum": [
+                  "yes",
+                  "somewhat",
+                  "no"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Useful"
+          }
+        },
+        "required": [
+          "screen"
+        ],
+        "title": "FeedbackCreate",
+        "type": "object"
+      },
+      "FeedbackDone": {
+        "additionalProperties": false,
+        "properties": {
+          "done": {
+            "title": "Done",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "done"
+        ],
+        "title": "FeedbackDone",
+        "type": "object"
+      },
       "FitRecipeItem": {
         "additionalProperties": false,
         "properties": {
@@ -11954,6 +12019,276 @@
         ]
       }
     },
+    "/api/admin/feedback": {
+      "get": {
+        "description": "``{feedback, counts}``: what testers sent, newest first, filtered by ``state`` (``open``, ``done``, ``all``) and\n``unsafe`` (only \"looked wrong or unsafe\"); ``before`` pages back. ``counts``: ``open``, ``done``, ``unsafe_open``.",
+        "operationId": "admin_list_feedback",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "default": "open",
+              "enum": [
+                "open",
+                "done",
+                "all"
+              ],
+              "title": "State",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "unsafe",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Unsafe",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 9223372036854775807,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Admin List Feedback",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "List Feedback",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/feedback.csv": {
+      "get": {
+        "description": "Feedback as CSV (oldest first), with the same filters. Cells a spreadsheet would run as a formula are escaped.",
+        "operationId": "admin_export_feedback",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "default": "all",
+              "enum": [
+                "open",
+                "done",
+                "all"
+              ],
+              "title": "State",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "unsafe",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Unsafe",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Export Feedback",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/feedback/done": {
+      "delete": {
+        "description": "Delete every item marked done (export it first if you want to keep it). ``{deleted}``.",
+        "operationId": "admin_delete_done_feedback",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Admin Delete Done Feedback",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Delete Done Feedback",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/feedback/{feedback_id}": {
+      "patch": {
+        "description": "Mark one item done (or open again). Unknown is ``404``.",
+        "operationId": "admin_mark_feedback",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "feedback_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Feedback Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackDone"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Admin Mark Feedback",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Mark Feedback",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/admin/invites": {
       "get": {
         "operationId": "admin_list_invites",
@@ -12335,6 +12670,85 @@
           }
         ],
         "summary": "Update Instance Settings",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/test-accounts": {
+      "get": {
+        "description": "``{enabled, ai, problem, accounts}``: the two switches, why the accounts could not be made (or null), and each test\naccount's ``{id, username, status, last_login_at}``. Never the password or its file's contents.",
+        "operationId": "admin_test_accounts_status",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Admin Test Accounts Status",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Test Accounts Status",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
+    "/api/admin/test-accounts/reset": {
+      "post": {
+        "description": "Delete everything both test accounts made and start them again: Sam's sample data, tester-helper on tester's Care team,\nthe password from the file. Both are signed out. The feedback stays. ``409`` while test accounts are off or cannot be made.",
+        "operationId": "admin_reset_test_accounts",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Admin Reset Test Accounts",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Reset Test Accounts",
         "tags": [
           "admin"
         ]
@@ -15145,6 +15559,96 @@
         "summary": "Update Weight",
         "tags": [
           "body"
+        ]
+      }
+    },
+    "/api/feedback": {
+      "get": {
+        "description": "``{feedback, max_length}``: what you sent, newest first, and whether the admin marked each one done. Test accounts\nonly (``404`` for everyone else).",
+        "operationId": "feedback_my_feedback",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Feedback My Feedback",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "My Feedback",
+        "tags": [
+          "feedback"
+        ]
+      },
+      "post": {
+        "description": "Send feedback about the screen you are on. Only what you typed is kept, with the screen name, the app version and the\ntime. At least one of ``trying`` and ``happened``. 50 a day; ``409`` when the server already keeps 5,000. Test accounts\nonly (``404`` for everyone else).",
+        "operationId": "feedback_send_feedback",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Feedback Send Feedback",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Send Feedback",
+        "tags": [
+          "feedback"
         ]
       }
     },

@@ -136,6 +136,12 @@
    that best, and the quiet zone around it is part of the code. */
 .badge.two-step-on { background: var(--accent-tint); color: var(--accent); margin-left: 0; }
 .badge.passkeys-on { background: var(--accent-tint); color: var(--accent); margin-left: 0; }
+.badge.test-account { background: var(--surface-2); color: var(--text-2); margin-left: 0; }
+/* Server administration → Feedback (js/views/feedback.js, design note 26). */
+.feedback-list { list-style: none; margin: 0; padding: 0; }
+.feedback-item { border-top: 1px solid var(--border); padding: 10px 0; }
+.feedback-item p { margin: 4px 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.feedback-filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
 .passkey-list { list-style: none; padding: 0; margin: 0.5rem 0; display: grid; gap: 0.5rem; }
 .passkey-item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 0.5rem 1rem;
   padding: 0.6rem 0.75rem; border: 1px solid var(--border); border-radius: var(--radius-sm); }
@@ -158,3 +164,4 @@
 .two-step-left.warn { color: var(--caution-text); font-weight: 600; }
 .recovery-codes { list-style: none; padding: 0; margin: 0.75rem 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: 0.4rem 1rem; }
 .recovery-codes code { font-family: var(--mono); font-size: 1rem; letter-spacing: 0.04em; }
+.feedback-filters select { width: auto; }

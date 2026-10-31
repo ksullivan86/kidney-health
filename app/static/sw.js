@@ -126,6 +126,7 @@ const SHELL_URLS = [
   '/js/views/passkeys.js',
   '/js/views/oidc.js',
   '/js/views/sharing.js',
+  '/js/views/feedback.js',
   '/js/views/ai.js',
   '/js/views/ai_routing.js',
   '/js/views/ai_quality.js',

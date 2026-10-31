@@ -38,6 +38,7 @@ import test_totp
 import test_body
 import test_care_team
 import test_symptoms
+import test_test_accounts
 from ai_support import FakeProvider, attach, chat
 from conftest import DAY, HTTPS_URL, TestClient, add_user, find_food, sign_in
 from app.config import AiEnv
@@ -105,6 +106,8 @@ MATRIX: dict[str, tuple[str, ...]] = {
     "care_invites": ("test_care_team.test_cancel_accept_decline_and_lapse",  # the Care team, step 27 (note 25)
                      "test_care_team.test_isolation_a_helper_of_ana_reaches_neither_kim_nor_their_own_log",
                      "test_care_team.test_the_migration_makes_old_shares_viewers"),
+    "feedback": ("test_test_accounts.test_feedback_is_for_test_accounts_and_admins_only",  # test accounts, step 28 (note 26)
+                 "test_test_accounts.test_reset_deletes_what_they_made_and_starts_again"),
     "oidc_links": ("test_oidc.test_another_persons_link_is_404",  # sign-in with a provider, step 26 (note 24)
                    "test_oidc.test_a_provider_account_linked_to_someone_else_is_refused",
                    "test_oidc.test_deleting_the_account_deletes_its_links"),
@@ -124,7 +127,8 @@ MODULES = {"test_isolation": test_isolation, "test_export_delete": test_export_d
            "test_mcp_write": test_mcp_write, "test_data_import": test_data_import,
            "test_ai_chat_save": test_ai_chat_save, "test_symptoms": test_symptoms, "test_body": test_body, "test_lab_photo": test_lab_photo,
            "test_log_if_match": test_log_if_match, "test_totp": test_totp,
-           "test_passkeys": test_passkeys, "test_sharing": test_sharing, "test_oidc": test_oidc, "test_care_team": test_care_team}
+           "test_passkeys": test_passkeys, "test_sharing": test_sharing, "test_oidc": test_oidc, "test_care_team": test_care_team,
+           "test_test_accounts": test_test_accounts}
 
 
 def _tables_with_people(conn: sqlite3.Connection) -> dict[str, list[str]]:
