@@ -52,6 +52,8 @@ When it is on, **this server opens the page a person pastes**, from the internet
   with Python's own HTML parser. Nothing on the page runs. **The page itself is never stored**; only its link is kept with the
   recipe.
 * At most 20 pages an hour per person.
+* If the server's outbound traffic goes through a proxy (`HTTPS_PROXY`), the proxy looks up the names, so it must refuse private
+  addresses itself ([`security.md`](security.md)).
 
 Because the destination is any public web site, a strict egress firewall must allow HTTPS to the internet for this to work. If you
 cannot, leave it off: pasting works with no network.
