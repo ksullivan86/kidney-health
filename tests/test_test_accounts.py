@@ -87,9 +87,11 @@ def test_off_by_default_nothing_is_made(admin):
     assert r.status_code == 401
 
 
-@pytest.mark.parametrize("content,says", [(None, "Set TEST_ACCOUNT_PASSWORD_FILE"), ("missing", "does not exist"),
-                                          ("short-1", "password policy"), ("tester", "password policy")])
-def test_a_missing_or_weak_password_file_makes_nothing(tmp_path, foods_json, caplog, content, says):
+@pytest.mark.parametrize("content,says,logged", [(None, "Set TEST_ACCOUNT_PASSWORD_FILE", "Set TEST_ACCOUNT_PASSWORD_FILE"),
+                                                 ("missing", "could not be read", "does not exist"),
+                                                 ("short-1", "password policy", "password policy"),
+                                                 ("tester", "password policy", "password policy")])
+def test_a_missing_or_weak_password_file_makes_nothing(tmp_path, foods_json, caplog, content, says, logged):
     path = None
     if content is not None:
         path = tmp_path / "pw"
@@ -100,7 +102,9 @@ def test_a_missing_or_weak_password_file_makes_nothing(tmp_path, foods_json, cap
         turn_on(admin)
         got = status(admin)
         assert got["enabled"] is True and got["accounts"] == [] and says in got["problem"]
-        assert any(says in rec.getMessage() for rec in caplog.records)
+        assert any(logged in rec.getMessage() for rec in caplog.records)
+        # The admin screen gets a fixed sentence: no file path or operating-system error (that stays in the log).
+        assert path is None or str(path) not in got["problem"]
         assert PASSWORD not in str(got) and (content is None or content not in ("short-1",) or "short-1" not in str(got))
         assert admin.post("/api/admin/test-accounts/reset").status_code == 409
 

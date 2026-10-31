@@ -104,7 +104,10 @@ def read_password(conn: sqlite3.Connection, settings: Settings, store: SettingsS
     try:
         password, _, _ = read_secret({"TEST_ACCOUNT_PASSWORD_FILE": str(path)}, "TEST_ACCOUNT_PASSWORD")
     except ConfigError as exc:
-        return None, str(exc)
+        # The detail (path, operating-system error) goes to the server log only; the admin screen gets a fixed sentence.
+        log.warning("TEST_ACCOUNT_PASSWORD_FILE could not be read: %s", exc)
+        return None, ("TEST_ACCOUNT_PASSWORD_FILE could not be read. Check that the file exists and that the app can read it; "
+                      "the server log says more.")
     if not password:
         return None, f"TEST_ACCOUNT_PASSWORD_FILE: {path} is empty. Put the test accounts' password in it."
     instance = str(store.get(conn, "instance.name"))
@@ -112,7 +115,11 @@ def read_password(conn: sqlite3.Connection, settings: Settings, store: SettingsS
         problems = policy.validate_new_password(password, username=name, display_name=DISPLAY[name], instance_name=instance,
                                                 min_length=settings.password_min_length)
         if problems:
-            return None, "The password in TEST_ACCOUNT_PASSWORD_FILE does not meet the password policy: " + " ".join(problems)
+            # Only the policy's own fixed sentences, never anything taken from the password itself.
+            known = (policy.MSG_TOO_SHORT.format(n=settings.password_min_length), policy.MSG_TOO_LONG, policy.MSG_CONTEXT,
+                     policy.MSG_COMMON, policy.MSG_PATTERN, policy.MSG_BREACHED)
+            why = " ".join(msg for msg in known if msg in problems) or "Choose another password."
+            return None, "The password in TEST_ACCOUNT_PASSWORD_FILE does not meet the password policy: " + why
     return password, None
 
 
