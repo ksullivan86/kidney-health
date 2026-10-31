@@ -103,6 +103,7 @@ class UserDeleteBody(_Body):
 
 # Access tokens (app/auth/api_tokens.py): the expiry choices, the longest name and the two families.
 ExpiryDays = Literal[30, 90, 365]
+Never = Literal["never"]  # a token that never expires (design note 24 §13), when the server allows it
 TokenFamily = Literal["assistant", "device"]
 TOKEN_NAME_MAX = 60
 
@@ -117,7 +118,7 @@ class TokenCreate(BaseModel):
     model_config = ConfigDict(extra="forbid", str_max_length=4096)
 
     name: str = Field(min_length=1, max_length=TOKEN_NAME_MAX)
-    expires_in_days: ExpiryDays = 90
+    expires_in_days: ExpiryDays | Never = 90
     can_log: bool = False
     can_prefs: bool = False
     family: TokenFamily = "assistant"

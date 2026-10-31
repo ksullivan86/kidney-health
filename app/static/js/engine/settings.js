@@ -257,6 +257,11 @@
       help: 'Off by default. When on, the server makes two accounts if they are missing: tester, who starts with the sample person Sam\'s food log, lab results and weights, '
         + 'and tester-helper, a Care helper on tester\'s Care team. Both use the password in the file TEST_ACCOUNT_PASSWORD_FILE. They are never admins, can only be on a Care team '
         + 'with each other, and get a Send feedback button. Turned off, they are disabled and signed out (not deleted); turned on again, they work again. Turn on the Care team too, to test it.' },
+    // Tokens that never expire (design note 24 §13; app/auth/api_tokens.py). Both token families.
+    { key: 'tokens.allow_never_expiring', type: 'bool', default: true, scope: 'instance', env: 'TOKENS_ALLOW_NEVER_EXPIRING',
+      label: 'Let people make tokens that never expire',
+      help: 'On by default. When on, a person making a token in Settings → Outside AI apps or Phone shortcuts can choose "Never (until you remove it)" as well as 30 days, 90 days or 1 year. '
+        + 'When off, every new token expires. Tokens already made keep working until they are removed; to end them, use Revoke tokens in People.' },
     { key: 'ui.theme', type: 'choice', options: ['system', 'light', 'dark'], default: 'system', scope: 'user_default', env: 'UI_THEME',
       label: 'Theme', help: '' },
     { key: 'user.units.labs', type: 'choice', options: ['us', 'si'], default: 'us', scope: 'user_default', env: 'LAB_UNITS',

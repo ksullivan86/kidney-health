@@ -88,7 +88,7 @@ def test_the_list_takes_a_family_and_lists_only_that_family(admin):
     assert [t["name"] for t in device["tokens"]] == ["D two", "D one"]
     assert {t["id"] for t in assistant["tokens"]} == {a1["id"], a2["id"]} and {t["id"] for t in device["tokens"]} == {d1["id"], d2["id"]}
     for doc in (assistant, device):
-        assert doc["enabled"] is True and doc["max_active"] == 5 and doc["expiry_days"] == [30, 90, 365] and doc["default_expiry_days"] == 90
+        assert doc["enabled"] is True and doc["max_active"] == 5 and doc["expiry_days"] == [30, 90, 365, "never"] and doc["default_expiry_days"] == 90
     dump = str(device)
     assert d1["token"] not in dump and hashlib.sha256(d1["token"].encode()).hexdigest() not in dump  # write-only, as ever
     for bad in ("", "all", "Device", "devices", "assistant,device"):

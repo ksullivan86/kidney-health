@@ -365,7 +365,7 @@
     this._currentUser();
     const family = qp('family') == null ? 'assistant' : qp('family');
     if (!TOKEN_FAMILIES.includes(family)) fail(400, `family must be one of: ${TOKEN_FAMILIES.join(', ')}.`, { field: 'family' });
-    return { family, enabled: false, max_active: 5, expiry_days: [30, 90, 365], default_expiry_days: 90, tokens: [] };
+    return { family, enabled: false, max_active: 5, expiry_days: [30, 90, 365, 'never'], default_expiry_days: 90, never_allowed: true, tokens: [] };
   });
   route('POST', '/api/me/tokens', function () { this._currentUser(); this._requireRecent(); fail(409, NO_TOKENS); });
   route('DELETE', /^\/api\/me\/tokens\/(\d+)$/, function () { this._currentUser(); fail(404, 'token not found'); });
