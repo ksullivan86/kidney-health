@@ -177,7 +177,7 @@ def test_the_block_draws_everything_through_h_and_keeps_nothing_in_the_browser()
     assert "console.warn" in BLOCK and BLOCK.count("console.") == 1  # the one place a failed first draw is reported, never a value
     assert BLOCK.count("made.token") == 2 and "unshownDevice = null; return made" in BLOCK  # read by the check and the one box; forgotten at once
     assert "const pushAddress = () => `${window.location.origin}${PUSH_PATH}`;" in BLOCK and "const PUSH_PATH = '/push/v1/body';" in BLOCK
-    assert "A.createToken({ name: text, expires_in_days: Number(expiry.value), family: 'device' })" in BLOCK  # scopes are not the person's choice
+    assert "A.createToken({ name: text, expires_in_days: expiryValue(expiry), family: 'device' })" in BLOCK  # scopes are not the person's choice
     assert "can_log" not in BLOCK and "scopes" not in BLOCK
     assert "Your admin has not turned this on." in BLOCK and "The preview has no server to send readings to." in BLOCK
     assert BLOCK.index("if (MOCK) {") < BLOCK.index("await A.deviceTokens()")  # the demo never asks the server
@@ -217,7 +217,7 @@ def test_the_demo_lists_no_tokens_and_refuses_to_make_one_with_the_previews_word
         {"method": "DELETE", "path": "/api/me/tokens/1/body-rows"},
         {"method": "GET", "path": "/api/admin/users"},
     ])
-    empty = {"enabled": False, "max_active": 5, "expiry_days": [30, 90, 365], "default_expiry_days": 90, "tokens": []}
+    empty = {"enabled": False, "max_active": 5, "expiry_days": [30, 90, 365, "never"], "default_expiry_days": 90, "never_allowed": True, "tokens": []}
     assert answers[0] == {"ok": True, "body": {"family": "device", **empty}}
     assert answers[1] == {"ok": True, "body": {"family": "assistant", **empty}}
     assert answers[2] == {"ok": False, "status": 400, "detail": "family must be one of: assistant, device."}

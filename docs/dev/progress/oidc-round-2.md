@@ -1,6 +1,6 @@
 # oidc-round-2 progress
 
-Status: in progress
+Status: complete
 
 Branch: worktree branch started from `next-8` (0.14.0). Task: several OIDC providers (up to 4), `OIDC_ONLY`, never-expiring
 tokens, docs (README row, accounts.md "If it doesn't work"), tests.
@@ -43,6 +43,13 @@ tokens, docs (README row, accounts.md "If it doesn't work"), tests.
 7. `tools/e2e/oidc.py` extended (second provider "google" as a public client; restart with OIDC_ONLY): 28 of 28 pass with
    `python3 tools/e2e/oidc.py --port 8351 --idp-port 8352 --out <scratch>/e2e-oidc --python <venv python>`.
 
-## Next
+8. Full suite: 6914 passed, 2 skipped, 16 failed, all in `tests/test_push_ui.py` (its Node harness runs only the push block, so it
+   did not see the shared expiry helpers). Fixed: `tests/js/push_page.mjs` now runs the real helpers from settings.js; that file
+   then passes (28). Also `scripts/gen_openapi.py --check`, `tests/data/gen_settings_vectors.py --check`,
+   `node tests/js/run_vectors.mjs` and ruff all pass.
 
-* Full suite once, fix anything, mark complete.
+## For the owner
+
+* Named providers' rules (domains, groups, sign-up) are env only; the server-wide ones stay in Server settings.
+* With `OIDC_ONLY`, reset and setup links still sign a person in once (the admin made them); say if they should be refused.
+* Turning `tokens.allow_never_expiring` off keeps existing never-expiring tokens working; say if it should end them.
