@@ -99,7 +99,7 @@ UNREADABLE = ("TEST_ACCOUNT_PASSWORD_FILE could not be read. Check that the file
 
 def _load_password(settings: Settings) -> str | None:
     """The test accounts' password from ``TEST_ACCOUNT_PASSWORD_FILE``, or ``None`` when it cannot be read
-    (:func:`password_problem` says why). Used only to hash it; it is never returned to a screen or logged."""
+    (:func:`setup_problem` says why). Used only to hash it; it is never returned to a screen or logged."""
     path = settings.test_account_password_file
     if path is None:
         return None
@@ -110,7 +110,7 @@ def _load_password(settings: Settings) -> str | None:
     return value or None
 
 
-def password_problem(conn: sqlite3.Connection, settings: Settings, store: SettingsStore) -> str | None:
+def setup_problem(conn: sqlite3.Connection, settings: Settings, store: SettingsStore) -> str | None:
     """Why the test accounts cannot be made from the password file, or ``None``. Only fixed sentences, so nothing taken
     from the password, its path or a file error reaches a screen or the log (the file error goes to the log on its own)."""
     from .auth import policy
@@ -201,7 +201,7 @@ def sync(conn: sqlite3.Connection, settings: Settings, store: SettingsStore, *, 
             conn.commit()
         log.warning("test accounts: %s", problem)
         return problem
-    problem = password_problem(conn, settings, store)
+    problem = setup_problem(conn, settings, store)
     password = None if problem else _load_password(settings)
     if password is None:
         problem = problem or UNREADABLE  # the file changed between the check and the read
@@ -246,7 +246,7 @@ def reset(conn: sqlite3.Connection, settings: Settings, store: SettingsStore, *,
         raise ResetRefused("Turn on test accounts first (Server settings → Test accounts, or TEST_ACCOUNT_ENABLED).")
     problem = _blocked(conn, settings)
     if problem is None:
-        problem = password_problem(conn, settings, store)
+        problem = setup_problem(conn, settings, store)
     if problem:
         raise ResetRefused(problem)
     names = []
@@ -267,7 +267,7 @@ def status(conn: sqlite3.Connection, settings: Settings, store: SettingsStore) -
     if enabled:
         problem = _blocked(conn, settings)
         if problem is None:
-            problem = password_problem(conn, settings, store)
+            problem = setup_problem(conn, settings, store)
     accounts = [{"id": int(r["id"]), "username": r["username"], "status": r["status"], "last_login_at": r["last_login_at"]}
                 for r in _rows(conn)]
     return {"enabled": enabled, "ai": bool(store.get(conn, AI_SWITCH)), "problem": problem, "accounts": accounts}
