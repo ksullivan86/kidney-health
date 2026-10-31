@@ -29,8 +29,7 @@
   }
   /** One food: "Rice, 1 serving of 1 cup" (and "no longer on your list, so it is left out" when it is gone). */
   function itemText(it) {
-    const n = Number(it.servings);
-    const amount = `${KH.rules.fmtServings(n)} ${n === 1 ? 'serving' : 'servings'}${it.serving_desc ? ` of ${it.serving_desc}` : ''}`;
+    const amount = `${KH.rules.fmtServings(Number(it.servings))}${it.serving_desc ? ` of ${it.serving_desc}` : ''}`;
     return `${it.name}, ${amount}${it.available === false ? ': no longer on your list, so it is left out' : ''}`;
   }
   function headingText(n) { return n === 1 ? '1 suggestion from your Care team' : `${n} suggestions from your Care team`; }

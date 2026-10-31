@@ -125,4 +125,6 @@
 .care-note { font-style: italic; overflow-wrap: anywhere; }
 .care-suggest textarea { width: 100%; max-width: 100%; }
 .care-suggest-items .device, .care-saved-meals .device { flex-wrap: wrap; }
+.care-plan .device-main { flex: 1 1 10rem; } /* narrow screens: the controls go under the food's name */
+.care-plan input.care-amount { width: 5.5rem; flex: none; }
 .entry-added-by { color: var(--text-2); }

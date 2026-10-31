@@ -161,6 +161,10 @@
 .sharing-form legend { font-weight: 600; margin-bottom: 0.25rem; }
 /* What someone on your Care team may see and do (design note 29): one switch each, under their row. */
 .care-member { flex-wrap: wrap; }
+.care-member .device-main { flex: 1 1 14rem; } /* narrow screens: the role and Remove go under the text, not beside it */
+.care-switches .check { flex-wrap: wrap; }
+.care-switches .check .check-text { flex: 1 1 0; min-width: 0; }
+.care-switches .check .hint { flex-basis: 100%; }
 .care-switches { flex-basis: 100%; margin-top: 0.35rem; }
 .care-switches fieldset { border: 0; padding: 0; margin: 0.5rem 0; display: grid; gap: 0.35rem; }
 .care-switches legend { font-weight: 600; margin-bottom: 0.25rem; }

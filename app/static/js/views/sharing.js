@@ -385,7 +385,7 @@
       const cb = h('input', { type: 'checkbox', id });
       cb.checked = !!checked;
       cb.addEventListener('change', () => onChange(cb));
-      return h('label', { class: 'check', for: id }, cb, ` ${label}`);
+      return h('label', { class: 'check', for: id }, cb, h('span', { class: 'check-text' }, label));
     };
     const see = AREAS.map((a) => {
       const id = `set-care-${s.id}-see-${a}`;

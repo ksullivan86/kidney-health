@@ -123,7 +123,6 @@ def test_the_pure_helpers():
       require('vm').runInThisContext(require('fs').readFileSync({json.dumps(str(STATIC / "js" / "views" / "careplan.js"))}, 'utf8'));
       window.KH.util.fmtDateLong = (d) => 'Tue, Nov 3';
       window.KH.ui = {{ LEVEL_TEXT: {{ ok: 'OK', caution: 'Near limit', over: 'Over limit' }} }};
-      window.KH.rules.fmtServings = (n) => String(n);
       require('vm').runInThisContext(require('fs').readFileSync({json.dumps(str(STATIC / "js" / "views" / "suggestions.js"))}, 'utf8'));
       const S = window.KH.sharing, C = window.KH.carePlan, G = window.KH.suggestions;
       const ana = {{ id: 3, name: 'Ana', username: 'ana', may_plan: true }};

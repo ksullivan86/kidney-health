@@ -91,7 +91,7 @@
     return levels.includes('over') ? 'over' : levels.includes('caution') ? 'caution' : 'ok';
   }
   function amountText(e) {
-    return e.grams != null ? `${Math.round(Number(e.grams))} g` : `${fmtServings(Number(e.servings))} ${Number(e.servings) === 1 ? 'serving' : 'servings'}`;
+    return e.grams != null ? `${Math.round(Number(e.grams))} g` : fmtServings(Number(e.servings));
   }
   /** Who the helper is, as "Added by" names them (display name, else user name). */
   function myName() { const me = state.me || {}; return ((me.display_name || '').trim()) || me.username || ''; }
@@ -128,7 +128,7 @@
   // ---------------------------------------------------------------------------
   function authOn() { return ((state.authStatus || {}).auth_mode || 'local') !== 'none'; }
 
-  async function refreshPeople() {
+  async function refreshPeople({ quiet = false } = {}) {
     const req = ++peopleRequest;
     let people = [];
     if (authOn() && KH.sharing && state.me) {
@@ -142,7 +142,7 @@
     if (!fresh) leave(`You can no longer help ${nameOf(current.person)} here.`);
     else if (['may_plan', 'may_log', 'may_use_saved_meals', 'may_suggest'].some((k) => !!fresh[k] !== !!current.person[k])) {
       current.person = fresh;
-      toast(`${nameOf(fresh)} changed what you may do.`);
+      if (!quiet) toast(`${nameOf(fresh)} changed what you may do.`);
       if (state.view === 'plan') draw();
     }
   }
@@ -176,6 +176,7 @@
     ownPlan(false);
     box.hidden = false;
     if (state.view !== 'plan') KH.router.show('plan'); else draw();
+    refreshPeople({ quiet: true }).catch((e) => console.warn('Care team:', e)); // the switches as they are now
   }
 
   /** Back to the helper's own plan. */
@@ -348,7 +349,7 @@
       if (req !== searchReq) return;
       clear(results).append(...foods.map((f) => {
         const b = h('button', { class: 'link-btn', type: 'button' }, `${f.name}${f.serving_desc ? ` (${f.serving_desc})` : ''}`);
-        b.addEventListener('click', () => onPick(f));
+        b.addEventListener('click', () => { ++searchReq; clear(results); onPick(f); });
         return h('li', {}, b);
       }));
       if (!foods.length) results.append(h('li', { class: 'muted small' }, 'No food found.'));
@@ -453,7 +454,10 @@
     const date = h('input', { id: 'care-suggest-date', type: 'date', value: current.date });
     const meal = h('select', { id: 'care-suggest-meal' }, ...MEALS.map((m) => h('option', { value: m.key }, m.label)));
     meal.value = 'dinner';
-    const search = foodSearch(rt, p, 'care-suggest', (f) => { items.push({ food: f, servings: 1 }); drawItems(); search.q.value = ''; search.q.focus(); });
+    const search = foodSearch(rt, p, 'care-suggest', (f) => {
+      items.push({ food: f, servings: 1 }); drawItems(); search.q.value = ''; search.q.focus();
+      toast(`${f.name} added to the suggestion`, 'ok');
+    });
     const note = h('textarea', { id: 'care-suggest-note', rows: '3', maxlength: String(NOTE_MAX) });
     const count = h('span', { class: 'hint', id: 'care-suggest-count' }, `0 of ${NOTE_MAX} characters`);
     note.addEventListener('input', () => { count.textContent = `${note.value.length} of ${NOTE_MAX} characters`; });
