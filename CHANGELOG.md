@@ -5,14 +5,10 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
-## 0.18.1 — 2026-10-31
+## Unreleased
 
 * **Releases tag themselves.** When a release is merged, GitHub now creates the release, its tag and the image on its own.
   Nobody has to push a version tag by hand any more (`.github/workflows/tag-release.yml`).
-* 0.16.0, 0.17.0 and 0.18.0 were never published as images, so 0.18.1 is the first image that has them. From 0.15: back up,
-  change the tag to `:0.18` and start, after reading "Upgrading from" 0.15, 0.16 and 0.17 below. The database updates all run in
-  one start.
-* Nothing in the app changed.
 
 ## 0.18.0 — 2026-10-31
 

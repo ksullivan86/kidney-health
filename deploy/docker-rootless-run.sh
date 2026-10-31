@@ -4,7 +4,7 @@
 # Guide (setup tool, linger, source-IP caveat): docs/deployment.md, "Rootless Docker".
 #
 #   deploy/docker-rootless-run.sh            # first run creates the secret files, then starts
-#   IMAGE=ghcr.io/ksullivan86/kidney-health:0.18.1@sha256:... deploy/docker-rootless-run.sh
+#   IMAGE=ghcr.io/ksullivan86/kidney-health:0.18.0@sha256:... deploy/docker-rootless-run.sh
 #
 # Settings (environment variables of this script):
 #   IMAGE        image reference            [ghcr.io/ksullivan86/kidney-health:0.18]

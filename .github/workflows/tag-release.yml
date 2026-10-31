@@ -10,9 +10,10 @@
 # The image's signing identity is then release.yml@refs/tags/vX.Y.Z, as with a tag pushed by a person,
 # so scripts/verify-image.sh checks it the same way.
 #
-# Run it by hand to tag an older release: give the version and the commit on main. With "publish"
-# off it only creates the git tag (no GitHub release, no image), for a version whose release.yml had
-# no workflow_dispatch trigger yet (0.18.0 and older).
+# Run it by hand to tag an older release: give the version and the commit on main. With "image" off it
+# creates the GitHub release and its tag but builds no image, for a version whose release.yml had no
+# workflow_dispatch trigger yet (0.18.0 and older). Tag older versions first, lowest first: the releases
+# page lists releases in the order they were created.
 #
 # The gate is the pull request into main (required checks, the branch ruleset). docs/maintainers.md,
 # "Releasing", describes the flow; the tag ruleset for v* must let GitHub Actions create tags.
@@ -32,8 +33,8 @@ on:
         description: "Commit on main to tag (blank: the newest commit on main)"
         type: string
         default: ""
-      publish:
-        description: "Create the GitHub release and build the image (off: only the git tag)"
+      image:
+        description: "Also build and publish the image (off: the release and its tag only)"
         type: boolean
         default: true
 
@@ -63,7 +64,7 @@ jobs:
         env:
           IN_VERSION: ${{ inputs.version }}
           IN_COMMIT: ${{ inputs.commit }}
-          IN_PUBLISH: ${{ github.event_name == 'push' || inputs.publish }}
+          IN_IMAGE: ${{ github.event_name == 'push' || inputs.image }}
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
         run: |
@@ -91,12 +92,13 @@ jobs:
             echo "tag=${tag}"
             echo "version=${version}"
             echo "commit=${commit}"
-            echo "publish=${IN_PUBLISH}"
+            echo "image=${IN_IMAGE}"
           } >> "$GITHUB_OUTPUT"
-          echo "will tag ${tag} at ${commit} (publish: ${IN_PUBLISH})"
+          echo "will tag ${tag} at ${commit} (image: ${IN_IMAGE})"
       - name: Create the GitHub release and its tag
-        if: steps.v.outputs.skip == 'false' && steps.v.outputs.publish == 'true'
+        if: steps.v.outputs.skip == 'false'
         env:
+          IMAGE_TOO: ${{ steps.v.outputs.image }}
           TAG: ${{ steps.v.outputs.tag }}
           VERSION: ${{ steps.v.outputs.version }}
           COMMIT: ${{ steps.v.outputs.commit }}
@@ -113,19 +115,16 @@ jobs:
           if [ "$size" -gt 100000 ]; then
             printf 'The notes for %s are too long for a GitHub release. Read them in CHANGELOG.md at this tag.\n' "$VERSION" > "$RUNNER_TEMP/notes.md"
           fi
-          prerelease=()
-          case "$VERSION" in (*-*) prerelease=(--prerelease);; esac
-          gh release create "$TAG" --target "$COMMIT" --title "$VERSION" --notes-file "$RUNNER_TEMP/notes.md" "${prerelease[@]}"
-      - name: Create the git tag only
-        if: steps.v.outputs.skip == 'false' && steps.v.outputs.publish != 'true'
-        env:
-          TAG: ${{ steps.v.outputs.tag }}
-          COMMIT: ${{ steps.v.outputs.commit }}
-          GH_TOKEN: ${{ github.token }}
-          GH_REPO: ${{ github.repository }}
-        run: gh api "repos/${GH_REPO}/git/refs" -f "ref=refs/tags/${TAG}" -f "sha=${COMMIT}" --silent
+          if [ "$IMAGE_TOO" != "true" ]; then
+            printf '\nNo image was published for this version. Use the newest release.\n' >> "$RUNNER_TEMP/notes.md"
+          fi
+          flags=()
+          case "$VERSION" in (*-*) flags+=(--prerelease);; esac
+          # an older version tagged late must not become the "Latest" release
+          [ "$IMAGE_TOO" = "true" ] || flags+=(--latest=false)
+          gh release create "$TAG" --target "$COMMIT" --title "$VERSION" --notes-file "$RUNNER_TEMP/notes.md" "${flags[@]}"
       - name: Start the release image build on the tag
-        if: steps.v.outputs.skip == 'false' && steps.v.outputs.publish == 'true'
+        if: steps.v.outputs.skip == 'false' && steps.v.outputs.image == 'true'
         env:
           TAG: ${{ steps.v.outputs.tag }}
           GH_TOKEN: ${{ github.token }}

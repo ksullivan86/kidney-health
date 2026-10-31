@@ -30,8 +30,8 @@ Contents:
 | Fact | Value |
 |---|---|
 | Image | `ghcr.io/ksullivan86/kidney-health` (linux/amd64 + linux/arm64), based on Chainguard Python (no shell, no pip, no package manager). Pulls need no login once the GHCR package is public; if a pull asks for credentials (`401`, `denied`), the package is private: its owner sets it public under the package's *Package settings* (a repository's visibility does not carry over to its packages). |
-| Tags | `0.18` = the current 0.18.x release (**track this**); `0.18.1` = one release; `latest` = the newest release; `edge` and `sha-<short>` = every push to `main` (testing only) |
-| Verify | `scripts/verify-image.sh 0.18.1` checks the signature and attestations and prints the digest to pin ([`SECURITY.md`](../SECURITY.md)) |
+| Tags | `0.18` = the current 0.18.x release (**track this**); `0.18.0` = one release; `latest` = the newest release; `edge` and `sha-<short>` = every push to `main` (testing only) |
+| Verify | `scripts/verify-image.sh 0.18.0` checks the signature and attestations and prints the digest to pin ([`SECURITY.md`](../SECURITY.md)) |
 | Listens on | TCP **8000**, plain HTTP: put HTTPS on a reverse proxy ([`https.md`](https.md)) |
 | Runs as | UID **10001**, GID 10001 (works with any UID whose GID is 0, too); no capabilities |
 | Writes | only `/data` (`kidney.db`, its `-wal`/`-shm` files) and `/tmp`; the root filesystem can be read-only |
@@ -263,9 +263,9 @@ systemctl --user enable --now podman-auto-update.timer               # daily pul
 ```
 
 **Which image to run.** Each GitHub release's notes carry the multi-arch index digest of that
-release. For a host managed from git (GitOps), pin it: `Image=ghcr.io/ksullivan86/kidney-health:0.18.1@sha256:<index digest>`
+release. For a host managed from git (GitOps), pin it: `Image=ghcr.io/ksullivan86/kidney-health:0.18.0@sha256:<index digest>`
 and drop `AutoUpdate=registry`; Renovate or Dependabot then open a change that bumps tag and digest
-together, which you review and apply, and `scripts/verify-image.sh 0.18.1` checks the signature and
+together, which you review and apply, and `scripts/verify-image.sh 0.18.0` checks the signature and
 attestations of exactly that digest. The shipped unit instead tracks `:0.18` with `AutoUpdate=registry`
 (patch releases arrive on their own, breaking changes never do): simpler, with the pull happening
 outside your review.
@@ -397,7 +397,7 @@ the overlay's patches in your repository:
 ```yaml
 # kustomization.yaml in your GitOps repository
 resources:
-  - https://github.com/ksullivan86/kidney-health//deploy/k8s?ref=v0.18.1
+  - https://github.com/ksullivan86/kidney-health//deploy/k8s?ref=v0.18.0
   - httproute.yaml
 patches:
   - path: deployment-env.yaml
@@ -479,8 +479,8 @@ an `AI_PRIVATE_HOSTS` entry.
 
 ```bash
 kubectl label --dry-run=server --overwrite ns kidney-health pod-security.kubernetes.io/enforce=restricted   # no warnings
-scripts/verify-image.sh 0.18.1                 # prints the verified digest (also in the release notes)
-cd deploy/k8s-overlays/home && kustomize edit set image ghcr.io/ksullivan86/kidney-health=ghcr.io/ksullivan86/kidney-health:0.18.1@sha256:<digest>
+scripts/verify-image.sh 0.18.0                 # prints the verified digest (also in the release notes)
+cd deploy/k8s-overlays/home && kustomize edit set image ghcr.io/ksullivan86/kidney-health=ghcr.io/ksullivan86/kidney-health:0.18.0@sha256:<digest>
 ```
 
 `imagePullPolicy: IfNotPresent` plus a digest means a node never pulls something you did not verify.
@@ -704,7 +704,7 @@ older one.
 
 ## Upgrades
 
-* **Pin the release digest** (`Image=...:0.18.1@sha256:<index digest>` from the release notes,
+* **Pin the release digest** (`Image=...:0.18.0@sha256:<index digest>` from the release notes,
   checked with `scripts/verify-image.sh`) and let Renovate or Dependabot propose the next one, or
   **track `:0.18`** (patch releases, no breaking changes) with Quadlet `AutoUpdate=registry` and
   `podman-auto-update.timer`. Do not track `:latest` or `:edge` on a machine you care about: `:edge`
@@ -718,11 +718,11 @@ older one.
 
 Read **Upgrading from 0.17** in [CHANGELOG.md](../CHANGELOG.md#0180--2026-10-31) first.
 
-1. **Back up first** (`podman exec kidney-health python -m app.admin backup /data/before-0.18.1.db`, or your backup tool).
+1. **Back up first** (`podman exec kidney-health python -m app.admin backup /data/before-0.18.0.db`, or your backup tool).
    Schema step 31 runs at the first start. It adds four columns to the Care team tables `shares` and `care_invites` and a table
    for meal suggestions. Every row stays, and every Care helper and Viewer keeps exactly what they had.
-2. **Change the tag** from `:0.17` to `:0.18` (or a digest from the 0.18.1 release notes, checked with
-   `scripts/verify-image.sh 0.18.1`). The shipped files already say `:0.18`.
+2. **Change the tag** from `:0.17` to `:0.18` (or a digest from the 0.18.0 release notes, checked with
+   `scripts/verify-image.sh 0.18.0`). The shipped files already say `:0.18`.
 3. **Nothing new is switched on.** The new Care team switches start off for everyone, and the Care team itself stays off until
    you turn it on, as before.
 4. **Coming from 0.16 or older**, also follow [From v0.16 to v0.17](#from-v016-to-v017) and the sections after it.
@@ -930,7 +930,7 @@ Read **Upgrading from 0.3** in [CHANGELOG.md](../CHANGELOG.md#040--2026-10-22) f
    The first start runs schema steps 8 to 17 in one go, each in its own transaction; there is no automatic copy as there was for
    0.3, and a backup restores into the same or a newer version, never an older one.
 2. **Change the tag** from `:0.3` to the current one (`:0.18`, or a digest from the latest release notes, checked with
-   `scripts/verify-image.sh 0.18.1`) in your Quadlet unit, compose file or Kubernetes overlay. The shipped files say `:0.18`.
+   `scripts/verify-image.sh 0.18.0`) in your Quadlet unit, compose file or Kubernetes overlay. The shipped files say `:0.18`.
    The image now runs Python 3.15 on the same Chainguard base.
 3. **Nothing new is switched on.** Assistant access, Ask, voice input, trusted saves and the cloud fallback are off until an admin
    turns them on; an upgraded server that already had a shared AI provider keeps every AI feature on the old rule (`any`) until an

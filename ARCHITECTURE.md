@@ -1089,8 +1089,7 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
 
-**Status (2026-10-31): v0.18.1 is prepared.** Releases now tag themselves (decision 7; `tag-release.yml`). It carries
-v0.18.0, which was never published: the full Care team (note 29, schema step 31): per-person switches with Viewer, Care
+**Status (2026-10-31): v0.18.0 is prepared.** The full Care team (note 29, schema step 31): per-person switches with Viewer, Care
 helper and Caregiver as presets, a Caregiver who logs eaten food, saved meals for helpers, and meal suggestions; see "The full Care
 team" below; CHANGELOG.md 0.18.0. **v0.17.0 (2026-10-31)** adds Whoop, Activity and recovery and the active-day calorie extra (note 28, schema step 30, `/api/activity`, off until `DEVICES_ENABLED` and
 `WHOOP_ENABLED`; the active-day calorie extra off until the person turns it on); see "Activity and recovery" below; CHANGELOG.md
@@ -4782,7 +4781,7 @@ Signed in only (`current_user`; an anonymous caller gets the generic `401`, so a
 (`no-store` like every `/api` answer). The answer:
 
 ```json
-{"app_version": "0.18.1", "api_version": 1,
+{"app_version": "0.18.0", "api_version": 1,
  "capabilities": {"ai": false, "ai_next_meal": false, "ai_parse_meal": false, "ai_label": false, "ai_plate": false, "ai_lab_report": false,
                   "chat": false, "voice": false, "assistant": false, "push": false,
                   "barcode": false, "barcode_off": false, "barcode_usda": false, "handbook": false},

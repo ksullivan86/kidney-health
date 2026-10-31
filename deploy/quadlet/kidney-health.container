@@ -30,7 +30,7 @@ Wants=network-online.target
 # Preferred for a host managed from git: pin the release's multi-arch index digest (it is in the
 # GitHub release notes; scripts/verify-image.sh checks it), remove AutoUpdate= below, and let
 # Renovate or Dependabot bump tag and digest together:
-#   Image=ghcr.io/ksullivan86/kidney-health:0.18.1@sha256:<index digest>
+#   Image=ghcr.io/ksullivan86/kidney-health:0.18.0@sha256:<index digest>
 # Otherwise track the minor release: patch releases arrive through AutoUpdate, breaking changes
 # never do. Do not track :latest (or :edge, the main branch) on a machine you care about.
 Image=ghcr.io/ksullivan86/kidney-health:0.18
