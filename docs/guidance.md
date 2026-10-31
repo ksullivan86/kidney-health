@@ -265,6 +265,8 @@ Chromium by `tools/e2e/prefs.py`.
 
 ## Recipes that fit
 
+A recipe can also be imported from a recipe page or from pasted ingredients: see [recipe-import.md](recipe-import.md).
+
 **Add to a day** asks for recipe servings, starting at one, and previews those ingredient and nutrient
 amounts. The client divides by Makes to send the API's existing whole-pot `scale`; callers of the
 API and the demo API keep that contract. Plain saved meals continue to use Scale (1 = as saved).

@@ -63,5 +63,5 @@ def test_the_colours_come_from_the_theme():
 
 def test_the_handbook_explains_the_order_and_the_choices():
     for needle in ("Fit to my targets", "never below half", "never takes away protein", "at most 2 swaps", "¾, then ½",
-                   "(fitted)", "Replace this recipe", "undo it", "never opens"):
+                   "(fitted)", "Replace this recipe", "undo it", "opens that link\nonly when you import a recipe from the page"):
         assert needle in HANDBOOK, needle

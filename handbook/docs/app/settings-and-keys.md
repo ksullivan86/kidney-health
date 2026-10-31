@@ -7,9 +7,9 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-14
+last_checked: 2026-10-31
 fact_checked: 2026-10-05
-sources: [NOTE07, NOTE03, NOTE04, NOTE06, NOTE02, FDC-API, NOTE17, NOTE18, NOTE19, NOTE25, NOTE28, NOTE29]
+sources: [NOTE07, NOTE03, NOTE04, NOTE06, NOTE02, FDC-API, NOTE17, NOTE18, NOTE19, NOTE25, NOTE28, NOTE29, NOTE30]
 ---
 
 # Settings and keys
@@ -25,6 +25,7 @@ can be shared by your admin or added by you ([design note 07][NOTE07]).
 | **Account** | your name, user name, **Change password**, **Two-step sign-in**, **Passkeys**, **Signed-in devices**, **Your data** (export, import, **Phone shortcuts** for an iPhone Shortcut that sends your weight and blood pressure: [Weight and blood pressure](weight-and-blood-pressure.md#from-a-phone-shortcut); delete account), your recent sign-in activity, **Sign out** |
 | **Care team** | family, a caregiver or a dietitian on your server who can look at your log (**Viewer**), also plan your meals (**Care helper**) or also log food you ate (**Caregiver**), with a switch for each thing; invites for you; the Care teams you are on ([Care team](#sharing)) |
 | **Connected devices** (when your admin sets it up) | **Connect Withings** so the server fetches your weight, blood pressure and pulse ([Weight and blood pressure](weight-and-blood-pressure.md#from-withings)); **Connect Whoop** for calories burned, strain, recovery, HRV, sleep and workouts ([Activity and recovery](reports-for-your-team.md#activity-and-recovery)), and **Add active-day calories to my target** ([More calories on active days](targets-and-warnings.md#active-day-calories)); **Sync now**; **Disconnect** |
+| **Shopping list app** (when your admin turns it on) | your own **Grocy**, **KitchenOwl** or **Mealie**: its address and a key you make there, **Test**, the list the food goes to, **Remove**. The key is never shown again. Plan's shopping list then has **Send** ([Send it to your own list app](planning-and-menus.md#send-it-to-your-own-list-app); [design note 30][NOTE30]) |
 | **Preferences** | theme (match device, light, dark), the day your week starts on, **Units for lab results** (US or SI: the unit offered first) |
 | **Meal guidance** | on or off, carbohydrate tolerance, low-treatment amount, foods to leave out, your "Not for me" foods ([Meal guidance](guidance.md)) |
 | **Food data** | your own USDA key, the shared key's status and today's remaining lookups, **Send barcodes I scan to Open Food Facts** ([Barcodes and label photos](barcode-and-photo.md)) |

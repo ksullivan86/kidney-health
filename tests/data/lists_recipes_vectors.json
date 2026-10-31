@@ -1,0 +1,1406 @@
+{
+ "constants": {
+  "max_line_chars": 300,
+  "max_lines": 60,
+  "max_step_chars": 500,
+  "max_steps": 20
+ },
+ "line_cases": [
+  {
+   "line": "2 cups white rice, rinsed",
+   "parsed": {
+    "amount": 2.0,
+    "food_text": "white rice",
+    "note": "rinsed",
+    "text": "2 cups white rice, rinsed",
+    "unit": "cup"
+   }
+  },
+  {
+   "line": "1 1/2 lb boneless chicken breast",
+   "parsed": {
+    "amount": 1.5,
+    "food_text": "boneless chicken breast",
+    "note": null,
+    "text": "1 1/2 lb boneless chicken breast",
+    "unit": "lb"
+   }
+  },
+  {
+   "line": "½ cup low-sodium chicken broth",
+   "parsed": {
+    "amount": 0.5,
+    "food_text": "low-sodium chicken broth",
+    "note": null,
+    "text": "1/2 cup low-sodium chicken broth",
+    "unit": "cup"
+   }
+  },
+  {
+   "line": "1½ cups whole milk",
+   "parsed": {
+    "amount": 1.5,
+    "food_text": "whole milk",
+    "note": null,
+    "text": "1 1/2 cups whole milk",
+    "unit": "cup"
+   }
+  },
+  {
+   "line": "1 (14.5 oz) can diced tomatoes",
+   "parsed": {
+    "amount": 14.5,
+    "food_text": "diced tomatoes",
+    "note": null,
+    "text": "1 (14.5 oz) can diced tomatoes",
+    "unit": "oz"
+   }
+  },
+  {
+   "line": "2 15-ounce cans black beans, drained",
+   "parsed": {
+    "amount": 30.0,
+    "food_text": "black beans",
+    "note": "drained",
+    "text": "2 15-ounce cans black beans, drained",
+    "unit": "oz"
+   }
+  },
+  {
+   "line": "3 cloves garlic, minced",
+   "parsed": {
+    "amount": 3.0,
+    "food_text": "garlic",
+    "note": "minced",
+    "text": "3 cloves garlic, minced",
+    "unit": "clove"
+   }
+  },
+  {
+   "line": "Salt and pepper, to taste",
+   "parsed": {
+    "amount": null,
+    "food_text": "Salt and pepper",
+    "note": "to taste",
+    "text": "Salt and pepper, to taste",
+    "unit": null
+   }
+  },
+  {
+   "line": "2-3 carrots, peeled",
+   "parsed": {
+    "amount": 2.0,
+    "food_text": "carrots",
+    "note": "peeled",
+    "text": "2-3 carrots, peeled",
+    "unit": null
+   }
+  },
+  {
+   "line": "1 to 2 tbsp honey",
+   "parsed": {
+    "amount": 1.0,
+    "food_text": "honey",
+    "note": null,
+    "text": "1 to 2 tbsp honey",
+    "unit": "tbsp"
+   }
+  },
+  {
+   "line": "1 tablespoon olive oil",
+   "parsed": {
+    "amount": 1.0,
+    "food_text": "olive oil",
+    "note": null,
+    "text": "1 tablespoon olive oil",
+    "unit": "tbsp"
+   }
+  },
+  {
+   "line": "200 g pasta",
+   "parsed": {
+    "amount": 200.0,
+    "food_text": "pasta",
+    "note": null,
+    "text": "200 g pasta",
+    "unit": "g"
+   }
+  },
+  {
+   "line": "1,5 kg potatoes",
+   "parsed": {
+    "amount": 1.5,
+    "food_text": "potatoes",
+    "note": null,
+    "text": "1,5 kg potatoes",
+    "unit": "kg"
+   }
+  },
+  {
+   "line": "1,000 g flour",
+   "parsed": {
+    "amount": 1000.0,
+    "food_text": "flour",
+    "note": null,
+    "text": "1,000 g flour",
+    "unit": "g"
+   }
+  },
+  {
+   "line": "a pinch of salt",
+   "parsed": {
+    "amount": 1.0,
+    "food_text": "salt",
+    "note": null,
+    "text": "a pinch of salt",
+    "unit": "pinch"
+   }
+  },
+  {
+   "line": "a few sprigs thyme",
+   "parsed": {
+    "amount": null,
+    "food_text": "a few sprigs thyme",
+    "note": null,
+    "text": "a few sprigs thyme",
+    "unit": null
+   }
+  },
+  {
+   "line": "an apple",
+   "parsed": {
+    "amount": null,
+    "food_text": "an apple",
+    "note": null,
+    "text": "an apple",
+    "unit": null
+   }
+  },
+  {
+   "line": "One onion, diced",
+   "parsed": {
+    "amount": 1.0,
+    "food_text": "onion",
+    "note": "diced",
+    "text": "One onion, diced",
+    "unit": null
+   }
+  },
+  {
+   "line": "twelve eggs",
+   "parsed": {
+    "amount": 12.0,
+    "food_text": "eggs",
+    "note": null,
+    "text": "twelve eggs",
+    "unit": null
+   }
+  },
+  {
+   "line": "2 large eggs",
+   "parsed": {
+    "amount": 2.0,
+    "food_text": "large eggs",
+    "note": null,
+    "text": "2 large eggs",
+    "unit": null
+   }
+  },
+  {
+   "line": "1 cup (240 ml) milk",
+   "parsed": {
+    "amount": 1.0,
+    "food_text": "milk",
+    "note": null,
+    "text": "1 cup (240 ml) milk",
+    "unit": "cup"
+   }
+  },
+  {
+   "line": "350 g/12 oz flour",
+   "parsed": {
+    "amount": 350.0,
+    "food_text": "flour",
+    "note": null,
+    "text": "350 g/12 oz flour",
+    "unit": "g"
+   }
+  },
+  {
+   "line": "▢ 1 c. sugar",
+   "parsed": {
+    "amount": 1.0,
+    "food_text": "sugar",
+    "note": null,
+    "text": "1 c. sugar",
+    "unit": "cup"
+   }
+  },
+  {
+   "line": "• 2 Tbsp. unsalted butter or margarine",
+   "parsed": {
+    "amount": 2.0,
+    "food_text": "unsalted butter or margarine",
+    "note": null,
+    "text": "2 Tbsp. unsalted butter or margarine",
+    "unit": "tbsp"
+   }
+  },
+  {
+   "line": "8 fl oz apple juice",
+   "parsed": {
+    "amount": 8.0,
+    "food_text": "apple juice",
+    "note": null,
+    "text": "8 fl oz apple juice",
+    "unit": "fl_oz"
+   }
+  },
+  {
+   "line": "1 fl. oz lemon juice",
+   "parsed": {
+    "amount": 1.0,
+    "food_text": "lemon juice",
+    "note": null,
+    "text": "1 fl. oz lemon juice",
+    "unit": "fl_oz"
+   }
+  },
+  {
+   "line": "3 1/4 cups water",
+   "parsed": {
+    "amount": 3.25,
+    "food_text": "water",
+    "note": null,
+    "text": "3 1/4 cups water",
+    "unit": "cup"
+   }
+  },
+  {
+   "line": "1⁄2 tsp salt",
+   "parsed": {
+    "amount": 0.5,
+    "food_text": "salt",
+    "note": null,
+    "text": "1/2 tsp salt",
+    "unit": "tsp"
+   }
+  },
+  {
+   "line": "1/0 cup nothing",
+   "parsed": {
+    "amount": null,
+    "food_text": "1/0 cup nothing",
+    "note": null,
+    "text": "1/0 cup nothing",
+    "unit": null
+   }
+  },
+  {
+   "line": "2 (8 ounce) packages cream cheese, softened",
+   "parsed": {
+    "amount": 16.0,
+    "food_text": "cream cheese",
+    "note": "softened",
+    "text": "2 (8 ounce) packages cream cheese, softened",
+    "unit": "oz"
+   }
+  },
+  {
+   "line": "1 (large) onion",
+   "parsed": {
+    "amount": 1.0,
+    "food_text": "onion",
+    "note": null,
+    "text": "1 (large) onion",
+    "unit": null
+   }
+  },
+  {
+   "line": "4 slices bread",
+   "parsed": {
+    "amount": 4.0,
+    "food_text": "bread",
+    "note": null,
+    "text": "4 slices bread",
+    "unit": "slice"
+   }
+  },
+  {
+   "line": "Juice of 1 lemon",
+   "parsed": {
+    "amount": null,
+    "food_text": "Juice of 1 lemon",
+    "note": null,
+    "text": "Juice of 1 lemon",
+    "unit": null
+   }
+  },
+  {
+   "line": "(optional) parsley",
+   "parsed": {
+    "amount": null,
+    "food_text": "parsley",
+    "note": null,
+    "text": "(optional) parsley",
+    "unit": null
+   }
+  },
+  {
+   "line": ", just a note",
+   "parsed": {
+    "amount": null,
+    "food_text": "just a note",
+    "note": null,
+    "text": ", just a note",
+    "unit": null
+   }
+  },
+  {
+   "line": "1 l stock",
+   "parsed": {
+    "amount": 1.0,
+    "food_text": "stock",
+    "note": null,
+    "text": "1 l stock",
+    "unit": "l"
+   }
+  },
+  {
+   "line": "500ml milk",
+   "parsed": {
+    "amount": 500.0,
+    "food_text": "milk",
+    "note": null,
+    "text": "500ml milk",
+    "unit": "ml"
+   }
+  },
+  {
+   "line": "2lbs beef",
+   "parsed": {
+    "amount": 2.0,
+    "food_text": "beef",
+    "note": null,
+    "text": "2lbs beef",
+    "unit": "lb"
+   }
+  },
+  {
+   "line": "1 chicken, cut up",
+   "parsed": {
+    "amount": 1.0,
+    "food_text": "chicken",
+    "note": "cut up",
+    "text": "1 chicken, cut up",
+    "unit": null
+   }
+  },
+  {
+   "line": "10 1/2 oz soup",
+   "parsed": {
+    "amount": 10.5,
+    "food_text": "soup",
+    "note": null,
+    "text": "10 1/2 oz soup",
+    "unit": "oz"
+   }
+  },
+  {
+   "line": "  ",
+   "parsed": {
+    "amount": null,
+    "food_text": "",
+    "note": null,
+    "text": "",
+    "unit": null
+   }
+  },
+  {
+   "line": "1 cup/240 ml water",
+   "parsed": {
+    "amount": 1.0,
+    "food_text": "water",
+    "note": null,
+    "text": "1 cup/240 ml water",
+    "unit": "cup"
+   }
+  },
+  {
+   "line": "3 ½ cups flour",
+   "parsed": {
+    "amount": 3.5,
+    "food_text": "flour",
+    "note": null,
+    "text": "3 1/2 cups flour",
+    "unit": "cup"
+   }
+  },
+  {
+   "line": "¾",
+   "parsed": {
+    "amount": 0.75,
+    "food_text": "",
+    "note": null,
+    "text": "3/4",
+    "unit": null
+   }
+  },
+  {
+   "line": "2 cans (15 oz each) beans",
+   "parsed": {
+    "amount": 2.0,
+    "food_text": "beans",
+    "note": null,
+    "text": "2 cans (15 oz each) beans",
+    "unit": "can"
+   }
+  }
+ ],
+ "list_text_cases": [
+  {
+   "amount": "2 servings of 1 medium (118 g)",
+   "food_name": "Banana, raw",
+   "name": "Banana, raw",
+   "serving_desc": "1 medium (118 g)",
+   "servings": 2,
+   "text": "Banana, raw: 2 servings of 1 medium (118 g)"
+  },
+  {
+   "amount": "1 serving of 3 oz (85 g)",
+   "food_name": "Chicken breast, roasted",
+   "name": "Chicken breast, roasted",
+   "serving_desc": "3 oz (85 g)",
+   "servings": 1,
+   "text": "Chicken breast, roasted: 1 serving of 3 oz (85 g)"
+  },
+  {
+   "amount": "0.5 servings of 1/2 cup",
+   "food_name": "Rice",
+   "name": "Rice",
+   "serving_desc": "1/2 cup",
+   "servings": 0.5,
+   "text": "Rice: 0.5 servings of 1/2 cup"
+  },
+  {
+   "amount": "1.25 servings of 1 cup",
+   "food_name": "Milk",
+   "name": "Milk",
+   "serving_desc": "1 cup",
+   "servings": 1.255,
+   "text": "Milk: 1.25 servings of 1 cup"
+  },
+  {
+   "amount": "1,200 servings of 1 cup (240 g)",
+   "food_name": "Water",
+   "name": "Water",
+   "serving_desc": "1 cup (240 g)",
+   "servings": 1200,
+   "text": "Water: 1,200 servings of 1 cup (240 g)"
+  },
+  {
+   "amount": "0.33 servings",
+   "food_name": "Salt",
+   "name": "Salt",
+   "serving_desc": "",
+   "servings": 0.333,
+   "text": "Salt: 0.33 servings"
+  },
+  {
+   "amount": "2.01 servings of 1 tbsp",
+   "food_name": "Oil",
+   "name": "Oil",
+   "serving_desc": "1 tbsp",
+   "servings": 2.005,
+   "text": "Oil: 2.01 servings of 1 tbsp"
+  }
+ ],
+ "paste_cases": [
+  {
+   "cut": false,
+   "lines": [
+    "1 cup tomato",
+    "2 tsp sugar",
+    "Step 3:"
+   ],
+   "text": "For the sauce:\n1 cup tomato\n\n2 tsp sugar\nStep 3:\n"
+  },
+  {
+   "cut": false,
+   "lines": [
+    "1 egg",
+    "2 cups milk"
+   ],
+   "text": "\r\n1 egg\r\n  • 2 cups milk  \r\n"
+  },
+  {
+   "cut": true,
+   "lines": [
+    "1 g banana",
+    "2 g banana",
+    "3 g banana",
+    "4 g banana",
+    "5 g banana",
+    "6 g banana",
+    "7 g banana",
+    "8 g banana",
+    "9 g banana",
+    "10 g banana",
+    "11 g banana",
+    "12 g banana",
+    "13 g banana",
+    "14 g banana",
+    "15 g banana",
+    "16 g banana",
+    "17 g banana",
+    "18 g banana",
+    "19 g banana",
+    "20 g banana",
+    "21 g banana",
+    "22 g banana",
+    "23 g banana",
+    "24 g banana",
+    "25 g banana",
+    "26 g banana",
+    "27 g banana",
+    "28 g banana",
+    "29 g banana",
+    "30 g banana",
+    "31 g banana",
+    "32 g banana",
+    "33 g banana",
+    "34 g banana",
+    "35 g banana",
+    "36 g banana",
+    "37 g banana",
+    "38 g banana",
+    "39 g banana",
+    "40 g banana",
+    "41 g banana",
+    "42 g banana",
+    "43 g banana",
+    "44 g banana",
+    "45 g banana",
+    "46 g banana",
+    "47 g banana",
+    "48 g banana",
+    "49 g banana",
+    "50 g banana",
+    "51 g banana",
+    "52 g banana",
+    "53 g banana",
+    "54 g banana",
+    "55 g banana",
+    "56 g banana",
+    "57 g banana",
+    "58 g banana",
+    "59 g banana",
+    "60 g banana"
+   ],
+   "text": "1 g banana\n2 g banana\n3 g banana\n4 g banana\n5 g banana\n6 g banana\n7 g banana\n8 g banana\n9 g banana\n10 g banana\n11 g banana\n12 g banana\n13 g banana\n14 g banana\n15 g banana\n16 g banana\n17 g banana\n18 g banana\n19 g banana\n20 g banana\n21 g banana\n22 g banana\n23 g banana\n24 g banana\n25 g banana\n26 g banana\n27 g banana\n28 g banana\n29 g banana\n30 g banana\n31 g banana\n32 g banana\n33 g banana\n34 g banana\n35 g banana\n36 g banana\n37 g banana\n38 g banana\n39 g banana\n40 g banana\n41 g banana\n42 g banana\n43 g banana\n44 g banana\n45 g banana\n46 g banana\n47 g banana\n48 g banana\n49 g banana\n50 g banana\n51 g banana\n52 g banana\n53 g banana\n54 g banana\n55 g banana\n56 g banana\n57 g banana\n58 g banana\n59 g banana\n60 g banana\n61 g banana\n62 g banana\n63 g banana\n64 g banana\n65 g banana"
+  },
+  {
+   "cut": false,
+   "lines": [],
+   "text": ""
+  }
+ ],
+ "recipe_cases": [
+  {
+   "doc": {
+    "@type": "Recipe",
+    "name": "Plain",
+    "recipeIngredient": [
+     "1 cup rice",
+     "2 eggs"
+    ],
+    "recipeInstructions": "Cook the rice.\nAdd the eggs.",
+    "recipeYield": "4 servings"
+   },
+   "found": true,
+   "recipe": {
+    "lines": [
+     "1 cup rice",
+     "2 eggs"
+    ],
+    "lines_cut": false,
+    "name": "Plain",
+    "servings_made": 4.0,
+    "steps": [
+     "Cook the rice.",
+     "Add the eggs."
+    ],
+    "steps_cut": false
+   }
+  },
+  {
+   "doc": {
+    "@context": "https://schema.org",
+    "@graph": [
+     {
+      "@type": "WebSite",
+      "name": "Site"
+     },
+     {
+      "@type": [
+       "Recipe"
+      ],
+      "name": "In a graph",
+      "recipeIngredient": [
+       "200 g pasta"
+      ],
+      "recipeInstructions": [
+       {
+        "@type": "HowToSection",
+        "itemListElement": [
+         {
+          "@type": "HowToStep",
+          "text": "Stir."
+         },
+         {
+          "@type": "HowToStep",
+          "name": "Serve."
+         }
+        ],
+        "name": "Sauce"
+       }
+      ],
+      "recipeYield": [
+       "6",
+       "6 bowls"
+      ]
+     }
+    ]
+   },
+   "found": true,
+   "recipe": {
+    "lines": [
+     "200 g pasta"
+    ],
+    "lines_cut": false,
+    "name": "In a graph",
+    "servings_made": 6.0,
+    "steps": [
+     "Stir.",
+     "Serve."
+    ],
+    "steps_cut": false
+   }
+  },
+  {
+   "doc": [
+    {
+     "@type": "Organization"
+    },
+    {
+     "@type": "http://schema.org/Recipe",
+     "ingredients": "3 cups milk",
+     "name": "Second in an array"
+    }
+   ],
+   "found": true,
+   "recipe": {
+    "lines": [
+     "3 cups milk"
+    ],
+    "lines_cut": false,
+    "name": "Second in an array",
+    "servings_made": null,
+    "steps": [],
+    "steps_cut": false
+   }
+  },
+  {
+   "doc": {
+    "@type": "WebPage",
+    "mainEntity": {
+     "@type": "schema:Recipe",
+     "name": "Main entity",
+     "recipeYield": 2.5
+    }
+   },
+   "found": true,
+   "recipe": {
+    "lines": [],
+    "lines_cut": false,
+    "name": "Main entity",
+    "servings_made": 2.5,
+    "steps": [],
+    "steps_cut": false
+   }
+  },
+  {
+   "doc": {
+    "@type": "Article",
+    "name": "No recipe"
+   },
+   "found": false,
+   "recipe": null
+  },
+  {
+   "doc": {
+    "@type": "Recipe",
+    "name": "<b>Tagged</b> &amp; long",
+    "recipeIngredient": [
+     "0 g flour",
+     "1 g flour",
+     "2 g flour",
+     "3 g flour",
+     "4 g flour",
+     "5 g flour",
+     "6 g flour",
+     "7 g flour",
+     "8 g flour",
+     "9 g flour",
+     "10 g flour",
+     "11 g flour",
+     "12 g flour",
+     "13 g flour",
+     "14 g flour",
+     "15 g flour",
+     "16 g flour",
+     "17 g flour",
+     "18 g flour",
+     "19 g flour",
+     "20 g flour",
+     "21 g flour",
+     "22 g flour",
+     "23 g flour",
+     "24 g flour",
+     "25 g flour",
+     "26 g flour",
+     "27 g flour",
+     "28 g flour",
+     "29 g flour",
+     "30 g flour",
+     "31 g flour",
+     "32 g flour",
+     "33 g flour",
+     "34 g flour",
+     "35 g flour",
+     "36 g flour",
+     "37 g flour",
+     "38 g flour",
+     "39 g flour",
+     "40 g flour",
+     "41 g flour",
+     "42 g flour",
+     "43 g flour",
+     "44 g flour",
+     "45 g flour",
+     "46 g flour",
+     "47 g flour",
+     "48 g flour",
+     "49 g flour",
+     "50 g flour",
+     "51 g flour",
+     "52 g flour",
+     "53 g flour",
+     "54 g flour",
+     "55 g flour",
+     "56 g flour",
+     "57 g flour",
+     "58 g flour",
+     "59 g flour",
+     "60 g flour",
+     "61 g flour",
+     "62 g flour",
+     "63 g flour",
+     "64 g flour"
+    ],
+    "recipeInstructions": [
+     "Step 0.",
+     "Step 1.",
+     "Step 2.",
+     "Step 3.",
+     "Step 4.",
+     "Step 5.",
+     "Step 6.",
+     "Step 7.",
+     "Step 8.",
+     "Step 9.",
+     "Step 10.",
+     "Step 11.",
+     "Step 12.",
+     "Step 13.",
+     "Step 14.",
+     "Step 15.",
+     "Step 16.",
+     "Step 17.",
+     "Step 18.",
+     "Step 19.",
+     "Step 20.",
+     "Step 21.",
+     "Step 22.",
+     "Step 23."
+    ],
+    "recipeYield": "0"
+   },
+   "found": true,
+   "recipe": {
+    "lines": [
+     "0 g flour",
+     "1 g flour",
+     "2 g flour",
+     "3 g flour",
+     "4 g flour",
+     "5 g flour",
+     "6 g flour",
+     "7 g flour",
+     "8 g flour",
+     "9 g flour",
+     "10 g flour",
+     "11 g flour",
+     "12 g flour",
+     "13 g flour",
+     "14 g flour",
+     "15 g flour",
+     "16 g flour",
+     "17 g flour",
+     "18 g flour",
+     "19 g flour",
+     "20 g flour",
+     "21 g flour",
+     "22 g flour",
+     "23 g flour",
+     "24 g flour",
+     "25 g flour",
+     "26 g flour",
+     "27 g flour",
+     "28 g flour",
+     "29 g flour",
+     "30 g flour",
+     "31 g flour",
+     "32 g flour",
+     "33 g flour",
+     "34 g flour",
+     "35 g flour",
+     "36 g flour",
+     "37 g flour",
+     "38 g flour",
+     "39 g flour",
+     "40 g flour",
+     "41 g flour",
+     "42 g flour",
+     "43 g flour",
+     "44 g flour",
+     "45 g flour",
+     "46 g flour",
+     "47 g flour",
+     "48 g flour",
+     "49 g flour",
+     "50 g flour",
+     "51 g flour",
+     "52 g flour",
+     "53 g flour",
+     "54 g flour",
+     "55 g flour",
+     "56 g flour",
+     "57 g flour",
+     "58 g flour",
+     "59 g flour"
+    ],
+    "lines_cut": true,
+    "name": "Tagged & long",
+    "servings_made": null,
+    "steps": [
+     "Step 0.",
+     "Step 1.",
+     "Step 2.",
+     "Step 3.",
+     "Step 4.",
+     "Step 5.",
+     "Step 6.",
+     "Step 7.",
+     "Step 8.",
+     "Step 9.",
+     "Step 10.",
+     "Step 11.",
+     "Step 12.",
+     "Step 13.",
+     "Step 14.",
+     "Step 15.",
+     "Step 16.",
+     "Step 17.",
+     "Step 18.",
+     "Step 19."
+    ],
+    "steps_cut": true
+   }
+  },
+  {
+   "doc": {
+    "@type": "Recipe",
+    "recipeInstructions": [
+     "Sentence 0 is quite long, with words. Sentence 1 is quite long, with words. Sentence 2 is quite long, with words. Sentence 3 is quite long, with words. Sentence 4 is quite long, with words. Sentence 5 is quite long, with words. Sentence 6 is quite long, with words. Sentence 7 is quite long, with words. Sentence 8 is quite long, with words. Sentence 9 is quite long, with words. Sentence 10 is quite long, with words. Sentence 11 is quite long, with words. Sentence 12 is quite long, with words. Sentence 13 is quite long, with words. Sentence 14 is quite long, with words. Sentence 15 is quite long, with words. Sentence 16 is quite long, with words. Sentence 17 is quite long, with words. Sentence 18 is quite long, with words. Sentence 19 is quite long, with words. Sentence 20 is quite long, with words. Sentence 21 is quite long, with words. Sentence 22 is quite long, with words. Sentence 23 is quite long, with words. Sentence 24 is quite long, with words. Sentence 25 is quite long, with words. Sentence 26 is quite long, with words. Sentence 27 is quite long, with words. Sentence 28 is quite long, with words. Sentence 29 is quite long, with words.",
+     "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    ]
+   },
+   "found": true,
+   "recipe": {
+    "lines": [],
+    "lines_cut": false,
+    "name": null,
+    "servings_made": null,
+    "steps": [
+     "Sentence 0 is quite long, with words. Sentence 1 is quite long, with words. Sentence 2 is quite long, with words. Sentence 3 is quite long, with words. Sentence 4 is quite long, with words. Sentence 5 is quite long, with words. Sentence 6 is quite long, with words. Sentence 7 is quite long, with words. Sentence 8 is quite long, with words. Sentence 9 is quite long, with words. Sentence 10 is quite long, with words. Sentence 11 is quite long, with words. Sentence 12 is quite long, with words.",
+     "Sentence 13 is quite long, with words. Sentence 14 is quite long, with words. Sentence 15 is quite long, with words. Sentence 16 is quite long, with words. Sentence 17 is quite long, with words. Sentence 18 is quite long, with words. Sentence 19 is quite long, with words. Sentence 20 is quite long, with words. Sentence 21 is quite long, with words. Sentence 22 is quite long, with words. Sentence 23 is quite long, with words. Sentence 24 is quite long, with words.",
+     "Sentence 25 is quite long, with words. Sentence 26 is quite long, with words. Sentence 27 is quite long, with words. Sentence 28 is quite long, with words. Sentence 29 is quite long, with words.",
+     "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    ],
+    "steps_cut": false
+   }
+  },
+  {
+   "doc": "just a string",
+   "found": false,
+   "recipe": null
+  }
+ ],
+ "serving_cases": [
+  {
+   "amount": 2,
+   "serving_desc": "1/2 cup (79 g)",
+   "serving_g": 79,
+   "servings": 4.0,
+   "unit": "cup"
+  },
+  {
+   "amount": 1.5,
+   "serving_desc": "3 oz (85 g)",
+   "serving_g": 85,
+   "servings": 8.0,
+   "unit": "lb"
+  },
+  {
+   "amount": 200,
+   "serving_desc": "1 cup (140 g)",
+   "serving_g": 140,
+   "servings": 1.43,
+   "unit": "g"
+  },
+  {
+   "amount": 2,
+   "serving_desc": "1 large (50 g)",
+   "serving_g": 50,
+   "servings": 2.0,
+   "unit": null
+  },
+  {
+   "amount": 3,
+   "serving_desc": "1 clove (3 g)",
+   "serving_g": 3,
+   "servings": 3.0,
+   "unit": "clove"
+  },
+  {
+   "amount": 1,
+   "serving_desc": "1 tsp (5 g)",
+   "serving_g": 5,
+   "servings": 3.0,
+   "unit": "tbsp"
+  },
+  {
+   "amount": 8,
+   "serving_desc": "1 cup, 8 fl oz (248 g)",
+   "serving_g": 248,
+   "servings": 1.0,
+   "unit": "fl_oz"
+  },
+  {
+   "amount": 2,
+   "serving_desc": "3 oz (85 g)",
+   "serving_g": 85,
+   "servings": null,
+   "unit": null
+  },
+  {
+   "amount": 1,
+   "serving_desc": "3 oz (85 g)",
+   "serving_g": 85,
+   "servings": null,
+   "unit": "cup"
+  },
+  {
+   "amount": 1,
+   "serving_desc": "1 tsp (6 g)",
+   "serving_g": 6,
+   "servings": null,
+   "unit": "pinch"
+  },
+  {
+   "amount": null,
+   "serving_desc": "1 cup",
+   "serving_g": 240,
+   "servings": null,
+   "unit": "cup"
+  },
+  {
+   "amount": 2,
+   "serving_desc": "1 medium (118 g)",
+   "serving_g": 118,
+   "servings": null,
+   "unit": "slice"
+  },
+  {
+   "amount": 0.001,
+   "serving_desc": "1 cup (240 g)",
+   "serving_g": 240,
+   "servings": null,
+   "unit": "g"
+  },
+  {
+   "amount": 4,
+   "serving_desc": "2 slices (60 g)",
+   "serving_g": 60,
+   "servings": 2.0,
+   "unit": "slice"
+  },
+  {
+   "amount": 1,
+   "serving_desc": "1 can, 12 fl oz (355 g)",
+   "serving_g": 355,
+   "servings": 1.0,
+   "unit": "can"
+  },
+  {
+   "amount": 1,
+   "serving_desc": "1 cup (240 g)",
+   "serving_g": 240,
+   "servings": 4.23,
+   "unit": "l"
+  },
+  {
+   "amount": 500,
+   "serving_desc": "1/2 cup (120 g)",
+   "serving_g": 120,
+   "servings": 4.23,
+   "unit": "ml"
+  },
+  {
+   "amount": 1,
+   "serving_desc": "1 cup (0 g)",
+   "serving_g": 0,
+   "servings": null,
+   "unit": "kg"
+  },
+  {
+   "amount": 5000,
+   "serving_desc": "1 oz (28 g)",
+   "serving_g": 28,
+   "servings": null,
+   "unit": "kg"
+  },
+  {
+   "amount": 8,
+   "serving_desc": "4 spears (60 g)",
+   "serving_g": 60,
+   "servings": 2.0,
+   "unit": null
+  },
+  {
+   "amount": 1,
+   "serving_desc": "1 cup, chopped (160 g)",
+   "serving_g": 160,
+   "servings": null,
+   "unit": null
+  },
+  {
+   "amount": 2,
+   "serving_desc": "1 piece (30 g)",
+   "serving_g": 30,
+   "servings": 2.0,
+   "unit": "piece"
+  },
+  {
+   "amount": 1,
+   "serving_desc": "1 1/2 tsp (7 g)",
+   "serving_g": 7,
+   "servings": 0.67,
+   "unit": "tsp"
+  },
+  {
+   "amount": 3,
+   "serving_desc": "",
+   "serving_g": 0,
+   "servings": null,
+   "unit": null
+  },
+  {
+   "amount": 1,
+   "serving_desc": "½ cup (60 g)",
+   "serving_g": 60,
+   "servings": 2.0,
+   "unit": "cup"
+  }
+ ],
+ "term_cases": [
+  {
+   "food": "boneless skinless chicken breasts",
+   "terms": [
+    "chicken breast",
+    "breast",
+    "chicken"
+   ]
+  },
+  {
+   "food": "diced tomatoes",
+   "terms": [
+    "tomato"
+   ]
+  },
+  {
+   "food": "butter or margarine",
+   "terms": [
+    "butter"
+   ]
+  },
+  {
+   "food": "fresh berries (any kind)",
+   "terms": [
+    "berr"
+   ]
+  },
+  {
+   "food": "Salt and pepper to taste",
+   "terms": [
+    "salt pepper",
+    "pepper",
+    "salt"
+   ]
+  },
+  {
+   "food": "",
+   "terms": []
+  },
+  {
+   "food": "chopped",
+   "terms": []
+  },
+  {
+   "food": "low-sodium chicken broth",
+   "terms": [
+    "low sodium chicken broth",
+    "chicken broth",
+    "broth",
+    "low"
+   ]
+  },
+  {
+   "food": "large eggs",
+   "terms": [
+    "egg"
+   ]
+  },
+  {
+   "food": "Jalapeño peppers",
+   "terms": [
+    "jalapeño pepper",
+    "pepper",
+    "jalapeño"
+   ]
+  },
+  {
+   "food": "olive oil, for frying",
+   "terms": [
+    "olive oil",
+    "oil",
+    "olive"
+   ]
+  },
+  {
+   "food": "rice/quinoa",
+   "terms": [
+    "rice"
+   ]
+  },
+  {
+   "food": "whole wheat flour plus more for dusting",
+   "terms": [
+    "whole wheat flour dusting",
+    "flour dusting",
+    "dusting",
+    "whole"
+   ]
+  },
+  {
+   "food": "a b c d e f g h",
+   "terms": []
+  },
+  {
+   "food": "dishes boxes glasses",
+   "terms": [
+    "dish box glass",
+    "box glass",
+    "glass",
+    "dish"
+   ]
+  },
+  {
+   "food": "asparagus hummus",
+   "terms": [
+    "asparagus hummus",
+    "hummus",
+    "asparagus"
+   ]
+  },
+  {
+   "food": "cheese for serving",
+   "terms": [
+    "cheese"
+   ]
+  },
+  {
+   "food": "optional parsley",
+   "terms": [
+    "parsley"
+   ]
+  },
+  {
+   "food": "dried thyme",
+   "terms": [
+    "thyme"
+   ]
+  },
+  {
+   "food": "extra virgin olive oil",
+   "terms": [
+    "olive oil",
+    "oil",
+    "olive"
+   ]
+  },
+  {
+   "food": "chicken thighs, bone-in, skin-on",
+   "terms": [
+    "chicken thigh",
+    "thigh",
+    "chicken"
+   ]
+  }
+ ],
+ "text_cases": [
+  {
+   "text": "Plain text",
+   "value": "  Plain  text "
+  },
+  {
+   "text": "Bold and it.",
+   "value": "<b>Bold</b> and <i>it</i>."
+  },
+  {
+   "text": "Fish & chips & peas 'n' ½ cup",
+   "value": "Fish &amp; chips &#38; peas &#x27;n&#x27; &frac12; cup"
+  },
+  {
+   "text": "Tab and new line",
+   "value": "Tab\tand\nnew line"
+  },
+  {
+   "text": "Ends with a tag.",
+   "value": "Ends with a tag <br/>."
+  },
+  {
+   "text": "Lead",
+   "value": "&nbsp;Lead"
+  },
+  {
+   "text": "42",
+   "value": 42
+  },
+  {
+   "text": "",
+   "value": null
+  },
+  {
+   "text": "",
+   "value": true
+  },
+  {
+   "text": "",
+   "value": [
+    "x"
+   ]
+  },
+  {
+   "text": "",
+   "value": ""
+  },
+  {
+   "text": "Quote \"this\" <tag>",
+   "value": "Quote &quot;this&quot; &lt;tag&gt;"
+  },
+  {
+   "text": "Control char",
+   "value": "Control\u0007char"
+  }
+ ],
+ "yield_cases": [
+  {
+   "servings": 4.0,
+   "value": 4
+  },
+  {
+   "servings": 6.0,
+   "value": "6 servings"
+  },
+  {
+   "servings": 2.0,
+   "value": [
+    "2",
+    "2 bowls"
+   ]
+  },
+  {
+   "servings": 8.0,
+   "value": "Makes 8"
+  },
+  {
+   "servings": 4.0,
+   "value": "4-6"
+  },
+  {
+   "servings": 1.5,
+   "value": "1.5"
+  },
+  {
+   "servings": null,
+   "value": "0"
+  },
+  {
+   "servings": null,
+   "value": 500
+  },
+  {
+   "servings": null,
+   "value": "a big pot"
+  },
+  {
+   "servings": null,
+   "value": null
+  },
+  {
+   "servings": null,
+   "value": true
+  },
+  {
+   "servings": null,
+   "value": {
+    "v": 4
+   }
+  },
+  {
+   "servings": null,
+   "value": []
+  },
+  {
+   "servings": 3.0,
+   "value": [
+    "x",
+    3
+   ]
+  }
+ ]
+}

@@ -49,6 +49,8 @@ using the app; the pages below are for the people who run, maintain and check it
   the MCP server at `/mcp` and its tools, connecting Open WebUI or a Hermes Agent profile, the system prompt template,
   the **Ask** screen inside the app with saving and a trust setting, voice, and the honest limits.
 * [Connected devices](devices.md): a Withings scale or blood pressure monitor, or a Whoop strap, sends each person's data to their own log and Trends; the active-day calorie extra; how the server owner sets up each company's app
+* [Your own list app](list-sync.md): send the Plan's shopping list to your own Grocy, KitchenOwl or Mealie; the address rules and `LIST_SYNC_ALLOWED_HOSTS`
+* [Import a recipe](recipe-import.md): from a recipe page (the server reads its schema.org data) or pasted ingredients; every match checked by the person
 * [Phone shortcuts](push.md): device tokens that let an iPhone Shortcut add weights and blood pressure readings to your own log
   (`POST /push/v1/body`): turning it on, the limits, what a leaked token can do. Add-only; it reads nothing.
 * [The online demo](demo.md): the Pages demo, and **Keep my data in this browser** (IndexedDB, off until you choose it): what is

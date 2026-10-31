@@ -26,7 +26,7 @@
   const REG = KH.settings;
 
   // Kept equal to APP_VERSION in app/main.py (tests/test_settings_ui.py).
-  const APP_VERSION = '0.18.0';
+  const APP_VERSION = '0.19.0';
 
   const A = {
     sessions: () => request('GET', '/api/me/sessions'),
@@ -761,6 +761,7 @@
     'oidc.linked': 'Sign-in provider linked', 'oidc.unlinked': 'Sign-in provider link removed',
     'device.connected': 'Device connected', 'device.disconnected': 'Device disconnected', 'device.sync_failed': 'Device sync stopped working',
     'activity.extra_on': 'Active-day calories turned on', 'activity.extra_off': 'Active-day calories turned off',
+    'list_sync.set_up': 'Shopping list app set up', 'list_sync.removed': 'Shopping list app removed', 'list_sync.sent': 'Shopping list sent',
     'test_accounts.created': 'Test account made', 'test_accounts.enabled': 'Test account turned on', 'test_accounts.disabled': 'Test account turned off',
     'test_accounts.reset': 'Test accounts reset',
   };
@@ -822,6 +823,10 @@
     if (ev.action === 'login.failed' && d.via === 'oidc') return 'with the sign-in provider';
     if (ev.action === 'login.succeeded' && d.via === 'oidc') return 'with the sign-in provider';
     if (ev.action === 'device.connected') return DEVICE_NAME[d.provider] || d.provider || '';
+    if (ev.action.startsWith('list_sync.')) {
+      const app = { grocy: 'Grocy', kitchenowl: 'KitchenOwl', mealie: 'Mealie' }[d.app] || d.app || '';
+      return ev.action === 'list_sync.sent' && d.items != null ? `${app}, ${d.items} ${d.items === 1 ? 'item' : 'items'}` : app;
+    }
     if (ev.action === 'device.disconnected') {
       if (d.provider === 'whoop') {
         const n = (d.deleted_days || 0) + (d.deleted_workouts || 0);
@@ -1935,6 +1940,7 @@
     ['Tokens for outside apps and phone shortcuts', ['tokens.allow_never_expiring']],
     ['Care team', ['sharing.enabled']],
     ['Connected devices', ['devices.enabled', 'devices.sync_hours']],
+    ['Shopping list app and recipe import', ['lists.sync_enabled', 'recipes.import_enabled']],
     // Design note 26: not in the demo (it has no accounts of its own to make).
     ['Test accounts', ['test_accounts.enabled', 'test_accounts.ai']],
     ['Activity log', ['audit.retention_days']],
@@ -2323,6 +2329,17 @@
     sec.hidden = !show;
     renderNav();
   }
+  // Settings → Shopping list app (js/views/list_sync.js, design note 30): shown only while the server has it on.
+  let listsDraw = 0;
+  async function renderLists() {
+    const sec = $('#set-lists');
+    if (!sec || !KH.listSync) return;
+    const ticket = ++listsDraw;
+    const show = await KH.listSync.render($('#set-lists-body'));
+    if (ticket !== listsDraw || sec.hidden === !show) return;
+    sec.hidden = !show;
+    renderNav();
+  }
   function renderNav() {
     const nav = $('#settings-nav');
     clear(nav);
@@ -2381,6 +2398,7 @@
     renderAi();
     renderAssistant().catch((err) => console.warn('Assistant access:', err));
     renderConnected().catch((err) => console.warn('Connected devices:', err));
+    renderLists().catch((err) => console.warn('Shopping list app:', err));
     renderAbout();
     cache.myKeys = null;
     renderFood();

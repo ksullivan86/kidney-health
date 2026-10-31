@@ -176,5 +176,43 @@ def test_every_outbound_client_in_the_app_uses_a_checked_transport() -> None:
                         r"^\s*import (?:requests|aiohttp|urllib3)\b"):
             if re.search(pattern, text, re.M):
                 other.append(rel)
-    assert sorted(set(clients)) == ["ai/transport.py", "auth/oidc.py", "auth/policy.py", "devices/whoop.py", "devices/withings.py", "foods.py", "off.py"], clients
+    assert sorted(set(clients)) == ["ai/transport.py", "auth/oidc.py", "auth/policy.py", "devices/whoop.py", "devices/withings.py", "foods.py",
+                                    "list_sync/apps.py", "off.py", "recipe_import/fetch.py"], clients
     assert sorted(set(other)) == ["egress.py", "healthcheck.py"], other  # proxy settings lookup; loopback probe
+
+
+def test_an_address_written_in_the_link_is_checked_before_a_proxy(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The proxy resolves names, so a private or cloud-internal address typed into the link is refused here first
+    (security review of 0.19)."""
+    clear_proxy_env(monkeypatch)
+    monkeypatch.setenv("HTTPS_PROXY", "http://proxy.internal:3128")
+    monkeypatch.setenv("HTTP_PROXY", "http://proxy.internal:3128")
+    capture = Capture()
+    t = CheckedTransport(resolver=lambda h, p: pytest.fail("the proxy resolves"), direct=Capture(), proxied=lambda p: capture)
+    with httpx2.Client(transport=t) as client:
+        for url in ("http://169.254.169.254/latest/meta-data", "https://10.0.0.5/x", "https://[::ffff:192.168.1.2]/x",
+                    "https://127.0.0.1/x"):
+            with pytest.raises(BlockedAddress):
+                client.get(url)
+        assert client.get("https://8.8.8.8/x").status_code == 200  # a public address still goes to the proxy
+    assert [str(r.url.host) for r in capture.requests] == ["8.8.8.8"]
+    private_ok = CheckedTransport(allow_private=True, direct=Capture(), proxied=lambda p: capture)
+    with httpx2.Client(transport=private_ok) as client:
+        assert client.get("https://10.0.0.5/x").status_code == 200
+        with pytest.raises(BlockedAddress):
+            client.get("http://169.254.169.254/x")  # denied stays denied
+
+
+def test_run_with_deadline_stops_waiting_at_the_deadline() -> None:
+    import threading
+    import time
+
+    release = threading.Event()
+    started = time.monotonic()
+    with pytest.raises(egress.DeadlineExceeded):
+        egress.run_with_deadline("test-deadline", lambda: release.wait(10), 0.2)
+    assert time.monotonic() - started < 2
+    release.set()
+    assert egress.run_with_deadline("test-deadline", lambda: 42, 5) == 42
+    with pytest.raises(ZeroDivisionError):
+        egress.run_with_deadline("test-deadline", lambda: 1 / 0, 5)

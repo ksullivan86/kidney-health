@@ -132,6 +132,8 @@ USER_AGENT_OFF = "KidneyHealth/{version} ({contact})"  # Open Food Facts asks fo
 USER_AGENT_HIBP = "kidney-health"  # the Pwned Passwords range lookup (``app/auth/policy.py``)
 USER_AGENT_OIDC = "kidney-health"  # discovery, keys and the token request of sign-in with a provider (``app/auth/oidc.py``)
 USER_AGENT_DEVICES = "kidney-health"  # connected devices: Withings token and measure requests (``app/devices/withings.py``)
+USER_AGENT_RECIPES = "kidney-health (recipe import)"  # reading a recipe page a person asked for (``app/recipe_import/fetch.py``)
+USER_AGENT_LISTS = "kidney-health"  # a person's own list app: Grocy, KitchenOwl, Mealie (``app/list_sync/apps.py``)
 
 # --------------------------------------------------------------------------- #
 # Key derivation labels (the HKDF ``info`` of ``app.crypto.Keyring``)

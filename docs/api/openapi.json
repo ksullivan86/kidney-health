@@ -584,6 +584,34 @@
         "title": "Alert",
         "type": "object"
       },
+      "AppOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "key_help": {
+            "title": "Key Help",
+            "type": "string"
+          },
+          "key_name": {
+            "title": "Key Name",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "key_name",
+          "key_help"
+        ],
+        "title": "AppOut",
+        "type": "object"
+      },
       "AppliedRule": {
         "description": "One rule behind the suggestion (\"Why this number?\"): source, grade and whether part of it is the project's opinion.",
         "properties": {
@@ -1816,64 +1844,6 @@
         "title": "Closest",
         "type": "object"
       },
-      "ConnectionOut": {
-        "properties": {
-          "connected_at": {
-            "title": "Connected At",
-            "type": "string"
-          },
-          "imported": {
-            "$ref": "#/components/schemas/ImportedCounts"
-          },
-          "last_error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Error"
-          },
-          "last_success_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Success At"
-          },
-          "last_sync_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Sync At"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "status",
-          "connected_at",
-          "last_sync_at",
-          "last_success_at",
-          "last_error",
-          "imported"
-        ],
-        "title": "ConnectionOut",
-        "type": "object"
-      },
       "ConsentBody": {
         "additionalProperties": false,
         "properties": {
@@ -2557,6 +2527,89 @@
           "revoked"
         ],
         "title": "DisconnectOut",
+        "type": "object"
+      },
+      "Draft": {
+        "properties": {
+          "estimate": {
+            "title": "Estimate",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/Line"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "lines_cut": {
+            "title": "Lines Cut",
+            "type": "boolean"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "notice": {
+            "title": "Notice",
+            "type": "string"
+          },
+          "servings_made": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Servings Made"
+          },
+          "source_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Url"
+          },
+          "steps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "steps_cut": {
+            "title": "Steps Cut",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "servings_made",
+          "steps",
+          "steps_cut",
+          "lines_cut",
+          "source_url",
+          "lines",
+          "notice",
+          "estimate"
+        ],
+        "title": "Draft",
         "type": "object"
       },
       "EgfrResult": {
@@ -4543,6 +4596,29 @@
         "title": "HypoOptionsResponse",
         "type": "object"
       },
+      "ImportInfo": {
+        "properties": {
+          "estimate": {
+            "title": "Estimate",
+            "type": "string"
+          },
+          "max_lines": {
+            "title": "Max Lines",
+            "type": "integer"
+          },
+          "web": {
+            "title": "Web",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "web",
+          "max_lines",
+          "estimate"
+        ],
+        "title": "ImportInfo",
+        "type": "object"
+      },
       "ImportedCounts": {
         "properties": {
           "days": {
@@ -5358,6 +5434,71 @@
         "title": "LearnedList",
         "type": "object"
       },
+      "Line": {
+        "properties": {
+          "amount": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount"
+          },
+          "food_text": {
+            "title": "Food Text",
+            "type": "string"
+          },
+          "matches": {
+            "items": {
+              "$ref": "#/components/schemas/Match"
+            },
+            "title": "Matches",
+            "type": "array"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "unit": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit"
+          }
+        },
+        "required": [
+          "text",
+          "amount",
+          "unit",
+          "food_text",
+          "note",
+          "matches"
+        ],
+        "title": "Line",
+        "type": "object"
+      },
       "LinkInfoBody": {
         "properties": {
           "token": {
@@ -5373,6 +5514,128 @@
           "token"
         ],
         "title": "LinkInfoBody",
+        "type": "object"
+      },
+      "ListRefOut": {
+        "properties": {
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ListRefOut",
+        "type": "object"
+      },
+      "ListSyncIn": {
+        "properties": {
+          "app": {
+            "enum": [
+              "grocy",
+              "kitchenowl",
+              "mealie"
+            ],
+            "title": "App",
+            "type": "string"
+          },
+          "base_url": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Base Url",
+            "type": "string"
+          },
+          "key": {
+            "anyOf": [
+              {
+                "maxLength": 4096,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key"
+          },
+          "list_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "List Id"
+          },
+          "list_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "List Name"
+          }
+        },
+        "required": [
+          "app",
+          "base_url"
+        ],
+        "title": "ListSyncIn",
+        "type": "object"
+      },
+      "ListSyncOut": {
+        "properties": {
+          "apps": {
+            "items": {
+              "$ref": "#/components/schemas/AppOut"
+            },
+            "title": "Apps",
+            "type": "array"
+          },
+          "can_use": {
+            "title": "Can Use",
+            "type": "boolean"
+          },
+          "connection": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/app__list_sync__api__ConnectionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "private_hosts": {
+            "title": "Private Hosts",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled",
+          "can_use",
+          "private_hosts",
+          "apps",
+          "connection"
+        ],
+        "title": "ListSyncOut",
         "type": "object"
       },
       "LogBatch": {
@@ -5740,6 +6003,140 @@
           "updated"
         ],
         "title": "MarkEatenResult",
+        "type": "object"
+      },
+      "Match": {
+        "properties": {
+          "food": {
+            "$ref": "#/components/schemas/MatchFood"
+          },
+          "servings": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Servings"
+          }
+        },
+        "required": [
+          "food",
+          "servings"
+        ],
+        "title": "Match",
+        "type": "object"
+      },
+      "MatchFood": {
+        "properties": {
+          "brand": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Brand"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "flags": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Flags",
+            "type": "array"
+          },
+          "hidden": {
+            "title": "Hidden",
+            "type": "boolean"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "kidney_rating": {
+            "title": "Kidney Rating",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "nutrients": {
+            "additionalProperties": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "title": "Nutrients",
+            "type": "object"
+          },
+          "serving_desc": {
+            "title": "Serving Desc",
+            "type": "string"
+          },
+          "serving_g": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Serving G"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "warnings": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "source",
+          "serving_desc",
+          "serving_g",
+          "nutrients",
+          "flags",
+          "warnings",
+          "kidney_rating",
+          "hidden"
+        ],
+        "title": "MatchFood",
         "type": "object"
       },
       "MaxDay": {
@@ -6934,6 +7331,21 @@
           "model"
         ],
         "title": "OwnProviderBody",
+        "type": "object"
+      },
+      "PageIn": {
+        "properties": {
+          "url": {
+            "maxLength": 900,
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "PageIn",
         "type": "object"
       },
       "ParseMealBody": {
@@ -8555,6 +8967,101 @@
         "title": "PreferenceList",
         "type": "object"
       },
+      "PreviewItem": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "food_id": {
+            "title": "Food Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "food_id",
+          "name",
+          "amount",
+          "text"
+        ],
+        "title": "PreviewItem",
+        "type": "object"
+      },
+      "PreviewOut": {
+        "properties": {
+          "app": {
+            "title": "App",
+            "type": "string"
+          },
+          "app_name": {
+            "title": "App Name",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PreviewItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "last_sent_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sent At"
+          },
+          "last_sent_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sent Count"
+          },
+          "list_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "List Name"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "app",
+          "app_name",
+          "list_name",
+          "ready",
+          "items",
+          "last_sent_at",
+          "last_sent_count"
+        ],
+        "title": "PreviewOut",
+        "type": "object"
+      },
       "Problem": {
         "additionalProperties": true,
         "description": "Every error answer. `detail` is a sentence for the person and is always there; a route may add keys next to it (the ones below are the common ones; read others from `additionalProperties`). Validation errors are the `ValidationProblem` form of this.",
@@ -9220,7 +9727,7 @@
           "connection": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/ConnectionOut"
+                "$ref": "#/components/schemas/app__devices__api__ConnectionOut"
               },
               {
                 "type": "null"
@@ -9506,6 +10013,24 @@
           }
         },
         "title": "Range",
+        "type": "object"
+      },
+      "RangeIn": {
+        "properties": {
+          "end": {
+            "title": "End",
+            "type": "string"
+          },
+          "start": {
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end"
+        ],
+        "title": "RangeIn",
         "type": "object"
       },
       "RangeSummary": {
@@ -10100,6 +10625,75 @@
           "message"
         ],
         "title": "SafetyAlert",
+        "type": "object"
+      },
+      "SendIn": {
+        "properties": {
+          "end": {
+            "title": "End",
+            "type": "string"
+          },
+          "food_ids": {
+            "items": {
+              "type": "integer"
+            },
+            "maxItems": 200,
+            "minItems": 1,
+            "title": "Food Ids",
+            "type": "array"
+          },
+          "start": {
+            "title": "Start",
+            "type": "string"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "food_ids"
+        ],
+        "title": "SendIn",
+        "type": "object"
+      },
+      "SendOut": {
+        "properties": {
+          "connection": {
+            "$ref": "#/components/schemas/app__list_sync__api__ConnectionOut"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "sent": {
+            "title": "Sent",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sent",
+          "error",
+          "message",
+          "connection"
+        ],
+        "title": "SendOut",
         "type": "object"
       },
       "SentList": {
@@ -11503,7 +12097,7 @@
       "SyncOut": {
         "properties": {
           "connection": {
-            "$ref": "#/components/schemas/ConnectionOut"
+            "$ref": "#/components/schemas/app__devices__api__ConnectionOut"
           },
           "error": {
             "anyOf": [
@@ -11561,6 +12155,95 @@
           "profile_updated_at"
         ],
         "title": "TargetsUsed",
+        "type": "object"
+      },
+      "TestOut": {
+        "properties": {
+          "connection": {
+            "$ref": "#/components/schemas/app__list_sync__api__ConnectionOut"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "lists": {
+            "items": {
+              "$ref": "#/components/schemas/ListRefOut"
+            },
+            "title": "Lists",
+            "type": "array"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "ok": {
+            "title": "Ok",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "ok",
+          "error",
+          "message",
+          "lists",
+          "connection"
+        ],
+        "title": "TestOut",
+        "type": "object"
+      },
+      "TextIn": {
+        "properties": {
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "servings": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 100.0,
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Servings"
+          },
+          "text": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "TextIn",
         "type": "object"
       },
       "Tip": {
@@ -12449,6 +13132,159 @@
         ],
         "title": "WorkoutOut",
         "type": "object"
+      },
+      "app__devices__api__ConnectionOut": {
+        "properties": {
+          "connected_at": {
+            "title": "Connected At",
+            "type": "string"
+          },
+          "imported": {
+            "$ref": "#/components/schemas/ImportedCounts"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success At"
+          },
+          "last_sync_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sync At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "connected_at",
+          "last_sync_at",
+          "last_success_at",
+          "last_error",
+          "imported"
+        ],
+        "title": "ConnectionOut",
+        "type": "object"
+      },
+      "app__list_sync__api__ConnectionOut": {
+        "properties": {
+          "app": {
+            "title": "App",
+            "type": "string"
+          },
+          "base_url": {
+            "title": "Base Url",
+            "type": "string"
+          },
+          "key_set": {
+            "title": "Key Set",
+            "type": "boolean"
+          },
+          "last_sent_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sent At"
+          },
+          "last_sent_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sent Count"
+          },
+          "last_test_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Test At"
+          },
+          "last_test_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Test Error"
+          },
+          "list_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "List Id"
+          },
+          "list_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "List Name"
+          }
+        },
+        "required": [
+          "app",
+          "base_url",
+          "list_id",
+          "list_name",
+          "key_set",
+          "last_test_at",
+          "last_test_error",
+          "last_sent_at",
+          "last_sent_count"
+        ],
+        "title": "ConnectionOut",
+        "type": "object"
       }
     },
     "securitySchemes": {
@@ -12475,7 +13311,7 @@
   "info": {
     "description": "Self-hosted food log with renal-diet and type 1 diabetes nutrient warnings, meal planning and period summaries.\n\nThis document is checked in as `docs/api/openapi.json`. `info.version` is the app's version; `info.x-api-version` is the API version, an integer that is raised only for a breaking change. Every error answer is `{\"detail\": string, ...}`; request validation is **400** with `errors`, never 422. Sign in with `POST /api/auth/login` (a cookie, see the `session` scheme); `/mcp` and `/push/v1/body` take bearer tokens.",
     "title": "Kidney Health Food Log",
-    "version": "0.18.0",
+    "version": "0.19.0",
     "x-api-version": 1
   },
   "openapi": "3.1.0",
@@ -19479,6 +20315,256 @@
         ]
       }
     },
+    "/api/list-sync": {
+      "delete": {
+        "operationId": "list_sync_delete_list_sync",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Delete List Sync",
+        "tags": [
+          "list sync"
+        ]
+      },
+      "get": {
+        "operationId": "list_sync_get_list_sync",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListSyncOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Get List Sync",
+        "tags": [
+          "list sync"
+        ]
+      },
+      "put": {
+        "operationId": "list_sync_put_list_sync",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListSyncIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__list_sync__api__ConnectionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Put List Sync",
+        "tags": [
+          "list sync"
+        ]
+      }
+    },
+    "/api/list-sync/preview": {
+      "post": {
+        "operationId": "list_sync_preview",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RangeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PreviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Preview",
+        "tags": [
+          "list sync"
+        ]
+      }
+    },
+    "/api/list-sync/send": {
+      "post": {
+        "operationId": "list_sync_send",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SendOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Send",
+        "tags": [
+          "list sync"
+        ]
+      }
+    },
+    "/api/list-sync/test": {
+      "post": {
+        "operationId": "list_sync_test_list_sync",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Test List Sync",
+        "tags": [
+          "list sync"
+        ]
+      }
+    },
     "/api/log": {
       "get": {
         "operationId": "log_get_day",
@@ -23217,6 +24303,143 @@
         "summary": "Suggested Targets",
         "tags": [
           "profile"
+        ]
+      }
+    },
+    "/api/recipe-import": {
+      "get": {
+        "operationId": "recipes_info",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ImportInfo"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Info",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/api/recipe-import/page": {
+      "post": {
+        "operationId": "recipes_from_page",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PageIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Draft"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "From Page",
+        "tags": [
+          "recipes"
+        ]
+      }
+    },
+    "/api/recipe-import/text": {
+      "post": {
+        "operationId": "recipes_from_text",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TextIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Draft"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "From Text",
+        "tags": [
+          "recipes"
         ]
       }
     },

@@ -550,6 +550,7 @@
       </div>
       <p class="hint">Combinations you eat often. Add one to any day as planned or eaten, scaled if needed.</p>
       <p class="settings-actions" id="ai-recipes-row" hidden><button class="btn secondary" type="button" id="btn-ai-recipes">Suggest recipes with AI</button></p>
+      <p class="settings-actions" id="recipe-import-row"><button class="btn secondary" type="button" id="btn-import-recipe">Import a recipe</button></p>
       <ul id="saved-meals" class="list saved-meals" aria-labelledby="saved-meals-heading"></ul>
     </section>
 
@@ -563,6 +564,7 @@
       <div class="shopping-foot">
         <button class="btn secondary" type="button" id="shopping-share" hidden>Share list</button>
         <button class="btn secondary" type="button" id="shopping-copy" hidden>Copy list</button>
+        <button class="btn secondary" type="button" id="shopping-send" hidden>Send to list app</button>
         <button class="link-btn" type="button" id="shopping-clear" hidden>Clear checks</button>
       </div>
       <textarea id="shopping-text" class="shopping-text" rows="6" readonly hidden aria-label="Shopping list as text"></textarea>
@@ -1239,6 +1241,11 @@
       <div id="set-devices-body" class="settings-body" role="region" aria-labelledby="set-connected-h"></div>
     </section>
 
+    <section class="card settings-section" id="set-lists" data-title="Shopping list app" aria-labelledby="set-lists-h" hidden>
+      <h2 class="card-title" id="set-lists-h">Shopping list app</h2>
+      <div id="set-lists-body" class="settings-body" role="region" aria-labelledby="set-lists-h"></div>
+    </section>
+
     <section class="card settings-section" id="set-guidance" data-title="Meal guidance" aria-labelledby="set-guidance-h">
       <h2 class="card-title" id="set-guidance-h">Meal guidance</h2>
       <div id="set-guidance-body" class="settings-body"></div>
@@ -1788,6 +1795,49 @@
       <span class="spacer"></span>
       <button class="btn secondary" type="button" data-close>Cancel</button>
       <button class="btn primary" type="submit" id="meal-save">Save meal</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ===================== SEND THE SHOPPING LIST (design note 30) ===================== -->
+<dialog id="sheet-list-send" class="sheet" aria-labelledby="sheet-list-send-title">
+  <form method="dialog" class="sheet-form" id="list-send-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-list-send-title" class="sheet-title">Send to your list app</h2>
+        <div class="sheet-sub" id="sheet-list-send-sub"></div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body" id="list-send-body"></div>
+    <div class="sheet-foot">
+      <span class="spacer"></span>
+      <button class="btn secondary" type="button" data-close>Cancel</button>
+      <button class="btn primary" type="submit" id="list-send-go">Send</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- ===================== IMPORT A RECIPE (design note 30) ===================== -->
+<dialog id="sheet-recipe-import" class="sheet" aria-labelledby="sheet-recipe-import-title">
+  <form method="dialog" class="sheet-form" id="recipe-import-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-recipe-import-title" class="sheet-title">Import a recipe</h2>
+        <div class="sheet-sub" id="sheet-recipe-import-sub">From a recipe page, or from ingredients you paste.</div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body" id="recipe-import-body"></div>
+    <div class="sheet-foot">
+      <button class="btn secondary" type="button" id="recipe-import-back" hidden>Back</button>
+      <span class="spacer"></span>
+      <button class="btn secondary" type="button" data-close>Cancel</button>
+      <button class="btn primary" type="submit" id="recipe-import-go">Read ingredients</button>
     </div>
   </form>
 </dialog>
@@ -2411,6 +2461,7 @@
 <script src="js/engine/visitprep.js"></script>
 <script src="js/engine/body_ui.js"></script>
 <script src="js/engine/activity.js"></script>
+<script src="js/engine/recipe_import.js"></script>
 <script src="js/engine/targets.js"></script>
 <script src="js/engine/settings.js"></script>
 <script src="js/engine/textclean.js"></script>
@@ -2447,6 +2498,7 @@
 <script src="js/mock/care.js"></script>
 <script src="js/mock/devices.js"></script>
 <script src="js/mock/activity.js"></script>
+<script src="js/mock/lists.js"></script>
 <script src="js/mock/handbook.js"></script>
 <script src="js/mock/meta.js"></script>
 <script src="js/mock/ai.js"></script>
@@ -2477,6 +2529,8 @@
 <script src="js/views/sharing.js"></script>
 <script src="js/views/oidc.js"></script>
 <script src="js/views/devices.js"></script>
+<script src="js/views/list_sync.js"></script>
+<script src="js/views/recipe_import.js"></script>
 <script src="js/views/ai.js"></script>
 <script src="js/views/ai_routing.js"></script>
 <script src="js/views/ai_quality.js"></script>

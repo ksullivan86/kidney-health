@@ -198,8 +198,8 @@ The server keeps no copy of the questions or answers; Settings shows when each t
 A token made with "Can also save food and recipes" lets that assistant also write to the person's own log and
 saved meals (and add a USDA food the person chose to their food list, which looks the food up at USDA FoodData
 Central as the Food screen's import does, sending only the food's number and the key); what it saved is ordinary
-data of the person's account, in the export and deleted with it. A recipe's source link is kept as text and the
-server never opens it. A token made with "Also let it remember tastes" lets that assistant also change the person's own food
+data of the person's account, in the export and deleted with it. A recipe's source link is kept as text. The
+server opens it only when the person imports a recipe from that page (see below). A token made with "Also let it remember tastes" lets that assistant also change the person's own food
 preferences (a like, "less often" or "not for me" for a food or a food group, or forgetting one; it reads and returns nothing
 else of them), limited to 30 changes a day per token; each change is in the person's activity list with the token's name, the
 food row is marked "from your assistant", and it is in the export and deleted with the account like any preference.
@@ -217,6 +217,17 @@ name, email or body measurements, and sends Whoop nothing but the sign-in and th
 is kept so one Whoop account is connected to one person here. The days and workouts are in the export, deleted with the account
 and never sent to an AI provider. A Care team member sees them only if the person shares "activity and recovery". The person's
 choice to add active-day calories to their target is kept with their other settings.
+
+If the admin turns on the shopping list app and a person sets one up ([list-sync.md](list-sync.md)), the server keeps the
+address of that person's own Grocy, KitchenOwl or Mealie, the list they chose, and their key, encrypted with the server's secret
+key. When the person presses Send, the server sends that app the lines they ticked: each food's name and amount. Nothing else:
+no dates, targets, readings or name. The key is never shown again, logged or exported; the address and key are deleted with the
+account or with Remove. The activity list records each send with the app's name and the number of items.
+
+If the admin turns on recipe pages and a person imports a recipe from a link ([recipe-import.md](recipe-import.md)), the
+server opens that one page, reads its recipe data and forgets the page; only the link is kept, with the recipe. The site sees a
+request from the server, not from the person's phone, with no cookie and nothing about the person. Pasted ingredients never
+leave the server.
 
 ## Who can see it
 
