@@ -434,6 +434,9 @@
     addSymptom: (b) => request('POST', '/api/symptoms', b),
     updateSymptom: (id, b) => request('PUT', `/api/symptoms/${id}`, b),
     deleteSymptom: (id) => request('DELETE', `/api/symptoms/${id}`),
+    // activity and recovery from Whoop and the active-day calorie extra (ARCHITECTURE.md "Activity and recovery")
+    activity: (start, end) => request('GET', '/api/activity?' + qs({ start, end })),
+    setActivityExtra: (b) => request('PUT', '/api/activity/extra', b),
     // weight and blood pressure log (ARCHITECTURE.md "Weight and blood pressure"); weights are in kilograms
     bodyWeights: (start, end) => request('GET', '/api/body/weights?' + qs({ start, end })),
     addWeight: (b) => request('POST', '/api/body/weights', b),

@@ -11,13 +11,14 @@ import zipfile
 
 from conftest import ADMIN_PASSWORD, DAY, HTTPS_URL, USER_PASSWORD, TestClient, find_food
 
-FILES = {"export.json", "log.csv", "foods.csv", "meals.csv", "labs.csv", "symptoms.csv", "weights.csv", "blood_pressure.csv",
+FILES = {"export.json", "log.csv", "foods.csv", "meals.csv", "labs.csv", "symptoms.csv", "weights.csv", "blood_pressure.csv", "activity.csv", "workouts.csv",
          "README.txt"}
 JSON_KEYS = {"format", "version", "exported_at", "app_version", "user", "profile", "settings", "log_entries",
              "custom_foods", "linked_foods", "meal_templates", "lab_results", "symptoms", "weights", "blood_pressures", "ai_audit",
              "activity",
              "food_preferences", "ai_usage", "ai_consents", "ai_provider",  # AI: schema step 6
-             "builtin_foods"}  # added for the import (app/data_import.py)
+             "builtin_foods",  # added for the import (app/data_import.py)
+             "activity_days", "activity_workouts", "activity_extra"}  # Whoop (schema step 30)
 
 
 def fill(client: TestClient) -> dict:

@@ -50,6 +50,7 @@
     if (KH.guidance && !src) KH.guidance.trends(state.trendsDays).catch((e) => console.warn('Insights:', e)); // js/views/guidance.js
     if (KH.symptoms) KH.symptoms.trends(start, end, src).catch((e) => console.warn('Symptoms:', e)); // js/views/symptoms.js
     if (KH.bodyTrends) KH.bodyTrends.show(start, end, src).catch((e) => console.warn('Weight and blood pressure:', e)); // js/views/body_trends.js
+    if (KH.activityViews) KH.activityViews.show(start, end, src).catch((e) => console.warn('Activity and recovery:', e)); // js/views/activity.js
     $('#trends-range').textContent = `${fmtDateShort(start)} – ${fmtDateShort(end)}`;
     const exportLink = $('#export-csv');
     if (MOCK) {

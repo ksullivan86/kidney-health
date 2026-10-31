@@ -1,8 +1,8 @@
 """A person's own data: the export archive and account deletion (note 07 §4.14).
 
 * :func:`build_export` returns a ``.zip`` with ``export.json`` (the documented shape below),
-  ``log.csv``, ``foods.csv``, ``meals.csv``, ``labs.csv``, ``symptoms.csv``, ``weights.csv``, ``blood_pressure.csv`` and
-  ``README.txt``. It never contains
+  ``log.csv``, ``foods.csv``, ``meals.csv``, ``labs.csv``, ``symptoms.csv``, ``weights.csv``, ``blood_pressure.csv``,
+  ``activity.csv``, ``workouts.csv`` and ``README.txt``. It never contains
   passwords, session data or API keys (not even their last four characters). Every CSV cell that a
   spreadsheet would run as a formula is escaped (:func:`app.log.csv_safe`).
 * :func:`delete_user` audits, then ``DELETE FROM users`` (every personal table cascades: entries,
@@ -15,7 +15,14 @@
     {"format": "kidney-health-export", "version": 1, "exported_at", "app_version",
      "user": {username, display_name, created_at}, "profile", "settings", "log_entries",
      "custom_foods", "linked_foods", "meal_templates", "lab_results", "symptoms", "weights", "blood_pressures", "ai_audit",
-     "activity", "food_preferences", "ai_usage", "ai_consents", "ai_provider", "builtin_foods"}
+     "activity", "food_preferences", "ai_usage", "ai_consents", "ai_provider", "builtin_foods", "activity_days",
+     "activity_workouts", "activity_extra"}
+
+``activity_days``, ``activity_workouts`` and ``activity_extra`` (schema step 30; design note 28) are the person's Whoop days
+``[{date, kcal, strain, recovery_pct, resting_hr, hrv_ms, sleep_minutes, sleep_performance_pct, finished, source}]``, workouts
+``[{date, start_time, end_time, minutes, sport, kcal, strain, source}]`` (``kcal`` is calories burned) and their active-day calorie
+extra setting ``{enabled, share_pct, ceiling_kcal}``. Optional additions to version 1. (``activity`` is the Activity list of
+sign-ins and changes, as before.)
 
 ``food_preferences`` (v0.3, schema steps 5 and 17) lists the foods the person told meal guidance about:
 ``[{food_id, name, preference, created_at, source, updated_at}]``. ``preference`` is ``like``, ``less``, ``not_for_me`` or
@@ -87,6 +94,8 @@ This archive holds everything this server stores about your account, in two form
 * weights.csv  - the weights you recorded, in kilograms, with the date, time and when they were taken (empty if none).
 * blood_pressure.csv - the blood pressure readings you recorded: top number (systolic) and bottom number (diastolic) in mmHg,
                  pulse, date, time and when they were taken (empty if none).
+* activity.csv - your days from Whoop: calories burned, strain, recovery, resting heart rate, HRV, sleep (empty if none).
+* workouts.csv - your workouts from Whoop: date, start, end, sport, calories burned, strain (empty if none).
 
 export.json also holds your food preferences (the foods you marked More like this, Less often or Not for me,
 and the foods where you switched off what the app learned from your log; the food groups you chose are in
@@ -218,6 +227,16 @@ def _blood_pressures(conn: sqlite3.Connection, user_id: int) -> list[dict[str, A
     return export_readings(conn, user_id)
 
 
+def _activity(conn: sqlite3.Connection, user_id: int) -> dict[str, Any]:
+    """Whoop days, workouts and the active-day extra setting (schema step 30); empty on an older schema."""
+    if not table_exists(conn, "activity_days"):
+        return {"activity_days": [], "activity_workouts": [], "activity_extra": None}
+    from .activity import export_rows
+
+    rows = export_rows(conn, user_id)
+    return {"activity_days": rows["days"], "activity_workouts": rows["workouts"], "activity_extra": rows["extra"]}
+
+
 def _csv(header: Iterable[str], rows: Iterable[Iterable[Any]]) -> str:
     from .log import csv_safe
 
@@ -267,6 +286,7 @@ def export_data(conn: sqlite3.Connection, user_id: int, *, app_version: str) -> 
         "ai_consents": _ai_rows(conn, "ai_consents", uid, "provider_id, purpose"),
         "ai_provider": _own_ai_provider(conn, uid),
         "builtin_foods": _builtin_foods(conn, uid),
+        **_activity(conn, uid),
     }
 
 
@@ -309,6 +329,11 @@ def build_export(conn: sqlite3.Connection, user_id: int, *, app_version: str) ->
     weights_csv = _csv(WEIGHT_CSV_COLUMNS, ([row.get(k) for k in WEIGHT_CSV_COLUMNS] for row in data["weights"]))
     blood_pressure_csv = _csv(READING_CSV_COLUMNS, ([row.get(k) for k in READING_CSV_COLUMNS] for row in data["blood_pressures"]))
 
+    from .activity import DAY_COLUMNS, WORKOUT_COLUMNS
+
+    activity_csv = _csv(DAY_COLUMNS, ([row.get(k) for k in DAY_COLUMNS] for row in data["activity_days"]))
+    workouts_csv = _csv(WORKOUT_COLUMNS, ([row.get(k) for k in WORKOUT_COLUMNS] for row in data["activity_workouts"]))
+
     buffer = io.BytesIO()
     stamp = datetime.now(timezone.utc).timetuple()[:6]
     with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
@@ -321,6 +346,8 @@ def build_export(conn: sqlite3.Connection, user_id: int, *, app_version: str) ->
             ("symptoms.csv", symptoms_csv),
             ("weights.csv", weights_csv),
             ("blood_pressure.csv", blood_pressure_csv),
+            ("activity.csv", activity_csv),
+            ("workouts.csv", workouts_csv),
             ("README.txt", README),
         ):
             info = zipfile.ZipInfo(name, date_time=stamp)

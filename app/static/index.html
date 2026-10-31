@@ -623,6 +623,14 @@
       <div class="body-actions" id="body-trends-actions" hidden></div>
       <div id="body-trends-body" class="body-body"></div>
     </section>
+    <!-- Activity and recovery from Whoop (js/views/activity.js; design note 28): shown only when there is data -->
+    <section class="card activity-card" id="activity-trends" aria-labelledby="activity-trends-h" hidden>
+      <div class="card-head">
+        <h3 id="activity-trends-h" class="card-title">Activity and recovery</h3>
+        <span class="muted small" id="activity-trends-sub"></span>
+      </div>
+      <div id="activity-trends-body" class="activity-body"></div>
+    </section>
     <p class="muted small chart-legend">
       Daily totals against your target (dashed line). Bars:
       <span class="legend-key"><i class="swatch level-ok"></i>OK</span>
@@ -2400,6 +2408,7 @@
 <script src="js/engine/body.js"></script>
 <script src="js/engine/visitprep.js"></script>
 <script src="js/engine/body_ui.js"></script>
+<script src="js/engine/activity.js"></script>
 <script src="js/engine/targets.js"></script>
 <script src="js/engine/settings.js"></script>
 <script src="js/engine/textclean.js"></script>
@@ -2435,6 +2444,7 @@
 <script src="js/mock/settings.js"></script>
 <script src="js/mock/care.js"></script>
 <script src="js/mock/devices.js"></script>
+<script src="js/mock/activity.js"></script>
 <script src="js/mock/handbook.js"></script>
 <script src="js/mock/meta.js"></script>
 <script src="js/mock/ai.js"></script>
@@ -2450,6 +2460,7 @@
 <script src="js/views/symptoms.js"></script>
 <script src="js/views/body.js"></script>
 <script src="js/views/body_trends.js"></script>
+<script src="js/views/activity.js"></script>
 <script src="js/views/labs.js"></script>
 <script src="js/views/lab_photo.js"></script>
 <script src="js/views/lab_fhir.js"></script>

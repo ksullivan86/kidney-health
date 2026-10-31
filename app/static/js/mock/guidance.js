@@ -189,8 +189,10 @@
       return this._guidanceRows(start, end, true).map((e) => GE.historyEntry({ date: e.date, meal: e.meal, food_id: e.food_id, name: e.food_name,
         servings: e.servings, nutrients: { ...e.nutrients }, purpose: e.purpose || null, flags: (foods.get(e.food_id) || { flags: new Set() }).flags }));
     },
-    _guidanceProfile() {
+    // context.load_profile: with a day, that day's calorie target (the active-day extra, design note 28); nothing else changes.
+    _guidanceProfile(day = null) {
       const p = this._profileView();
+      if (day != null && this._dayExtra) p.targets = this._dayExtra(day, p.targets)[0];
       let warn = Number(p.warn_fraction);
       if (!Number.isFinite(warn) || !(warn > 0 && warn <= 1)) warn = 0.8;
       return { targets: { ...(p.targets || {}) }, warn_fraction: warn, dialysis: p.dialysis || 'none', dialysis_days: [...(p.dialysis_days || [])],
@@ -243,7 +245,7 @@
           .map((e) => ({ food_id: e.food_id, date: e.date, meal: e.meal }));
         if (planned30.length && !history60) eaten30 = this._guidanceHistory(foods, start30, yesterday);
       }
-      return GE.makeContext({ date: day, profile: this._guidanceProfile(), prefs, foods, day: entries, history: hist,
+      return GE.makeContext({ date: day, profile: this._guidanceProfile(day), prefs, foods, day: entries, history: hist,
         history60: hist60, planned30, eaten30, saved_meals: saved, combos: starters,
         tunables: { pool_per_role: this._effectiveSetting('guidance.pool_per_role', null).value, beam_width: this._effectiveSetting('guidance.beam_width', null).value } });
     },

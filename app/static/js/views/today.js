@@ -144,6 +144,8 @@
         h('button', { class: 'link-btn', type: 'button', onclick: () => router.show('profile') }, 'Set your weight and targets in Profile')));
     }
     for (const key of keys) statusBarsEl.append(statusBar(key, day.status[key], counts.planned > 0 && day.projected_status ? day.projected_status[key] : null));
+    // The active-day calorie extra from Whoop (design note 28): base and extra as separate lines (js/views/activity.js).
+    if (day.calorie_extra && KH.activityViews) statusBarsEl.append(KH.activityViews.todayBlock(day.calorie_extra));
     const statusSub = $('#status-heading').nextElementSibling;
     if (statusSub) statusSub.textContent = counts.planned > 0 ? 'eaten / target · lighter part = planned' : 'running total / target';
 
