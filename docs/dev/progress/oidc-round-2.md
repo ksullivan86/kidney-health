@@ -22,4 +22,20 @@ tokens, docs (README row, accounts.md "If it doesn't work"), tests.
 
 ## Done
 
+1. Server: config (`OidcEnv.providers/name/only`, `load_oidc_env`, `_validate_oidc`), `oidc.FlowStore` per provider,
+   `callback_path/redirect_uri(name)`, `app/auth/__init__.py` builds `app.state.oidc_providers`, `oidc_api` per-provider
+   routes (`?provider=`, `/callback/{name}`), `status_view` (`providers`, `only`, `password`), `about_view(request, conn)`,
+   `routes.login/register` refuse passwords with OIDC_ONLY (test accounts excepted), `security.PROVIDER_RETURN_RE`.
+2. Screens: `js/views/oidc.js` (providers, labelOf, passwordMode, per-provider buttons), `auth.js` (applyPasswordMode,
+   delegated clicks, re-auth list), `index.html` (`.pw-signin`, `.pw-signup`, `#login-test-toggle`, `*-oidc-list`),
+   `settings.js` About (each provider, OIDC_ONLY warning), mock status/me-oidc shapes.
+3. Tests: `tests/test_oidc_providers.py` (33 pass), `tests/test_oidc.py`, `tests/test_oidc_ui.py`, `tests/test_auth_coverage.py`,
+   `tests/test_test_accounts.py` (sync_role per provider). Command:
+   `python -m pytest tests/test_oidc*.py tests/test_auth_coverage.py -p no:cacheprovider --basetemp=<scratch>/bt1`
+
 ## Next
+
+* Token never-expiry (api_tokens, schemas, settings registry + engine/settings.js + vectors, settings.js UI, mock).
+* OpenAPI regen, settings vectors, node vectors, ruff.
+* Docs: README row, accounts.md (+ "If it doesn't work"), deployment.md, .env.example, quadlet/compose/k8s, handbook,
+  ARCHITECTURE.md, CHANGELOG, note 24 §13, network-allowlist. tools/e2e/oidc.py if practical.

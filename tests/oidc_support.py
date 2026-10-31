@@ -201,23 +201,35 @@ def env(**changes: Any) -> OidcEnv:
     return OidcEnv(**values)
 
 
-def attach(app: Any, provider: FakeProvider) -> FakeProvider:
-    oc = app.state.oidc
+def attach(app: Any, provider: FakeProvider, provider_id: str | None = None) -> FakeProvider:
+    """Point the app's client for ``provider_id`` (the first provider when None) at the fake provider."""
+    oc = app.state.oidc if provider_id is None else app.state.oidc_providers[provider_id]
     oc.resolver = lambda host, port: [provider.address]
     oc.direct = httpx2.MockTransport(provider.handler)
     oc.use_env_proxy = False
     return provider
 
 
-def sign_in_with_provider(client: Any, provider: FakeProvider, **authorize: Any) -> httpx2.Response:
-    """Press the button, sign in at the provider, come back. The callback's answer (a 303)."""
-    r = client.get("/api/auth/oidc/start", follow_redirects=False)
+def named_env(name: str, issuer: str, client_id: str = CLIENT_ID, client_secret: str | None = CLIENT_SECRET, **changes: Any) -> OidcEnv:
+    """A named provider of ``OIDC_PROVIDERS`` (design note 24 §13)."""
+    return OidcEnv(enabled=True, name=name, issuer=issuer, client_id=client_id, client_secret=client_secret, **changes)
+
+
+def _back_path(query: dict[str, str]) -> str:
+    """The callback the provider sends the browser to: the path of the redirect URI the app asked for."""
+    return urlsplit(query["redirect_uri"]).path
+
+
+def sign_in_with_provider(client: Any, provider: FakeProvider, *, provider_id: str | None = None, **authorize: Any) -> httpx2.Response:
+    """Press the button (of ``provider_id``, or the first one), sign in at the provider, come back. The callback's answer (a 303)."""
+    params = {"provider": provider_id} if provider_id else None
+    r = client.get("/api/auth/oidc/start", params=params, follow_redirects=False)
     assert r.status_code == 303, r.text
-    code, state, _ = provider.authorize(r.headers["location"], **authorize)
-    return client.get("/api/auth/oidc/callback", params={"code": code, "state": state}, follow_redirects=False)
+    code, state, query = provider.authorize(r.headers["location"], **authorize)
+    return client.get(_back_path(query), params={"code": code, "state": state}, follow_redirects=False)
 
 
 def come_back(client: Any, provider: FakeProvider, url: str, **authorize: Any) -> httpx2.Response:
     """Follow a ``{url}`` from a link, re-auth or invite start to the provider and back."""
-    code, state, _ = provider.authorize(url, **authorize)
-    return client.get("/api/auth/oidc/callback", params={"code": code, "state": state}, follow_redirects=False)
+    code, state, query = provider.authorize(url, **authorize)
+    return client.get(_back_path(query), params={"code": code, "state": state}, follow_redirects=False)

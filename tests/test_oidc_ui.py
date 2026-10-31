@@ -116,3 +116,25 @@ def test_the_pure_helpers():
     assert got["old"] == [{"id": "default", "label": "Sign in with Authentik"}] and got["mode"] == "on"
     assert several == {"two": ["authentik", "google"], "google": "Sign in with Google", "unknown": "Sign in with Authentik",
                        "first": "Sign in with Authentik", "mode": "test_accounts"}
+
+
+def test_one_button_per_provider_and_the_password_parts_can_hide():
+    """Several providers (design note 24 §13): each list starts with the first provider's button, which keeps its id. OIDC_ONLY:
+    the password parts of the sign-in and invite forms carry a class that js/views/auth.js hides, and test accounts get a button."""
+    login = _form("form-login")
+    assert '<div class="auth-oidc-list" id="login-oidc-list"><a class="btn secondary auth-passkey-btn" id="login-oidc-btn"' in login
+    for needle in ('<div class="field pw-signin">\n          <label for="login-username">', '<div class="field pw-signin">\n          <label for="login-password">',
+                   'class="btn primary auth-submit pw-signin" type="submit" id="login-submit"', '<p class="hint auth-help pw-signin">Forgot'):
+        assert needle in login, needle
+    assert re.search(r'<button [^>]*id="login-test-toggle" hidden>', login) and re.search(r'<p [^>]*id="login-only-note" hidden>', login)
+    register = _form("form-register")
+    assert register.count('class="field pw-signup"') == 3 and 'auth-submit pw-signup" type="submit" id="reg-submit"' in register
+    assert 'id="register-oidc-list"><button class="btn secondary auth-passkey-btn" type="button" id="register-oidc-btn">' in register
+    assert '<div class="auth-oidc-list" id="reauth-oidc-list">' in HTML
+    auth = (STATIC / "js" / "views" / "auth.js").read_text(encoding="utf-8")
+    assert "$$('#form-login .pw-signin').forEach((el) => { el.hidden = !showPw; });" in auth
+    assert "$$('#form-register .pw-signup').forEach((el) => { el.hidden = mode !== 'on'; });" in auth
+    view = VIEW.read_text(encoding="utf-8")
+    assert "index === 0 ? 'api/auth/oidc/start' : `api/auth/oidc/start?provider=${encodeURIComponent(id)}`" in view
+    css = (STATIC / "css" / "auth.css").read_text(encoding="utf-8")
+    assert ".auth-oidc-list { display: flex;" in css
