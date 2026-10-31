@@ -32,6 +32,7 @@ Run the commands from the repository root.
 
 | File | Command |
 |---|---|
+| `activity_vectors.json` | `python3 tests/data/gen_activity_vectors.py` |
 | `apple_health_vectors.json` | `node tests/js/gen_apple_health_vectors.mjs` |
 | `barcode_vectors.json` | `python3 tests/data/gen_barcode_vectors.py` |
 | `body_vectors.json` | `python3 tests/data/gen_body_vectors.py` |
@@ -66,6 +67,27 @@ What to know about the commands:
 In the sections below, a shape such as `{name: string, expected: object}` lists the fields of one case. `field?` is a field that
 is not in every case, `a | b` means one of the two, `[x]` is a list of `x`, and `null` is JSON null. Most files have an `about` key. It is free text
 saying where the file comes from, and no replay reads it.
+
+## activity_vectors.json
+
+The active-day calorie extra from Whoop (design note 28): the usual quiet-day level and the extra added to a day's calorie target.
+
+* Server: `app/activity.py`.
+* Browser twin: `app/static/js/engine/activity.js` (the demo uses it in `app/static/js/mock/activity.js`).
+* Made by `tests/data/gen_activity_vectors.py`.
+
+Top-level keys:
+
+* `constants`: `window_days`, `min_days`, `percentile`, `share_default`, `share_min`, `share_max`, `ceiling_min` and `ceiling_max`.
+* `quiet_cases`: `{name: string, history: [number | null | boolean], quiet_kcal: int | null}`, the lower quartile of the finished days.
+* `extra_cases`: `{name, setting: {enabled, share_pct, ceiling_kcal}, target: number | {min, max} | null, burned: int | null,
+  history: [int], calorie_extra: object | null, raised: number | object | null}`.
+
+What a replayer must get right:
+
+* Only whole, positive numbers count as days; `true`, fractions, 0 and nulls do not.
+* The extra is never negative, is rounded half up to 10 kcal with whole-number arithmetic, and never passes the ceiling.
+* Only the calorie target changes; both ends of a range move by the same amount.
 
 ## apple_health_vectors.json
 

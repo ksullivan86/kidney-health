@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete (2026-10-31)
 
 # Whoop, Activity and recovery, the active-day calorie extra (0.17)
 
@@ -33,9 +33,17 @@ Branch: this helper's worktree branch, started from `next-8` (commit locally, no
 7. Checks: ruff clean; gen_openapi --check; settings/import/activity vectors current; node run_vectors no failures; handbook
    --check + content tests (592 passed); mkdocs strict build, check_links 0 broken; Chromium walk tools/e2e/learn.py 72 passed.
 
-## Next
+8. Full suite: 7023 passed, 2 skipped, 5 failed (31 min). The 5 were lists that name every export key or vector file
+   (settings.js IMPORT_NEVER_SENT, tests/js/demo_local_storage.mjs, tests/data/README.md); fixed and those tests rerun
+   (42 passed), with run_vectors, ruff and gen_openapi --check.
 
-8. Full suite, then "Status: complete".
+## For the owner
+
+* Register a Whoop developer app (developer-dashboard.whoop.com, needs a Whoop membership; Sandbox tier = up to 10 members, no
+  approval) with redirect `<PUBLIC_URL>/api/devices/whoop/callback` and scopes offline, read:cycles, read:recovery, read:sleep,
+  read:workout; then set WHOOP_ENABLED, WHOOP_CLIENT_ID, WHOOP_CLIENT_SECRET_FILE (docs/devices.md#whoop) with DEVICES_ENABLED.
+* Not tried against the real Whoop: token endpoint auth style (form, as Whoop's tutorials), the score_state of the cycle in
+  progress, and whether a refused refresh is 400 or 401 (both handled).
 
 ## Decisions
 
