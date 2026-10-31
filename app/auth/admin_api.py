@@ -17,6 +17,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, Res
 from .. import account, brand, credentials, sharing, test_accounts
 from ..audit import audit, list_events
 from ..crypto import secret_report
+from ..devices import api as devices_api
 from ..db import database_file, get_db, get_meta, get_schema_version, utcnow
 from . import api_tokens, clock, oidc_api, passkeys, sessions, tokens, totp
 from .accounts import (
@@ -552,4 +553,5 @@ def about(request: Request, admin: AdminUser, conn: sqlite3.Connection = Depends
         "last_backup_at": last_backup["at"] if last_backup else None,
         "backup_reminder_days": s.backup_reminder_days,
         "oidc": oidc_api.about_view(request, conn),
+        "devices": devices_api.about_view(request, conn),
     }

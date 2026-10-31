@@ -7,6 +7,42 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+## 0.16.0 — 2026-10-31
+
+Version 0.16 adds **Connected devices**: a person can link their Withings scale or blood pressure monitor, and the readings
+arrive in the app by themselves. It is off until you set it up. Nothing about the person is sent to Withings.
+
+### Upgrading from 0.15 (read this first)
+
+1. **Back up first** (`podman exec kidney-health python -m app.admin backup /data/before-0.16.0.db`). Schema step 29 runs at
+   the first start. It adds two tables and changes nothing that is there.
+2. **Coming from 0.14 or older**, read [Upgrading from 0.14](#upgrading-from-014-read-this-first) and the notes before it too.
+3. **Change the tag** to `:0.16`, or pin a digest from the release notes. The shipped files already say `:0.16`.
+4. **Nothing new is switched on.** To use Withings, register a free Withings developer app and set `DEVICES_ENABLED`,
+   `WITHINGS_ENABLED`, `WITHINGS_CLIENT_ID` and `WITHINGS_CLIENT_SECRET_FILE` ([devices.md](docs/devices.md)).
+
+### Known limitations
+
+* Not yet tried against a real Withings account: the code is tested against a fake Withings.
+* Deleting an account here does not ask Withings to end its access; the person can do that in their Withings account.
+
+### Connected devices: Withings
+
+* **A Withings scale or blood pressure monitor can fill in the log.** Each person connects their own Withings account in
+  **Settings → Connected devices**. The server then fetches their weight, blood pressure and pulse every few hours and adds them
+  to Weight and blood pressure, marked "from Withings". **Sync now** fetches at once. Nothing about the person is sent to
+  Withings: the server only signs in and reads.
+* The server never changes a reading someone typed, does not add the same reading twice, and does not bring back a reading the
+  person deleted. Weighings Withings is not sure about (a guest on the scale) are left out.
+* **Disconnect** keeps the readings, unless the person ticks "Also delete the readings that came from Withings".
+* If Withings stops accepting the sign-in, the section says so and offers **Connect again**.
+* Off until you turn it on. You need a free Withings developer app and an `https` `PUBLIC_URL`: set `DEVICES_ENABLED`,
+  `WITHINGS_ENABLED`, `WITHINGS_CLIENT_ID` and `WITHINGS_CLIENT_SECRET_FILE`. The steps are in [devices.md](docs/devices.md).
+  The server then needs to reach `wbsapi.withings.net`.
+* Test accounts cannot connect a device. The demo shows a sample Withings connection.
+* Schema step 29 adds two tables. Back up before you upgrade, as always.
+* New dependency `tzdata`: the image had no time-zone data, so imported readings would have shown in UTC time.
+
 ## 0.15.0 — 2026-10-31
 
 Version 0.15 lets people sign in with Authentik and Google on the same server, adds a choice to sign in only through them,

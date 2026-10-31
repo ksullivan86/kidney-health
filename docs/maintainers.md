@@ -249,6 +249,9 @@ A repository variable (Settings → Secrets and variables → Actions → Variab
   that tracks `:0.13` stays on 0.13.x. CHANGELOG.md, "Upgrading from 0.13", says to take a backup first.
 * **v0.15.0: not held.** No schema step; the release moves the shipped files from `:0.14` to `:0.15`. A host that tracks
   `:0.14` stays on 0.14.x. CHANGELOG.md, "Upgrading from 0.14", says to take a backup first.
+* **v0.16.0: not held.** The release runs schema step 29 at start without an automatic copy (it only adds two tables), adds
+  the `tzdata` dependency and moves the shipped files from `:0.15` to `:0.16`. A host that tracks `:0.15` stays on 0.15.x.
+  CHANGELOG.md, "Upgrading from 0.15", says to take a backup first.
 * Use it for patch tags of an older minor version (above), and only with the owner's say-so for anything else. Remove it again (or set it
   to anything but `true`) when the hold should end; the next `v*` tag then moves `:latest`, or move it
   by hand: `docker buildx imagetools create --tag ghcr.io/ksullivan86/kidney-health:latest

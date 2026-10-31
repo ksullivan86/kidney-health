@@ -26,7 +26,7 @@
   const REG = KH.settings;
 
   // Kept equal to APP_VERSION in app/main.py (tests/test_settings_ui.py).
-  const APP_VERSION = '0.15.0';
+  const APP_VERSION = '0.16.0';
 
   const A = {
     sessions: () => request('GET', '/api/me/sessions'),
@@ -756,6 +756,7 @@
     'care.invited': 'Care team invite sent', 'care.invite_cancelled': 'Care team invite cancelled', 'care.invite_answered': 'Someone answered your Care team invite',
     'care.role_changed': 'Care team role changed', 'care.plan_changed': 'Your Care helper changed your plan',
     'oidc.linked': 'Sign-in provider linked', 'oidc.unlinked': 'Sign-in provider link removed',
+    'device.connected': 'Device connected', 'device.disconnected': 'Device disconnected', 'device.sync_failed': 'Device sync stopped working',
     'test_accounts.created': 'Test account made', 'test_accounts.enabled': 'Test account turned on', 'test_accounts.disabled': 'Test account turned off',
     'test_accounts.reset': 'Test accounts reset',
   };
@@ -778,6 +779,10 @@
   const TRUST_NAME = { ask: 'Ask me before every save', conversation: 'Trust it for this conversation', always: 'Trust it always' };
   const TOKEN_REVOKED_WHY = { password_changed: 'password changed', password_reset: 'password reset', account_disabled: 'account disabled',
     account_deleted: 'account deleted', admin: 'revoked by an admin', auth_mode_changed: 'sign-in mode changed' };
+  // Connected devices (design note 27): the provider's name and the short error code in words.
+  const DEVICE_NAME = { withings: 'Withings' };
+  const DEVICE_ERROR = { auth: 'it needs you to connect again', rate_limited: 'too many requests, paused for an hour',
+    unreachable: 'it could not be reached', provider_error: 'it did not answer as expected' };
   function eventDetail(ev) {
     const d = ev.details || {};
     if (ev.action === 'settings.changed') return `${(REG.BY_KEY[d.key] || {}).label || d.key}: ${JSON.stringify(d.old)} → ${JSON.stringify(d.new)}${d.env ? ` (first value from ${d.env})` : ''}`;
@@ -811,6 +816,12 @@
     if (ev.action === 'oidc.unlinked') return { self: 'by the person', admin: 'by an admin' }[d.via] || '';
     if (ev.action === 'login.failed' && d.via === 'oidc') return 'with the sign-in provider';
     if (ev.action === 'login.succeeded' && d.via === 'oidc') return 'with the sign-in provider';
+    if (ev.action === 'device.connected') return DEVICE_NAME[d.provider] || d.provider || '';
+    if (ev.action === 'device.disconnected') {
+      const gone = (d.deleted_weights || 0) + (d.deleted_readings || 0);
+      return [DEVICE_NAME[d.provider] || d.provider || '', gone ? `${gone === 1 ? '1 reading' : `${gone} readings`} deleted` : 'readings kept'].filter(Boolean).join(', ');
+    }
+    if (ev.action === 'device.sync_failed') return `${DEVICE_NAME[d.provider] || d.provider || ''}: ${DEVICE_ERROR[d.error] || d.error || ''}`;
     if (ev.action === 'passkey.counter_went_back') return 'a passkey answered like an old copy of itself, so the sign-in was refused';
     if ((ev.action === 'share.code_created' || ev.action === 'share.accepted') && KH.sharing && d.areas) return KH.sharing.areasText(d.areas);
     if (ev.action === 'share.ended') return { owner: 'you removed them', grantee: 'they left', admin: 'an admin ended it', time: 'on the end date you chose' }[d.by] || '';
@@ -1909,6 +1920,7 @@
     ['Phone shortcuts', ['push.enabled']],
     ['Tokens for outside apps and phone shortcuts', ['tokens.allow_never_expiring']],
     ['Care team', ['sharing.enabled']],
+    ['Connected devices', ['devices.enabled', 'devices.sync_hours']],
     // Design note 26: not in the demo (it has no accounts of its own to make).
     ['Test accounts', ['test_accounts.enabled', 'test_accounts.ai']],
     ['Activity log', ['audit.retention_days']],
@@ -2141,6 +2153,18 @@
   }
 
   // ---- About this server
+  function deviceRows(dev) {
+    if (!dev) return [];
+    const rows = [['Connected devices', dev.enabled ? 'On' : 'Off (DEVICES_ENABLED)']];
+    for (const p of dev.providers || []) {
+      const people = Object.values(p.connected || {}).reduce((n, x) => n + x, 0);
+      const waiting = (p.connected || {}).needs_reconnect || 0;
+      rows.push([p.name, p.enabled
+        ? `client ${p.client_id || 'not set'}, secret ${p.secret}, return address ${p.redirect_uri || 'needs PUBLIC_URL'}, ${people === 1 ? '1 person' : `${people} people`} connected${waiting ? ` (${waiting} must connect again)` : ''}`
+        : `Off (WITHINGS_ENABLED)${people ? `, ${people === 1 ? '1 person' : `${people} people`} still connected` : ''}`]);
+    }
+    return rows;
+  }
   async function loadServerAbout() {
     const box = $('#set-server-about');
     if (!box) return;
@@ -2172,6 +2196,8 @@
       // Sign-in with a provider (design note 24 §10): the connection, never the client secret.
       ['Single sign-on', oidc.enabled ? `On, ${oidcProviders.length === 1 ? 'one provider' : `${oidcProviders.length} providers`}${oidc.only ? ', the only way in (OIDC_ONLY)' : ''}` : 'Off (OIDC_ENABLED)'],
       ...oidcRows,
+      // Connected devices (design note 27): each provider's app, never its client secret.
+      ...deviceRows(a.devices),
       proxy.ignored_identity_headers ? ['Identity headers ignored', `${proxy.ignored_identity_headers} from untrusted peers (check TRUSTED_PROXIES)`] : null,
       ['Last backup', a.last_backup_at ? fmtDateTime(a.last_backup_at) : 'None recorded (python -m app.admin backup)'],
       a.pre_v3_backup ? ['Pre-v0.3 backup', `${a.pre_v3_backup.path} (${fmtBytes(a.pre_v3_backup.bytes)}), deleted after ${fmtDate(a.pre_v3_backup.deleted_after)}`] : null,
@@ -2272,6 +2298,17 @@
     sec.hidden = authMode() === 'none' || !KH.sharing;
     if (!sec.hidden) clear($('#set-care-body')).append(KH.sharing.block());
   }
+  // Settings → Connected devices (js/views/devices.js, design note 27): shown only while the server has it on.
+  let devicesDraw = 0;
+  async function renderConnected() {
+    const sec = $('#set-devices');
+    if (!sec || !KH.devices) return;
+    const ticket = ++devicesDraw;
+    const show = await KH.devices.render($('#set-devices-body'));
+    if (ticket !== devicesDraw || sec.hidden === !show) return;
+    sec.hidden = !show;
+    renderNav();
+  }
   function renderNav() {
     const nav = $('#settings-nav');
     clear(nav);
@@ -2329,6 +2366,7 @@
     if (KH.guidance) KH.guidance.renderSettings().catch((err) => console.warn('Meal guidance settings:', err)); // js/views/guidance.js
     renderAi();
     renderAssistant().catch((err) => console.warn('Assistant access:', err));
+    renderConnected().catch((err) => console.warn('Connected devices:', err));
     renderAbout();
     cache.myKeys = null;
     renderFood();

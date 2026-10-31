@@ -33,6 +33,10 @@ Keys (defaults in brackets):
   ``OIDC_SCOPES`` [``openid email profile``], ``OIDC_ALLOW_PRIVATE_ISSUER`` [false]; ``OIDC_PROVIDERS`` (named providers, each with
   ``OIDC_<NAME>_*``, at most four in all) and ``OIDC_ONLY`` [false] (note 24 §13). Env only: what the server connects to is never
   changed at run time. Who may sign in is in the settings registry (``auth.oidc.*``). On needs ``AUTH_MODE=local`` and ``PUBLIC_URL``.
+* Connected devices (design note 27; :class:`WithingsEnv`, ``Settings.withings``): ``WITHINGS_ENABLED`` [false],
+  ``WITHINGS_CLIENT_ID``, ``WITHINGS_CLIENT_SECRET_FILE`` (only as a file: ``WITHINGS_CLIENT_SECRET`` is refused). Env only, like
+  OIDC. On needs ``PUBLIC_URL`` (Withings sends people back to ``<PUBLIC_URL>/api/devices/withings/callback``). The switches
+  ``DEVICES_ENABLED`` and ``DEVICES_SYNC_HOURS`` are settings (``devices.*``).
 * Test accounts (design note 26): ``TEST_ACCOUNT_PASSWORD_FILE`` (only as a file: ``TEST_ACCOUNT_PASSWORD`` is refused). The file
   is read when the accounts are made or reset. The switches ``TEST_ACCOUNT_ENABLED`` and ``TEST_ACCOUNT_AI`` are settings
   (``test_accounts.*``).
@@ -358,6 +362,54 @@ class OidcEnv:
         return first + tuple(self.providers)
 
 
+@dataclass(frozen=True)
+class WithingsEnv:
+    """The server's Withings developer app (design note 27): ``WITHINGS_ENABLED``, ``WITHINGS_CLIENT_ID`` and
+    ``WITHINGS_CLIENT_SECRET_FILE``. The secret is never returned by any API; Server administration says only "set"."""
+
+    enabled: bool = False
+    client_id: str | None = None
+    client_secret: str | None = field(default=None, repr=False)
+
+    @property
+    def secret_set(self) -> bool:
+        return bool(self.client_secret)
+
+    @property
+    def configured(self) -> bool:
+        return bool(self.enabled and self.client_id and self.client_secret)
+
+
+_WITHINGS_CLIENT_ID = re.compile(r"^[A-Za-z0-9._-]{1,128}$")
+
+
+def load_withings_env(env: Mapping[str, str]) -> WithingsEnv:
+    if env.get("WITHINGS_CLIENT_SECRET"):
+        raise ConfigError("Give the Withings client secret as a file: put it in a file and set WITHINGS_CLIENT_SECRET_FILE to its "
+                          "path. Remove WITHINGS_CLIENT_SECRET.")
+    value, _, _ = read_secret({k: v for k, v in env.items() if k == "WITHINGS_CLIENT_SECRET_FILE"}, "WITHINGS_CLIENT_SECRET")
+    return WithingsEnv(enabled=parse_bool(env, "WITHINGS_ENABLED", False), client_id=_raw(env, "WITHINGS_CLIENT_ID"),
+                       client_secret=(value or "").strip() or None)
+
+
+def _validate_withings(s: "Settings") -> list[str]:
+    w = s.withings
+    if not w.enabled:
+        return ["WITHINGS_CLIENT_ID set without WITHINGS_ENABLED=true: Withings stays off."] if w.client_id else []
+    if not w.client_id or not _WITHINGS_CLIENT_ID.match(w.client_id):
+        raise ConfigError("WITHINGS_ENABLED=true needs WITHINGS_CLIENT_ID: the client id of your Withings developer app "
+                          "(letters, digits, dots, dashes and underscores; see docs/devices.md).")
+    if not w.client_secret:
+        raise ConfigError("WITHINGS_ENABLED=true needs WITHINGS_CLIENT_SECRET_FILE: a file holding your Withings app's client "
+                          "secret (see docs/devices.md).")
+    if not s.public_url:
+        raise ConfigError("WITHINGS_ENABLED=true needs PUBLIC_URL: Withings sends people back to "
+                          "<PUBLIC_URL>/api/devices/withings/callback.")
+    if urlsplit(s.public_url).scheme != "https":
+        return ["WITHINGS_ENABLED=true with a PUBLIC_URL that is not https: Withings only accepts an https return address."]
+    return []
+
+
 def check_oidc_issuer(raw: str, var: str = "OIDC_ISSUER") -> str:
     """``OIDC_ISSUER``: ``https://`` with a host (plain ``http://`` only for a loopback host, for tests), no query, no fragment."""
     try:
@@ -523,6 +575,8 @@ class Settings:
 
     # Sign-in with an OpenID Connect provider (design note 24); off for Settings built in code.
     oidc: OidcEnv = field(default_factory=OidcEnv, repr=False)
+    # Connected devices (design note 27): the server's Withings developer app; off for Settings built in code.
+    withings: WithingsEnv = field(default_factory=WithingsEnv, repr=False)
 
     # Secrets at rest (note 07 §4.12). ``secret_key`` holds the raw SECRET_KEY text (one key per
     # line); None means "use or create $DATA_DIR/secret.key" (see app.crypto.load_keyring).
@@ -587,7 +641,7 @@ class Settings:
         """Every secret value loaded from the environment, for the log-redaction filter."""
         values = [self.usda_api_key, self.app_password, self.admin_password, self.trusted_proxy_secret, self.ai.api_key,
                   self.ai.cloud.api_key, self.ai.stt_api_key, self.oidc.client_secret,
-                  *(p.client_secret for p in self.oidc.providers)]
+                  *(p.client_secret for p in self.oidc.providers), self.withings.client_secret]
         return [v for v in values if v] + self.secret_key_lines()
 
     def validate(self) -> tuple[str, ...]:
@@ -906,6 +960,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         log_level=_choice(env, "LOG_LEVEL", "INFO", LOG_LEVELS, upper=True),
         ai=load_ai_env(env),
         oidc=load_oidc_env(env),
+        withings=load_withings_env(env),
     )
     extra: list[str] = []
     if env.get("FORWARDED_ALLOW_IPS"):
@@ -999,6 +1054,7 @@ def _validate(s: Settings) -> list[str]:
                 "can read and change all data. Set PUBLIC_URL and use HTTPS, or switch to AUTH_MODE=local."
             )
     warnings += _validate_oidc(s)
+    warnings += _validate_withings(s)
     if "*" in s.allowed_hosts:
         warnings.append("ALLOWED_HOSTS contains '*': the Host check (DNS-rebinding defence) is switched off.")
     if s.docs_enabled:

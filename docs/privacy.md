@@ -204,6 +204,13 @@ preferences (a like, "less often" or "not for me" for a food or a food group, or
 else of them), limited to 30 changes a day per token; each change is in the person's activity list with the token's name, the
 food row is marked "from your assistant", and it is in the export and deleted with the account like any preference.
 
+If the admin sets up Withings and a person connects their Withings account ([devices.md](devices.md)), the server keeps that
+person's Withings sign-in, encrypted with the server's secret key, and fetches their weight, blood pressure and pulse every few
+hours. The server sends Withings nothing but the sign-in and the request for measurements. The readings are ordinary weights and
+readings marked "from Withings": in the export, deleted with the account, never sent to an AI provider. The server also keeps a
+list of which Withings measures it has already looked at, so none is fetched twice; it holds no values and is deleted with the
+account. Disconnect deletes the sign-in at once.
+
 ## Who can see it
 
 * **You** see everything of yours, and can download it all (Settings → Account → Export) as a

@@ -867,7 +867,8 @@
               "manual",
               "apple_health",
               "import",
-              "shortcut"
+              "shortcut",
+              "withings"
             ],
             "title": "Source",
             "type": "string"
@@ -1571,6 +1572,64 @@
         "title": "Closest",
         "type": "object"
       },
+      "ConnectionOut": {
+        "properties": {
+          "connected_at": {
+            "title": "Connected At",
+            "type": "string"
+          },
+          "imported": {
+            "$ref": "#/components/schemas/ImportedCounts"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "last_success_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Success At"
+          },
+          "last_sync_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sync At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "connected_at",
+          "last_sync_at",
+          "last_success_at",
+          "last_error",
+          "imported"
+        ],
+        "title": "ConnectionOut",
+        "type": "object"
+      },
       "ConsentBody": {
         "additionalProperties": false,
         "properties": {
@@ -2196,6 +2255,54 @@
           "readings"
         ],
         "title": "DeletedRows",
+        "type": "object"
+      },
+      "DevicesOut": {
+        "properties": {
+          "can_connect": {
+            "title": "Can Connect",
+            "type": "boolean"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "providers": {
+            "items": {
+              "$ref": "#/components/schemas/ProviderOut"
+            },
+            "title": "Providers",
+            "type": "array"
+          },
+          "sync_hours": {
+            "title": "Sync Hours",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "enabled",
+          "can_connect",
+          "sync_hours",
+          "providers"
+        ],
+        "title": "DevicesOut",
+        "type": "object"
+      },
+      "DisconnectOut": {
+        "properties": {
+          "removed": {
+            "$ref": "#/components/schemas/ImportedCounts"
+          },
+          "revoked": {
+            "title": "Revoked",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "removed",
+          "revoked"
+        ],
+        "title": "DisconnectOut",
         "type": "object"
       },
       "EgfrResult": {
@@ -4134,6 +4241,24 @@
           "notes"
         ],
         "title": "HypoOptionsResponse",
+        "type": "object"
+      },
+      "ImportedCounts": {
+        "properties": {
+          "readings": {
+            "title": "Readings",
+            "type": "integer"
+          },
+          "weights": {
+            "title": "Weights",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "weights",
+          "readings"
+        ],
+        "title": "ImportedCounts",
         "type": "object"
       },
       "Insight": {
@@ -8776,6 +8901,48 @@
         "title": "ProteinRoom",
         "type": "object"
       },
+      "ProviderOut": {
+        "properties": {
+          "available": {
+            "title": "Available",
+            "type": "boolean"
+          },
+          "connection": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ConnectionOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "what": {
+            "items": {
+              "type": "string"
+            },
+            "title": "What",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "what",
+          "available",
+          "connection"
+        ],
+        "title": "ProviderOut",
+        "type": "object"
+      },
       "PushAdded": {
         "properties": {
           "readings": {
@@ -9921,6 +10088,19 @@
         "title": "ShoppingList",
         "type": "object"
       },
+      "StartOut": {
+        "properties": {
+          "url": {
+            "title": "Url",
+            "type": "string"
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "title": "StartOut",
+        "type": "object"
+      },
       "SuggestedRange": {
         "additionalProperties": {
           "type": "integer"
@@ -10544,6 +10724,68 @@
           "prominent"
         ],
         "title": "SymptomRedFlag",
+        "type": "object"
+      },
+      "SyncCounts": {
+        "properties": {
+          "added": {
+            "$ref": "#/components/schemas/ImportedCounts"
+          },
+          "already_there": {
+            "title": "Already There",
+            "type": "integer"
+          },
+          "left_out": {
+            "title": "Left Out",
+            "type": "integer"
+          },
+          "skipped": {
+            "title": "Skipped",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "added",
+          "already_there",
+          "skipped",
+          "left_out"
+        ],
+        "title": "SyncCounts",
+        "type": "object"
+      },
+      "SyncOut": {
+        "properties": {
+          "connection": {
+            "$ref": "#/components/schemas/ConnectionOut"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SyncCounts"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "connection",
+          "result",
+          "error"
+        ],
+        "title": "SyncOut",
         "type": "object"
       },
       "TargetsUsed": {
@@ -11278,7 +11520,8 @@
               "manual",
               "apple_health",
               "import",
-              "shortcut"
+              "shortcut",
+              "withings"
             ],
             "title": "Source",
             "type": "string"
@@ -11402,7 +11645,7 @@
   "info": {
     "description": "Self-hosted food log with renal-diet and type 1 diabetes nutrient warnings, meal planning and period summaries.\n\nThis document is checked in as `docs/api/openapi.json`. `info.version` is the app's version; `info.x-api-version` is the API version, an integer that is raised only for a breaking change. Every error answer is `{\"detail\": string, ...}`; request validation is **400** with `errors`, never 422. Sign in with `POST /api/auth/login` (a cookie, see the `session` scheme); `/mcp` and `/push/v1/body` take bearer tokens.",
     "title": "Kidney Health Food Log",
-    "version": "0.15.0",
+    "version": "0.16.0",
     "x-api-version": 1
   },
   "openapi": "3.1.0",
@@ -15736,6 +15979,295 @@
         "summary": "Update Weight",
         "tags": [
           "body"
+        ]
+      }
+    },
+    "/api/devices": {
+      "get": {
+        "operationId": "devices_list_devices",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DevicesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "List Devices",
+        "tags": [
+          "devices"
+        ]
+      }
+    },
+    "/api/devices/{provider_id}": {
+      "delete": {
+        "operationId": "devices_disconnect",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider_id",
+            "required": true,
+            "schema": {
+              "const": "withings",
+              "title": "Provider Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "delete_readings",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Delete Readings",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DisconnectOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Disconnect",
+        "tags": [
+          "devices"
+        ]
+      }
+    },
+    "/api/devices/{provider_id}/callback": {
+      "get": {
+        "operationId": "devices_callback",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider_id",
+            "required": true,
+            "schema": {
+              "const": "withings",
+              "title": "Provider Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "code",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 512,
+              "title": "Code",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "State",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "error",
+            "required": false,
+            "schema": {
+              "default": "",
+              "maxLength": 200,
+              "title": "Error",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "303": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Callback",
+        "tags": [
+          "devices"
+        ]
+      }
+    },
+    "/api/devices/{provider_id}/start": {
+      "post": {
+        "operationId": "devices_start",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider_id",
+            "required": true,
+            "schema": {
+              "const": "withings",
+              "title": "Provider Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Start",
+        "tags": [
+          "devices"
+        ]
+      }
+    },
+    "/api/devices/{provider_id}/sync": {
+      "post": {
+        "operationId": "devices_sync_now",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "provider_id",
+            "required": true,
+            "schema": {
+              "const": "withings",
+              "title": "Provider Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Sync Now",
+        "tags": [
+          "devices"
         ]
       }
     },

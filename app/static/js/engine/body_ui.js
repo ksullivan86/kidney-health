@@ -273,6 +273,7 @@
     const source = row ? row.source : null;
     if (source === 'shortcut') return row.via ? `from a shortcut (${row.via})` : 'from a shortcut';
     if (source === 'apple_health') return 'from the Health app';
+    if (source === 'withings') return 'from Withings'; // a connected device (design note 27)
     if (source === 'import') return 'from a file';
     return '';
   }

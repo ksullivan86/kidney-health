@@ -59,7 +59,7 @@ Exactly **one** container may use a database. Never run two copies on the same v
 5. **Finish first-run setup** with the one-time setup code from the log ([Users and keys](users-and-keys.md)).
 6. **Invite** the other people, and decide which shared keys (USDA, AI) to offer.
 7. **Set up backups** and test a restore ([Backups](backups.md)).
-8. **Choose an update policy**: track `:0.15` or pin a verified digest ([Upgrades](upgrades.md)).
+8. **Choose an update policy**: track `:0.16` or pin a verified digest ([Upgrades](upgrades.md)).
 
 Then work through the hardening checklist for your engine ([Security](security.md);
 [operator security guide][SECDOC]).

@@ -24,7 +24,7 @@
   const KG_PER_LB = 0.45359237; // exactly: the international pound (1959), NIST SP 811 Appendix B (note 10 F7)
   const WEIGHT_CONTEXTS = ['morning', 'before_dialysis', 'after_dialysis', 'other'];
   const BLOOD_PRESSURE_CONTEXTS = ['morning', 'evening', 'before_dialysis', 'after_dialysis', 'other'];
-  const SOURCES = ['manual', 'apple_health', 'import', 'shortcut'];
+  const SOURCES = ['manual', 'apple_health', 'import', 'shortcut', 'withings']; // 'withings': a connected device (app/devices/)
   const UNITS = ['kg', 'lb'];
   // app/models.py: the project's own plausibility ranges (not clinical numbers) and the bounds on what one person can store.
   const LIMITS = {

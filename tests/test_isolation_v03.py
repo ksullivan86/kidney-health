@@ -39,6 +39,7 @@ import test_body
 import test_care_team
 import test_symptoms
 import test_test_accounts
+import test_connected_devices
 from ai_support import FakeProvider, attach, chat
 from conftest import DAY, HTTPS_URL, TestClient, add_user, find_food, sign_in
 from app.config import AiEnv
@@ -111,6 +112,11 @@ MATRIX: dict[str, tuple[str, ...]] = {
     "oidc_links": ("test_oidc.test_another_persons_link_is_404",  # sign-in with a provider, step 26 (note 24)
                    "test_oidc.test_a_provider_account_linked_to_someone_else_is_refused",
                    "test_oidc.test_deleting_the_account_deletes_its_links"),
+    "device_connections": ("test_connected_devices.test_another_persons_connection_is_404",  # connected devices, step 29 (note 27)
+                           "test_connected_devices.test_one_withings_account_belongs_to_one_person_here",
+                           "test_connected_devices.test_deleting_the_account_deletes_its_connection_and_ledger"),
+    "device_imports": ("test_connected_devices.test_the_ledger_skips_what_was_seen_and_a_deleted_reading_stays_deleted",
+                       "test_connected_devices.test_deleting_the_account_deletes_its_connection_and_ledger"),
 }
 SHARED_OR_SYSTEM = {
     "users": "the accounts themselves (admins only, tests/test_auth_coverage.py)",
@@ -128,7 +134,7 @@ MODULES = {"test_isolation": test_isolation, "test_export_delete": test_export_d
            "test_ai_chat_save": test_ai_chat_save, "test_symptoms": test_symptoms, "test_body": test_body, "test_lab_photo": test_lab_photo,
            "test_log_if_match": test_log_if_match, "test_totp": test_totp,
            "test_passkeys": test_passkeys, "test_sharing": test_sharing, "test_oidc": test_oidc, "test_care_team": test_care_team,
-           "test_test_accounts": test_test_accounts}
+           "test_test_accounts": test_test_accounts, "test_connected_devices": test_connected_devices}
 
 
 def _tables_with_people(conn: sqlite3.Connection) -> dict[str, list[str]]:

@@ -96,6 +96,9 @@ ACTIONS: set[str] = {
     "care.plan_changed",
     "oidc.linked",  # sign-in with a provider (design note 24; app/auth/oidc_api.py, admin_api.py)
     "oidc.unlinked",
+    "device.connected",  # connected devices (design note 27; app/devices/)
+    "device.disconnected",
+    "device.sync_failed",
 }
 USER_VISIBLE_ACTIONS = frozenset(
     {
@@ -138,6 +141,9 @@ USER_VISIBLE_ACTIONS = frozenset(
         "care.plan_changed",
         "oidc.linked",
         "oidc.unlinked",
+        "device.connected",
+        "device.disconnected",
+        "device.sync_failed",
     }
 )
 _ACTION = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")

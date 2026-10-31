@@ -7,6 +7,8 @@ so uvicorn must not apply them too). Tests call :func:`create_app` with their ow
 """
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import logging
 import sqlite3
 from contextlib import asynccontextmanager
@@ -32,6 +34,7 @@ from . import data_import  # POST /api/me/import: the person's own export.json (
 from . import meta  # design note 14 change 4: GET /api/meta (versions, capabilities, the nutrient registry)
 from . import sharing  # schema step 24: read-only sharing with a caregiver or dietitian (/api/me/shares, /api/shared)
 from . import feedback, test_accounts  # schema step 28: test accounts, Send feedback (/api/feedback, /api/admin/feedback)
+from .devices import api as devices_api, sync as devices_sync  # schema step 29: connected devices (/api/devices)
 from . import openapi_doc  # design note 14 change 2: stable operation ids, honest errors and security schemes in the OpenAPI document
 from .auth import bootstrap as auth_bootstrap
 from .config import DEFAULT_STATIC_DIR, ConfigError, Settings, load_settings
@@ -40,7 +43,7 @@ from .settings_store import SettingsStore, default_store
 
 logger = logging.getLogger(brand.LOGGER_NAME)
 
-APP_VERSION = "0.15.0"
+APP_VERSION = "0.16.0"
 STATIC_DIR = DEFAULT_STATIC_DIR
 
 
@@ -105,7 +108,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         finally:
             conn.close()
         logger.info("database %s ready; builtin foods: %s", settings.db_path, result.get("status"))
-        yield
+        # Design note 27: fetch from connected devices every few hours, in a worker thread (it does nothing while off).
+        devices_task = asyncio.create_task(devices_sync.loop(app))
+        try:
+            yield
+        finally:
+            devices_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await devices_task
 
     docs = settings.docs_enabled
     app = FastAPI(
@@ -121,6 +131,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     openapi_doc.install(app)  # app.openapi(): the rewritten document (docs/api/openapi.json is made from it)
     app.state.settings = settings
     app.state.settings_store = store
+    app.state.devices = devices_sync.Devices(settings)  # design note 27: the providers (tests swap in a fake Withings)
     app.add_exception_handler(RequestValidationError, security.validation_error_handler)
     auth_ctx = auth.install(app, settings, store)  # /api/auth, /api/me, /api/admin + error handler
 
@@ -154,6 +165,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(sharing.shared_router)
     app.include_router(feedback.router)
     app.include_router(feedback.admin_router)
+    app.include_router(devices_api.router)
 
     @app.get("/healthz")
     def healthz(conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:

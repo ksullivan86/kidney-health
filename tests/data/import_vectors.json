@@ -15651,13 +15651,13 @@
       0,
       "source"
      ],
-     "value": "withings"
+     "value": "fitbit"
     }
    ],
    "answer": {
     "status": 400,
     "body": {
-     "detail": "The file was not imported. weights[0].source: Input should be 'manual', 'apple_health', 'import' or 'shortcut'",
+     "detail": "The file was not imported. weights[0].source: Input should be 'manual', 'apple_health', 'import', 'shortcut' or 'withings'",
      "kind": "weights",
      "index": 0
     }
@@ -17480,7 +17480,7 @@
    "answer": {
     "status": 400,
     "body": {
-     "detail": "The file was not imported. blood_pressures[0].source: Input should be 'manual', 'apple_health', 'import' or 'shortcut'",
+     "detail": "The file was not imported. blood_pressures[0].source: Input should be 'manual', 'apple_health', 'import', 'shortcut' or 'withings'",
      "kind": "blood_pressures",
      "index": 0
     }

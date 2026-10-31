@@ -382,7 +382,7 @@ def refusals() -> list[tuple[str, list[dict[str, Any]]]]:
         ("a weight without kg", s("weights.0.kg", DELETE)),
         ("a weight with another context", s("weights.0.context", "evening")),
         ("a weight with a context of the wrong kind", s("weights.0.context", 3)),
-        ("a weight with another source", s("weights.0.source", "withings")),
+        ("a weight with another source", s("weights.0.source", "fitbit")),
         ("a weight without a source", s("weights.0.source", DELETE)),
         ("a typed weight that keeps a key", [edit("weights.0.source_key", "k1")]),
         ("a weight in the future", s("weights.0.date", "2999-01-01")),

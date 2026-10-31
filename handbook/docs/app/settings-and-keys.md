@@ -24,6 +24,7 @@ can be shared by your admin or added by you ([design note 07][NOTE07]).
 |---|---|
 | **Account** | your name, user name, **Change password**, **Two-step sign-in**, **Passkeys**, **Signed-in devices**, **Your data** (export, import, **Phone shortcuts** for an iPhone Shortcut that sends your weight and blood pressure: [Weight and blood pressure](weight-and-blood-pressure.md#from-a-phone-shortcut); delete account), your recent sign-in activity, **Sign out** |
 | **Care team** | family, a caregiver or a dietitian on your server who can look at your log (**Viewer**) or also plan your meals and use your shopping list (**Care helper**); invites for you; the Care teams you are on ([Care team](#sharing)) |
+| **Connected devices** (when your admin sets it up) | **Connect Withings** so the server fetches your weight, blood pressure and pulse; **Sync now**; **Disconnect** ([Weight and blood pressure](weight-and-blood-pressure.md#from-withings)) |
 | **Preferences** | theme (match device, light, dark), the day your week starts on, **Units for lab results** (US or SI: the unit offered first) |
 | **Meal guidance** | on or off, carbohydrate tolerance, low-treatment amount, foods to leave out, your "Not for me" foods ([Meal guidance](guidance.md)) |
 | **Food data** | your own USDA key, the shared key's status and today's remaining lookups, **Send barcodes I scan to Open Food Facts** ([Barcodes and label photos](barcode-and-photo.md)) |

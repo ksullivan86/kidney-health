@@ -34,9 +34,9 @@ name: kidney-health
 services:
   kidney-health:
     # Track the minor release (security fixes, no breaking changes), never :latest on machines you
-    # care about; or pin a verified digest: ghcr.io/ksullivan86/kidney-health:0.15.0@sha256:...
+    # care about; or pin a verified digest: ghcr.io/ksullivan86/kidney-health:0.16.0@sha256:...
     # (scripts/verify-image.sh checks the signature and prints the digest).
-    image: ghcr.io/ksullivan86/kidney-health:0.15
+    image: ghcr.io/ksullivan86/kidney-health:0.16
     # Build locally instead (context is the repository root):
     # build:
     #   context: ..
@@ -134,6 +134,13 @@ services:
       # The test accounts' one password is a file secret only (TEST_ACCOUNT_PASSWORD is refused; docs/test-the-full-app.md):
       # TEST_ACCOUNT_PASSWORD_FILE: /run/secrets/test_account_password   # and add test_account_password below
       AUTH_REQUIRE_TWO_STEP_ADMINS: ${AUTH_REQUIRE_TWO_STEP_ADMINS:-}
+      # Connected devices (docs/devices.md): each person's own Withings scale or blood pressure monitor. Needs PUBLIC_URL.
+      # The Withings client secret is a file secret only (WITHINGS_CLIENT_SECRET is refused):
+      # WITHINGS_CLIENT_SECRET_FILE: /run/secrets/withings_client_secret   # and add withings_client_secret below
+      DEVICES_ENABLED: ${DEVICES_ENABLED:-}
+      DEVICES_SYNC_HOURS: ${DEVICES_SYNC_HOURS:-}
+      WITHINGS_ENABLED: ${WITHINGS_ENABLED:-}
+      WITHINGS_CLIENT_ID: ${WITHINGS_CLIENT_ID:-}
       HANDBOOK_PUBLIC_URL: ${HANDBOOK_PUBLIC_URL:-}
       PASSWORD_BREACH_CHECK: ${PASSWORD_BREACH_CHECK:-}
       # Sign in with Authentik, Google or another OpenID Connect provider (docs/accounts.md). Off unless OIDC_ENABLED=true;
@@ -179,6 +186,7 @@ services:
       # - oidc_authentik_secret
       # - oidc_google_secret
       # - test_account_password
+      # - withings_client_secret
 
     volumes:
       # Named volume: starts empty and is populated from the image's /data (owner 10001, group 0,
@@ -223,6 +231,9 @@ secrets:
   #   file: ./secrets/oidc_authentik_secret
   # oidc_google_secret:
   #   file: ./secrets/oidc_google_secret
+  #   x-podman.relabel: Z
+  # withings_client_secret:             # only for Withings (WITHINGS_ENABLED; docs/devices.md)
+  #   file: ./secrets/withings_client_secret
   #   x-podman.relabel: Z
   # test_account_password:              # only for test accounts (TEST_ACCOUNT_ENABLED; docs/test-the-full-app.md)
   #   file: ./secrets/test_account_password
