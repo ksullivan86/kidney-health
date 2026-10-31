@@ -93,6 +93,7 @@ class UserPatch(_Body):
     role: Literal["admin", "user"] | None = None
     status: Literal["active", "disabled"] | None = None
     can_use_shared: bool | None = None
+    can_choose_ai: bool | None = None  # design note 32: may choose the server's local or cloud AI per feature
     must_change_password: bool | None = None
     display_name: str | None = Field(default=None, max_length=200)
 

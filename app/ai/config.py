@@ -636,6 +636,9 @@ class Resolved:
     # local AI's answer fails the schema or the app's rules (see app.ai.routes.run_call). None for every other route, for a person
     # who uses their own provider, and when no cloud provider is usable (the feature then behaves as ``local``).
     fallback: "Resolved | None" = None
+    # Design note 32: ``local`` or ``cloud`` when the person's own choice of the server's AI decided this feature (only while the server
+    # switch is on and an admin ticked them; app/ai/route_choice.py), None when the admin's route did.
+    chosen: str | None = None
 
     @property
     def ok(self) -> bool:
@@ -654,6 +657,8 @@ MESSAGES = {
     "no_local_provider": "This feature is set to use a local AI, and none is set up on this server. An admin can set one in Server administration → AI providers.",
     "no_cloud_provider": "This feature is set to use a cloud AI, and your admin has not chosen one. An admin can choose it in Server administration → AI providers.",
     "local_not_private": "The local AI is not on a private address (AI_PRIVATE_HOSTS) any more, so nothing is sent to it.",
+    "chosen_role_missing": "You chose one of the server's AIs for this, and it is not set up any more, so it is off. Choose again in "
+    "Settings → AI features.",
 }
 
 

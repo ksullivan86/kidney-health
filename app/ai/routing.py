@@ -51,6 +51,12 @@ Rules that keep "local" local:
 Consent, quota, the AI activity log and "What will be sent?" all use the provider the feature resolves to, so a
 feature that moves to another provider asks for consent again for that provider.
 
+**A person's own choice** (:mod:`app.ai.route_choice`, note 32): while the server switch ``ai.person_route_choice`` is on and an
+admin ticked the person (``users.can_choose_ai``), the person may pick, per feature, the shared provider holding the role ``local``
+or ``cloud`` instead of the admin's route. It is read here, after ``off`` (off for everyone), after the local-only rule (``labs``
+is never chosen) and after a person's own provider (their own provider wins), and it never has a fallback. Both checks are made
+from the database on every resolution, so taking the privilege away or turning the switch off counts from the next request.
+
 **Tier 2, the privacy filter** (:mod:`app.ai.privacy_filter`, note 31) adds to these rules and never replaces them: every
 provider this resolves that is not pinned to the private network gets the account's known names
 (``ProviderConfig.privacy_terms``), and the client filters every request to it. Nothing here changes because of the filter:
@@ -69,7 +75,7 @@ from ..crypto import InvalidToken, Keyring
 from ..db import get_meta, set_meta, table_exists
 from ..settings_store import SettingLocked, SettingsStore
 from . import config as K
-from . import privacy_filter
+from . import privacy_filter, route_choice
 from .netpolicy import NetPolicy, PolicyError, is_private_host, parse_base_url
 
 log = logging.getLogger(f"{brand.LOGGER_NAME}.ai")
@@ -210,7 +216,11 @@ def _resolve_feature(conn: sqlite3.Connection, store: SettingsStore, keyring: Ke
     route = str(store.get(conn, route_key(feature)))
     if route == "off" or (feature in LOCAL_ONLY and route != "local"):  # a local-only feature is local or off, nothing in between
         return K.Resolved(None, None, "feature_off", feature=feature, route="off")
-    if feature not in LOCAL_ONLY and (str(prefs.get("provider") or "auto") == "own" or route == "any"):
+    own = str(prefs.get("provider") or "auto") == "own"
+    # Note 32: the person's own choice of the server's local or cloud AI. None unless the switch is on and an admin ticked them; never
+    # read for a local-only feature, and a person's own provider wins over it.
+    chosen = None if feature in LOCAL_ONLY or own else route_choice.choice_for(conn, store, user_id, feature)
+    if feature not in LOCAL_ONLY and (own or (route == "any" and chosen is None)):
         # A person's own provider is their choice; "any" is the rule from before routing existed.
         resolved = K.resolve(conn, store, keyring, settings, user_id=user_id, can_use_shared=can_use_shared, require_opt_in=require_opt_in)
         resolved.feature, resolved.route = feature, route
@@ -221,24 +231,25 @@ def _resolve_feature(conn: sqlite3.Connection, store: SettingsStore, keyring: Ke
             return resolved
         return _holding(conn, store, settings, policy, resolved)
     if not K.shared_rows(conn):
-        return K.Resolved(None, None, "not_configured", feature=feature, route=route)
+        return K.Resolved(None, None, "not_configured", feature=feature, route=route, chosen=chosen)
     if not can_use_shared:
-        return K.Resolved(None, None, "not_allowed", feature=feature, route=route)
+        return K.Resolved(None, None, "not_allowed", feature=feature, route=route, chosen=chosen)
     # ``local_then_cloud`` starts on the local AI, exactly as ``local`` does (same reasons when there is none); the cloud AI is only
-    # looked up afterwards, as the second call's provider.
-    fallback_wanted = route == FALLBACK_ROUTE and feature in FALLBACK_FEATURES
-    role = "local" if route == FALLBACK_ROUTE else route
+    # looked up afterwards, as the second call's provider. A person's choice is one AI: never a fallback.
+    fallback_wanted = chosen is None and route == FALLBACK_ROUTE and feature in FALLBACK_FEATURES
+    role = chosen or ("local" if route == FALLBACK_ROUTE else route)
     row = role_row(conn, store, settings, role)
     if row is None:
-        return K.Resolved(None, None, f"no_{role}_provider", feature=feature, route=route)
+        # A chosen AI that is gone leaves the feature off for this person: it never moves to the other AI on its own.
+        return K.Resolved(None, None, "chosen_role_missing" if chosen else f"no_{role}_provider", feature=feature, route=route, chosen=chosen)
     if not K.usable(row):
-        return K.Resolved(row, None, "provider_disabled", feature=feature, route=route)
+        return K.Resolved(row, None, "provider_disabled", feature=feature, route=route, chosen=chosen)
     try:
         cfg = K.to_config(row, keyring, settings, user_id=user_id)
     except InvalidToken:
         log.warning("the key of shared AI provider %s cannot be decrypted with the current SECRET_KEY; set it again", row["id"])
-        return K.Resolved(row, None, "provider_disabled", feature=feature, route=route)
-    held = _holding(conn, store, settings, policy, K.Resolved(row, cfg, None, feature=feature, route=route))
+        return K.Resolved(row, None, "provider_disabled", feature=feature, route=route, chosen=chosen)
+    held = _holding(conn, store, settings, policy, K.Resolved(row, cfg, None, feature=feature, route=route, chosen=chosen))
     if feature in LOCAL_ONLY and held.cfg is not None and not (held.role == "local" and held.cfg.local_only):
         # Belt and braces: whatever the settings say, a local-only feature is never served by a provider that is not pinned to the private network.
         return K.Resolved(row, None, "local_not_private", feature=feature, route=route, role=held.role)
@@ -270,7 +281,8 @@ def _holding(conn: sqlite3.Connection, store: SettingsStore, settings: Settings,
     resolved.role = role
     if role == "local":
         if not is_private(resolved.row, policy):
-            return K.Resolved(resolved.row, None, "local_not_private", feature=resolved.feature, route=resolved.route, role=role)
+            return K.Resolved(resolved.row, None, "local_not_private", feature=resolved.feature, route=resolved.route, role=role,
+                              chosen=resolved.chosen)
         resolved.cfg = dataclasses.replace(resolved.cfg, local_only=True)
     return resolved
 
@@ -297,6 +309,7 @@ _MISSING = {
     "no_cloud_provider": "Needs a cloud AI, which your admin has not chosen, so it is off.",
     "local_not_private": "Its local AI is not on a private address any more, so it is off.",
     "feature_off": "Switched off by your admin.",
+    "chosen_role_missing": "You chose an AI that is not set up on this server any more, so it is off. Choose again below.",
 }
 
 
@@ -310,16 +323,17 @@ def runs_on_text(resolved: K.Resolved) -> str:
         if resolved.feature in LOCAL_ONLY and resolved.reason in ("no_local_provider", "not_configured"):
             return LABS_NEEDS_LOCAL
         return _MISSING.get(resolved.reason or "") or K.MESSAGES.get(resolved.reason or "", "Not available.")
+    mine = " You chose this." if resolved.chosen else ""
     if resolved.role == "local":
         fallback = resolved.fallback.cfg if resolved.fallback is not None else None
         if fallback is not None:  # local_then_cloud with a usable cloud AI (tier 3)
             return f"Runs on your local AI ({cfg.host}); if its answer fails the app's checks, on the cloud AI ({fallback.host})."
-        return f"Runs on your local AI ({cfg.host})."
+        return f"Runs on your local AI ({cfg.host}).{mine}"
     if resolved.role == "own":
         return f"Runs on your own AI provider, {cfg.label} ({cfg.host}), outside your network."
     if resolved.role == "cloud":
-        return f"Runs on {cfg.label} ({cfg.host}), a cloud AI outside your network."
-    return f"Runs on {cfg.label} ({cfg.host})."
+        return f"Runs on {cfg.label} ({cfg.host}), a cloud AI outside your network.{mine}"
+    return f"Runs on {cfg.label} ({cfg.host}).{mine}"
 
 
 def provider_summary(cfg: Any) -> dict[str, Any]:
@@ -334,7 +348,7 @@ def route_view(conn: sqlite3.Connection, user_id: int, feature: str, resolved: K
     cfg = resolved.cfg
     out: dict[str, Any] = {
         "feature": feature, "label": LABEL[feature], "purpose": PURPOSE[feature], "route": resolved.route,
-        "role": resolved.role, "available": cfg is not None, "reason": resolved.reason,
+        "role": resolved.role, "chosen": resolved.chosen, "available": cfg is not None, "reason": resolved.reason,
         "message": K.MESSAGES.get(resolved.reason) if resolved.reason else None,
         "text": runs_on_text(resolved), "runs_on": None if cfg is None else provider_summary(cfg),
     }

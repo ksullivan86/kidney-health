@@ -723,6 +723,24 @@ AiStructuredRoute = Literal["local", "cloud", "off", "any", "local_then_cloud"]
 # `any` are refused here, whoever asks and whatever the environment says.
 AiLocalOnlyRoute = Literal["local", "off"]
 AiProviderId = Annotated[int, Field(ge=0, le=1_000_000_000)]
+# Design note 32: a person the admin ticked ("May choose the server's local or cloud AI", users.can_choose_ai) may pick, per
+# feature, the server's local AI or its cloud AI instead of the admin's route, while the server switch is on. "default" keeps the
+# admin's route. Lab report photos have no field: they stay local or off for everyone (the model refuses "labs").
+AiPersonRoute = Literal["default", "local", "cloud"]
+
+
+class AiRouteChoice(BaseModel):
+    """The person's choice per feature (Settings → AI features). Written only through ``PUT /api/me/ai/route-choice``, which
+    checks the server switch and the person's privilege; app/ai/route_choice.py ignores it whenever either is missing."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    photos: AiPersonRoute = "default"
+    meal_ideas: AiPersonRoute = "default"
+    describe: AiPersonRoute = "default"
+    chat: AiPersonRoute = "default"
+    recipes: AiPersonRoute = "default"
+
 
 register(
     SettingDef(
@@ -813,13 +831,33 @@ register(
         label="The cloud AI (shared provider id)",
         help="The shared provider that runs outside your network (0: none). Set it in Server administration → AI providers, not here.",
     ),
+    SettingDef(
+        key="ai.person_route_choice",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="AI_PERSON_ROUTE_CHOICE_ENABLED",
+        label="Let chosen people pick the server's local or cloud AI",
+        help="Off by default. When on, a person you tick in Server administration → Users (May choose the server's local or cloud "
+        "AI) can choose, for each AI feature, the server's local AI or its cloud AI in Settings → AI features. A feature you "
+        "switched off stays off, and lab report photos always stay on the local AI. Off: everyone uses your routing.",
+    ),
+    SettingDef(
+        key="ai.route_choice",
+        model=AiRouteChoice,
+        default=AiRouteChoice(),
+        scope="user",
+        label="Which of the server's AIs each feature uses for me",
+        help="photos, meal_ideas, describe, chat and recipes: default (your admin's choice), local or cloud. Counts only when your "
+        "admin lets you choose.",
+    ),
 )
 NO_SIGNIN_ENV_ONLY.update(
     {"ai.enabled", "ai.user_keys_allowed", "ai.allow_user_base_url", "ai.shared_daily_limit", "ai.max_concurrency",
      "ai.audit_retention_days", "ai.vision_plate_enabled", "ai.vision_allow_agent", "ai.chat_enabled", "ai.voice_enabled",
      "ai.allow_trusted_saves",
      "ai.route.photos", "ai.route.meal_ideas", "ai.route.describe", "ai.route.chat", "ai.route.labs", "ai.route.recipes",
-     "ai.recipe_steps", "ai.route.local_provider", "ai.route.cloud_provider"}
+     "ai.recipe_steps", "ai.route.local_provider", "ai.route.cloud_provider", "ai.person_route_choice"}
 )
 
 

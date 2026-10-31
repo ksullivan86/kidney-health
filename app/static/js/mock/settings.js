@@ -53,6 +53,8 @@
       for (const [key, value] of Object.entries(body)) {
         const def = this._settingDef(key);
         if (admin ? !S.adminEditable(def) : !S.userEditable(def)) fail(403, admin ? `${key} is a personal setting` : `${key} can only be changed by an admin`);
+        // Design note 32 (app/auth/me.py): a person's choice of the server's local or cloud AI goes only through PUT /api/me/ai/route-choice.
+        if (!admin && key === 'ai.route_choice') fail(403, `${key} is changed in Settings → AI features (PUT /api/me/ai/route-choice).`);
         if (def.env && st.env[def.env] != null && String(st.env[def.env]).trim() !== '') fail(409, `${key} is set by the server (${def.env})`, { locked_by_env: def.env });
         if (value === null) { writes.push([key, null]); continue; }
         const r = S.validate(def, value);
