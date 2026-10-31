@@ -1,6 +1,6 @@
 # privacy-filter progress
 
-Status: in progress (full suite running)
+Status: complete
 
 Task: release 0.20 feature, the privacy filter (ROADMAP "Privacy tiers", tier 2). Rule-based, standard library, runs on
 every request to a cloud AI, never on the local AI. Design note: `docs/dev/research/31-privacy-filter.md`.
@@ -24,8 +24,13 @@ every request to a cloud AI, never on the local AI. Design note: `docs/dev/resea
 - Checks: ruff clean; node --check ai.js; run_vectors exit 0; gen_openapi --check exit 0; build_handbook --check ok;
   mkdocs --strict ok; AI test files + handbook tests 756 passed.
 
-## Next
-1. Full suite result (scratch `pf/full.txt`), fix anything, then mark complete.
+- Full suite: 7257 passed, 2 skipped, 1 failed (test_ai_chat_preference: a 19-digit food id in a tool error now reaches the cloud
+  as `[ID_1]`, which is the filter working); test updated, that file 42 passed. The worker-thread change (4b3bda1) came after the
+  full run started; test_ai_privacy_filter, test_ai_client and test_ai_chat were re-run on it: 155 passed.
+
+## Left for the owner
+- A named-entity model on top of the rules (note 31 §5): a dependency decision.
+- A live run against a real cloud model to see whether models keep the labels intact (no prompt line tells them).
 
 ## Decisions
 - Filter runs when `not cfg.local_only` (anything not pinned to the private network counts as cloud).
