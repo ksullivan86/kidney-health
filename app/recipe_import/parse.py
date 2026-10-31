@@ -8,6 +8,7 @@
 * :func:`parse_line`: one ingredient line → amount, unit, food words and the note after a comma.
 * :func:`search_terms`: the food words → the searches to try, best first.
 * :func:`recipe_servings`: an amount and unit → servings of one food, only where the food's serving allows it; else ``None``.
+* :func:`lines_of_text`: pasted ingredients → lines (headings such as "For the sauce:" left out).
 
 Every function but :func:`ld_json_blocks` has a JavaScript twin, ``app/static/js/engine/recipe_import.js``, pinned by
 ``tests/data/recipe_import_vectors.json`` (``tests/data/gen_recipe_import_vectors.py``).
@@ -128,7 +129,7 @@ def find_recipe(node: Any, depth: int = 0) -> dict[str, Any] | None:
     return None
 
 
-_NUMBER = re.compile(r"\d+(?:\.\d+)?")
+_NUMBER = re.compile(r"[0-9]+(?:\.[0-9]+)?")
 
 
 def yield_of(value: Any) -> float | None:
@@ -230,6 +231,18 @@ def ingredient_lines(value: Any) -> tuple[list[str], bool]:
     return lines[:MAX_LINES], len(lines) > MAX_LINES
 
 
+def is_heading(line: str) -> bool:
+    """"For the sauce:" is a heading, not an ingredient."""
+    return line.endswith(":") and not any(ch in "0123456789" for ch in line)
+
+
+def lines_of_text(text: str) -> tuple[list[str], bool]:
+    """``(lines, cut)``: pasted ingredients, one a line; empty lines and headings left out; at most :data:`MAX_LINES`."""
+    lines = [normalise_line(raw)[:MAX_LINE_CHARS] for raw in (text or "").split("\n")]
+    lines = [line for line in lines if line and not is_heading(line)]
+    return lines[:MAX_LINES], len(lines) > MAX_LINES
+
+
 def recipe_from_jsonld(recipe: dict[str, Any]) -> dict[str, Any]:
     """What the app keeps of a schema.org ``Recipe``: name, servings made, steps and ingredient lines."""
     name = text_of(recipe.get("name"))[:MAX_NAME_CHARS].strip() or None
@@ -248,7 +261,7 @@ def recipe_from_jsonld(recipe: dict[str, Any]) -> dict[str, Any]:
 
 FRACTION_CHARS = {"½": "1/2", "⅓": "1/3", "⅔": "2/3", "¼": "1/4", "¾": "3/4", "⅕": "1/5", "⅖": "2/5", "⅗": "3/5", "⅘": "4/5",
                   "⅙": "1/6", "⅚": "5/6", "⅛": "1/8", "⅜": "3/8", "⅝": "5/8", "⅞": "7/8"}
-_FRACTION_RE = re.compile(r"(\d?)([" + "".join(FRACTION_CHARS) + r"])")
+_FRACTION_RE = re.compile(r"([0-9]?)([" + "".join(FRACTION_CHARS) + r"])")
 NUMBER_WORDS = {"one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6, "seven": 7, "eight": 8, "nine": 9, "ten": 10,
                 "eleven": 11, "twelve": 12, "half": 0.5}
 ARTICLE_WORDS = ("a", "an")  # "a pinch": 1, only before a unit
@@ -278,9 +291,10 @@ MASS_G = {"g": 1.0, "kg": 1000.0, "oz": 28.349523125, "lb": 453.59237}
 VOLUME_ML = {"ml": 1.0, "l": 1000.0, "cup": 236.5882365, "tbsp": 14.78676478125, "tsp": 4.92892159375, "fl_oz": 29.5735295625}
 COUNT_UNITS = ("piece", "slice", "clove", "can")
 
-_NUM = r"\d+(?:\.\d+|,\d{1,2}(?!\d))?"
-_QTY = re.compile(r"(?:(\d+)\s+(\d+)\s*/\s*(\d+)|(\d+)\s*/\s*(\d+)|(" + _NUM + r"))")
-_RANGE = re.compile(r"\s*(?:-|–|—|to|or)\s*(?=\d)")
+_NUM = r"[0-9]{1,3}(?:,[0-9]{3})+(?![0-9])|[0-9]+(?:\.[0-9]+|,[0-9]{1,2}(?![0-9]))?"  # "1,000", "1.5", "1,5"
+_THOUSANDS = re.compile(r"[0-9]{1,3}(?:,[0-9]{3})+")
+_QTY = re.compile(r"(?:([0-9]+)\s+([0-9]+)\s*/\s*([0-9]+)|([0-9]+)\s*/\s*([0-9]+)|(" + _NUM + r"))")
+_RANGE = re.compile(r"\s*(?:-|–|—|to|or)\s*(?=[0-9])")
 _BULLET = re.compile(r"^[\s\-*•▢□☐·]+")
 
 
@@ -299,7 +313,8 @@ def _number(match: re.Match[str]) -> float | None:
     if match.group(4) is not None:
         den = int(match.group(5))
         return int(match.group(4)) / den if den else None
-    return float(match.group(6).replace(",", "."))
+    raw = match.group(6)
+    return float(raw.replace(",", "") if _THOUSANDS.fullmatch(raw) else raw.replace(",", "."))
 
 
 def take_quantity(text: str) -> tuple[float | None, str]:

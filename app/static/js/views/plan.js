@@ -49,6 +49,8 @@
   }
   async function afterAiSave() { await KH.loadMeals(true); renderSavedMeals(); }
   $('#btn-ai-recipes').addEventListener('click', (e) => KH.ai.openRecipes({ trigger: e.currentTarget, onSaved: afterAiSave }));
+  // Import a recipe from a page or pasted ingredients (design note 30; js/views/recipe_import.js).
+  $('#btn-import-recipe').addEventListener('click', (e) => KH.recipeImportView.open({ trigger: e.currentTarget, onSaved: afterAiSave }));
 
   async function loadPlan() {
     const reqId = ++planRequest;
@@ -248,6 +250,9 @@
       if (!(e && e.name === 'AbortError')) copyShopping(text); // closed by the person: nothing to do
     }
   });
+  $('#shopping-send').addEventListener('click', (e) => {
+    if (state.shopping && KH.listSync) KH.listSync.openSend({ start: state.shopping.start, end: state.shopping.end, checks: loadChecks(state.shopping.start), trigger: e.currentTarget });
+  });
   function renderShopping() {
     const sh = state.shopping;
     if (!sh) return;
@@ -259,6 +264,7 @@
     $('#shopping-copy').hidden = !items.length;
     $('#shopping-share').hidden = !items.length || typeof navigator.share !== 'function';
     $('#shopping-text').hidden = true;
+    if (KH.listSync) KH.listSync.planButton($('#shopping-send'), items.length > 0); // design note 30: "Send to <app>" when one is set up
     if (!items.length) {
       shoppingEl.append(h('li', { class: 'empty-state' }, 'Nothing planned this week yet. Plan foods on a day, or add a saved meal, to build the list.'));
       return;

@@ -128,3 +128,17 @@
 .care-plan .device-main { flex: 1 1 10rem; } /* narrow screens: the controls go under the food's name */
 .care-plan input.care-amount { width: 5.5rem; flex: none; }
 .entry-added-by { color: var(--text-2); }
+
+/* Import a recipe (design note 30; js/views/recipe_import.js): one ingredient line to check. */
+.ri-lines { margin: 8px 0; }
+.ri-line { display: grid; gap: 6px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.ri-line:last-child { border-bottom: 0; }
+.ri-line-text { display: flex; gap: 8px; align-items: center; overflow-wrap: anywhere; }
+.ri-line-choice select { width: 100%; min-width: 0; }
+.ri-line-amount { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.ri-line-amount input { width: 7rem; }
+.ri-line .check { display: flex; gap: 8px; align-items: center; }
+.ri-search .list { margin-top: 4px; }
+.ri-estimate { margin-top: 8px; }
+#ri-steps summary { cursor: pointer; }
+#ri-source { overflow-wrap: anywhere; }

@@ -156,17 +156,6 @@ def draft(conn: sqlite3.Connection, user_id: int, recipe: dict[str, Any], source
             "lines": lines, "notice": CHECK_TEXT, "estimate": ESTIMATE_TEXT}
 
 
-def is_heading(line: str) -> bool:
-    """"For the sauce:" is a heading, not an ingredient."""
-    return line.endswith(":") and not any(ch.isdigit() for ch in line)
-
-
-def lines_of_text(text: str) -> tuple[list[str], bool]:
-    lines = [P.normalise_line(raw)[:P.MAX_LINE_CHARS] for raw in text.splitlines()]
-    lines = [line for line in lines if line and not is_heading(line)]
-    return lines[:P.MAX_LINES], len(lines) > P.MAX_LINES
-
-
 # --------------------------------------------------------------------------- #
 # Routes
 # --------------------------------------------------------------------------- #
@@ -206,6 +195,6 @@ def from_page(body: PageIn, request: Request, user: CurrentUser, conn: sqlite3.C
 
 @router.post("/text", response_model=Draft)
 def from_text(body: TextIn, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    lines, cut = lines_of_text(body.text)
+    lines, cut = P.lines_of_text(body.text)
     recipe = {"name": body.name, "servings_made": body.servings, "steps": [], "steps_cut": False, "lines": lines, "lines_cut": cut}
     return draft(conn, user.id, recipe, None)
