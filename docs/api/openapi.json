@@ -138,6 +138,157 @@
       }
     },
     "schemas": {
+      "ActivityDayOut": {
+        "properties": {
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "finished": {
+            "title": "Finished",
+            "type": "boolean"
+          },
+          "hrv_ms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hrv Ms"
+          },
+          "kcal": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kcal"
+          },
+          "recovery_pct": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recovery Pct"
+          },
+          "resting_hr": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resting Hr"
+          },
+          "sleep_minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sleep Minutes"
+          },
+          "sleep_performance_pct": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sleep Performance Pct"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "strain": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strain"
+          }
+        },
+        "required": [
+          "date",
+          "kcal",
+          "strain",
+          "recovery_pct",
+          "resting_hr",
+          "hrv_ms",
+          "sleep_minutes",
+          "sleep_performance_pct",
+          "finished",
+          "source"
+        ],
+        "title": "ActivityDayOut",
+        "type": "object"
+      },
+      "ActivityOut": {
+        "properties": {
+          "days": {
+            "items": {
+              "$ref": "#/components/schemas/ActivityDayOut"
+            },
+            "title": "Days",
+            "type": "array"
+          },
+          "end": {
+            "title": "End",
+            "type": "string"
+          },
+          "extra": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExtraSetting"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "start": {
+            "title": "Start",
+            "type": "string"
+          },
+          "workouts": {
+            "items": {
+              "$ref": "#/components/schemas/WorkoutOut"
+            },
+            "title": "Workouts",
+            "type": "array"
+          }
+        },
+        "required": [
+          "start",
+          "end",
+          "days",
+          "workouts"
+        ],
+        "title": "ActivityOut",
+        "type": "object"
+      },
       "AdminProviderBody": {
         "additionalProperties": false,
         "properties": {
@@ -1136,6 +1287,76 @@
         "title": "BodySummary",
         "type": "object"
       },
+      "CalorieExtra": {
+        "description": "What Today shows about the active-day calorie extra (design note 28 §4.2).",
+        "properties": {
+          "base_kcal": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "number"
+              }
+            ],
+            "title": "Base Kcal"
+          },
+          "burned_kcal": {
+            "title": "Burned Kcal",
+            "type": "integer"
+          },
+          "ceiling_kcal": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ceiling Kcal"
+          },
+          "extra_kcal": {
+            "title": "Extra Kcal",
+            "type": "integer"
+          },
+          "history_days": {
+            "title": "History Days",
+            "type": "integer"
+          },
+          "quiet_kcal": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quiet Kcal"
+          },
+          "share_pct": {
+            "title": "Share Pct",
+            "type": "integer"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "base_kcal",
+          "extra_kcal",
+          "burned_kcal",
+          "quiet_kcal",
+          "share_pct",
+          "ceiling_kcal",
+          "history_days",
+          "source"
+        ],
+        "title": "CalorieExtra",
+        "type": "object"
+      },
       "Capabilities": {
         "description": "True when the signed-in person can use it now. New capabilities arrive as new keys.",
         "properties": {
@@ -1319,11 +1540,12 @@
                 "food",
                 "labs",
                 "body",
-                "symptoms"
+                "symptoms",
+                "activity"
               ],
               "type": "string"
             },
-            "maxItems": 4,
+            "maxItems": 5,
             "minItems": 1,
             "title": "Areas",
             "type": "array"
@@ -1858,6 +2080,16 @@
             },
             "title": "Alerts",
             "type": "array"
+          },
+          "calorie_extra": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CalorieExtra"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "carb_tolerance_g": {
             "anyOf": [
@@ -2658,6 +2890,37 @@
           "current"
         ],
         "title": "EntryConflictProblem",
+        "type": "object"
+      },
+      "ExtraSetting": {
+        "properties": {
+          "ceiling_kcal": {
+            "anyOf": [
+              {
+                "maximum": 3000.0,
+                "minimum": 50.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ceiling Kcal"
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "share_pct": {
+            "default": 100,
+            "maximum": 100.0,
+            "minimum": 10.0,
+            "title": "Share Pct",
+            "type": "integer"
+          }
+        },
+        "title": "ExtraSetting",
         "type": "object"
       },
       "FamiliarMeal": {
@@ -4245,12 +4508,22 @@
       },
       "ImportedCounts": {
         "properties": {
+          "days": {
+            "default": 0,
+            "title": "Days",
+            "type": "integer"
+          },
           "readings": {
             "title": "Readings",
             "type": "integer"
           },
           "weights": {
             "title": "Weights",
+            "type": "integer"
+          },
+          "workouts": {
+            "default": 0,
+            "title": "Workouts",
             "type": "integer"
           }
         },
@@ -9882,11 +10155,12 @@
                 "food",
                 "labs",
                 "body",
-                "symptoms"
+                "symptoms",
+                "activity"
               ],
               "type": "string"
             },
-            "maxItems": 4,
+            "maxItems": 5,
             "minItems": 1,
             "title": "Areas",
             "type": "array"
@@ -10741,6 +11015,11 @@
           },
           "skipped": {
             "title": "Skipped",
+            "type": "integer"
+          },
+          "updated": {
+            "default": 0,
+            "title": "Updated",
             "type": "integer"
           }
         },
@@ -11619,6 +11898,89 @@
         ],
         "title": "WeightSummary",
         "type": "object"
+      },
+      "WorkoutOut": {
+        "properties": {
+          "date": {
+            "title": "Date",
+            "type": "string"
+          },
+          "end_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Time"
+          },
+          "kcal": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kcal"
+          },
+          "minutes": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "sport": {
+            "title": "Sport",
+            "type": "string"
+          },
+          "start_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Start Time"
+          },
+          "strain": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Strain"
+          }
+        },
+        "required": [
+          "date",
+          "start_time",
+          "end_time",
+          "minutes",
+          "sport",
+          "kcal",
+          "strain",
+          "source"
+        ],
+        "title": "WorkoutOut",
+        "type": "object"
       }
     },
     "securitySchemes": {
@@ -11650,6 +12012,129 @@
   },
   "openapi": "3.1.0",
   "paths": {
+    "/api/activity": {
+      "get": {
+        "operationId": "activity_list_activity",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "List Activity",
+        "tags": [
+          "activity"
+        ]
+      }
+    },
+    "/api/activity/extra": {
+      "put": {
+        "operationId": "activity_set_extra",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExtraSetting"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtraSetting"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Set Extra",
+        "tags": [
+          "activity"
+        ]
+      }
+    },
     "/api/admin/about": {
       "get": {
         "operationId": "admin_about",
@@ -16026,7 +16511,10 @@
             "name": "provider_id",
             "required": true,
             "schema": {
-              "const": "withings",
+              "enum": [
+                "withings",
+                "whoop"
+              ],
               "title": "Provider Id",
               "type": "string"
             }
@@ -16089,7 +16577,10 @@
             "name": "provider_id",
             "required": true,
             "schema": {
-              "const": "withings",
+              "enum": [
+                "withings",
+                "whoop"
+              ],
               "title": "Provider Id",
               "type": "string"
             }
@@ -16168,7 +16659,10 @@
             "name": "provider_id",
             "required": true,
             "schema": {
-              "const": "withings",
+              "enum": [
+                "withings",
+                "whoop"
+              ],
               "title": "Provider Id",
               "type": "string"
             }
@@ -16224,7 +16718,10 @@
             "name": "provider_id",
             "required": true,
             "schema": {
-              "const": "withings",
+              "enum": [
+                "withings",
+                "whoop"
+              ],
               "title": "Provider Id",
               "type": "string"
             }
@@ -22354,6 +22851,93 @@
         ]
       }
     },
+    "/api/shared/{share_id}/activity": {
+      "get": {
+        "description": "The owner's Whoop days and workouts (the Activity and recovery card), as ``GET /api/activity`` without their setting.",
+        "operationId": "shared_activity",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Share Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "start",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Start"
+            }
+          },
+          {
+            "in": "query",
+            "name": "end",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "End"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ActivityOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Shared Activity",
+        "tags": [
+          "shared"
+        ]
+      }
+    },
     "/api/shared/{share_id}/body/blood-pressure": {
       "get": {
         "description": "The owner's blood pressure readings, as ``GET /api/body/blood-pressure``.",
@@ -22849,7 +23433,7 @@
     },
     "/api/shared/{share_id}/log": {
       "get": {
-        "description": "A day of the owner's food log, as ``GET /api/log`` answers it to them.",
+        "description": "A day of the owner's food log, as ``GET /api/log`` answers it to them; without the activity area with the base calorie target\n(the active-day extra would tell how active they were).",
         "operationId": "shared_day",
         "parameters": [
           {

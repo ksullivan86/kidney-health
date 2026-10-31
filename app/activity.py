@@ -224,14 +224,14 @@ class ActivityOut(BaseModel):
 
 
 @router.get("", response_model=ActivityOut)
-def get_activity(user: CurrentUser, start: str | None = None, end: str | None = None,
+def list_activity(user: CurrentUser, start: str | None = None, end: str | None = None,
                  conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     start_s, end_s = parse_range(start, end)
     return {**activity_view(conn, user.id, start_s, end_s), "extra": extra_setting(conn, user.id)}
 
 
 @router.put("/extra", response_model=ExtraSetting)
-def put_extra(body: ExtraSetting, request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+def set_extra(body: ExtraSetting, request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     before = extra_setting(conn, user.id)
     conn.execute("INSERT INTO activity_extra (user_id, enabled, share_pct, ceiling_kcal, updated_at) VALUES (?, ?, ?, ?, ?) "
                  "ON CONFLICT(user_id) DO UPDATE SET enabled = excluded.enabled, share_pct = excluded.share_pct, "
