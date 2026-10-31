@@ -38,7 +38,8 @@ APPS: dict[str, dict[str, str]] = {
     "mealie": {"name": "Mealie", "key_name": "API token",
                "key_help": "In Mealie, open your profile, then API Tokens, and generate one."},
 }
-ERROR_CODES = ("unreachable", "blocked", "redirect", "auth", "not_found", "app_error")
+ERROR_CODES = ("unreachable", "blocked", "redirect", "auth", "not_found", "app_error", "timeout")
+DEADLINE_S = 60.0  # a whole Test or Send (several requests), headers included
 
 
 class ListAppError(Exception):
@@ -160,7 +161,9 @@ class Net:
     allowlist: HostAllowlist
     resolver: Callable[[str, int], list[str]] | None = None
     direct: httpx2.BaseTransport | None = None
-    use_env_proxy: bool = True
+    # Never through HTTPS_PROXY: a proxy would resolve the name itself, so LIST_SYNC_ALLOWED_HOSTS and the https rule
+    # would no longer be checked. List apps are the person's own servers, reached directly.
+    use_env_proxy: bool = False
 
     def client(self) -> httpx2.Client:
         transport = ListTransport(self.allowlist, resolver=self.resolver, use_env_proxy=self.use_env_proxy, direct=self.direct)

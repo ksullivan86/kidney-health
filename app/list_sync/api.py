@@ -23,6 +23,7 @@ from typing import Any, Literal
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 
+from .. import egress
 from ..audit import audit
 from ..auth.context import auth_context, request_ip
 from ..auth.deps import CurrentUser
@@ -33,7 +34,7 @@ from ..db import get_db, utcnow
 from ..log import parse_range
 from ..meals import shopping_items
 from ..security import register_secret
-from .apps import APPS, HostAllowlist, Item, ListAppError, Net, check_base_url, client_for, valid_list_id
+from .apps import APPS, DEADLINE_S, HostAllowlist, Item, ListAppError, Net, check_base_url, client_for, valid_list_id
 
 router = APIRouter(prefix="/api/list-sync", tags=["list sync"])
 
@@ -57,6 +58,7 @@ ERROR_TEXT = {
     "not_found": "The list app has no such page. Check the address, and that it is the right app.",
     "app_error": "The list app gave an answer the app could not read.",
     "no_key": "The key can no longer be read on this server. Enter it again.",
+    "timeout": "The list app took too long to answer. Try again later.",
 }
 
 
@@ -316,9 +318,12 @@ def test_list_sync(request: Request, user: CurrentUser, conn: sqlite3.Connection
         code = "no_key"
     else:
         try:
-            lists = [{"id": x.id, "name": x.name} for x in client.test() if valid_list_id(row["app"], x.id)]
+            found = egress.run_with_deadline("lists", client.test, DEADLINE_S)
+            lists = [{"id": x.id, "name": x.name} for x in found if valid_list_id(row["app"], x.id)]
         except ListAppError as exc:
             code = exc.code
+        except egress.DeadlineExceeded:
+            code = "timeout"
     list_id, list_name = row["list_id"], row["list_name"]
     if code is None:
         chosen = next((x for x in lists if x["id"] == list_id), None)
@@ -365,9 +370,11 @@ def send(body: SendIn, request: Request, user: CurrentUser, conn: sqlite3.Connec
         code = "no_key"
     else:
         try:
-            sent = client.send(str(row["list_id"]), items)
+            sent = egress.run_with_deadline("lists", lambda: client.send(str(row["list_id"]), items), DEADLINE_S)
         except ListAppError as exc:
             code, sent = exc.code, exc.sent
+        except egress.DeadlineExceeded:
+            code = "timeout"
     if sent:
         conn.execute("UPDATE list_sync SET last_sent_at = ?, last_sent_count = ? WHERE user_id = ?", (utcnow(), sent, user.id))
         audit(conn, user.id, "list_sync.sent", "list_sync", row["app"], ip=request_ip(request), app=row["app"], items=sent)

@@ -37,6 +37,7 @@
     not_found: 'The list app has no such page. Check the address, and that it is the right app.',
     app_error: 'The list app gave an answer the app could not read.',
     no_key: 'The key can no longer be read on this server. Enter it again.',
+    timeout: 'The list app took too long to answer. Try again later.',
   };
 
   let cached = null; // the last GET /api/list-sync

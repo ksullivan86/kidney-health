@@ -40,7 +40,8 @@ handbook: **Planning, menus and shopping**.
    Every other private or local address stays refused. Cloud metadata, link-local and reserved addresses are always refused,
    even when listed. The variable is read at start-up only (an outbound allowlist is never changed in the app). `0.0.0.0/0`,
    wildcards and ports are refused.
-3. If you route the server's outbound traffic through a proxy (`HTTPS_PROXY`), put the home host in `NO_PROXY` too.
+3. List sync never goes through an outbound proxy (`HTTPS_PROXY`): the server always connects to the list app itself, so the
+   rules above always apply. Make sure the server can reach the list app directly.
 4. On Kubernetes, also allow the list app in `deploy/k8s/networkpolicy.yaml` (an `ipBlock` for its address).
 
 ## The address rules

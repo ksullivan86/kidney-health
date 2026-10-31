@@ -80,9 +80,11 @@ def _charset(content_type: str, head: bytes) -> str:
             name = candidate.group(1)
             name = name.decode("ascii", "replace") if isinstance(name, bytes) else name
             try:
-                return codecs.lookup(name).name
+                info = codecs.lookup(name)
             except LookupError:
                 continue
+            if getattr(info, "_is_text_encoding", True):
+                return info.name
     return "utf-8"
 
 
@@ -109,11 +111,21 @@ class RecipeFetcher:
                                       "Accept": "text/html,application/xhtml+xml;q=0.9,*/*;q=0.1"})
 
     def fetch(self, url: str) -> str:
-        """The page as text. Raises :class:`PageError`."""
+        """The page as text. Raises :class:`PageError`. The whole fetch, headers and redirects included, has
+        :data:`DEADLINE_S` seconds (:func:`app.egress.run_with_deadline`)."""
+        check_page_url(url)
+        try:
+            return egress.run_with_deadline("recipe", lambda: self._fetch(url), self.deadline_s)
+        except egress.DeadlineExceeded:
+            raise PageError("timeout") from None
+
+    def _fetch(self, url: str) -> str:
         current = check_page_url(url)
         started = self.clock()
         with self._client() as client:
             for _hop in range(MAX_REDIRECTS + 1):
+                if self.clock() - started > self.deadline_s:
+                    raise PageError("timeout")
                 try:
                     with client.stream("GET", current) as response:
                         status = response.status_code
@@ -135,7 +147,10 @@ class RecipeFetcher:
                     raise PageError("timeout") from None
                 except httpx2.HTTPError:
                     raise PageError("unreachable") from None
-                return raw.decode(charset, errors="replace")
+                try:
+                    return raw.decode(charset, errors="replace")
+                except LookupError:  # a "charset" that is not a text encoding (zlib, base64, ...)
+                    return raw.decode("utf-8", errors="replace")
         raise PageError("too_many_redirects")
 
     def _read(self, response: httpx2.Response, started: float) -> bytes:

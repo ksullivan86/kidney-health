@@ -399,3 +399,33 @@ def test_config_checks_the_allowed_hosts(tmp_path: Path) -> None:
 
 def test_key_rotation_covers_the_list_key() -> None:
     assert ("list_sync", "user_id", "key_enc", "key_id") in crypto.ENCRYPTED_COLUMNS
+
+
+def test_list_sync_never_goes_through_an_outbound_proxy() -> None:
+    """A proxy would resolve the name itself, so LIST_SYNC_ALLOWED_HOSTS and the https rule would no longer apply
+    (security review of 0.19)."""
+    from app.list_sync.apps import HostAllowlist, Net
+
+    assert Net(HostAllowlist.parse(())).use_env_proxy is False
+
+
+def test_a_list_app_that_never_finishes_answering_is_a_timeout(on: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+    import threading
+
+    import httpx2
+
+    from app.list_sync import api as list_api
+
+    fake = attach_list_app(on.app, FakeListApp())
+    set_up(on)
+    release = threading.Event()
+
+    def slow(request: httpx2.Request) -> httpx2.Response:
+        release.wait(10)
+        return fake.handler(request)
+
+    on.app.state.list_sync_net.direct = httpx2.MockTransport(slow)
+    monkeypatch.setattr(list_api, "DEADLINE_S", 0.3)
+    r = on.post("/api/list-sync/test").json()
+    release.set()
+    assert r["ok"] is False and r["error"] == "timeout" and r["message"] == "The list app took too long to answer. Try again later."

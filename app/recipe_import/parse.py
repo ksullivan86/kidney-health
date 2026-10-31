@@ -37,7 +37,7 @@ MAX_BLOCK_CHARS = 1_048_576
 # Text
 # --------------------------------------------------------------------------- #
 
-_TAG = re.compile(r"<[^>]*>")
+_TAG = re.compile(r"<[^<>]*>")  # [^<>] keeps it linear on text full of "<"
 _SPACE = re.compile(r"\s+")
 _SPACE_BEFORE_MARK = re.compile(r" ([.,;:!?)])")
 _CONTROL = re.compile(r"[\u0000-\u001f\u007f-\u009f]")

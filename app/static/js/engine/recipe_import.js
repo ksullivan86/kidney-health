@@ -23,7 +23,7 @@
   const MAX_SERVINGS_MADE = 100;
 
   // ---- Text ----
-  const TAG = /<[^>]*>/g;
+  const TAG = /<[^<>]*>/g; // twin of parse._TAG
   const SPACE = /\s+/g;
   const SPACE_BEFORE_MARK = / ([.,;:!?)])/g;
   const CONTROL = /[\u0000-\u001f\u007f-\u009f]/g;

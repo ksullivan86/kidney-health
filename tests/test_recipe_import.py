@@ -358,3 +358,46 @@ def test_jsonld_with_entities_and_tags_in_lines() -> None:
                                 "recipeIngredient": "2 cups &frac12;-strength broth"})
     assert out["name"] == "Soup & bread" and out["lines"] == ["2 cups ½-strength broth"]
     assert json.loads(json.dumps(out))  # plain JSON
+
+
+def test_the_whole_fetch_has_one_deadline_headers_included(web: TestClient) -> None:
+    """A site that answers a byte at a time cannot hold the request: the fetch stops at the deadline, however the time is
+    spent (security review of 0.19)."""
+    import threading
+    import time
+
+    import httpx2
+
+    release = threading.Event()
+
+    def slow(request: httpx2.Request) -> httpx2.Response:
+        release.wait(10)
+        return httpx2.Response(200, headers={"Content-Type": "text/html"}, content=b"<p>late</p>")
+
+    attach_site(web.app, FakeSite())
+    fetcher = web.app.state.recipe_fetcher
+    fetcher.direct = httpx2.MockTransport(slow)
+    fetcher.deadline_s = 0.3
+    started = time.monotonic()
+    assert fetch_page(web).json()["code"] == "timeout"
+    assert time.monotonic() - started < 3
+    release.set()
+
+
+def test_a_charset_that_is_not_a_text_encoding_is_read_as_utf8(web: TestClient) -> None:
+    site = attach_site(web.app, FakeSite())
+    for charset in ("zlib", "base64", "hex", "rot13"):
+        html = page_html(recipe_jsonld(name="Lemon chicken")).replace("<head>", f'<head><meta charset="{charset}">')
+        site.pages["/lemon-chicken"] = (200, {"Content-Type": f"text/html; charset={charset}"}, html.encode("utf-8"))
+        r = fetch_page(web)
+        assert r.status_code == 200 and r.json()["name"] == "Lemon chicken", charset
+
+
+def test_tag_stripping_stays_fast_on_text_full_of_angle_brackets() -> None:
+    import time
+
+    started = time.monotonic()
+    for _ in range(300):  # a page's worth of values, each at the 4,000-character cap and full of "<"
+        P.text_of("<" * 3996 + "rice")
+    assert time.monotonic() - started < 1.0  # the old pattern took about 4 seconds here
+    assert P.text_of("1 <b>cup</b> rice") == "1 cup rice"

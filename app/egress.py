@@ -27,12 +27,14 @@ memory; note 03 §9 B6).
 """
 from __future__ import annotations
 
+import concurrent.futures
 import ipaddress
 import logging
 import os
 import socket
+import threading
 import urllib.request
-from typing import Callable, Literal
+from typing import Callable, Literal, TypeVar
 
 import httpx2
 from . import brand
@@ -55,6 +57,10 @@ DEFAULT_PORTS = {"http": 80, "https": 443}
 
 class BlockedAddress(httpx2.ConnectError):
     """The host resolved to an address this server must not connect to (or did not resolve)."""
+
+
+class DeadlineExceeded(Exception):
+    """The work did not finish within its whole-request deadline (:func:`run_with_deadline`)."""
 
 
 class ResponseTooLarge(Exception):
@@ -200,6 +206,15 @@ class CheckedTransport(httpx2.BaseTransport):
         if self._use_env_proxy:
             proxy = env_proxy_for(url)
             if proxy:
+                # The proxy resolves names, but an address written into the link is checked here first.
+                try:
+                    literal = ipaddress.ip_address(url.raw_host.decode("ascii").strip("[]"))
+                except ValueError:
+                    literal = None
+                if literal is not None:
+                    verdict = classify_address(literal)
+                    if verdict == "denied" or (verdict == "private" and not self.allow_private):
+                        raise BlockedAddress("blocked_address: an address this server does not contact")
                 return self._proxy_transport(proxy).handle_request(request)
         host = url.raw_host.decode("ascii").lower()  # the IDNA form DNS and SNI use (``url.host`` is Unicode)
         port = url.port or DEFAULT_PORTS[url.scheme]
@@ -231,3 +246,27 @@ def read_capped(response: httpx2.Response, limit: int) -> bytes:
         chunks.append(chunk)
     return b"".join(chunks)
 
+
+
+_T = TypeVar("_T")
+_POOLS: dict[str, concurrent.futures.ThreadPoolExecutor] = {}
+_POOLS_LOCK = threading.Lock()
+
+
+def run_with_deadline(name: str, work: Callable[[], _T], deadline_s: float, *, workers: int = 4) -> _T:
+    """``work()`` on a small pool of its own, waited for at most ``deadline_s`` seconds in all.
+
+    httpx's timeouts limit each read, not the whole request, so a server that sends its answer a byte at a time could hold the
+    caller for hours. The caller stops waiting at the deadline (:class:`DeadlineExceeded`); a slow request can then hold only
+    one of this pool's ``workers`` threads, never the server's own request threads.
+    """
+    with _POOLS_LOCK:
+        pool = _POOLS.get(name)
+        if pool is None:
+            pool = _POOLS[name] = concurrent.futures.ThreadPoolExecutor(max_workers=workers, thread_name_prefix=f"egress-{name}")
+    future = pool.submit(work)
+    try:
+        return future.result(timeout=deadline_s)
+    except concurrent.futures.TimeoutError:
+        future.cancel()
+        raise DeadlineExceeded(name) from None
