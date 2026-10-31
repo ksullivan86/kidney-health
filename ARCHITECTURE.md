@@ -1083,11 +1083,9 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
 
-**v0.18 work (2026-10-31, not released yet).** The full Care team (note 29, schema step 31): per-person switches with Viewer, Care
+**Status (2026-10-31): v0.18.0 is prepared.** The full Care team (note 29, schema step 31): per-person switches with Viewer, Care
 helper and Caregiver as presets, a Caregiver who logs eaten food, saved meals for helpers, and meal suggestions; see "The full Care
-team" below; CHANGELOG.md "Unreleased".
-
-**Status (2026-10-31): v0.17.0 is prepared.** Whoop, Activity and recovery and the active-day calorie extra (note 28, schema step 30, `/api/activity`, off until `DEVICES_ENABLED` and
+team" below; CHANGELOG.md 0.18.0. **v0.17.0 (2026-10-31)** adds Whoop, Activity and recovery and the active-day calorie extra (note 28, schema step 30, `/api/activity`, off until `DEVICES_ENABLED` and
 `WHOOP_ENABLED`; the active-day calorie extra off until the person turns it on); see "Activity and recovery" below; CHANGELOG.md
 0.17.0. **v0.16.0 (2026-10-31)** adds Connected devices and Withings (note 27, schema step 29, `/api/devices`, off until `DEVICES_ENABLED` and
 `WITHINGS_ENABLED`); see "Connected devices" below; CHANGELOG.md 0.16.0. **v0.15.0 (2026-10-31)** adds several sign-in providers at once (`OIDC_PROVIDERS`, up to four),
@@ -4777,7 +4775,7 @@ Signed in only (`current_user`; an anonymous caller gets the generic `401`, so a
 (`no-store` like every `/api` answer). The answer:
 
 ```json
-{"app_version": "0.17.0", "api_version": 1,
+{"app_version": "0.18.0", "api_version": 1,
  "capabilities": {"ai": false, "ai_next_meal": false, "ai_parse_meal": false, "ai_label": false, "ai_plate": false, "ai_lab_report": false,
                   "chat": false, "voice": false, "assistant": false, "push": false,
                   "barcode": false, "barcode_off": false, "barcode_usda": false, "handbook": false},

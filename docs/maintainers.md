@@ -252,6 +252,9 @@ A repository variable (Settings → Secrets and variables → Actions → Variab
 * **v0.16.0: not held.** The release runs schema step 29 at start without an automatic copy (it only adds two tables), adds
   the `tzdata` dependency and moves the shipped files from `:0.15` to `:0.16`. A host that tracks `:0.15` stays on 0.15.x.
   CHANGELOG.md, "Upgrading from 0.15", says to take a backup first.
+* **v0.18.0: not held.** Schema step 31 adds four columns to `shares` and `care_invites` and a table `care_suggestions`
+  (every row kept). The release moves the shipped files from `:0.17` to `:0.18`. A host that tracks `:0.17` stays on 0.17.x.
+  CHANGELOG.md, "Upgrading from 0.17", says to take a backup first.
 * **v0.17.0: not held.** Schema step 30 adds three tables and rebuilds `shares` and `care_invites` (every row kept; the step
   copies the database to `<db>.pre-v30.bak` first). The release moves the shipped files from `:0.16` to `:0.17`. A host that
   tracks `:0.16` stays on 0.16.x. CHANGELOG.md, "Upgrading from 0.16", says to take a backup first.

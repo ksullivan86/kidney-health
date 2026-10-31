@@ -5,9 +5,20 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
-## Unreleased
+## 0.18.0 — 2026-10-31
 
 The full **Care team** (design note 29, schema step 31).
+
+### Upgrading from 0.17 (read this first)
+
+* **Back up first** (`python -m app.admin backup`). Schema step 31 runs at the first start. It adds four switches to the Care
+  team tables and a table for meal suggestions. Every Care helper stays a Care helper and every Viewer a Viewer.
+* Change the image tag to `:0.18`. The shipped deployment files already say `:0.18`.
+* Nothing new is switched on. The new switches start off for everyone.
+* Going back to 0.17 after this keeps planning rights and drops the rest.
+
+### The full Care team
+
 
 * **Switches for each person.** In Settings → Care team, **What they may see and do** has one switch for each thing a person may
   see (food log, lab results, weight and blood pressure, symptoms, activity and recovery) and do (plan meals and use the shopping
@@ -31,11 +42,12 @@ The full **Care team** (design note 29, schema step 31).
   `POST /api/shared/{id}/meals/{meal_id}/apply`, `POST`/`GET /api/shared/{id}/suggestions`, `GET /api/me/suggestions`,
   `POST /api/me/suggestions/{id}/accept|decline`. A helper's `POST /api/shared/{id}/log` takes `status: "eaten"` when logging is
   on. A helper changing or removing a low treatment now gets 403 with a sentence (was 404).
-* **Upgrading.** Schema step 31 adds four columns to `shares` and `care_invites` and a table `care_suggestions`. Every Care helper
-  stays a Care helper and every Viewer a Viewer. Going back to 0.17 keeps planning rights and drops the rest.
-* **Fixed.** Adding a saved meal that holds a food for treating a low now marks that entry as a low treatment, as logging it
-  directly does. Before, it was an ordinary entry, so the Care team rules for low treatments did not cover it. Tapping
-  **No thanks** just as **Add to my plan** finishes now records only one answer.
+
+### Fixed
+
+* Adding a saved meal that holds a food for treating a low now marks that entry as a low treatment, as logging it
+  directly does. Before, it was an ordinary entry, so the Care team rules for low treatments did not cover it.
+* Tapping **No thanks** just as **Add to my plan** finishes now records only one answer.
 
 ## 0.17.0 — 2026-10-31
 
