@@ -254,29 +254,29 @@ def callback(request: Request, user: CurrentUser, provider_id: ProviderId = Path
     provider = _provider(request, provider_id)
     flow = _flows(request).take(state)
     if flow is None:
-        return _back("expired", provider_id)
+        return _back("expired", provider.id)
     if (flow.user_id != user.id or flow.provider != provider_id
             or not hmac.compare_digest(flow.session_hash, _session_hash(request))):
         log.warning("connected devices: a way back from %s did not match the person who started it", provider.name)
-        return _back("wrong_account", provider_id)
+        return _back("wrong_account", provider.id)
     if user.is_test_account:
-        return _back("test_account", provider_id)
+        return _back("test_account", provider.id)
     if error or not code:
-        return _back("cancelled", provider_id)
+        return _back("cancelled", provider.id)
     try:
-        tokens = provider.exchange(code=code, redirect_uri=redirect_uri(request, provider_id))
+        tokens = provider.exchange(code=code, redirect_uri=redirect_uri(request, provider.id))
     except ProviderError as exc:
         return _back({"scope": "scope", "unreachable": "unavailable", "rate_limited": "unavailable"}.get(exc.code, "failed"),
-                     provider_id)
+                     provider.id)
     keyring = auth_context(request).require_keyring()
     try:
         store.connect(conn, keyring, user.id, provider_id, tokens)
     except ProviderError:
         conn.rollback()
-        return _back("taken", provider_id)
+        return _back("taken", provider.id)
     audit(conn, user.id, "device.connected", "device", provider_id, ip=request_ip(request), provider=provider_id)
     conn.commit()
-    return _back("connected", provider_id)
+    return _back("connected", provider.id)
 
 
 @router.post("/{provider_id}/sync", response_model=SyncOut)

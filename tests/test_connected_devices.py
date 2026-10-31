@@ -28,7 +28,7 @@ from app.crypto import InvalidToken
 from app.db import connect
 from app.devices import store, sync as devices_sync, withings
 from conftest import HTTPS_URL, TestClient, add_user, make_settings, signed_in_client
-from devices_support import CLIENT_SECRET, FakeWithings, attach, bp_group, env, weight_group
+from devices_support import APP_KEY, CLIENT_SECRET, FakeWithings, attach, bp_group, env, weight_group
 
 NOW = int(time.time())
 DAY = 86400
@@ -544,16 +544,16 @@ def test_the_client_secret_is_only_a_file(tmp_path: Path) -> None:
 
 
 def test_withings_needs_an_id_a_secret_file_and_a_public_url(tmp_path: Path) -> None:
-    secret = tmp_path / "withings_secret"
-    secret.write_text(CLIENT_SECRET + "\n", encoding="utf-8")
+    key_file = tmp_path / "withings_app_key"
+    key_file.write_text(APP_KEY + "\n", encoding="utf-8")
     base = {"DATA_DIR": str(tmp_path), "WITHINGS_ENABLED": "true"}
     with pytest.raises(ConfigError, match="WITHINGS_CLIENT_ID"):
         load_settings(base).validate()
     with pytest.raises(ConfigError, match="WITHINGS_CLIENT_SECRET_FILE"):
         load_settings({**base, "WITHINGS_CLIENT_ID": "abc"}).validate()
     with pytest.raises(ConfigError, match="PUBLIC_URL"):
-        load_settings({**base, "WITHINGS_CLIENT_ID": "abc", "WITHINGS_CLIENT_SECRET_FILE": str(secret)}).validate()
-    s = load_settings({**base, "WITHINGS_CLIENT_ID": "abc", "WITHINGS_CLIENT_SECRET_FILE": str(secret),
+        load_settings({**base, "WITHINGS_CLIENT_ID": "abc", "WITHINGS_CLIENT_SECRET_FILE": str(key_file)}).validate()
+    s = load_settings({**base, "WITHINGS_CLIENT_ID": "abc", "WITHINGS_CLIENT_SECRET_FILE": str(key_file),
                        "PUBLIC_URL": "https://food.example.org"})
     assert s.withings.configured and s.withings.client_secret == CLIENT_SECRET
     assert CLIENT_SECRET in s.secret_values()

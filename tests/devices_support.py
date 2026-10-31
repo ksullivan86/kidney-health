@@ -18,7 +18,8 @@ import httpx2
 from app.config import WithingsEnv
 
 CLIENT_ID = "kh-test-client"
-CLIENT_SECRET = "withings-client-secret-0123456789abcdef"
+APP_KEY = "withings-app-key-0123456789abcdef-test"
+CLIENT_SECRET = APP_KEY
 ADDRESS = "93.184.216.34"
 
 
