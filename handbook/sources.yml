@@ -1660,6 +1660,37 @@ NOTE27:
   licence: "PolyForm Noncommercial 1.0.0 (project)"
   checked: 2026-10-31
   kind: project
+NOTE28:
+  cite: "kidney-health design note 28: Whoop, the Activity and recovery card, and the active-day calorie extra."
+  short: "Design note 28"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/28-whoop-activity.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-31
+  kind: project
+ODRISCOLL20:
+  cite: "O'Driscoll R, Turicchi J, Beaulieu K, et al. How well do activity monitors estimate energy expenditure? A systematic review and meta-analysis of the validity of current technologies. Br J Sports Med 2020;54(6):332–340. doi:10.1136/bjsports-2018-099643"
+  short: "O'Driscoll 2020: how well activity monitors estimate energy"
+  url: https://bjsm.bmj.com/content/54/6/332
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-31
+  kind: review
+  note: "60 studies, 41 devices: pooled energy expenditure underestimated (Hedges' g -0.23); accuracy varied by activity; I² > 75 % for many devices."
+GERMINI22:
+  cite: "Germini F, Noronha N, Borg Debono V, et al. Accuracy and acceptability of wrist-wearable activity-tracking devices: systematic review of the literature. J Med Internet Res 2022;24(1):e30791. doi:10.2196/30791"
+  short: "Germini 2022: accuracy of wrist trackers"
+  url: https://www.jmir.org/2022/1/e30791
+  licence: "CC BY 4.0: cite and paraphrase"
+  checked: 2026-10-31
+  kind: review
+  note: "65 studies: energy expenditure mean absolute percentage error over 30 % for every brand; \"none of the tested devices proved to be accurate in measuring energy expenditure\"."
+WHOOP-API:
+  cite: "WHOOP. Developer platform: OAuth 2.0, API reference (v2), rate limiting, webhooks and app approval."
+  short: "WHOOP developer documentation"
+  url: https://developer.whoop.com/api
+  also: [https://developer.whoop.com/docs/developing/oauth, https://developer.whoop.com/docs/developing/app-approval]
+  licence: "Publisher copyright: cite and paraphrase only"
+  checked: 2026-10-31
+  kind: tool
 APPLE-SHORTCUTS:
   cite: "Apple Support. Shortcuts User Guide (Health actions, Format Date, Dictionary, Get Contents of URL, personal automations)."
   short: "Apple: Shortcuts User Guide"

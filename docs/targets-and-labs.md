@@ -90,6 +90,24 @@ for ages 19 and over; at 18 the app uses them too, and the 25–35 kcal/kg range
 (E-2). With nutrition risk, at least 30 kcal/kg (E-3; ESPEN 2022 R1). On peritoneal dialysis the
 calories absorbed from the dialysis fluid are subtracted, never below 20 kcal/kg (E-4).
 
+**Active-day extra (Whoop, 0.17; design note 28).** Off unless the person turns it on (Settings → Connected devices → Whoop →
+Add active-day calories to my target). The suggested and saved targets do not change; on a day with a Whoop figure, Today and
+meal guidance use **base calorie target + extra**, where
+
+* **burned** is Whoop's calories for that day so far (its kilojoules ÷ 4.184);
+* the **usual quiet-day level** is the lower quartile (nearest rank) of Whoop's calories on the person's finished Whoop days in
+  the 28 days before, with at least 14 such days (fewer: no extra yet);
+* **extra** = max(0, burned − quiet) × the share (10–100 %, default 100 %), half up to 10 kcal, at most the person's daily
+  ceiling (50–3000 kcal, none by default).
+
+Why the person's own Whoop days and not the EER the base assumes: tracker energy figures are often off by a third or more
+(O'Driscoll 2020, Br J Sports Med 54:332; Germini 2022, J Med Internet Res 24:e30791), and comparing Whoop with Whoop cancels a
+constant error that comparing it with the EER would add (or hide) every day. **Only calories rise**: protein, potassium,
+phosphorus, sodium, fluid and carbohydrate targets stay fixed. Today shows the base and the extra as separate lines, "Why this
+number" names Whoop, and on a day with an extra one line says: "Extra calories on active days change your carbs; your care team
+can help you plan insulin for exercise." Never insulin advice; nothing about treating a low. HRV, recovery, sleep and strain never
+change a target. The JS twin (`js/engine/activity.js`) is pinned by `tests/data/activity_vectors.json`.
+
 **Protein** (g/kg × reference weight):
 
 | Situation | g/kg | Rule and source |

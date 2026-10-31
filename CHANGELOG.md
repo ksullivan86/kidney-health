@@ -7,6 +7,42 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+This version adds **Whoop** to Connected devices, an **Activity and recovery** card in Trends, and a choice to add Whoop's
+calories on active days to your calorie target. All of it is off until you set it up.
+
+### Upgrading
+
+1. **Back up first.** Schema step 30 runs at the first start. It adds three tables and rebuilds the Care team tables `shares`
+   and `care_invites` so a fifth area fits; every row stays. The server also copies the database to `<db>.pre-v30.bak` before
+   this step.
+2. **Nothing new is switched on.** To use Whoop, register a Whoop developer app (up to 10 Whoop members need no approval) and
+   set `WHOOP_ENABLED`, `WHOOP_CLIENT_ID` and `WHOOP_CLIENT_SECRET_FILE`, with `DEVICES_ENABLED` on
+   ([devices.md](docs/devices.md#whoop)). The server then needs HTTPS to `api.prod.whoop.com`.
+
+### Known limitations
+
+* Not yet tried against a real Whoop account: the code is tested against a fake Whoop.
+* Tracker calories can be off by a lot. The extra counts the difference from the person's own quiet days, and the person can
+  count only part of it or set a daily ceiling.
+
+### Whoop, Activity and recovery
+
+* **Connect Whoop** in Settings → Connected devices. The server fetches calories burned, strain, recovery, resting heart rate,
+  heart rate variability (HRV), sleep and workouts every few hours, from the last 90 days at first. It never asks Whoop for a
+  name, an email or body measurements, and sends Whoop nothing about the person.
+* **Trends → Activity and recovery** shows the days and workouts of the period, with a table of every day. It shows only when
+  there is data. HRV, recovery, sleep and strain are shown, never acted on.
+* **Care team:** a fifth area, "activity and recovery". Without it, someone on the Care team sees the base calorie target.
+* **Add active-day calories to my target** (off by default): on a day Whoop counts more than your usual quiet day, the
+  difference is added to that day's calorie target, as the day goes on. Your usual quiet day is the lower quarter of your own
+  Whoop days of the last 4 weeks (14 days needed first). You can count part of it (for example 50 %) and set a daily ceiling.
+  Only calories change; protein, potassium, phosphorus, sodium, fluid and carbohydrate targets stay the same. Today shows the
+  base target and the extra on separate lines, and on an active day: "Extra calories on active days change your carbs; your
+  care team can help you plan insulin for exercise." "What fits now" uses the raised calorie target.
+* The export has `activity.csv`, `workouts.csv` and the same data in `export.json`. Importing a file leaves them out:
+  connecting Whoop again fetches them.
+* The demo shows a sample Whoop connection and sample days.
+
 ## 0.16.0 — 2026-10-31
 
 Version 0.16 adds **Connected devices**: a person can link their Withings scale or blood pressure monitor, and the readings

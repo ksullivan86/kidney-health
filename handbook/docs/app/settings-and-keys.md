@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-14
 fact_checked: 2026-10-05
-sources: [NOTE07, NOTE03, NOTE04, NOTE06, NOTE02, FDC-API, NOTE17, NOTE18, NOTE19, NOTE25]
+sources: [NOTE07, NOTE03, NOTE04, NOTE06, NOTE02, FDC-API, NOTE17, NOTE18, NOTE19, NOTE25, NOTE28]
 ---
 
 # Settings and keys
@@ -24,7 +24,7 @@ can be shared by your admin or added by you ([design note 07][NOTE07]).
 |---|---|
 | **Account** | your name, user name, **Change password**, **Two-step sign-in**, **Passkeys**, **Signed-in devices**, **Your data** (export, import, **Phone shortcuts** for an iPhone Shortcut that sends your weight and blood pressure: [Weight and blood pressure](weight-and-blood-pressure.md#from-a-phone-shortcut); delete account), your recent sign-in activity, **Sign out** |
 | **Care team** | family, a caregiver or a dietitian on your server who can look at your log (**Viewer**) or also plan your meals and use your shopping list (**Care helper**); invites for you; the Care teams you are on ([Care team](#sharing)) |
-| **Connected devices** (when your admin sets it up) | **Connect Withings** so the server fetches your weight, blood pressure and pulse; **Sync now**; **Disconnect** ([Weight and blood pressure](weight-and-blood-pressure.md#from-withings)) |
+| **Connected devices** (when your admin sets it up) | **Connect Withings** so the server fetches your weight, blood pressure and pulse ([Weight and blood pressure](weight-and-blood-pressure.md#from-withings)); **Connect Whoop** for calories burned, strain, recovery, HRV, sleep and workouts ([Activity and recovery](reports-for-your-team.md#activity-and-recovery)), and **Add active-day calories to my target** ([More calories on active days](targets-and-warnings.md#active-day-calories)); **Sync now**; **Disconnect** |
 | **Preferences** | theme (match device, light, dark), the day your week starts on, **Units for lab results** (US or SI: the unit offered first) |
 | **Meal guidance** | on or off, carbohydrate tolerance, low-treatment amount, foods to leave out, your "Not for me" foods ([Meal guidance](guidance.md)) |
 | **Food data** | your own USDA key, the shared key's status and today's remaining lookups, **Send barcodes I scan to Open Food Facts** ([Barcodes and label photos](barcode-and-photo.md)) |
@@ -171,7 +171,8 @@ team on first; until then, Settings says so. **Profile → Open Care team** take
 
 There are two roles:
 
-- A **Viewer** can look at the parts you tick: your food log, lab results, weight and blood pressure, symptoms. They never change
+- A **Viewer** can look at the parts you tick: your food log, lab results, weight and blood pressure, symptoms, activity and
+  recovery (from Whoop). They never change
   anything.
 - A **Care helper** can also plan your meals and use your shopping list. They see your food log so they can plan. They never
   change what you ate, your targets, your profile, your labs, your weight, your symptoms or your settings.

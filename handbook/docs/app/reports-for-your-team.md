@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-07
 fact_checked: 2026-10-05
-sources: [ARCH, NOTE03, NOTE06, NOTE07, Q20, DG28a, DG53]
+sources: [ARCH, NOTE03, NOTE06, NOTE07, Q20, DG28a, DG53, NOTE28, ODRISCOLL20]
 ---
 
 # Reports for your care team
@@ -91,6 +91,18 @@ one stands out. Itch, tiredness, poor appetite or nausea, and muscle cramps are 
 **Mention at your next visit**; it adds: "If any of these get worse quickly, do not wait: call today."
 Symptoms are never sent to an AI provider or an assistant ([Privacy and your data](privacy.md)).
 
+## Activity and recovery from Whoop {#activity-and-recovery}
+
+If you connected a **Whoop** strap (Settings → Connected devices), **Trends** has an **Activity and recovery** card for the days
+on screen: the average calories burned, strain, recovery, resting heart rate, heart rate variability (HRV) and sleep, a chart of
+calories burned with a table of every day under it, and your workouts. Today's numbers say "so far": they grow until your Whoop
+day ends. A Whoop day starts when you fall asleep, so a night that starts on Monday evening counts for Tuesday.
+
+The card shows these numbers for you and your care team. The app does not act on recovery, HRV, sleep or strain: no warning, no
+suggestion, no change to a target. Tracker calories can be off by a lot ([O'Driscoll 2020][ODRISCOLL20]). The export has the
+days and workouts (`activity.csv`, `workouts.csv`). Someone on your Care team sees the card only if you share **activity and
+recovery** with them ([design note 28][NOTE28]).
+
 ## Visit prep: one page for an appointment
 
 **Trends → Get ready for a visit** opens **Visit prep**. Choose the last 2 weeks, 4 weeks (the first choice) or
@@ -171,3 +183,4 @@ More: [Questions to ask](../reference/questions-to-ask.md) and [Appointments](..
 - [KDOQI 2020 nutrition guideline][Q20]: why phosphorus and protein are judged over weeks.
 - [Foley 2011][DG53]: the long interdialytic interval; [Cabrera 2015][DG28a]: weight gain between sessions.
 - [Design note 03][NOTE03] (CSV formula escaping); [design note 06][NOTE06] (insights); [design note 07][NOTE07] (full export).
+- [Design note 28][NOTE28]: the Activity and recovery card; [O'Driscoll 2020][ODRISCOLL20]: how accurate trackers' calories are.

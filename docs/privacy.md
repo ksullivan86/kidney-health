@@ -211,6 +211,13 @@ readings marked "from Withings": in the export, deleted with the account, never 
 list of which Withings measures it has already looked at, so none is fetched twice; it holds no values and is deleted with the
 account. Disconnect deletes the sign-in at once.
 
+Whoop works the same way. The server keeps the person's Whoop sign-in, encrypted, and fetches their calories burned, strain,
+recovery, resting heart rate, heart rate variability, sleep and workouts every few hours. It never asks Whoop for the person's
+name, email or body measurements, and sends Whoop nothing but the sign-in and the requests. Whoop's member number for the person
+is kept so one Whoop account is connected to one person here. The days and workouts are in the export, deleted with the account
+and never sent to an AI provider. A Care team member sees them only if the person shares "activity and recovery". The person's
+choice to add active-day calories to their target is kept with their other settings.
+
 ## Who can see it
 
 * **You** see everything of yours, and can download it all (Settings → Account → Export) as a

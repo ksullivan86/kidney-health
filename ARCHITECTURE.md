@@ -842,6 +842,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 27 | `m027_care_team.py` | the Care team (note 25 §4) | `shares.role` (`viewer` or `care_helper`, default `viewer`: every existing share becomes a Viewer), `shares.helper_changes` (JSON `{day, added, changed, removed}` or NULL), `log_entries.added_by_user_id` (`ON DELETE SET NULL`; set only when a Care helper adds a planned entry) and a new table `care_invites` (`owner_user_id`, `invitee_user_id` NULL when no active account had the name, `username` as typed, `areas`, `role`, `lasts_days`, `created_at`, `expires_at`, `answered_at`, `answer` (`accepted`, `declined`, `cancelled`, `replaced`), `share_id`; `ON DELETE CASCADE` on both accounts; never yourself). Nothing else changes. |
 | 28 | `m028_test_accounts.py` | test accounts (note 26 §4) | `users.is_test_account` (0 or 1, default 0: every existing account is real), two triggers that refuse a row with `role = 'admin'` and `is_test_account = 1` (insert or update), and a new table `feedback` (`user_id` `ON DELETE SET NULL`, `username` kept as text, `screen`, `trying`, `happened`, `useful` (`yes`, `somewhat`, `no` or NULL), `unsafe`, `app_version`, `created_at`, `done_at`, `done_by`). Nothing else changes. |
 | 29 | `m029_connected_devices.py` | connected devices (note 27 §3) | two new tables: `device_connections` (`user_id` `ON DELETE CASCADE`, `provider`, `external_user_id`, `tokens_enc` (access and refresh token sealed with the keyring, purpose `device:<provider>`, owner the person), `key_id`, `access_expires_at`, `scopes`, `status` (`active` or `needs_reconnect`), `sync_cursor`, `last_sync_at`, `last_success_at`, `last_error`, `next_sync_after`; `UNIQUE (user_id, provider)` and `UNIQUE (provider, external_user_id)`) and `device_imports` (the ledger: `user_id`, `provider`, `external_id`, `kind`, `row_id`, `imported_at`; primary key `(user_id, provider, external_id)`). Imported rows go into `weights` and `blood_pressures` with `source = 'withings'`. Nothing else changes. |
+| 30 | `m030_activity.py` | Whoop, activity and recovery (note 28 §5) | three new tables: `activity_days` (`user_id` `ON DELETE CASCADE`, `date`, `source`, `source_key` (`whoop:cycle:<id>`), `kcal`, `strain`, `recovery_pct`, `resting_hr`, `hrv_ms`, `sleep_minutes`, `sleep_performance_pct`, `finished`, `started_at`; `UNIQUE (user_id, date, source)` and `UNIQUE (user_id, source_key)`), `activity_workouts` (`date`, `start_time`, `end_time`, `minutes`, `sport`, `kcal`, `strain`, `source`, `source_key` `whoop:workout:<uuid>`; `UNIQUE (user_id, source_key)`) and `activity_extra` (`user_id` primary key, `enabled`, `share_pct` 10–100, `ceiling_kcal` 50–3000 or NULL). `shares` and `care_invites` are rebuilt from their stored definitions with `json_array_length(areas) BETWEEN 1 AND 5` (the area `activity`); every row stays and the invite → share links are restored after `DROP TABLE shares` set them NULL. `BACKUP_BEFORE`. |
 | 23 | `m023_passkeys.py` | passkeys (note 18) | `passkeys` (one row per passkey: `credential_id` BLOB, unique, 1 to 1,023 bytes; `public_key`, the COSE key as sent; `alg`; `user_handle`, 32 random bytes shared by one person's passkeys; `sign_count`; `name`; `backed_up`; `created_at`; `last_used_at`). `ON DELETE CASCADE`. Nothing is sealed: a public key is not a secret. Nobody has a passkey after the upgrade. |
 
 ## Backend file ownership
@@ -1079,7 +1080,9 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
 
-**Status (2026-10-31): v0.16.0 is prepared.** Connected devices and Withings (note 27, schema step 29, `/api/devices`, off until `DEVICES_ENABLED` and
+**Status (2026-10-31): Whoop is in progress for 0.17** (note 28, schema step 30, `/api/activity`, off until `DEVICES_ENABLED` and
+`WHOOP_ENABLED`; the active-day calorie extra off until the person turns it on); see "Activity and recovery" below; CHANGELOG.md
+Unreleased. **v0.16.0 is prepared.** Connected devices and Withings (note 27, schema step 29, `/api/devices`, off until `DEVICES_ENABLED` and
 `WITHINGS_ENABLED`); see "Connected devices" below; CHANGELOG.md 0.16.0. **v0.15.0 (2026-10-31)** adds several sign-in providers at once (`OIDC_PROVIDERS`, up to four),
 `OIDC_ONLY`, and tokens that never expire (`tokens.allow_never_expiring`); note 24 §13, no schema step; CHANGELOG.md 0.15.0.
 **v0.14.0 (2026-10-31)** It adds the Care team (note 25, schema step 27: invites by user name, the
@@ -1240,7 +1243,7 @@ optional HIBP check (`PASSWORD_BREACH_CHECK`, off by default; the k-anonymity ra
 | `POST /api/me/oidc/link` | user (local) *(re-auth)* | `?provider=` as for the start → `{url}` (and the flow cookie); the callback links only when this same session comes back and that provider account is not linked to someone else (`taken`); audit `oidc.linked` (`via: settings`). 409 when already linked to this issuer; 404 unless it is on |
 | `DELETE /api/me/oidc/{id}` | user (local) *(re-auth)* | → 204; audit `oidc.unlinked` (`via: self`). 409 when it is the last way in (no password, no passkey, no other link); 404 if not yours |
 | `GET /api/me/shares` | user | → `{enabled, areas, roles, max: 10, sharing: [{id, name, username, areas, since, until, last_viewed_at, active, role, helper_changes}], codes: [{id, areas, days, created_at, expires_at, role}], invites: [{id, username, areas, role, days, created_at, expires_at}]}` (never a link); `enabled` false while `sharing.enabled` is off; 404 in `AUTH_MODE=none` |
-| `POST /api/me/shares` | user *(re-auth)* | `{areas, days?, role?}` (`role` `viewer` by default; `care_helper` adds `food`) (1 to 4 of `food`, `labs`, `body`, `symptoms`; `days` 1 to 365 makes the share end that long after it is accepted, absent or null: until stopped) → 201 `{code, link}`: `/#/share/<id>.<verifier>`, shown only here, works once for 7 days; 409 at 5 unused links or 10 shares; audit `share.code_created` |
+| `POST /api/me/shares` | user *(re-auth)* | `{areas, days?, role?}` (`role` `viewer` by default; `care_helper` adds `food`) (1 to 5 of `food`, `labs`, `body`, `symptoms`, `activity` (step 30); `days` 1 to 365 makes the share end that long after it is accepted, absent or null: until stopped) → 201 `{code, link}`: `/#/share/<id>.<verifier>`, shown only here, works once for 7 days; 409 at 5 unused links or 10 shares; audit `share.code_created` |
 | `DELETE /api/me/shares/{id}` | user | → 204: stops a share (audit `share.ended`, `by: owner`) or cancels a link (`share.code_cancelled`); 404 if not yours or already ended |
 | `POST /api/me/shares/invite` | user *(re-auth)* | `{username, areas, days?, role?}` → 201 `{id, username, areas, role, days, created_at, expires_at}`, the **same answer whether or not the name is an active account** (note 25 §3); a second invite to the same name replaces the first; 400 your own name; 409 at 5 waiting invites or 10 shares; 20 tries an hour per account and address (`care_invite`); audit `care.invited` (no name) |
 | `DELETE /api/me/shares/invites/{id}` | user | → 204: cancels a waiting invite; audit `care.invite_cancelled`; 404 if not yours, answered or lapsed |
@@ -2301,7 +2304,7 @@ it connects to the checked IP with the original `Host` and SNI. Clients never fo
 standard `HTTPS_PROXY`/`ALL_PROXY` variables name a proxy (honouring `NO_PROXY`), requests go to the proxy
 and pinning is its job. `read_capped` counts decoded bytes. Every outbound client in the app uses it (USDA
 `app/foods.py`, Open Food Facts `app/off.py`, the breached-password check `app/auth/policy.py`, sign-in providers
-`app/auth/oidc.py`, Withings `app/devices/withings.py`) or, for AI,
+`app/auth/oidc.py`, Withings `app/devices/withings.py`, Whoop `app/devices/whoop.py`) or, for AI,
 `app/ai/transport.py`'s `PinnedTransport`; `tests/test_egress.py` fails on any other client.
 
 ### Parity
@@ -4553,7 +4556,8 @@ this route does before sending, because one refused row makes the whole request 
 runtime image has none, so without it a Withings reading's time would fall back to UTC. Locked with hashes in `requirements.lock`.
 
 The server signs in to a device company with the person's consent and fetches only that person's own readings into their log.
-Nothing about the person is sent out. 0.16 has Withings (weight, blood pressure, pulse); Whoop (0.17) adds a provider module.
+Nothing about the person is sent out. 0.16 has Withings (weight, blood pressure, pulse); Whoop (0.17) adds a provider module
+(see "Activity and recovery" below).
 
 * **Switches.** `devices.enabled` (`DEVICES_ENABLED`, off) and `devices.sync_hours` (`DEVICES_SYNC_HOURS`, 1 to 24, default 4)
   are settings. The provider app is env only (`app/config.py` `WithingsEnv`): `WITHINGS_ENABLED`, `WITHINGS_CLIENT_ID`,
@@ -4605,6 +4609,57 @@ called from `js/main.js`), which syncs at once after `connected`. `KH.bodyUi.ori
 administration shows the switch group and the About rows. The demo (`js/mock/devices.js`) has a sample connection and marks the
 sample morning readings `withings`; Connect is refused there. Tests: `tests/test_connected_devices.py` (a fake Withings behind the
 real checked transport, `tests/devices_support.py`), `tests/test_connected_devices_ui.py`, `tests/js/devices_demo.mjs`.
+
+## Activity and recovery: Whoop and the active-day calorie extra (schema step 30; design note 28)
+
+Whoop is the second provider of Connected devices. Its days and workouts are shown on Trends; the person may let Whoop's
+calories on active days raise that day's calorie target. Nothing about the person is sent to Whoop.
+
+* **Switch and app.** The same `devices.enabled` switch; the app is env only (`WhoopEnv`): `WHOOP_ENABLED`, `WHOOP_CLIENT_ID`,
+  `WHOOP_CLIENT_SECRET_FILE` (`WHOOP_CLIENT_SECRET` is a `ConfigError`); on needs `PUBLIC_URL`.
+* **`app/devices/whoop.py`.** Authorize at `api.prod.whoop.com/oauth/oauth2/auth` with `offline read:cycles read:recovery
+  read:sleep read:workout` (never `read:profile` or `read:body_measurement`); tokens at `/oauth/oauth2/token` (form-encoded,
+  client id and secret in the form; refresh with `scope=offline`; **rotation**: the old refresh token ends at once, so
+  `store.save_refreshed` commits before the fetch). The token answer has no user id: `exchange` reads `user_id` from
+  `GET /developer/v2/cycle?limit=1`, else the first sync sets it (`store.set_external`; another person's = `account_taken`,
+  needs reconnect). Fetch: the four v2 collections, `limit=25`, `nextToken`, at most 40 pages each, from the cursor minus 3 days
+  (the first time `first_days` = 90). 401 `auth`, 429 `rate_limited`, 403 on recovery, sleep or workout = not allowed (skipped),
+  on cycles `scope`. Only `SCORED` records give numbers; kcal = kJ ÷ 4.184 half up; a cycle belongs to the date 12 hours after
+  its start in its `timezone_offset`; two cycles on one date keep the later; sleep minutes = light + slow wave + REM of the
+  non-nap sleeps; plausibility ranges leave a value empty. Revoke: `DELETE /developer/v2/user/access` with the person's access
+  token (refreshed first when it has run out). Every request through `egress.CheckedTransport` (no redirects, 2 MiB, 15 s).
+* **Storage.** `store.add_activity` (one `BEGIN IMMEDIATE` transaction): a day or workout seen before (`device_imports`, kinds
+  `activity_day` and `workout`) **replaces** its values (the day in progress grows) while its row still exists with the same
+  `source_key`; a deleted row stays deleted; days after tomorrow are skipped. Disconnect with `delete_readings` deletes the
+  `whoop` days and workouts and the ledger. `imported` and `removed` counts gain `days` and `workouts`.
+* **The extra** (`app/activity.py`, pure functions + `day_extra`; JS twin `js/engine/activity.js`, vectors
+  `tests/data/activity_vectors.json` from `tests/data/gen_activity_vectors.py`): with `activity_extra.enabled`, a calorie target
+  (number, or a range: the top, else the bottom) and a Whoop `kcal` for the day, `quiet` = the lower quartile (nearest rank,
+  `ceil(25·n/100)`) of the finished days' kcal in `[day−28, day−1]`, at least 14 days (else no extra); `extra =
+  min(ceiling, ((max(0, burned − quiet) × share + 500) div 1000) × 10)`; the target becomes base + extra (both ends of a range).
+  **Only `calories_kcal` changes.** `log.day_summary` returns `calorie_extra` (`{base_kcal, extra_kcal, burned_kcal, quiet_kcal,
+  share_pct, ceiling_kcal, history_days, source}` or null) and the raised target; `guidance.context.load_profile(conn, user, day)`
+  uses the same targets, so "What fits now", swaps and plan-day agree with Today. Period summaries and Trends compare with the
+  base. HRV, recovery, sleep and strain never reach the engine.
+* **Care team.** `sharing.AREAS` gains `activity`. `GET /api/shared/{id}/activity` needs it. `GET /api/shared/{id}/log` uses
+  `day_summary(..., activity_extra=False)` without it (base target, `calorie_extra` null). A Care helper's plan-days uses the
+  person's own guidance context (the extra of a day with a Whoop figure, usually today, is in it).
+* **Export.** `export.json` gains `activity_days`, `activity_workouts`, `activity_extra`; the archive `activity.csv` and
+  `workouts.csv`. Import skips the three (`SKIPPED_SECTIONS`, and a line in `NOT_IMPORTED`).
+
+| Method and path | Auth | Body → response |
+|---|---|---|
+| `GET /api/activity?start=&end=` | signed in | `{start, end, days: [{date, kcal, strain, recovery_pct, resting_hr, hrv_ms, sleep_minutes, sleep_performance_pct, finished, source}], workouts: [{date, start_time, end_time, minutes, sport, kcal, strain, source}], extra: {enabled, share_pct, ceiling_kcal}}`. Default the last 30 days, at most 366. Always 200 (Trends asks on every open) |
+| `PUT /api/activity/extra` | signed in | `{enabled, share_pct (10–100), ceiling_kcal (50–3000 or null)}` → the same. Audit `activity.extra_on` / `activity.extra_off` when it changes and is or was on |
+| `GET /api/shared/{share_id}/activity?start=&end=` | signed in, area `activity` | the days and workouts, `extra: null` |
+
+**Screens.** `js/views/activity.js` (`KH.activityViews`): the Trends card `#activity-trends` (hidden without data or without the
+area), a bar chart of kcal with a table of every day under it, the workouts, the accuracy line; Today's block under the daily
+status (base and extra as separate lines, "Why this number", the one carbs and care-team line on an active day); the setting in
+the Whoop box of Settings → Connected devices (`extraBlock`). `js/views/devices.js` says its sentences with the provider's name.
+The demo (`js/mock/activity.js`) has 45 sample days and workouts, the extra off; `_dayExtra` raises the demo's day and guidance
+targets with the engine. Tests: `tests/test_whoop.py` (a fake Whoop in `tests/devices_support.py`), `tests/test_activity.py`,
+`tests/test_activity_ui.py`, `tests/test_migration_m030.py`.
 
 ## The API document and `GET /api/meta` (design note 14 changes 2 and 4)
 
