@@ -26,10 +26,14 @@ Branch: this helper's worktree branch (commit locally, no push; the owner merges
    settings.js (group, badge, admin parts, who line, activity labels), auth.js. tests/test_test_accounts_ui.py; admin_frame
    node test updated; tools/e2e/test_accounts.py 34/34 PASS (system python3, port 8094).
 
+3. Docs: note 26, docs/accounts.md (Test accounts + CLI), docs/deployment.md row, deploy/.env.example, compose, quadlet,
+   k8s examples (password as a secret file), handbook self-hosting/users-and-keys (+ NOTE26 source, rebuilt sources pages),
+   ARCHITECTURE.md (step 28 row, section, CLI), CHANGELOG Unreleased, docs/test-the-full-app.md, README + docs/README links.
+   Checked: handbook content, compose env, deploy, research notes tests; ruff; OpenAPI and settings vectors --check.
+
 ## Next
 
-Docs: note 26, docs/accounts.md, docs/deployment.md + deploy examples, handbook self-hosting users page, ARCHITECTURE.md,
-CHANGELOG, docs/test-the-full-app.md, README + docs/README links. Then the full pytest run.
+The full pytest run (log: scratchpad full.log), then "Status: complete".
 
 ## Decisions
 
