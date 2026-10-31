@@ -49,6 +49,8 @@
       if (KH.menuPlan) KH.menuPlan.openPending().catch((e) => console.warn('Menu day:', e));
       // A share link (#/share/<code>, js/views/sharing.js), kept the same way: asks "Accept?" before anything is saved.
       if (KH.sharing) KH.sharing.openPending().catch((e) => console.warn('Share link:', e));
+      // Back from a device company (#/devices/<word>/<provider>, js/views/devices.js): Settings → Connected devices says how it went.
+      if (KH.devices) KH.devices.openPending().catch((e) => console.warn('Connected devices:', e));
       // A signed-in visit: on an iPhone or iPad the third one offers the Home Screen tip (js/pwa.js, note 02 R10).
       if (KH.pwa && KH.pwa.countVisit) KH.pwa.countVisit();
     }

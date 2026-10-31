@@ -185,7 +185,9 @@
         api._insertWeight(labUser, { date, time: '07:15', kg: hemodialysis && back === 0 ? 72.4 : kg, context: 'morning', note: '' }, { createdAt: stampOf(back, 7.15) });
       }
       const [systolic, diastolic, pulse] = MORNING_BP[i];
-      api._insertReading(labUser, { date, time: '07:20', systolic, diastolic, pulse, context: 'morning', note: '' }, { createdAt: stampOf(back, 7.2) });
+      // The morning readings come from the sample Withings monitor (design note 27; js/mock/devices.js): "from Withings" in the table.
+      api._insertReading(labUser, { date, time: '07:20', systolic, diastolic, pulse, context: 'morning', note: '' },
+        { source: 'withings', sourceKey: `withings:${9000 + i}:bp`, createdAt: stampOf(back, 7.2) });
       if (EVENING_BP[back]) {
         const [es, ed, ep] = EVENING_BP[back];
         api._insertReading(labUser, { date, time: '19:10', systolic: es, diastolic: ed, pulse: ep, context: 'evening', note: '' }, { createdAt: stampOf(back, 19.1) });

@@ -960,6 +960,32 @@ register(
         "or been revoked work again.",
     ),
 )
+# Connected devices (design note 27; read by app/devices/). The provider apps (WITHINGS_*) are env only (app/config.py), never
+# settings: what the server connects to is never changed at run time, and the client secret is a file.
+register(
+    SettingDef(
+        key="devices.enabled",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="DEVICES_ENABLED",
+        label="Let people connect a Withings scale or blood pressure monitor",
+        help="Off by default. When on, each person can connect their own Withings account in Settings → Connected devices. "
+        "The server then fetches that person's weight, blood pressure and pulse from Withings every few hours and adds them "
+        "to their log. Nothing about the person is sent to Withings. The server owner sets up a Withings developer app "
+        "first (WITHINGS_ENABLED; see docs/devices.md). While off, nothing is fetched and the section is hidden; turned on "
+        "again, connections that were not removed work again.",
+    ),
+    SettingDef(
+        key="devices.sync_hours",
+        model=Annotated[int, Field(ge=1, le=24)],
+        default=4,
+        scope="instance",
+        env="DEVICES_SYNC_HOURS",
+        label="Fetch from connected devices every (hours)",
+        help="How often the server asks Withings for new readings. People can also press Sync now.",
+    ),
+)
 # Tokens that never expire (design note 24 §13, the owner's question 7; read by app/auth/api_tokens.py). Both families.
 register(
     SettingDef(

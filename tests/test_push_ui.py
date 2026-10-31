@@ -238,7 +238,8 @@ def test_the_demo_lists_no_tokens_and_refuses_to_make_one_with_the_previews_word
     ({"source": "apple_health", "via": None}, "from the Health app"),
     ({"source": "import", "via": None}, "from a file"),
     ({"source": "manual", "via": None}, ""),
-    ({"source": "withings"}, ""),
+    ({"source": "withings"}, "from Withings"),
+    ({"source": "fitbit"}, ""),
     ({}, ""),
 ])
 def test_origin_text_for_a_row(row, text):

@@ -165,3 +165,9 @@
 .recovery-codes { list-style: none; padding: 0; margin: 0.75rem 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: 0.4rem 1rem; }
 .recovery-codes code { font-family: var(--mono); font-size: 1rem; letter-spacing: 0.04em; }
 .feedback-filters select { width: auto; }
+
+/* Settings → Connected devices (js/views/devices.js, design note 27): the "before you connect" and "disconnect" boxes. */
+.device-provider + .device-provider { margin-top: 12px; }
+.device-consent { padding: 10px 12px; border-radius: var(--radius-sm); background: var(--over-tint); color: var(--text); margin-top: 8px; }
+.device-consent h4 { margin: 0 0 6px; font-size: 1rem; }
+.device-consent .check { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0; }
