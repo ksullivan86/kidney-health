@@ -26,6 +26,7 @@ PUBLIC = {
     ("post", "/api/auth/passkey"),
     ("get", "/api/auth/oidc/start"),  # sign-in with a provider (note 24 §3): 404 while it is off
     ("get", "/api/auth/oidc/callback"),
+    ("get", "/api/auth/oidc/callback/{name}"),  # a named provider's way back (note 24 §13)
     ("post", "/api/auth/oidc/invite"),
 }
 METHODS = ("get", "post", "put", "patch", "delete")

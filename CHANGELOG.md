@@ -7,6 +7,45 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+## 0.15.0 — 2026-10-31
+
+Version 0.15 lets people sign in with Authentik and Google on the same server, adds a choice to sign in only through them,
+and lets a token for an outside AI app or a phone shortcut last until you remove it. Nothing new is switched on.
+
+### Upgrading from 0.14 (read this first)
+
+1. **Back up first** (`podman exec kidney-health python -m app.admin backup /data/before-0.15.0.db`). There is no schema step.
+2. **Coming from 0.13 or older**, read [Upgrading from 0.13](#upgrading-from-013-read-this-first) and the notes before it too.
+3. **Change the tag** to `:0.15`, or pin a digest from the release notes. The shipped files already say `:0.15`.
+4. **Nothing changes for your current sign-in.** The `OIDC_ISSUER` variables keep working as the first provider. A second
+   provider, `OIDC_ONLY` and never-ending tokens are all off until you set them ([accounts.md](docs/accounts.md)).
+
+### Sign-in with providers
+
+* **Authentik and Google at the same time.** List up to four providers in `OIDC_PROVIDERS`, for example `authentik,google`, and
+  give each its own `OIDC_<NAME>_ISSUER`, `OIDC_<NAME>_CLIENT_ID` and `OIDC_<NAME>_CLIENT_SECRET_FILE`. Each gets its own button
+  on the sign-in page, the invite page and the "enter your password again" sheet, and its own return address,
+  `<PUBLIC_URL>/api/auth/oidc/callback/<name>`. People link each one separately in Settings. A provider can have its own button
+  words, allowed email domains, admin groups and new-account switch. **A provider you set up with `OIDC_ISSUER` keeps working as
+  it is**, with the same return address and the same links.
+* **Provider-only mode.** `OIDC_ONLY=true` turns passwords off: people sign in with a provider button or a passkey. Test accounts
+  keep their password. The server does not start with it on and no provider set up. If the provider is down, set
+  `OIDC_ONLY=false` and restart to sign in with a password. Server administration warns about this, and also while no admin has
+  linked a provider.
+* **About this server** lists each provider, its return address and whether the server reached it ("not asked yet" until
+  someone presses its button).
+* [accounts.md](docs/accounts.md#if-it-doesnt-work) has a new list of what to check when sign-in with a provider does not work,
+  and says plainly how to turn on linking by email.
+
+### Tokens
+
+* **Tokens that never expire.** When making a token for an outside AI app or a phone shortcut, people can now choose **Never
+  (until you remove it)**. The list shows "never expires", and the app reminds them to remove a token they no longer use. To
+  forbid it, set `TOKENS_ALLOW_NEVER_EXPIRING=false` or turn off the switch in Server administration → Server settings; tokens
+  made before keep working until they are revoked.
+
+No schema step: nothing to do before you upgrade.
+
 ## 0.14.0 — 2026-10-31
 
 Version 0.14 adds the **Care team**: invite a family member or caregiver who already has an account, and let them help plan

@@ -41,6 +41,8 @@ body.signed-out .main { padding-bottom: calc(32px + env(safe-area-inset-bottom, 
 .auth-or { display: flex; align-items: center; gap: 10px; margin: 0; color: var(--text-2); font-size: 0.85rem; }
 .auth-or::before, .auth-or::after { content: ""; flex: 1; border-top: 1px solid var(--border); }
 .auth-passkey-btn { width: 100%; }
+/* One button per sign-in provider (design note 24 §13). */
+.auth-oidc-list { display: flex; flex-direction: column; gap: 8px; }
 .auth-foot { max-width: 460px; margin: 0; text-align: center; color: var(--text-2); font-size: 0.82rem; }
 .code-input { font-family: var(--mono); letter-spacing: 0.06em; text-transform: uppercase; }
 .code-input::placeholder { letter-spacing: 0.04em; }

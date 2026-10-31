@@ -74,7 +74,9 @@ neither gives the other, and both are off by default. It never sees anyone else'
 **Settings → Outside AI apps** (it shows once your admin has turned assistant access on):
 
 1. Under **New token**, give the token a **name** (for example the app or device it is for, so you know which one
-   to revoke later) and choose when it **expires**: after 30 days, 90 days (the default) or 1 year. Tick **Can also
+   to revoke later) and choose when it **expires**: after 30 days, 90 days (the default) or 1 year, or **Never (until you
+   remove it)** if your admin allows it (`TOKENS_ALLOW_NEVER_EXPIRING`, on by default). A token that never expires works until
+   you revoke it, so revoke one you no longer use. Tick **Can also
    save food and recipes** only if you want the assistant to be able to save for you, and **Also let it remember tastes** only if
    you want it to be able to remember your likes and dislikes; both are off by default, and a token cannot be changed later (make
    a new one instead).

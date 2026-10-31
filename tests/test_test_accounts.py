@@ -202,17 +202,23 @@ def test_a_test_account_is_never_an_admin(on):
 
 
 def test_single_sign_on_groups_never_make_a_test_account_an_admin(on, monkeypatch):
+    """Whichever provider: the first one (the server-wide groups) or a named one with its own (design note 24 §13)."""
     from app.auth import oidc, oidc_api
+    from app.config import OidcEnv
 
     uid = status(on)["accounts"][0]["id"]
     store = SettingsStore(env={})
+    first = SimpleNamespace(env=OidcEnv(), id="default")
+    authentik = SimpleNamespace(env=OidcEnv(name="authentik", admin_groups="kidney admins"), id="authentik")
+    google = SimpleNamespace(env=OidcEnv(name="google"), id="google")
     with conn_of(on) as conn:
         store.set_instance(conn, "auth.oidc.admin_groups", "admins")
         conn.commit()
-        monkeypatch.setattr(oidc, "groups", lambda claims: {"admins"})
-        oidc_api._sync_role(conn, SimpleNamespace(store=store), uid, {"groups": ["admins"]}, None)
-        conn.commit()
-        assert conn.execute("SELECT role FROM users WHERE id = ?", (uid,)).fetchone()["role"] == "user"
+        monkeypatch.setattr(oidc, "groups", lambda claims: {"admins", "kidney admins"})
+        for provider in (first, authentik, google):
+            oidc_api._sync_role(conn, SimpleNamespace(store=store), provider, uid, {"groups": ["admins", "kidney admins"]}, None)
+            conn.commit()
+            assert conn.execute("SELECT role FROM users WHERE id = ?", (uid,)).fetchone()["role"] == "user", provider.id
 
 
 # --------------------------------------------------------------------------- the Care team: only with test accounts

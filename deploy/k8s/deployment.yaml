@@ -47,7 +47,7 @@ spec:
       containers:
         - name: app
           # The tag and digest are set in kustomization.yaml (`images:`).
-          image: ghcr.io/ksullivan86/kidney-health:0.14
+          image: ghcr.io/ksullivan86/kidney-health:0.15
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -109,6 +109,30 @@ spec:
             #   value: "true"                     # (docs/accounts.md); needs PUBLIC_URL, OIDC_ISSUER, OIDC_CLIENT_ID
             # - name: OIDC_CLIENT_SECRET_FILE     # the client secret, from the Secret (add oidc_client_secret there)
             #   value: /run/secrets/kidney-health/oidc_client_secret
+            # Or Authentik and Google together (docs/accounts.md); each provider's return address is
+            # <PUBLIC_URL>/api/auth/oidc/callback/<name>, and each secret is a key of the Secret:
+            # - name: OIDC_PROVIDERS
+            #   value: "authentik,google"
+            # - name: OIDC_AUTHENTIK_ISSUER
+            #   value: https://auth.example.org/application/o/kidney-health/
+            # - name: OIDC_AUTHENTIK_CLIENT_ID
+            #   value: your-authentik-client-id
+            # - name: OIDC_AUTHENTIK_CLIENT_SECRET_FILE
+            #   value: /run/secrets/kidney-health/oidc_authentik_secret
+            # - name: OIDC_AUTHENTIK_ALLOW_PRIVATE_ISSUER
+            #   value: "true"
+            # - name: OIDC_GOOGLE_ISSUER
+            #   value: https://accounts.google.com
+            # - name: OIDC_GOOGLE_CLIENT_ID
+            #   value: your-google-client-id.apps.googleusercontent.com
+            # - name: OIDC_GOOGLE_CLIENT_SECRET_FILE
+            #   value: /run/secrets/kidney-health/oidc_google_secret
+            # - name: OIDC_GOOGLE_ALLOWED_DOMAINS
+            #   value: example.org
+            # - name: OIDC_ONLY                   # no passwords: only the providers and passkeys (link your admin first)
+            #   value: "true"
+            # - name: TOKENS_ALLOW_NEVER_EXPIRING # false: every new token expires (30, 90 or 365 days)
+            #   value: "false"
             # - name: TEST_ACCOUNT_ENABLED        # tester and tester-helper for people who test the app
             #   value: "true"                     # (docs/test-the-full-app.md); never admins
             # - name: TEST_ACCOUNT_PASSWORD_FILE  # their one password, from the Secret (add test_account_password there)

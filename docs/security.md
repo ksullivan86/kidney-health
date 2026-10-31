@@ -43,7 +43,7 @@ Contents:
 | Supply-chain attacker | Compromises a package, an action or a base image | Hash-locked wheels, digest-pinned bases, SHA-pinned actions, Grype gate, signed images (section 9) |
 | Code running inside the container | Tries to escape or move sideways | Rootless engine, non-root UID 10001, no capabilities, no-new-privileges, seccomp, read-only root, no shell, NetworkPolicy |
 | A lost phone | Holds a session and cached pages | Session idle timeout, sign-out clears site data, the service worker never caches `/api/*`, `Cache-Control: no-store` |
-| A phone-shortcut token that leaks (phone switched on **Phone shortcuts**, off by default; [`push.md`](push.md)) | Adds plausible weights and blood pressure readings to one person's log, at most 60 requests of 50 rows an hour and 20 weights and 30 readings a day; reads, changes and deletes nothing, reaches no other route | A separate token family (`khd_`, the one scope `body:write`) that `/mcp` and every `/api` route refuse; answers are counts only; ranges and day limits as for typed rows; expiry at most 365 days; Revoke and "Delete what it sent"; every token ends on a password change; a wrong token counts toward the address's sign-in limit |
+| A phone-shortcut token that leaks (phone switched on **Phone shortcuts**, off by default; [`push.md`](push.md)) | Adds plausible weights and blood pressure readings to one person's log, at most 60 requests of 50 rows an hour and 20 weights and 30 readings a day; reads, changes and deletes nothing, reaches no other route | A separate token family (`khd_`, the one scope `body:write`) that `/mcp` and every `/api` route refuse; answers are counts only; ranges and day limits as for typed rows; expiry at most 365 days, or never when the person chooses it and the admin allows it (`TOKENS_ALLOW_NEVER_EXPIRING`); Revoke and "Delete what it sent"; every token ends on a password change; a wrong token counts toward the address's sign-in limit |
 
 ## 3. The defaults and why
 
@@ -91,11 +91,11 @@ the app:
 ```bash
 # 1. Copy the built handbook out of the image you run (no shell needed in the image).
 mkdir -p learn-site
-podman create --name kh-learn ghcr.io/ksullivan86/kidney-health:0.14
+podman create --name kh-learn ghcr.io/ksullivan86/kidney-health:0.15
 podman cp kh-learn:/app/learn ./learn-site/learn && podman rm kh-learn     # docker: same commands
 # 2. The header your proxy must send there (the same policy the app sends at /learn):
 podman run --rm --entrypoint python -v "$PWD/learn-site/learn:/site:ro,Z" \
-  ghcr.io/ksullivan86/kidney-health:0.14 -m app.handbook csp /site
+  ghcr.io/ksullivan86/kidney-health:0.15 -m app.handbook csp /site
 ```
 
 3. Serve `./learn-site` as static files on its own name, for example
@@ -166,7 +166,7 @@ Tick every line before you put real health data in the app.
 - [ ] `Network=pasta`; `TRUSTED_PROXIES` set from the logged peer address (section 4). With a proxy container on a shared network instead: no `PublishPort` at all, the proxy's address pinned (`IP=`) and trusted alone, never the subnet.
 - [ ] `PUBLIC_URL` set to the URL people type; HTTPS in front ([`https.md`](https.md)).
 - [ ] SELinux hosts: enforcing, no `SecurityLabelDisable`; bind mounts use `:Z`.
-- [ ] `loginctl enable-linger` for the user; `podman-auto-update.timer` enabled if you track `:0.14`.
+- [ ] `loginctl enable-linger` for the user; `podman-auto-update.timer` enabled if you track `:0.15`.
 - [ ] No Podman socket mounted into any container (section 7).
 
 ### Rootless Docker
@@ -268,8 +268,8 @@ publicly is refused. On Kubernetes the egress NetworkPolicy is a second layer.
 * **Scanning**: Grype fails the build on High or Critical vulnerabilities **with a fix available**,
   on pull requests (amd64) and before any tag moves (amd64 and arm64). A weekly scan of the
   published `:latest` and `:edge` prints the full report and opens an issue on a new fixable High.
-* **Tags**: pushes to `main` publish `:edge` and `:sha-<short>` only. `:latest`, `:0.14` and `:0.14.x`
-  move only on a `v*` tag, after the scan passed. **Track `:0.14` (or a verified digest), never
+* **Tags**: pushes to `main` publish `:edge` and `:sha-<short>` only. `:latest`, `:0.15` and `:0.15.x`
+  move only on a `v*` tag, after the scan passed. **Track `:0.15` (or a verified digest), never
   `:latest` or `:edge` on a machine you care about.**
 * **Signing and provenance**: buildx records SLSA provenance (`mode=max`) and an SBOM in the image
   index. Once the repository is public, release.yml also signs the index keylessly with cosign and
@@ -298,5 +298,5 @@ publicly is refused. On Kubernetes the egress NetworkPolicy is a second layer.
   may reach; its single-use state and the browser's own cookie refuse a forged one.
 * A kernel zero-day that escapes a user namespace is out of scope; the subordinate-UID mapping limits
   what it can reach.
-* Auto-update trusts whoever controls the tag you track; signing, tag rulesets and the `:0.14`
+* Auto-update trusts whoever controls the tag you track; signing, tag rulesets and the `:0.15`
   advice reduce, but do not remove, that risk.

@@ -33,7 +33,8 @@ requests and `POST /mcp` ([assistant.md](assistant.md)). A VPN is simpler and sa
 
 * Starts with `khd_` ("device"; assistant tokens start with `kha_`) and holds exactly one scope, `body:write`. The person does not choose
   scopes. The plain token is shown **once**, when it is made; the server keeps only its SHA-256.
-* A person has at most **5 active device tokens** (5 assistant tokens besides), valid **30, 90 (default) or 365 days**. Making one needs a
+* A person has at most **5 active device tokens** (5 assistant tokens besides), valid **30, 90 (default) or 365 days**, or until it is revoked when the admin allows tokens that never expire
+  (`TOKENS_ALLOW_NEVER_EXPIRING`, on by default). Making one needs a
   recent password (like saving a key) and is limited to 20 tokens an hour in all.
 * A token has a name (for example "Morning weight"), shows when it was last used and how many weights and readings it sent that are still in
   the log, and is **revoked** at once in Settings. Every token
@@ -44,7 +45,7 @@ requests and `POST /mcp` ([assistant.md](assistant.md)). A VPN is simpler and sa
   everything one token sent** in one step (`DELETE /api/me/tokens/{id}/body-rows`). If the token is purged 30 days after it ended, the rows
   stay and only lose its name.
 
-**In Settings** (Account → Your data → Phone shortcuts): give the token a name, choose when it ends (30 days, 90 days or 1 year) and press
+**In Settings** (Account → Your data → Phone shortcuts): give the token a name, choose when it ends (30 days, 90 days, 1 year, or Never: until you remove it) and press
 Make token. After a few minutes without a password the app asks for it again first. The token is shown **once**, with **Copy token** and
 the address to send to (this server's address followed by `/push/v1/body`); paste both into the Shortcut ([the
 recipe](../handbook/docs/app/weight-and-blood-pressure.md#from-a-phone-shortcut)). The list below shows each token's name, its first
@@ -143,7 +144,7 @@ kidneyhealthsync://pair?v=1&server=https%3A%2F%2Ffood.example.org&token=khd_…
 ## What a leaked token can do
 
 It can add up to 60 requests of up to 50 plausible weights and readings an hour (never more than 20 weights and 30 readings a day) to
-**one** person's log, until it expires (at most 365 days) or is revoked. It cannot read the log, the profile or anything else, change or
+**one** person's log, until it expires (at most 365 days, or never when the person chose so) or is revoked. It cannot read the log, the profile or anything else, change or
 delete a row, make or see tokens, or reach any other route (every other route ignores the `Authorization` header). The check route only says whether it works. The false rows are
 marked as sent by that token, so the person can see them and delete all of them in one step. Nothing is acted on automatically. Revoke the
 token (and delete what it sent) if a phone is lost or a Shortcut was shared.

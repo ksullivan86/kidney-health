@@ -93,7 +93,7 @@ fill in **Profile**, press **Suggest targets**, check them with your care team, 
 invite the rest of the household from **Server administration** (the shield icon).
 
 Put HTTPS in front of the app ([docs/https.md](docs/https.md)) so phones can install it and use the
-camera. You can check that a release image is genuine with `scripts/verify-image.sh 0.14.0`
+camera. You can check that a release image is genuine with `scripts/verify-image.sh 0.15.0`
 ([SECURITY.md](SECURITY.md#verifying-the-image-before-you-run-it)). The full guide, with backups,
 upgrades and troubleshooting, is [docs/deployment.md](docs/deployment.md).
 
@@ -124,12 +124,12 @@ running a local AI model next to the app. See [docs/deployment.md](docs/deployme
 
 ### Upgrading
 
-**From 0.13, 0.12, 0.11 or 0.10:** back up `kidney.db` first
-(`podman exec kidney-health python -m app.admin backup /data/before-0.14.0.db`), change the image tag
-to `:0.14`, and start it. The first start updates the database. Nothing new is turned on for you.
-What changed: [CHANGELOG.md](CHANGELOG.md#upgrading-from-013-read-this-first).
+**From 0.14, 0.13, 0.12, 0.11 or 0.10:** back up `kidney.db` first
+(`podman exec kidney-health python -m app.admin backup /data/before-0.15.0.db`), change the image tag
+to `:0.15`, and start it. The first start updates the database. Nothing new is turned on for you.
+What changed: [CHANGELOG.md](CHANGELOG.md#upgrading-from-014-read-this-first).
 
-**From 0.9, 0.8, 0.7, 0.6, 0.5, 0.4 or 0.3:** do the same with the tag `:0.14`, and read the notes for each step:
+**From 0.9, 0.8, 0.7, 0.6, 0.5, 0.4 or 0.3:** do the same with the tag `:0.15`, and read the notes for each step:
 [0.3 to 0.4](CHANGELOG.md#upgrading-from-03-read-this-first),
 [0.4 to 0.5](CHANGELOG.md#upgrading-from-04-read-this-first),
 [0.5 to 0.6](CHANGELOG.md#upgrading-from-05-read-this-first),
@@ -139,8 +139,9 @@ What changed: [CHANGELOG.md](CHANGELOG.md#upgrading-from-013-read-this-first).
 [0.9 to 0.10](CHANGELOG.md#upgrading-from-09-read-this-first),
 [0.10 to 0.11](CHANGELOG.md#upgrading-from-010-read-this-first),
 [0.11 to 0.12](CHANGELOG.md#upgrading-from-011-read-this-first),
-[0.12 to 0.13](CHANGELOG.md#upgrading-from-012-read-this-first) and
-[0.13 to 0.14](CHANGELOG.md#upgrading-from-013-read-this-first). The database updates all run in one start.
+[0.12 to 0.13](CHANGELOG.md#upgrading-from-012-read-this-first),
+[0.13 to 0.14](CHANGELOG.md#upgrading-from-013-read-this-first) and
+[0.14 to 0.15](CHANGELOG.md#upgrading-from-014-read-this-first). The database updates all run in one start.
 
 **From 0.2:** if your server updates itself (the old Quadlet file with `Image=...:latest` and
 `AutoUpdate=registry`), replace that file with the one in `deploy/quadlet/` before the next update,
@@ -181,6 +182,7 @@ Settings are environment variables, and secrets are read from files. These are t
 | `PUBLIC_URL` | not set | The address people type, like `https://food.home.example.net`. Set it whenever you use a host name. |
 | `TRUSTED_PROXIES` | `127.0.0.1,::1` | Which reverse proxies to trust. It depends on your setup ([docs/security.md](docs/security.md#4-proxy-trust-trusted_proxies-per-topology)). |
 | `AUTH_MODE` | `local` | `local` for normal logins, `proxy` if a sign-in proxy handles it, `none` for one trusted device with no login. |
+| `OIDC_ENABLED` | `false` | Sign in with Authentik, Google or another provider, one or several at once ([docs/accounts.md](docs/accounts.md#sign-in-with-authentik-google-or-another-provider)). |
 | `SECRET_KEY_FILE` | made for you in the data folder | Used to encrypt saved API keys. Keep a copy with your backups. |
 | `USDA_API_KEY_FILE` | not set | A shared key for USDA food search. People can also add their own. |
 | `OFF_ENABLED` | `false` | Barcode lookups in Open Food Facts. |

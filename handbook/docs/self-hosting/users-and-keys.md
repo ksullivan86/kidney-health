@@ -74,6 +74,9 @@ from other machines ([HTTPS for phones](https.md)).
   Revoke tokens** ends every token that person has, assistant tokens and phone shortcut tokens alike (it shows while
   assistant access or phone shortcuts is on and they have active ones). It appears in their activity; they can make
   new tokens in their settings.
+- People can make a token that never expires ("Never (until you remove it)") unless you turn off **Let people make tokens that
+  never expire** (`TOKENS_ALLOW_NEVER_EXPIRING=false`). Turning it off stops new ones; tokens already made keep working until they
+  are revoked.
 - Changing `AUTH_MODE` signs everybody out and revokes every assistant and phone shortcut token at the next start. With
   sign-in off, anyone who could reach the server could have made a token, so none is kept.
 - Removing an admin contains them: demoting, disabling or deleting an admin also deletes every
@@ -159,7 +162,8 @@ Then choose who may get in, under **Server administration → Server settings �
   Linked sign-in**, or who have an invite link, get in. Keep it off with Google, where anyone in the world has an account, unless
   you also list the email domains allowed in.
 - **Linking by email**: gives someone the account you made for them in **People** with their email address as the username, at
-  their first sign-in, if nobody has used that account yet and the provider says the email is verified. Off by default. Never an
+  their first sign-in, if nobody has used that account yet and the provider says the email is verified. Off by default: tick
+  **Give someone the account you made for their email address** to turn it on (or set `OIDC_LINK_BY_EMAIL=true`). Never an
   account someone registered themselves, and never an admin account.
 - **Admin groups**: members of these provider groups are admins here, and the role follows the groups at each sign-in. The last
   admin is never demoted.
@@ -167,6 +171,18 @@ Then choose who may get in, under **Server administration → Server settings �
 Someone who signs in through the provider is not asked for this app's two-step code, admins included: the provider does its own
 checks. So make the provider ask for a second factor, especially for admins. If someone loses their provider account, remove their
 link under **Server administration → People** and send them a reset link.
+
+**Authentik and Google together.** You can offer up to four providers, each with its own button. List their names in
+`OIDC_PROVIDERS`, for example `authentik,google`, and give each its own issuer, client ID and secret file. Each has its own return
+address, ending in its name: `/api/auth/oidc/callback/google`. A provider can have its own button words, allowed email domains, admin
+groups and new-account switch; without them it follows the settings above. People link each one separately in **Settings →
+Account → Linked sign-in**. **About this server** shows each provider and whether the server reached it.
+
+**Only the provider.** With `OIDC_ONLY=true` the password form is gone: people sign in with a provider button or a passkey. Test
+accounts keep their password. Link your own admin account first. If the provider is down, nobody can sign in with a password until
+you set `OIDC_ONLY=false` and restart the server; if your account has no password, the command `python -m app.admin reset-password
+YOUR_USERNAME` gives you a link to set one. The operator guide has the details and a list of what to check when sign-in does not
+work.
 
 A sign-in proxy in front of the app (the section below) is the other way to use Authentik. Use the proxy when nobody should see
 the app before signing in; use the button for Google, for a VPN or LAN address, or when some people keep a password.

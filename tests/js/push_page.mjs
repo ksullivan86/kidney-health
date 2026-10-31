@@ -13,6 +13,8 @@ import vm from 'node:vm';
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..', '..');
 const source = readFileSync(join(ROOT, 'app', 'static', 'js', 'views', 'settings.js'), 'utf8');
 const code = source.slice(source.indexOf('  // push block (begin)'), source.indexOf('  // push block (end)'));
+// The expiry words and helpers both token blocks share (design note 24 §13: "Never (until you remove it)"), from the real file.
+const expiryCode = source.slice(source.indexOf('  // "never": a token that lasts'), source.indexOf('  let assistantRender'));
 
 class Text { constructor(t) { this.nodeType = 3; this.t = t; } }
 class El {
@@ -85,10 +87,10 @@ function build(MOCK) {
     failed: (err) => h('p', { class: 'form-error' }, `Could not load this: ${err.detail || err.message}`),
     formError: () => h('div', { class: 'form-error' }),
     showFormError: (box, err) => { clear(box); box.append(h('p', {}, typeof err === 'string' ? err : err.detail || err.message)); },
-    fmtDate: (s) => `d(${s})`, relTime: (s) => `r(${s})`, isAdmin: () => isAdmin, EXPIRY_LABEL: { 30: '30 days', 90: '90 days', 365: '1 year' },
+    fmtDate: (s) => `d(${s})`, relTime: (s) => `r(${s})`, isAdmin: () => isAdmin,
     console, Number, Promise, String, Array, Object,
   });
-  vm.runInContext(`${code}\nglobalThis.pushBlock = pushBlock; globalThis.pushCountsText = pushCountsText; globalThis.pushTokenSub = pushTokenSub; globalThis.pushPairBox = pushPairBox;`, context);
+  vm.runInContext(`${expiryCode}\n${code}\nglobalThis.pushBlock = pushBlock; globalThis.pushCountsText = pushCountsText; globalThis.pushTokenSub = pushTokenSub; globalThis.pushPairBox = pushPairBox;`, context);
   return context;
 }
 const item = (over = {}) => ({ id: 1, name: 'Morning weight', prefix: 'khd_AbCd1234', scopes: ['body:write'], created_at: '2026-10-22T07:00:00Z', last_used_at: null,

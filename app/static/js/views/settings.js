@@ -26,7 +26,7 @@
   const REG = KH.settings;
 
   // Kept equal to APP_VERSION in app/main.py (tests/test_settings_ui.py).
-  const APP_VERSION = '0.14.0';
+  const APP_VERSION = '0.15.0';
 
   const A = {
     sessions: () => request('GET', '/api/me/sessions'),
@@ -786,6 +786,7 @@
     if (ev.action === 'user.role_changed') return `${ROLE_LABEL[d.old] || d.old} → ${ROLE_LABEL[d.new] || d.new}`;
     if (ev.action === 'login.failed' && d.via === 'reauth') return 'when asked for the password again';
     if (ev.action === 'user.password_changed' && d.via) return { self: 'by the person', admin_reset_link: 'with an admin reset link', reset_link: 'with a reset link', account_setup: 'first password' }[d.via] || '';
+    if (ev.action === 'api_token.created' && d.expires_in_days === 'never') return 'never expires';
     if (ev.action === 'api_token.created' && d.expires_in_days) return `valid for ${EXPIRY_LABEL[d.expires_in_days] || `${d.expires_in_days} days`}`;
     if (ev.action === 'api_token.revoked') return [d.count > 1 ? `${d.count} tokens` : '', TOKEN_REVOKED_WHY[d.reason] || ''].filter(Boolean).join(', ');
     if (ev.action === 'body.token_rows_deleted') return pushCountsText({ weights: d.weights, readings: d.readings }) || 'nothing was left to delete';
@@ -1077,7 +1078,7 @@
   function pushTokenSub(t) {
     const parts = [`${t.prefix}…`, `created ${fmtDate(t.created_at)}`, t.last_used_at ? `last used ${relTime(t.last_used_at)}` : 'never used'];
     if (t.state === 'revoked') parts.push(`revoked ${fmtDate(t.revoked_at)}`);
-    else parts.push(`${t.state === 'expired' ? 'expired' : 'expires'} ${fmtDate(t.expires_at)}`);
+    else parts.push(expiryText(t));
     const sent = pushCountsText(t.sent);
     parts.push(sent ? `sent ${sent}` : 'nothing sent that is still in your log');
     return parts.join(' · ');
@@ -1168,6 +1169,7 @@
     }
     const name = h('input', { id: 'set-push-name', type: 'text', maxlength: 60, autocomplete: 'off', spellcheck: 'false', 'aria-describedby': 'set-push-name-hint' });
     const expiry = selectEl('set-push-expiry', (res.expiry_days || []).map((d) => [d, EXPIRY_LABEL[d] || `${d} days`]), res.default_expiry_days);
+    const neverHint = expiryWarning(expiry, 'set-push-never');
     const err = formError();
     const create = action('Make token', 'primary', async () => {
       clear(err);
@@ -1175,7 +1177,7 @@
       if (!text) { showFormError(err, 'Give the token a name, for example “Morning weight”.'); name.focus(); return; }
       let made;
       try {
-        made = await A.createToken({ name: text, expires_in_days: Number(expiry.value), family: 'device' }); // a password prompt opens here when it is needed
+        made = await A.createToken({ name: text, expires_in_days: expiryValue(expiry), family: 'device' }); // a password prompt opens here when it is needed
       } catch (e) {
         if (!e.cancelled && !e.handled) showFormError(err, e);
         return;
@@ -1186,7 +1188,7 @@
     return h('div', { class: 'settings-form' },
       h('div', { class: 'field' }, h('label', { for: 'set-push-name' }, 'Name'), name,
         h('span', { class: 'hint', id: 'set-push-name-hint' }, 'For example “Morning weight”, so you know which one to revoke.')),
-      h('div', { class: 'field' }, h('label', { for: 'set-push-expiry' }, 'Expires after'), expiry),
+      h('div', { class: 'field' }, h('label', { for: 'set-push-expiry' }, 'Expires after'), expiry, neverHint),
       h('div', { class: 'settings-actions' }, create),
       err);
   }
@@ -1254,7 +1256,21 @@
     if (canTaste(t)) return 'Read and tastes';
     return canSave(t) ? 'Read and save' : 'Read only';
   }
-  const EXPIRY_LABEL = { 30: '30 days', 90: '90 days', 365: '1 year' };
+  // "never": a token that lasts until it is removed (design note 24 §13), offered while the server allows it.
+  const EXPIRY_LABEL = { 30: '30 days', 90: '90 days', 365: '1 year', never: 'Never (until you remove it)' };
+  const NEVER_WARNING = 'This token works until you remove it. Remove a token you no longer use.';
+  function expiryValue(select) { return select.value === 'never' ? 'never' : Number(select.value); }
+  /** The one-line warning under "Expires after", shown while "Never" is chosen. */
+  function expiryWarning(select, id) {
+    const hint = h('span', { class: 'hint', id, hidden: select.value !== 'never' }, NEVER_WARNING);
+    select.addEventListener('change', () => { hint.hidden = select.value !== 'never'; });
+    return hint;
+  }
+  /** "expires <date>", "expired <date>" or "never expires". */
+  function expiryText(t) {
+    if (t.never_expires || !t.expires_at) return 'never expires';
+    return `${t.state === 'expired' ? 'expired' : 'expires'} ${fmtDate(t.expires_at)}`;
+  }
   let assistantRender = 0;
   let unshownToken = null; // the answer of POST /api/me/tokens until a render has put it on screen (once)
   function takeUnshownToken() { const made = unshownToken; unshownToken = null; return made && made.token ? made : null; }
@@ -1266,7 +1282,7 @@
     const parts = [accessWord(t), `${t.prefix}…`, `created ${fmtDate(t.created_at)}`,
       t.last_used_at ? `last used ${relTime(t.last_used_at)}` : 'never used'];
     if (t.state === 'revoked') parts.push(`revoked ${fmtDate(t.revoked_at)}`);
-    else parts.push(`${t.state === 'expired' ? 'expired' : 'expires'} ${fmtDate(t.expires_at)}`);
+    else parts.push(expiryText(t));
     return parts.join(' · ');
   }
   function focusAssistant() {
@@ -1308,6 +1324,7 @@
     }
     const name = h('input', { id: 'set-token-name', type: 'text', maxlength: 60, autocomplete: 'off', spellcheck: 'false', 'aria-describedby': 'set-token-name-hint' });
     const expiry = selectEl('set-token-expiry', (res.expiry_days || []).map((d) => [d, EXPIRY_LABEL[d] || `${d} days`]), res.default_expiry_days);
+    const neverHint = expiryWarning(expiry, 'set-token-never');
     const canLog = h('input', { type: 'checkbox', id: 'set-token-can-log', 'aria-describedby': 'set-token-can-log-hint' });
     const canPrefs = h('input', { type: 'checkbox', id: 'set-token-can-prefs', 'aria-describedby': 'set-token-can-prefs-hint' });
     const err = formError();
@@ -1317,7 +1334,7 @@
       if (!text) { showFormError(err, 'Give the token a name, for example the app or device it is for.'); name.focus(); return; }
       let made;
       try {
-        made = await A.createToken({ name: text, expires_in_days: Number(expiry.value), can_log: canLog.checked, can_prefs: canPrefs.checked });
+        made = await A.createToken({ name: text, expires_in_days: expiryValue(expiry), can_log: canLog.checked, can_prefs: canPrefs.checked });
       } catch (e) {
         if (!e.cancelled && !e.handled) showFormError(err, e);
         return;
@@ -1328,7 +1345,7 @@
     return h('div', { class: 'settings-form' },
       h('div', { class: 'field' }, h('label', { for: 'set-token-name' }, 'Name'), name,
         h('span', { class: 'hint', id: 'set-token-name-hint' }, 'For example the app or device it is for, so you know which one to revoke.')),
-      h('div', { class: 'field' }, h('label', { for: 'set-token-expiry' }, 'Expires after'), expiry),
+      h('div', { class: 'field' }, h('label', { for: 'set-token-expiry' }, 'Expires after'), expiry, neverHint),
       h('div', { class: 'field' },
         h('label', { class: 'check', for: 'set-token-can-log' }, canLog, h('span', { class: 'check-text' }, 'Can also save food and recipes')),
         h('span', { class: 'hint', id: 'set-token-can-log-hint' }, 'Off: the assistant can only read. On: it can also add entries to your food log and save recipes as saved meals, after it asks you. Each save is listed in your activity.')),
@@ -1890,6 +1907,7 @@
     ['Which AI each feature uses', ['ai.route.photos', 'ai.route.meal_ideas', 'ai.route.describe', 'ai.route.chat', 'ai.route.labs',
       'ai.route.recipes', 'ai.route.local_provider', 'ai.route.cloud_provider']],
     ['Phone shortcuts', ['push.enabled']],
+    ['Tokens for outside apps and phone shortcuts', ['tokens.allow_never_expiring']],
     ['Care team', ['sharing.enabled']],
     // Design note 26: not in the demo (it has no accounts of its own to make).
     ['Test accounts', ['test_accounts.enabled', 'test_accounts.ai']],
@@ -2133,8 +2151,15 @@
     const secrets = sk.secrets || {};
     const proxy = a.proxy || {};
     const oidc = a.oidc || {};
-    const oidcDiscovery = { ok: 'reached', blocked_address: 'refused: a private address (OIDC_ALLOW_PRIVATE_ISSUER)', dns_failed: 'its name does not resolve',
-      unreachable: 'cannot be reached', issuer_mismatch: 'it names another issuer (check OIDC_ISSUER)' };
+    // Each sign-in provider (design note 24 §10, §13): its connection and whether the server reached it, never its client secret.
+    const oidcProviders = Array.isArray(oidc.providers) && oidc.providers.length ? oidc.providers
+      : (oidc.enabled ? [{ id: 'default', label: '', issuer: oidc.issuer, client_id: oidc.client_id, secret: oidc.secret, redirect_uri: oidc.redirect_uri, discovery: oidc.discovery }] : []);
+    const oidcVar = (p) => (p.id && p.id !== 'default' ? `OIDC_${p.id.toUpperCase()}_` : 'OIDC_');
+    const oidcDiscovery = (p) => ({ ok: 'reached', blocked_address: `refused: a private address (${oidcVar(p)}ALLOW_PRIVATE_ISSUER)`, dns_failed: 'its name does not resolve',
+      unreachable: 'cannot be reached', issuer_mismatch: `it names another issuer (check ${oidcVar(p)}ISSUER, with or without the slash at the end)` })[p.discovery]
+      || (p.discovery ? `not reached yet (${p.discovery})` : 'not asked yet');
+    const oidcRows = oidcProviders.map((p) => [`Single sign-on: ${p.label ? KH.oidc.shortLabel(p.label) : p.issuer}`,
+      `${p.issuer}, client ${p.client_id}, secret ${p.secret}, return address ${p.redirect_uri}, provider ${oidcDiscovery(p)}`]);
     box.append(kv([
       ['Server version', a.version],
       ['Database schema', String(a.schema_version)],
@@ -2145,9 +2170,8 @@
       ['Secret key', sk.source === 'auto' ? 'Generated on the data volume' : sk.source === 'env' ? 'From SECRET_KEY' : sk.source === 'file' ? 'From SECRET_KEY_FILE' : String(sk.source || '')],
       ['Stored keys', `${secrets.current || 0} current${secrets.older_key ? `, ${secrets.older_key} under an older key` : ''}${secrets.unreadable ? `, ${secrets.unreadable} unreadable` : ''}`],
       // Sign-in with a provider (design note 24 §10): the connection, never the client secret.
-      ['Single sign-on', oidc.enabled ? `On: ${oidc.issuer}` : 'Off (OIDC_ENABLED)'],
-      oidc.enabled ? ['Single sign-on details', `client ${oidc.client_id}, secret ${oidc.secret}, return address ${oidc.redirect_uri}`
-        + `, provider ${oidcDiscovery[oidc.discovery] || (oidc.discovery ? `not reached yet (${oidc.discovery})` : 'not asked yet')}`] : null,
+      ['Single sign-on', oidc.enabled ? `On, ${oidcProviders.length === 1 ? 'one provider' : `${oidcProviders.length} providers`}${oidc.only ? ', the only way in (OIDC_ONLY)' : ''}` : 'Off (OIDC_ENABLED)'],
+      ...oidcRows,
       proxy.ignored_identity_headers ? ['Identity headers ignored', `${proxy.ignored_identity_headers} from untrusted peers (check TRUSTED_PROXIES)`] : null,
       ['Last backup', a.last_backup_at ? fmtDateTime(a.last_backup_at) : 'None recorded (python -m app.admin backup)'],
       a.pre_v3_backup ? ['Pre-v0.3 backup', `${a.pre_v3_backup.path} (${fmtBytes(a.pre_v3_backup.bytes)}), deleted after ${fmtDate(a.pre_v3_backup.deleted_after)}`] : null,
@@ -2155,6 +2179,11 @@
     const due = backupDue(a.last_backup_at, a.backup_reminder_days ?? BACKUP_DUE_DAYS);
     if (due) box.append(due);
     if (sk.warning) box.append(note('caution', h('p', {}, sk.warning)));
+    if (oidc.only) {
+      box.append(note('caution', h('p', {}, 'Passwords are turned off (OIDC_ONLY): if the sign-in provider is down, nobody can sign in with a password. '
+        + 'To get back in, set OIDC_ONLY=false and restart the server (docs/accounts.md).'
+        + (oidc.admins_linked === 0 ? ' No admin has linked a provider yet: link yours in Settings → Account before you sign out.' : ''))));
+    }
     if (secrets.unreadable) box.append(note('caution', h('p', {}, 'Some stored keys can no longer be read (the secret key changed). Ask the people concerned to enter their keys again.')));
   }
 

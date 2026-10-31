@@ -52,9 +52,10 @@ def test_settings_auth_and_the_demo_use_it():
     assert "removeUserOidc: (id) => request('DELETE', `/api/admin/users/${id}/oidc`)" in settings
     assert "if (u.oidc_links)" in settings and "'Remove linked sign-in'" in settings
     auth = (STATIC / "js" / "views" / "auth.js").read_text(encoding="utf-8")
-    assert "if (KH.oidc) KH.oidc.applyStatus();" in auth and "await KH.oidc.reauth();" in auth and "KH.oidc.startInvite(" in auth
+    assert "if (KH.oidc) KH.oidc.applyStatus();" in auth and "await KH.oidc.reauth(btn.dataset.provider || null);" in auth
+    assert "KH.oidc.startInvite(linkToken.token, btn.dataset.provider || null)" in auth and "applyPasswordMode();" in auth
     mock = (STATIC / "js" / "mock" / "auth.js").read_text(encoding="utf-8")
-    assert "oidc: { enabled: false, label: null }," in mock and "oidc_links: 0," in mock
+    assert "oidc: { enabled: false, label: null, providers: [], only: false, password: 'on' }," in mock and "oidc_links: 0," in mock
     assert "route('GET', '/api/me/oidc', function () {" in mock and "route('DELETE', userIdRoute('/oidc')" in mock
 
 
@@ -89,15 +90,51 @@ def test_the_pure_helpers():
         odd: O.shortLabel('Family login'),
         parsed: O.parseResult('#/oidc/no_account'),
         ok: O.parseResult('#/oidc/linked'),
-        bad: [O.parseResult('#/oidc/<script>'), O.parseResult('#/oidc/unknown'), O.parseResult('#/oidc/linked/x')],
+        named: O.parseResult('#/oidc/failed/google'),
+        bad: [O.parseResult('#/oidc/<script>'), O.parseResult('#/oidc/unknown'), O.parseResult('#/oidc/linked/X'),
+              O.parseResult('#/oidc/linked/google/x'), O.parseResult('#/oidc/linked/g')],
         enabled: O.enabled(),
+        old: O.providers(),
+        mode: O.passwordMode(),
       }}));
+      window.KH.state.authStatus.oidc = {{ enabled: true, label: 'Sign in with Authentik', only: true, password: 'test_accounts',
+        providers: [{{ id: 'authentik', label: 'Sign in with Authentik' }}, {{ id: 'google', label: 'Sign in with Google' }}] }};
+      console.log(JSON.stringify({{ two: O.providers().map((p) => p.id), google: O.labelOf('google'), unknown: O.labelOf('nope'),
+        first: O.labelOf(null), mode: O.passwordMode() }}));
     """
     out = subprocess.run(["node", "-e", script], capture_output=True, text=True, check=True, timeout=60).stdout
-    got = json.loads(out)
+    got, several = (json.loads(line) for line in out.strip().splitlines())
     assert got["all"] is True and got["unknown"] == ""
     assert got["failed"].startswith("Signing in with Google did not work.")
     assert got["linked"] == "Linked. You can now sign in with Authentik."
     assert got["plain"] == "single sign-on" and got["odd"] == "Family login"
-    assert got["parsed"] == {"word": "no_account", "ok": False} and got["ok"] == {"word": "linked", "ok": True}
-    assert got["bad"] == [None, None, None] and got["enabled"] is True
+    assert got["parsed"] == {"word": "no_account", "ok": False, "provider": None}
+    assert got["ok"] == {"word": "linked", "ok": True, "provider": None}
+    assert got["named"] == {"word": "failed", "ok": False, "provider": "google"}
+    assert got["bad"] == [None] * 5 and got["enabled"] is True
+    # A server from before several providers sends only the label: one provider, passwords on.
+    assert got["old"] == [{"id": "default", "label": "Sign in with Authentik"}] and got["mode"] == "on"
+    assert several == {"two": ["authentik", "google"], "google": "Sign in with Google", "unknown": "Sign in with Authentik",
+                       "first": "Sign in with Authentik", "mode": "test_accounts"}
+
+
+def test_one_button_per_provider_and_the_password_parts_can_hide():
+    """Several providers (design note 24 §13): each list starts with the first provider's button, which keeps its id. OIDC_ONLY:
+    the password parts of the sign-in and invite forms carry a class that js/views/auth.js hides, and test accounts get a button."""
+    login = _form("form-login")
+    assert '<div class="auth-oidc-list" id="login-oidc-list"><a class="btn secondary auth-passkey-btn" id="login-oidc-btn"' in login
+    for needle in ('<div class="field pw-signin">\n          <label for="login-username">', '<div class="field pw-signin">\n          <label for="login-password">',
+                   'class="btn primary auth-submit pw-signin" type="submit" id="login-submit"', '<p class="hint auth-help pw-signin">Forgot'):
+        assert needle in login, needle
+    assert re.search(r'<button [^>]*id="login-test-toggle" hidden>', login) and re.search(r'<p [^>]*id="login-only-note" hidden>', login)
+    register = _form("form-register")
+    assert register.count('class="field pw-signup"') == 3 and 'auth-submit pw-signup" type="submit" id="reg-submit"' in register
+    assert 'id="register-oidc-list"><button class="btn secondary auth-passkey-btn" type="button" id="register-oidc-btn">' in register
+    assert '<div class="auth-oidc-list" id="reauth-oidc-list">' in HTML
+    auth = (STATIC / "js" / "views" / "auth.js").read_text(encoding="utf-8")
+    assert "$$('#form-login .pw-signin').forEach((el) => { el.hidden = !showPw; });" in auth
+    assert "$$('#form-register .pw-signup').forEach((el) => { el.hidden = mode !== 'on'; });" in auth
+    view = VIEW.read_text(encoding="utf-8")
+    assert "index === 0 ? 'api/auth/oidc/start' : `api/auth/oidc/start?provider=${encodeURIComponent(id)}`" in view
+    css = (STATIC / "css" / "auth.css").read_text(encoding="utf-8")
+    assert ".auth-oidc-list { display: flex;" in css

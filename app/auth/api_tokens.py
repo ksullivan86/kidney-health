@@ -29,7 +29,9 @@ with its first 12 characters for display. The plain token is in the answer to ``
   limit of the client address (:meth:`app.auth.throttle.Throttle.ip_failure`); a blocked address gets ``429`` with
   ``Retry-After``, as sign-in does. A request without a bearer token, or any request while the family's switch is off, is
   refused without counting: nothing was guessed and nothing is looked up.
-* **Limits.** Expiry 30, 90 (default) or 365 days; at most :data:`MAX_ACTIVE` active tokens a person **in each family**;
+* **Limits.** Expiry 30, 90 (default) or 365 days, or never (``"never"``, while ``tokens.allow_never_expiring`` is on, the
+  default; such a row stores :data:`NEVER_EXPIRES_AT` and the API shows ``expires_at: null``); at most :data:`MAX_ACTIVE` active
+  tokens a person **in each family**;
   ``last_used_at`` is written at most once a minute per token.
 * **Revocation.** The person revokes one in Settings (``DELETE /api/me/tokens/{id}``); :func:`revoke_all` ends every token
   of a person, of both families, when their password is changed or reset, when the account is disabled or deleted and when
@@ -60,7 +62,7 @@ from .deps import CurrentUser, RecentUser, _none_mode_user, current_user
 from .errors import ApiProblem, too_many
 from .models import User, clean_display, load_user
 from .ratelimit import register_limit
-from .schemas import TOKEN_NAME_MAX, ExpiryDays, TokenCreate
+from .schemas import TOKEN_NAME_MAX, ExpiryDays, Never, TokenCreate
 
 ASSISTANT = "assistant"  # the families (module docstring)
 DEVICE = "device"
@@ -80,6 +82,13 @@ DEVICE_SCOPES: tuple[str, ...] = (BODY_WRITE,)  # the device family's: always ex
 ALL_SCOPES: tuple[str, ...] = SCOPES + DEVICE_SCOPES
 EXPIRY_DAYS: tuple[int, ...] = tuple(get_args(ExpiryDays))
 DEFAULT_EXPIRY_DAYS = 90
+NEVER: str = get_args(Never)[0]  # "never": a token that lasts until it is revoked (design note 24 §13)
+# ``expires_at`` is NOT NULL (schema step 10), so a token that never expires stores this far-future time instead of NULL: every
+# check that compares ``expires_at`` with now (use, list, count, revoke, housekeeping) keeps working unchanged, with no schema
+# step. It sorts after every real time as text and parses as a date. The API shows it as ``expires_at: null``.
+NEVER_EXPIRES_AT = "9999-12-31T23:59:59.999999Z"
+NEVER_SWITCH = "tokens.allow_never_expiring"  # instance setting (env TOKENS_ALLOW_NEVER_EXPIRING), on by default
+NEVER_REFUSED = "This server does not allow tokens that never expire. Choose 30 days, 90 days or 1 year."
 MAX_ACTIVE = 5  # active tokens a person may hold in each family
 KEEP_ENDED_DAYS = 30
 TOUCH_INTERVAL = timedelta(minutes=1)
@@ -205,7 +214,8 @@ def token_item(row: sqlite3.Row | dict[str, Any], now: str | None = None) -> dic
         "scopes": list(parse_scopes(row["scopes"])),
         "created_at": row["created_at"],
         "last_used_at": row["last_used_at"],
-        "expires_at": row["expires_at"],
+        "expires_at": None if row["expires_at"] == NEVER_EXPIRES_AT else row["expires_at"],
+        "never_expires": row["expires_at"] == NEVER_EXPIRES_AT,
         "revoked_at": row["revoked_at"],
         "state": _state(row, now or clock.now_iso()),
     }
@@ -274,13 +284,13 @@ def active_counts(conn: sqlite3.Connection, family: str | None = None) -> dict[i
     return {int(r["user_id"]): int(r["n"]) for r in rows}
 
 
-def create(conn: sqlite3.Connection, user_id: int, name: str, days: int,
+def create(conn: sqlite3.Connection, user_id: int, name: str, days: int | str,
            scopes: tuple[str, ...] = (READ,)) -> tuple[str, dict[str, Any]]:
     """Insert a token; returns ``(token, item)``. The token is shown once and never stored. The family follows the
     scopes: ``(BODY_WRITE,)`` makes a device token (``khd_``), assistant scopes an assistant token (``kha_``); scopes of both
-    families are refused."""
-    if days not in EXPIRY_DAYS:
-        raise ValueError(f"expiry must be one of {EXPIRY_DAYS}")
+    families are refused. ``days`` is one of :data:`EXPIRY_DAYS` or :data:`NEVER` (the caller checks the server allows it)."""
+    if days != NEVER and days not in EXPIRY_DAYS:
+        raise ValueError(f"expiry must be one of {EXPIRY_DAYS} or {NEVER!r}")
     if not scopes or any(s not in ALL_SCOPES for s in scopes):
         raise ValueError(f"scopes must be some of {ALL_SCOPES}")
     scopes = parse_scopes(" ".join(scopes))  # log implies read
@@ -294,7 +304,7 @@ def create(conn: sqlite3.Connection, user_id: int, name: str, days: int,
         "scopes": " ".join(scopes),
         "created_at": clock.iso(now),
         "last_used_at": None,
-        "expires_at": clock.iso(now + timedelta(days=days)),
+        "expires_at": NEVER_EXPIRES_AT if days == NEVER else clock.iso(now + timedelta(days=int(days))),
         "revoked_at": None,
     }
     cur = conn.execute(
@@ -361,6 +371,7 @@ def purge_ended(conn: sqlite3.Connection) -> int:
     if not table_exists(conn, "api_tokens"):
         return 0
     cutoff = clock.iso(clock.now() - timedelta(days=KEEP_ENDED_DAYS))
+    # A token that never expires is deleted only 30 days after it was revoked: its expires_at never passes the cutoff.
     cur = conn.execute("DELETE FROM api_tokens WHERE COALESCE(revoked_at, expires_at) <= ?", (cutoff,))
     conn.commit()
     return int(cur.rowcount or 0)
@@ -477,14 +488,21 @@ def read_my_tokens(request: Request, user: CurrentUser, conn: sqlite3.Connection
     """One family's tokens (``?family=assistant`` by default, or ``device``). The list works while the family's switch is
     off too, so a person can still see and revoke their tokens."""
     family = _family_param(family)
+    never = never_allowed(conn, auth_context(request))
     return {
         "family": family,
         "enabled": is_enabled(conn, auth_context(request), family),
         "max_active": MAX_ACTIVE,
-        "expiry_days": list(EXPIRY_DAYS),
+        "expiry_days": [*EXPIRY_DAYS, *((NEVER,) if never else ())],
         "default_expiry_days": DEFAULT_EXPIRY_DAYS,
+        "never_allowed": never,
         "tokens": list_tokens(conn, user.id, family),
     }
+
+
+def never_allowed(conn: sqlite3.Connection, ctx: AuthContext) -> bool:
+    """Whether a new token may never expire (``tokens.allow_never_expiring``, on by default)."""
+    return bool(ctx.store.get(conn, NEVER_SWITCH))
 
 
 @router.post("", status_code=201)
@@ -504,6 +522,8 @@ def create_my_token(body: TokenCreate, request: Request, user: RecentUser,
                              field=field)
     if not is_enabled(conn, ctx, family):
         raise ApiProblem(409, DEVICE_SWITCHED_OFF if family == DEVICE else SWITCHED_OFF)
+    if body.expires_in_days == NEVER and not never_allowed(conn, ctx):
+        raise ApiProblem(400, NEVER_REFUSED, field="expires_in_days")
     name = clean_name(body.name)
     ctx.limits.take("api_tokens", f"user:{user.id}")
     begin_immediate(conn)  # the count and the insert see the same rows

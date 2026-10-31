@@ -170,13 +170,15 @@ Good to know:
 * **Two-step for admins.** "Admins must use two-step sign-in" applies to password sign-ins. An admin who signs in through the
   provider is not asked for the app's code, so make the provider ask for a second factor: an MFA stage in the Authentik flow, or
   2-Step Verification on the Google account.
-* **Linking by email** gives someone the account you made for them. Make the account in **Server administration → People** with
-  their email address as the username, and do not send the setup link. At their first sign-in through the provider, if the
-  provider says the email is verified and it matches exactly, in plain letters, they get that account. It is off by default and
-  never links an account someone registered themselves, one with a password, passkey or link, an admin account, or an
-  unverified email. Their provider groups count from their next sign-in.
-* **Too many sign-ins started.** At most 10 sign-ins can wait at the provider for one address, and 10,000 in all; beyond that the
-  page says "Too many sign-ins started. Try again soon."
+* **Linking by email** gives someone the account you made for them. It is off by default. To turn it on, tick **Give someone the
+  account you made for their email address** in **Server administration → Server settings → Single sign-on**, or set
+  `OIDC_LINK_BY_EMAIL=true` and restart. Then make the account in **Server administration → People** with their email address as
+  the username, and do not send the setup link. At their first sign-in through the provider, if the provider says the email is
+  verified and it matches exactly, in plain letters, they get that account. It never links an account someone registered
+  themselves, one with a password, passkey or link, an admin account, or an unverified email. Their provider groups count from
+  their next sign-in. With several providers, it works through any of them.
+* **Too many sign-ins started.** At most 10 sign-ins can wait at the provider for one address, and 10,000 in all, shared out
+  evenly between the providers; beyond that the page says "Too many sign-ins started. Try again soon."
 * **Admin groups.** When set, the role follows the provider's `groups` claim at each sign-in. The last admin is never demoted.
 * **Lost provider account.** The person removes the link in Settings (not their last way in), or you remove it in **Server
   administration → People → Remove linked sign-in** and send a reset link if they have no password.
@@ -185,6 +187,78 @@ Good to know:
 * Signing out of the app does not sign out at the provider.
 * The activity log records sign-ins through the provider and every link and unlink. Tokens are never stored or logged, and the
   server's access log shows the one-time code and state as `[redacted]`.
+
+### Authentik and Google together
+
+You can offer up to four providers at once, each with its own button. Name them in `OIDC_PROVIDERS` and give each its own
+variables, with the name in capitals after `OIDC_`:
+
+```
+OIDC_ENABLED=true
+PUBLIC_URL=https://kidney.example.org
+OIDC_PROVIDERS=authentik,google
+OIDC_AUTHENTIK_ISSUER=https://auth.example.org/application/o/kidney-health/
+OIDC_AUTHENTIK_CLIENT_ID=...
+OIDC_AUTHENTIK_CLIENT_SECRET_FILE=/run/secrets/oidc_authentik_secret
+OIDC_AUTHENTIK_ALLOW_PRIVATE_ISSUER=true
+OIDC_AUTHENTIK_ADMIN_GROUPS=authentik Admins
+OIDC_GOOGLE_ISSUER=https://accounts.google.com
+OIDC_GOOGLE_CLIENT_ID=....apps.googleusercontent.com
+OIDC_GOOGLE_CLIENT_SECRET_FILE=/run/secrets/oidc_google_secret
+OIDC_GOOGLE_ALLOWED_DOMAINS=example.org
+```
+
+* **Each provider has its own return address**: `https://kidney.example.org/api/auth/oidc/callback/authentik` and
+  `…/callback/google`. Give each provider its own. The address without a name, `…/api/auth/oidc/callback`, belongs to the
+  provider set with the plain `OIDC_ISSUER` variables.
+* **What each provider can have**: `_ISSUER`, `_CLIENT_ID`, `_CLIENT_SECRET_FILE`, `_SCOPES` and `_ALLOW_PRIVATE_ISSUER` (the
+  connection), and `_BUTTON_LABEL`, `_ALLOWED_DOMAINS`, `_ADMIN_GROUPS` and `_ALLOW_SIGNUP` (who gets in). A provider without
+  one of the last four uses the server-wide setting from **Server settings → Single sign-on**. The button reads "Sign in with"
+  and the name, for example "Sign in with Google", unless you set `_BUTTON_LABEL`.
+* **Linking by email** is one switch for all providers.
+* **A provider set up before** with `OIDC_ISSUER` keeps working unchanged: it is the first button, and the names in
+  `OIDC_PROVIDERS` come after it. Links people already made stay.
+* People link each provider separately in **Settings → Account → Linked sign-in**, and can remove one as long as another way in
+  is left (a password, a passkey or another link).
+* **About this server** lists each provider with its return address and whether the server reached it.
+* Two providers cannot share an issuer. A sign-in started with one provider can only finish at that provider's return address.
+
+### Only sign in with the provider (`OIDC_ONLY`)
+
+Set `OIDC_ONLY=true` to turn passwords off. The sign-in page then shows only the provider buttons, invite links only offer
+**Create the account with …**, and the server refuses a typed password. It is off by default.
+
+* **Passkeys keep working.** They cannot be phished, and people add them in Settings after signing in.
+* **Test accounts keep their password.** `tester` and `tester-helper` have no provider and are never admins, so the sign-in page
+  shows **Sign in to a test account with its password** while they are turned on. Nobody else can use that form.
+* **A setup or reset link still works once.** It sets a password and signs the person in, but that password cannot be used to
+  sign in again while `OIDC_ONLY` is on.
+* **First link your own admin account** in Settings, then turn it on. **About this server** warns you while no admin has a link.
+* The server will not start with `OIDC_ONLY=true` and no provider set up. The log says why.
+
+**If the provider is down, nobody can sign in with a password.** To get back in:
+
+1. Set `OIDC_ONLY=false` (or remove it) and restart the server.
+2. Sign in with your password. If your account has none, make a link from the command line first, open it and choose one:
+   `podman exec -it kidney-health python -m app.admin reset-password YOUR_USERNAME` (with Docker: `docker compose exec app python -m
+   app.admin reset-password YOUR_USERNAME`).
+3. Turn `OIDC_ONLY` back on when the provider works again.
+
+### If it doesn't work
+
+* **"The server could not reach …"** Check **Server administration → About this server**: each provider's line says whether the
+  server reached it. "Not asked yet" means nobody has pressed that button since the server started.
+* **"It names another issuer".** The issuer must match exactly what the provider says, letter for letter. Authentik's ends with a
+  slash: `https://auth.example.org/application/o/kidney-health/`. Google's is `https://accounts.google.com`, with no slash.
+* **The provider says the redirect URI is wrong.** It must match exactly: `https`, your `PUBLIC_URL` host, no slash at the end,
+  and the provider's name at the end for a provider in `OIDC_PROVIDERS` (`…/api/auth/oidc/callback/google`).
+* **"Refused: a private address".** Authentik on your LAN or VPN needs `OIDC_ALLOW_PRIVATE_ISSUER=true` (or
+  `OIDC_<NAME>_ALLOW_PRIVATE_ISSUER=true`).
+* **Signing in "did not work" every time.** The provider may sign with HS256 or no key, which this app refuses: in Authentik, pick a
+  signing key (a certificate or an EC key). Or the server's clock is off by more than 60 seconds: check that it keeps time (NTP).
+* **Google refuses the redirect URI.** Google needs a host name, not an IP address (`localhost` is allowed for testing).
+* **"There is no account here".** The provider account is not linked yet. Link it in Settings, send an invite link, or turn on
+  linking by email or new accounts.
 
 **Provider or sign-in proxy?** `AUTH_MODE=proxy` (an Authentik proxy outpost or Authelia in front of the app, see
 [Proxy mode](#proxy-mode)) already works and keeps the app's page hidden until the proxy has signed someone in. Pick the proxy when
@@ -285,6 +359,8 @@ Test accounts need `AUTH_MODE=local`, and HTTPS like any server with more than o
 * The server's AI is off for them, unless you also set `TEST_ACCOUNT_AI=true` (or the switch next to it).
 * Their password stays the one in the file: testers cannot change it, turn on two-step sign-in or delete the account.
 * They see a **Send feedback** button at the top of every screen.
+* With `OIDC_ONLY` on, they still sign in with their password: the sign-in page shows **Sign in to a test account with its
+  password** for them. Nobody else can use a password then.
 
 **Feedback.** The sheet asks what the tester was trying to do, what happened, whether the screen was useful, and whether
 something looked wrong or unsafe. Only what they type is kept, with the screen's name, the app version and the time: no

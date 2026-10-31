@@ -149,6 +149,8 @@ Agent profile, OpenAI, OpenRouter), the address rules and troubleshooting are in
 | Variable | Default | Purpose |
 |---|---|---|
 | `PUSH_ENABLED` | `false` | Phone shortcuts (also **Server administration → Server settings**): each person may make device tokens (**Settings → Account → Your data → Phone shortcuts**) for an iPhone Shortcut that adds their weight and blood pressure to their own log at `POST /push/v1/body`. A token can only add; it reads nothing. While off, the route answers `401` to everyone. The phone must reach the server (home network or your VPN); if a reverse proxy lists the paths it passes on, add `/push/v1/`. Nothing leaves the server for it ([design note 12][NOTE12]; [From a phone shortcut](../app/weight-and-blood-pressure.md#from-a-phone-shortcut)). |
+| `TOKENS_ALLOW_NEVER_EXPIRING` | `true` | Whether people may choose "Never (until you remove it)" when making a token for an outside AI app or a phone shortcut (also **Server administration → Server settings**). Off: every new token expires; tokens made before keep working until revoked. |
+| `OIDC_ENABLED`, `OIDC_PROVIDERS`, `OIDC_ONLY` | `false`, empty, `false` | Sign in with Authentik, Google or another provider, up to four at once, and optionally only with them. See [Accounts and keys](users-and-keys.md#sign-in-with-authentik-or-google) and the operator guide for every variable. |
 | `AUTH_REQUIRE_TWO_STEP_ADMINS` | `false` | Admins must use two-step sign-in (also **Server administration → Server settings**): an admin opens Server administration only after turning it on in **Settings → Account → Two-step sign-in**. You can switch it on there only once your own two-step sign-in is on. No effect with a sign-in proxy ([design note 17][NOTE17]). |
 
 ## Meal guidance

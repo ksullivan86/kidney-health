@@ -4,7 +4,7 @@
 |---|---|
 | Status | Accepted, 2026-10-30. The owner asked: "can we add integration with oauth so we could setup google login like I did with netbird or use my authentik instance". The choices below are the defaults this note took; §12 lists the open questions so the owner can change any of them. The schema step is **26**. Built 2026-10-30, the server and the screens together, tested against a fake provider (`tests/oidc_support.py`) and in Chromium (`tools/e2e/oidc.py`); not yet tried against a real Authentik or Google. |
 | Scope | One OpenID Connect provider per server, set by the admin in the environment. People sign in with it from the sign-in page; a person with a password links it in Settings → Account → Linked sign-in; an invite link can create an account with it; new accounts on first sign-in only when the admin allows it. Off by default. |
-| Out of scope | More than one provider at once, hiding the password form (`OIDC_ONLY`), single sign-out at the provider, the userinfo endpoint, `form_post` responses, encrypted ID tokens, dynamic client registration. See §12 "Later". |
+| Out of scope | (More than one provider at once and `OIDC_ONLY` were built later: §13.) Single sign-out at the provider, the userinfo endpoint, `form_post` responses, encrypted ID tokens, dynamic client registration. See §12 "Later". |
 | Builds on | Note 07 (accounts, F6 proxy sign-in, F7 OIDC, §3.1, §6 "Later"), note 17 (two-step sign-in), note 18 (passkeys, the precedent of checking signatures with `cryptography` only), `app/egress.py` (the SSRF-checked transport). |
 | Sources | OpenID Connect Core 1.0 (§3.1.2 authorization request, §3.1.3.7 ID token validation, §15.5.2 nonce); OpenID Connect Discovery 1.0 (§4 provider metadata, §4.3 issuer match); RFC 7636 (PKCE, S256); RFC 9700 (OAuth 2.0 Security Best Current Practice, 2025: PKCE for every client, exact redirect URIs, `iss` check); RFC 9207 (`iss` in the authorization response); RFC 7515/7517/7518 (JWS, JWK, algorithms); RFC 8037 (EdDSA in JOSE); Google Identity "OpenID Connect" guide (the `hd` and `email_verified` claims); authentik documentation "OAuth2 provider" (issuer per application, redirect URIs, `groups` in the profile scope). |
 
@@ -51,7 +51,7 @@ Pick **proxy** when everything already sits behind Authentik forward auth and no
 3. The person signs in **at the provider**. The provider sends the browser back to `GET /api/auth/oidc/callback?code&state` (a
    top-level navigation, so the `SameSite=Lax` cookies come along). The browser marks it `Sec-Fetch-Site: cross-site` (or
    `same-site` for a provider on a sibling host), which the app's cross-site read guard refuses for every other `/api` path; this
-   one path is let through only as a top-level `GET` navigation (`security.PROVIDER_RETURN_PATHS`). The Chromium walk found this.
+   one path is let through only as a top-level `GET` navigation (`security.PROVIDER_RETURN_RE`). The Chromium walk found this.
 4. **Callback** (public). The flow is taken by `state` (once); the cookie must match the flow (this stops another browser from
    finishing someone else's flow, the classic login CSRF of OAuth). A state that is not waiting, or a cookie that does not match,
    changes nothing: the flow stays for its own browser, the browser's cookie stays, and it is not counted as a failed sign-in
@@ -95,7 +95,7 @@ administration → Server settings, and each has a variable that locks it (they 
 | `auth.oidc.allowed_domains` (`OIDC_ALLOWED_DOMAINS`) | empty | Comma list of email domains. When set, every sign-in needs a verified email in one of them, and an `hd` claim, when sent, in them too. With Google as the issuer `hd` is required: a personal Google account can carry a work address as its email. Important with Google, where anyone in the world has an account. |
 | `auth.oidc.admin_groups` (`OIDC_ADMIN_GROUPS`) | empty | Comma list of group names. When set and the ID token carries a `groups` claim, the role follows it at each sign-in: in a group → admin, else user (never the last admin; audited). No claim: the role is left alone. |
 
-**`OIDC_ONLY` (hide the password form) is not in scope now.** Hiding the form while the server still takes passwords would only look
+**`OIDC_ONLY` (hide the password form) was not in scope at first** (built in round 2, §13.2). Hiding the form while the server still takes passwords would only look
 safer. Doing it properly means refusing passwords and passkeys too, and then an outage at the provider, or a lost Google account, locks
 everyone out with the command line as the only way back. Revisit when someone asks for it (§12).
 
@@ -271,5 +271,77 @@ for testing).
 5. Do you want `OIDC_ONLY` later (§4), knowing it makes the provider a single point of failure?
 6. Should signing out of the app also sign out at the provider (`end_session_endpoint`)? Today it signs out of the app only.
 
-**Later.** Several providers; `OIDC_ONLY`; single sign-out; reading `amr`/`acr` to require a second factor at the provider; the
+**Later.** ~~Several providers~~ and ~~`OIDC_ONLY`~~ (built, §13); single sign-out; reading `amr`/`acr` to require a second factor at the provider; the
 userinfo endpoint for providers that put nothing in the ID token; a CLI `remove-oidc USERNAME`.
+
+## 13. Round 2 (2026-10-31): the owner's answers, several providers, `OIDC_ONLY`, tokens that never expire
+
+**The owner's answers to §12.** (1) Admins who sign in through a provider need no app two-step code: kept (§9). (2) Linking by
+email: wanted; kept as it is, the switch `OIDC_LINK_BY_EMAIL` (`auth.oidc.link_by_email`), off by default, with every rule of §6
+step 3; the docs now say how to turn it on. (3) Sign-up keeps its own switch. (4) Authentik and Google at once: built, below.
+(5) A provider-only mode as an option: built, below. (6) Signing out of the app does not sign out at the provider: kept. (7) Tokens
+for outside AI apps need a "never expires" choice: built, below.
+
+### 13.1 Several providers
+
+* **Settings.** The variables of §4 stay the first provider, unchanged (id `default`, callback `/api/auth/oidc/callback`, its
+  words, domains, groups and sign-up from the registry). `OIDC_PROVIDERS=authentik,google` adds named providers, at most four in
+  all. A name is 2 to 20 lower-case letters and digits, starting with a letter, and not `default`. Each name reads
+  `OIDC_<NAME>_ISSUER`, `_CLIENT_ID`, `_CLIENT_SECRET_FILE` (only as a file, `_CLIENT_SECRET` stops the start), `_SCOPES`,
+  `_ALLOW_PRIVATE_ISSUER`, `_BUTTON_LABEL`, `_ALLOWED_DOMAINS`, `_ADMIN_GROUPS` and `_ALLOW_SIGNUP`. Two providers with the same
+  issuer stop the start: links are keyed by issuer (step 26's `UNIQUE (issuer, subject)` and `UNIQUE (user_id, issuer)` already
+  fit several providers), so **no schema step**.
+* **Per provider or server-wide, and why.** The connection (issuer, client, secret, scopes, private address) is per provider by
+  nature. The button's words are per provider (two identical buttons would be useless); a named provider defaults to "Sign in
+  with <Name>". Allowed domains, admin groups and the sign-up switch are per provider **with the server-wide setting as the
+  default**: the useful mix is "Authentik may make accounts and its groups make admins; Google may not make accounts and only lets
+  in one Workspace domain", and Google sends no `groups` claim at all. Each override is env only, like the connection, while the
+  server-wide values stay editable in Server settings. Linking by email stays **server-wide only**: it is a rule about the
+  accounts an admin made, not about a provider, and it already needs a verified, exactly matching email whichever provider says
+  so. The admin groups are those of the provider used for that sign-in; a test account is never promoted by any of them.
+* **Each provider has its own redirect URI**, `…/callback/<name>`. With one shared callback, the flow alone would say which
+  provider a code belongs to; with its own URI per provider, the provider's own registration also pins it (the mix-up defence of
+  RFC 9700 §4.4.2). The flow records its provider, and `FlowStore.take(state, binder, provider)` returns nothing at another
+  provider's way back and leaves the flow waiting (as for an unknown state: any page can send a browser there). `iss` (the
+  parameter and the ID token claim) is checked against that provider's issuer. The cross-site guard lets through
+  `^/api/auth/oidc/callback(/<name>)?$` only (`security.PROVIDER_RETURN_RE`).
+* **Routes.** `GET /api/auth/oidc/start`, `POST /api/auth/oidc/invite`, `POST /api/auth/reauth/oidc` and
+  `POST /api/me/oidc/link` take `?provider=<id>`; left out, the first provider (re-auth: the first one this person linked).
+  `GET /api/auth/status` adds `oidc.providers: [{id, label}]`; `GET /api/me/oidc` adds `providers: [{id, label, linked}]` and,
+  per link, `provider_id` and `name`. A result word for a named provider is `#/oidc/<word>/<name>`, so the page names the right
+  one. The "last way in" rule already counted every link of the person, whatever the provider.
+* **Limits.** One flow store for all providers: 10,000 flows in all, an equal share per provider (`MAX_FLOWS // n`), 10 per
+  address across providers; the 300-a-minute start limit is per provider. A flood at one provider cannot fill another's share.
+* **About this server** lists each provider (issuer, client ID, secret set or not, return address, the rules in force, and
+  whether it was reached: `ok`, the last failure, or not asked yet; discovery runs at the first press of a button, not at start).
+
+### 13.2 `OIDC_ONLY`
+
+Env only, off by default. While a provider is in use: `POST /api/auth/login` answers 403 (`oidc_only: true`) before any work for
+every name except a test account, the same answer for an unknown name and a real one; `POST /api/auth/register` with a password
+answers 403 (an invite is redeemed with a provider instead). The status says `oidc.only` and `oidc.password` (`off`, or
+`test_accounts` while they are on), and the page hides the password parts of the sign-in and invite forms.
+
+* **Passkeys stay allowed.** They are phishing-resistant and can only be added by someone already signed in, so they are a second
+  way in when the provider is down, not a weaker one.
+* **Test accounts keep their password.** They are switched on separately, never admins, have no provider, and exist so that
+  testers can get in; the sign-in page offers "Sign in to a test account with its password" while they are on.
+* **Reset and setup links still work once** (only an admin or the command line makes them). The password set that way cannot be
+  used to sign in again while `OIDC_ONLY` is on. First-run setup still works: there is no other way to make the first admin.
+  Typing the password again for a sensitive action (re-auth) still works for someone who has one: it needs a session already, so
+  it is not a way in.
+* **Start-up refuses** `OIDC_ONLY=true` without a provider (`ConfigError`, a one-line message, no traceback), and warns when it is
+  on.
+* **The way back in** when the provider is down: set `OIDC_ONLY=false`, restart, sign in with a password; an admin with no
+  password first runs `python -m app.admin reset-password USERNAME`. Server administration says this in a warning while it is on,
+  and also warns while no active admin has a link.
+
+### 13.3 Tokens that never expire
+
+`POST /api/me/tokens` accepts `expires_in_days: "never"` (both families) while `tokens.allow_never_expiring`
+(`TOKENS_ALLOW_NEVER_EXPIRING`, on by default) is on; otherwise 400. `api_tokens.expires_at` is `NOT NULL` (step 10), so such a row
+stores the far-future time `9999-12-31T23:59:59.999999Z` instead of NULL. That keeps every check (`expires_at > now` for use, count
+and revoke; `COALESCE(revoked_at, expires_at) <= cutoff` for the housekeeping) unchanged and needs no schema step; NULL would have
+needed a table rebuild (SQLite cannot drop `NOT NULL`) and a `NULL` branch in each of those queries. The API shows
+`expires_at: null` and `never_expires: true`, never the sentinel. The housekeeping deletes such a token only 30 days after it was
+revoked. Turning the switch off stops new ones; tokens already made keep working until revoked (People → Revoke tokens ends them).

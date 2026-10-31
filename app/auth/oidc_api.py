@@ -1,10 +1,14 @@
 """Sign-in with an OpenID Connect provider: the routes and the account rules (design note 24 §3, §6 to §10).
 
-Public (no session): ``GET /api/auth/oidc/start`` (a ``303`` to the provider), ``GET /api/auth/oidc/callback`` (where the provider
-sends the browser back) and ``POST /api/auth/oidc/invite`` (an invite link redeemed with the provider). Signed in:
-``POST /api/auth/reauth/oidc`` (confirm with the provider instead of the password), ``GET /api/me/oidc``, ``POST /api/me/oidc/link``
-*(re-auth)* and ``DELETE /api/me/oidc/{id}`` *(re-auth)*. Every route answers 404 unless ``AUTH_MODE=local`` and ``OIDC_ENABLED``
-(listing and unlinking still work while it is off, for a link left from before).
+Public (no session): ``GET /api/auth/oidc/start`` (a ``303`` to the provider), ``GET /api/auth/oidc/callback`` (where the first
+provider sends the browser back; a named one uses ``…/callback/<name>``) and ``POST /api/auth/oidc/invite`` (an invite link redeemed
+with the provider). Signed in: ``POST /api/auth/reauth/oidc`` (confirm with the provider instead of the password),
+``GET /api/me/oidc``, ``POST /api/me/oidc/link`` *(re-auth)* and ``DELETE /api/me/oidc/{id}`` *(re-auth)*. Every route answers 404
+unless ``AUTH_MODE=local`` and ``OIDC_ENABLED`` (listing and unlinking still work while it is off, for a link left from before).
+
+Several providers (up to four, note 24 §13): the routes that start a flow take ``?provider=<id>`` (``default`` for the provider of
+``OIDC_ISSUER``, else the name from ``OIDC_PROVIDERS``; left out, the first). A flow belongs to the provider it was started with,
+and only that provider's way back can finish it; the ID token's ``iss`` must be that provider's issuer.
 
 The callback never shows what the provider sent: it answers ``303`` to ``/`` (signed in) or to ``/#/oidc/<word>``, one of
 :data:`app.auth.oidc.RESULTS`, which the page turns into a sentence (``js/views/oidc.js``). Tokens and the nonce are never logged
@@ -15,14 +19,15 @@ from __future__ import annotations
 import logging
 import re
 import sqlite3
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response
 from fastapi.responses import RedirectResponse
 
 from .. import brand
 from ..audit import audit
 from ..db import get_db, utcnow
+from ..config import OIDC_DEFAULT_ID
 from ..settings_registry import comma_list
 from . import oidc, passkeys, sessions, tokens
 from .accounts import begin_immediate, create_user, require_secure_enough, username_taken, would_remove_last_admin
@@ -96,11 +101,15 @@ def ways_in(conn: sqlite3.Connection, user_id: int) -> int:
     return password + keys + links
 
 
-def link_item(row: sqlite3.Row, issuer: str) -> dict[str, Any]:
+def link_item(row: sqlite3.Row, known: dict[str, tuple[str, str]]) -> dict[str, Any]:
+    """One link for the person's list. ``known`` maps the issuer of each provider in use to ``(id, short label)``; ``current`` is
+    whether this server still uses that provider."""
     from urllib.parse import urlsplit
 
-    return {"id": int(row["id"]), "provider": urlsplit(row["issuer"]).hostname or row["issuer"], "email": row["email"],
-            "created_at": row["created_at"], "last_used_at": row["last_used_at"], "current": row["issuer"] == issuer}
+    provider_id, name = known.get(row["issuer"], (None, None))
+    return {"id": int(row["id"]), "provider": urlsplit(row["issuer"]).hostname or row["issuer"], "provider_id": provider_id,
+            "name": name, "email": row["email"], "created_at": row["created_at"], "last_used_at": row["last_used_at"],
+            "current": provider_id is not None}
 
 
 # --------------------------------------------------------------------------- #
@@ -108,44 +117,139 @@ def link_item(row: sqlite3.Row, issuer: str) -> dict[str, Any]:
 # --------------------------------------------------------------------------- #
 
 
+def providers(request: Request) -> list[oidc.OidcClient]:
+    """The providers in use, in order (empty unless ``AUTH_MODE=local`` and ``OIDC_ENABLED``)."""
+    if auth_context(request).settings.auth_mode != "local":
+        return []
+    found = getattr(request.app.state, "oidc_providers", None)
+    if found is None:  # an app built without install() (a few tests): the one client, if any
+        oc = getattr(request.app.state, "oidc", None)
+        return [oc] if oc is not None and oc.enabled else []
+    return [oc for oc in found.values() if oc.enabled]
+
+
 def client(request: Request) -> oidc.OidcClient | None:
-    return getattr(request.app.state, "oidc", None)
+    """The first provider in use, or None."""
+    found = providers(request)
+    return found[0] if found else None
 
 
-def _on(request: Request) -> tuple[AuthContext, oidc.OidcClient]:
+def _on(request: Request, provider: str | None = None) -> tuple[AuthContext, oidc.OidcClient]:
+    """The context and the provider asked for (the first when ``provider`` is None); 404 when it is not in use."""
     ctx = auth_context(request)
-    oc = client(request)
-    if ctx.settings.auth_mode != "local" or oc is None or not oc.enabled:
+    found = providers(request)
+    oc = next((c for c in found if provider is None or c.id == provider), None)
+    if oc is None:
         raise HTTPException(status_code=404, detail="Not Found")
     return ctx, oc
 
 
-def label(conn: sqlite3.Connection, ctx: AuthContext) -> str:
+def only(request: Request) -> bool:
+    """``OIDC_ONLY`` (note 24 §13): no password sign-in, while a provider is in use (start-up refuses it without one)."""
+    return bool(auth_context(request).settings.oidc.only and providers(request))
+
+
+# Each provider's rules: a named provider's own variable when set, else the server-wide setting (note 24 §13).
+def label(conn: sqlite3.Connection, ctx: AuthContext, oc: oidc.OidcClient | None = None) -> str:
+    if oc is not None and oc.env.button_label:
+        return oc.env.button_label
+    if oc is not None and oc.env.name:
+        return f"Sign in with {oc.env.name.capitalize()}"
     return str(ctx.store.get(conn, "auth.oidc.button_label"))
 
 
+def short_label(text: str) -> str:
+    """The button's words without "Sign in with" (the provider's name, for lists and messages)."""
+    m = re.match(r"(?i)^sign in with\s+(.+)$", text.strip())
+    return m.group(1) if m else text.strip()
+
+
+def allowed_domains(conn: sqlite3.Connection, ctx: AuthContext, oc: oidc.OidcClient) -> list[str]:
+    raw = oc.env.allowed_domains if oc.env.allowed_domains is not None else ctx.store.get(conn, "auth.oidc.allowed_domains")
+    return comma_list(raw)
+
+
+def admin_groups(conn: sqlite3.Connection, ctx: AuthContext, oc: oidc.OidcClient) -> set[str]:
+    raw = oc.env.admin_groups if oc.env.admin_groups is not None else ctx.store.get(conn, "auth.oidc.admin_groups")
+    return set(comma_list(raw))
+
+
+def allow_signup(conn: sqlite3.Connection, ctx: AuthContext, oc: oidc.OidcClient) -> bool:
+    return bool(oc.env.allow_signup if oc.env.allow_signup is not None else ctx.store.get(conn, "auth.oidc.allow_signup"))
+
+
+def _known(conn: sqlite3.Connection, ctx: AuthContext, found: list[oidc.OidcClient]) -> dict[str, tuple[str, str]]:
+    return {oc.issuer: (oc.id, short_label(label(conn, ctx, oc))) for oc in found}
+
+
+def _form_mode(request: Request, conn: sqlite3.Connection) -> str:
+    """``on``; or with ``OIDC_ONLY`` ``off``, or ``test_accounts`` while the test accounts are on (they sign in with a password)."""
+    if not only(request):
+        return "on"
+    from .. import test_accounts
+
+    return "test_accounts" if auth_context(request).store.get(conn, test_accounts.SWITCH) else "off"
+
+
 def status_view(request: Request, conn: sqlite3.Connection) -> dict[str, Any]:
-    """``oidc`` in ``GET /api/auth/status``: whether the sign-in page shows the button, and its words (no issuer, no client ID)."""
+    """``oidc`` in ``GET /api/auth/status``: whether the sign-in page shows buttons, their words (no issuer, no client ID), and
+    whether the password form shows (``password``: ``on``, ``off`` or ``test_accounts``, note 24 §13). ``label`` is the first
+    provider's words, as before several providers."""
     ctx = auth_context(request)
-    oc = client(request)
-    on = ctx.settings.auth_mode == "local" and oc is not None and oc.enabled
-    return {"enabled": on, "label": label(conn, ctx) if on else None}
+    found = providers(request)
+    items = [{"id": oc.id, "label": label(conn, ctx, oc)} for oc in found]
+    return {"enabled": bool(found), "label": items[0]["label"] if items else None, "providers": items,
+            "only": only(request), "password": _form_mode(request, conn)}
 
 
-def about_view(request: Request) -> dict[str, Any]:
-    """``oidc`` in ``GET /api/admin/about``: the connection without the secret (note 24 §10)."""
-    s = auth_context(request).settings
-    oc = client(request)
-    o = s.oidc
+def _about_one(oc: oidc.OidcClient, conn: sqlite3.Connection, ctx: AuthContext) -> dict[str, Any]:
+    o = oc.env
     return {
-        "enabled": bool(oc is not None and oc.enabled and s.auth_mode == "local"),
-        "issuer": o.issuer if o.enabled else None,
-        "client_id": o.client_id if o.enabled else None,
+        "id": oc.id,
+        "label": label(conn, ctx, oc),
+        "issuer": o.issuer,
+        "client_id": o.client_id,
         "secret": "set" if o.secret_set else "not set",
-        "scopes": o.scopes if o.enabled else None,
+        "scopes": o.scopes,
         "private_issuer_allowed": o.allow_private_issuer,
-        "redirect_uri": oc.redirect_uri if oc is not None and oc.enabled else None,
-        "discovery": (oc.last_error or "ok") if oc is not None and oc.enabled else None,
+        "redirect_uri": oc.redirect_uri,
+        "discovery": oc.discovery_state,
+        "allowed_domains": ", ".join(allowed_domains(conn, ctx, oc)),
+        "admin_groups": ", ".join(sorted(admin_groups(conn, ctx, oc))),
+        "allow_signup": allow_signup(conn, ctx, oc),
+        "flows_waiting": oc.flows.count(oc.id),
+    }
+
+
+def _admins_linked(conn: sqlite3.Connection, found: list[oidc.OidcClient]) -> int:
+    issuers = {oc.issuer for oc in found}
+    rows = conn.execute("SELECT DISTINCT l.user_id, l.issuer FROM oidc_links l JOIN users u ON u.id = l.user_id "
+                        "WHERE u.role = 'admin' AND u.status = 'active'").fetchall()
+    return len({int(r["user_id"]) for r in rows if r["issuer"] in issuers})
+
+
+def about_view(request: Request, conn: sqlite3.Connection | None = None) -> dict[str, Any]:
+    """``oidc`` in ``GET /api/admin/about``: each provider's connection without its secret (note 24 §10, §13). The top-level
+    fields describe the first provider, as before several providers; ``only`` is ``OIDC_ONLY`` and ``admins_linked`` how many
+    active admins can sign in with a provider (with ``OIDC_ONLY``, none means nobody can reach Server administration after
+    signing out)."""
+    ctx = auth_context(request)
+    s = ctx.settings
+    found = providers(request)
+    first = found[0] if found else None
+    o = first.env if first is not None else s.oidc
+    return {
+        "enabled": first is not None,
+        "issuer": o.issuer if first is not None else None,
+        "client_id": o.client_id if first is not None else None,
+        "secret": "set" if o.secret_set else "not set",
+        "scopes": o.scopes if first is not None else None,
+        "private_issuer_allowed": o.allow_private_issuer,
+        "redirect_uri": first.redirect_uri if first is not None else None,
+        "discovery": first.discovery_state if first is not None else None,
+        "providers": [_about_one(oc, conn, ctx) for oc in found] if conn is not None else [],
+        "only": bool(s.oidc.only and found),
+        "admins_linked": _admins_linked(conn, found) if conn is not None and found else None,
     }
 
 
@@ -171,8 +275,9 @@ def _go(path: str) -> RedirectResponse:
     return response
 
 
-def _result(word: str) -> RedirectResponse:
-    return _go(f"/#/oidc/{word}")
+def _result(word: str, oc: oidc.OidcClient | None = None) -> RedirectResponse:
+    """``/#/oidc/<word>``, or ``/#/oidc/<word>/<name>`` for a named provider, so the page names the right one."""
+    return _go(f"/#/oidc/{word}/{oc.env.name}" if oc is not None and oc.env.name else f"/#/oidc/{word}")
 
 
 def _problem_word(exc: ApiProblem) -> str:
@@ -192,11 +297,12 @@ class _Refused(oidc.OidcError):
 
 
 def _begin(request: Request, oc: oidc.OidcClient, purpose: str, response: Response, key: str, **flow: Any) -> str:
-    """Make a flow and set its cookie on ``response``; returns the provider's authorization URL. ``key`` is who started it (the
-    address, or the person) for the flow store's per-key cap; :class:`oidc.FlowStoreFull` when the store or that key is full."""
-    auth_context(request).limits.take("oidc_start_all", "all")
+    """Make a flow with ``oc`` and set its cookie on ``response``; returns the provider's authorization URL. ``key`` is who
+    started it (the address, or the person) for the flow store's per-key cap; :class:`oidc.FlowStoreFull` when the store, this
+    provider's share of it or that key is full."""
+    auth_context(request).limits.take("oidc_start_all", oc.id)
     meta = oc.metadata()
-    state, binder, item = oc.flows.issue(purpose, key=key, **flow)
+    state, binder, item = oc.flows.issue(purpose, key=key, provider=oc.id, **flow)
     _set_binder(response, request, binder)
     return oc.authorization_url(meta, state, item)
 
@@ -214,31 +320,36 @@ def _unavailable(exc: oidc.OidcError) -> ApiProblem:
 # --------------------------------------------------------------------------- #
 
 
+ProviderId = Query(None, pattern=r"^[a-z][a-z0-9]{1,19}$", description="The provider: `default` for the one of OIDC_ISSUER, "
+                   "else its name from OIDC_PROVIDERS. Left out: the first.")
+
+
 @router.get("/start", status_code=303, response_class=RedirectResponse)
-def start(request: Request, conn: sqlite3.Connection = Depends(get_db)) -> Response:
+def start(request: Request, conn: sqlite3.Connection = Depends(get_db), provider: str | None = ProviderId) -> Response:
     """Go to the provider to sign in (a plain link on the sign-in page)."""
-    ctx, oc = _on(request)
+    ctx, oc = _on(request, provider)
     ip = request_ip(request)
     try:
         ensure_setup_done(conn, ctx)
         if ctx.throttle.ip_wait(ip) or ctx.throttle.ip_attempt(ip):
-            return _result("busy")
+            return _result("busy", oc)
         ctx.limits.take("oidc_start", ip_key(ip))
         response = _go("/")
         response.headers["Location"] = _begin(request, oc, "signin", response, f"ip:{ip_key(ip)}")
         return response
     except oidc.FlowStoreFull:
-        return _result("full")
+        return _result("full", oc)
     except oidc.OidcError as exc:
-        return _result(exc.result)
+        return _result(exc.result, oc)
     except ApiProblem as exc:
-        return _result(_problem_word(exc))
+        return _result(_problem_word(exc), oc)
 
 
 @router.post("/invite")
-def start_with_invite(body: LinkInfoBody, request: Request, response: Response, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+def start_with_invite(body: LinkInfoBody, request: Request, response: Response, conn: sqlite3.Connection = Depends(get_db),
+                      provider: str | None = ProviderId) -> dict[str, Any]:
     """An invite link redeemed with the provider: ``{url}`` to go to; the account is made when the person comes back."""
-    ctx, oc = _on(request)
+    ctx, oc = _on(request, provider)
     ensure_setup_done(conn, ctx)
     ip = request_ip(request)
     wait = ctx.throttle.ip_wait(ip)
@@ -265,19 +376,33 @@ def start_with_invite(body: LinkInfoBody, request: Request, response: Response, 
 @router.get("/callback", response_class=RedirectResponse)
 def callback(request: Request, conn: sqlite3.Connection = Depends(get_db), code: str | None = None, state: str | None = None,
              error: str | None = None, iss: str | None = None) -> Response:
-    """Where the provider sends the browser back. Never reflects what the provider sent.
+    """Where the first provider (``OIDC_ISSUER``) sends the browser back. Never reflects what the provider sent.
 
     Any web page can send a browser here with a made-up state, so an unknown state or a cookie that does not match counts as
     nothing: not a failed sign-in for the address, and the browser's cookie (perhaps for its own waiting sign-in) stays. Only a
     flow this browser really started, once taken, counts as a failure when it is refused, and only then is the cookie cleared."""
-    ctx, oc = _on(request)
+    return _callback(request, conn, OIDC_DEFAULT_ID, code, state, error, iss)
+
+
+@router.get("/callback/{name}", response_class=RedirectResponse)
+def callback_named(name: Annotated[str, Path(pattern=r"^[a-z][a-z0-9]{1,19}$")], request: Request,
+                   conn: sqlite3.Connection = Depends(get_db), code: str | None = None, state: str | None = None,
+                   error: str | None = None, iss: str | None = None) -> Response:
+    """Where a named provider of ``OIDC_PROVIDERS`` sends the browser back (each has its own address). A flow started with
+    another provider is not taken here: it stays waiting, as for an unknown state."""
+    return _callback(request, conn, name, code, state, error, iss)
+
+
+def _callback(request: Request, conn: sqlite3.Connection, provider: str, code: str | None, state: str | None, error: str | None,
+              iss: str | None) -> Response:
+    ctx, oc = _on(request, provider)
     ip = request_ip(request)
     binder = _read_binder(request)
     flow: oidc.Flow | None = None
     try:
         if ctx.throttle.ip_wait(ip):
             raise oidc.OidcError("busy", "address_blocked")
-        flow = oc.flows.take(state, binder)
+        flow = oc.flows.take(state, binder, oc.id)
         if flow is None:
             raise oidc.OidcError("expired", "unknown_state")
         if iss is not None and iss != oc.issuer:
@@ -300,12 +425,12 @@ def callback(request: Request, conn: sqlite3.Connection = Depends(get_db), code:
             audit(conn, None, "login.failed", "user", user_id, ip=ip, via="oidc", reason=exc.reason)
             conn.commit()
         log.info("sign-in with the provider refused: %s", exc.reason)
-        response = _result(exc.result)
+        response = _result(exc.result, oc)
     except ApiProblem as exc:
         conn.rollback()
         if flow is not None:
             ctx.throttle.ip_failure(ip)
-        response = _result(_problem_word(exc))
+        response = _result(_problem_word(exc), oc)
     if flow is not None:
         _clear_binder(response, request)
     return response
@@ -318,8 +443,7 @@ def callback(request: Request, conn: sqlite3.Connection = Depends(get_db), code:
 
 def _finish(request: Request, conn: sqlite3.Connection, ctx: AuthContext, oc: oidc.OidcClient, flow: oidc.Flow,
             claims: dict[str, Any], ip: str | None) -> Response:
-    store = ctx.store
-    if not oidc.domain_allowed(claims, comma_list(store.get(conn, "auth.oidc.allowed_domains")), oc.issuer):
+    if not oidc.domain_allowed(claims, allowed_domains(conn, ctx, oc), oc.issuer):
         raise oidc.OidcError("domain", "domain_not_allowed")
     issuer, subject = oc.issuer, claims["sub"]
     email = oidc.any_email(claims)
@@ -347,12 +471,12 @@ def _finish(request: Request, conn: sqlite3.Connection, ctx: AuthContext, oc: oi
         user_id = _link_by_email(request, conn, ctx, claims, issuer, subject, ip)
         linked_by_email = user_id is not None
         if user_id is None:
-            if not store.get(conn, "auth.oidc.allow_signup"):
+            if not allow_signup(conn, ctx, oc):
                 raise oidc.OidcError("no_account", "unknown_subject")
             user_id = _create_by_signup(request, conn, ctx, claims, issuer, subject, email, ip)
     # Never promote on the sign-in that linked by email (security review 2026-10-30): the next sign-in follows the groups.
     if not linked_by_email:
-        _sync_role(conn, ctx, user_id, claims, ip)
+        _sync_role(conn, ctx, oc, user_id, claims, ip)
     response = _go("/")
     from .routes import start_session
 
@@ -376,7 +500,7 @@ def _finish_signed_in(request: Request, conn: sqlite3.Connection, ctx: AuthConte
         sessions.mark_reauth(conn, info.id, user.id)
         conn.execute("UPDATE oidc_links SET last_used_at = ? WHERE id = ?", (utcnow(), int(link["id"])))
         conn.commit()
-        return _result("confirmed")
+        return _result("confirmed", oc)
     if link is not None and int(link["user_id"]) != user.id:
         raise oidc.OidcError("taken", "linked_to_another_account")
     if link is None:
@@ -385,7 +509,7 @@ def _finish_signed_in(request: Request, conn: sqlite3.Connection, ctx: AuthConte
         add_link(conn, user.id, issuer, subject, email)
         audit(conn, user.id, "oidc.linked", "user", user.id, ip=ip, via="settings")
         conn.commit()
-    return _result("linked")
+    return _result("linked", oc)
 
 
 _ASCII_EMAIL = re.compile(r"^[a-z0-9._%+-]+@[a-z0-9.-]+$")
@@ -487,10 +611,12 @@ def _create_by_signup(request: Request, conn: sqlite3.Connection, ctx: AuthConte
     return user_id
 
 
-def _sync_role(conn: sqlite3.Connection, ctx: AuthContext, user_id: int, claims: dict[str, Any], ip: str | None) -> None:
-    """``auth.oidc.admin_groups`` (note 24 §4): with names set and a ``groups`` claim, the role follows the groups. The last active
-    admin is never demoted. A change signs out the person's other sessions, as an admin's role change does."""
-    names = set(comma_list(ctx.store.get(conn, "auth.oidc.admin_groups")))
+def _sync_role(conn: sqlite3.Connection, ctx: AuthContext, oc: oidc.OidcClient, user_id: int, claims: dict[str, Any],
+               ip: str | None) -> None:
+    """``auth.oidc.admin_groups``, or the provider's own ``OIDC_<NAME>_ADMIN_GROUPS`` (note 24 §4, §13): with names set and a
+    ``groups`` claim, the role follows the groups of the provider just used. The last active admin is never demoted, and a test
+    account never becomes an admin. A change signs out the person's other sessions, as an admin's role change does."""
+    names = admin_groups(conn, ctx, oc)
     found = oidc.groups(claims)
     if not names or found is None:
         return
@@ -508,7 +634,7 @@ def _sync_role(conn: sqlite3.Connection, ctx: AuthContext, user_id: int, claims:
     if wanted == "user":
         tokens.void_issued_by(conn, user_id)
     sessions.revoke_user_sessions(conn, user_id)
-    audit(conn, None, "user.role_changed", "user", user_id, ip=ip, old=row["role"], new=wanted, via="oidc_groups")
+    audit(conn, None, "user.role_changed", "user", user_id, ip=ip, old=row["role"], new=wanted, via="oidc_groups", provider=oc.id)
 
 
 # --------------------------------------------------------------------------- #
@@ -517,9 +643,14 @@ def _sync_role(conn: sqlite3.Connection, ctx: AuthContext, user_id: int, claims:
 
 
 @reauth_router.post("/oidc")
-def reauth_start(request: Request, response: Response, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    """Confirm with the provider instead of the password (note 24 §8): ``{url}``; the provider asks the person to sign in again."""
-    ctx, oc = _on(request)
+def reauth_start(request: Request, response: Response, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db),
+                 provider: str | None = ProviderId) -> dict[str, Any]:
+    """Confirm with a provider instead of the password (note 24 §8): ``{url}``; the provider asks the person to sign in again.
+    Without ``provider``, the first provider this person has linked."""
+    if provider is None:
+        mine = {r["issuer"] for r in links_for(conn, user.id)}
+        provider = next((c.id for c in providers(request) if c.issuer in mine), None)
+    ctx, oc = _on(request, provider)
     info = getattr(request.state, "auth_session", None)
     if info is None or link_for_issuer(conn, user.id, oc.issuer) is None:
         raise ApiProblem(409, "Your account is not linked to the sign-in provider.")
@@ -538,28 +669,33 @@ def _available(request: Request, user: Any) -> bool:
 
 @me_router.get("")
 def my_links(request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    """``{available, enabled, label, links, can_link, has_password, passkeys}`` (never a subject or a token)."""
+    """``{available, enabled, label, providers, links, can_link, has_password, passkeys}`` (never a subject or a token).
+    ``providers`` lists each provider in use with ``linked`` (this person has a link to it); ``can_link`` is whether any is
+    left to link. ``label`` is the first provider's words."""
     ctx = auth_context(request)
-    oc = client(request)
-    on = ctx.settings.auth_mode == "local" and oc is not None and oc.enabled
-    issuer = oc.issuer if on and oc is not None else ""
-    rows = links_for(conn, user.id) if _available(request, user) else []
+    found = providers(request)
+    available = _available(request, user)
+    rows = links_for(conn, user.id) if available else []
+    mine = {r["issuer"] for r in rows}
     row = conn.execute("SELECT password_hash FROM users WHERE id = ?", (user.id,)).fetchone()
+    items = [{"id": oc.id, "label": label(conn, ctx, oc), "linked": oc.issuer in mine} for oc in found]
     return {
-        "available": _available(request, user),
-        "enabled": on,
-        "label": label(conn, ctx) if on else None,
-        "links": [link_item(r, issuer) for r in rows],
-        "can_link": on and _available(request, user) and not any(r["issuer"] == issuer for r in rows),
+        "available": available,
+        "enabled": bool(found),
+        "label": items[0]["label"] if items else None,
+        "providers": items,
+        "links": [link_item(r, _known(conn, ctx, found)) for r in rows],
+        "can_link": available and any(not item["linked"] for item in items),
         "has_password": bool(row is not None and row["password_hash"]),
         "passkeys": passkeys.count_for(conn, user.id),
     }
 
 
 @me_router.post("/link")
-def link_start(request: Request, response: Response, user: RecentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    """Link the provider to this account *(re-auth)*: ``{url}``. The callback links only in this same session."""
-    ctx, oc = _on(request)
+def link_start(request: Request, response: Response, user: RecentUser, conn: sqlite3.Connection = Depends(get_db),
+               provider: str | None = ProviderId) -> dict[str, Any]:
+    """Link a provider to this account *(re-auth)*: ``{url}``. The callback links only in this same session."""
+    ctx, oc = _on(request, provider)
     if not _available(request, user):
         raise HTTPException(status_code=404, detail="Not Found")
     if link_for_issuer(conn, user.id, oc.issuer) is not None:

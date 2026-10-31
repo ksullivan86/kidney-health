@@ -46,7 +46,7 @@ def switch(admin: TestClient, on: bool) -> None:
     assert r.json()["settings"]["assistant.enabled"]["value"] is on
 
 
-def make(client: TestClient, name: str = "Open WebUI", days: int | None = None, can_log: bool | None = None,
+def make(client: TestClient, name: str = "Open WebUI", days: int | str | None = None, can_log: bool | None = None,
          can_prefs: bool | None = None) -> dict[str, Any]:
     body: dict[str, Any] = {"name": name}
     if days is not None:
@@ -159,10 +159,12 @@ def test_lifecycle_create_list_use_and_revoke(admin):
     listed = admin.get("/api/me/tokens")
     assert listed.status_code == 200
     doc = listed.json()
-    assert doc["enabled"] is True and doc["max_active"] == 5 and doc["expiry_days"] == [30, 90, 365]
-    assert doc["default_expiry_days"] == 90
+    assert doc["enabled"] is True and doc["max_active"] == 5 and doc["expiry_days"] == [30, 90, 365, "never"]
+    assert doc["default_expiry_days"] == 90 and doc["never_allowed"] is True
     (item,) = doc["tokens"]
-    assert set(item) == {"id", "name", "prefix", "scopes", "created_at", "last_used_at", "expires_at", "revoked_at", "state"}
+    assert set(item) == {"id", "name", "prefix", "scopes", "created_at", "last_used_at", "expires_at", "never_expires", "revoked_at",
+                         "state"}
+    assert item["never_expires"] is False
     # write-only: the list never carries the token, nor its hash
     assert token not in listed.text and hashlib.sha256(token.encode()).hexdigest() not in listed.text
 
@@ -660,3 +662,63 @@ def test_the_admin_list_shows_how_many_assistant_tokens_each_person_has_active(p
     # only a number: no token, hash or prefix reaches the admin
     dump = json.dumps(admin.get("/api/admin/users").json())
     assert "kha_" not in dump and "token_hash" not in dump
+
+
+# --------------------------------------------------------------------------- tokens that never expire (design note 24 §13)
+
+
+def test_a_token_that_never_expires_lists_works_and_survives_housekeeping(admin, fake_clock):
+    item = make(admin, "Home assistant", days="never")
+    assert item["expires_at"] is None and item["never_expires"] is True and item["state"] == "active"
+    with db(admin) as conn:  # stored as the far-future time, so every expiry check keeps working unchanged
+        assert conn.execute("SELECT expires_at FROM api_tokens WHERE id = ?", (item["id"],)).fetchone()[0] == api_tokens.NEVER_EXPIRES_AT
+    (made,) = audit_rows(admin, "api_token.created")
+    assert made["details"]["expires_in_days"] == "never"
+    fake_clock.advance(days=3650)  # ten years on
+    sign_in(admin)
+    assert bearer(admin.app, item["token"]).status_code == 200
+    with db(admin) as conn:
+        assert api_tokens.purge_ended(conn) == 0
+        assert conn.execute("SELECT COUNT(*) FROM api_tokens").fetchone()[0] == 1
+    (listed,) = admin.get("/api/me/tokens").json()["tokens"]
+    assert listed["state"] == "active" and listed["expires_at"] is None and listed["never_expires"] is True
+    assert api_tokens.active_count(db(admin), admin.get("/api/me").json()["id"]) == 1  # counted as active, never as ended
+    # Removing it ends it at once; it is listed as revoked for 30 days, then the housekeeping deletes it.
+    assert admin.delete(f"/api/me/tokens/{item['id']}").status_code == 204
+    assert bearer(admin.app, item["token"]).status_code == 401
+    fake_clock.advance(days=31)
+    sign_in(admin)
+    assert admin.get("/api/me/tokens").json()["tokens"] == []
+    with db(admin) as conn:
+        assert conn.execute("SELECT COUNT(*) FROM api_tokens").fetchone()[0] == 0
+
+
+def test_the_server_can_forbid_tokens_that_never_expire(admin):
+    kept = make(admin, "Made before", days="never")
+    r = admin.patch("/api/admin/settings", json={"tokens.allow_never_expiring": False})
+    assert r.status_code == 200, r.text
+    doc = admin.get("/api/me/tokens").json()
+    assert doc["expiry_days"] == [30, 90, 365] and doc["never_allowed"] is False
+    r = admin.post("/api/me/tokens", json={"name": "Forever", "expires_in_days": "never"})
+    assert r.status_code == 400 and r.json()["detail"] == api_tokens.NEVER_REFUSED and r.json()["field"] == "expires_in_days"
+    assert bearer(admin.app, kept["token"]).status_code == 200  # a token made earlier keeps working until it is removed
+    assert REGISTRY["tokens.allow_never_expiring"].env == "TOKENS_ALLOW_NEVER_EXPIRING"
+    assert REGISTRY["tokens.allow_never_expiring"].default is True
+
+
+def test_the_env_lock_forbids_tokens_that_never_expire(tmp_path, foods_json, monkeypatch):
+    from app.main import create_app
+    from conftest import make_settings, signed_in_client
+
+    monkeypatch.setenv("TOKENS_ALLOW_NEVER_EXPIRING", "false")
+    with signed_in_client(make_settings(tmp_path, foods_json)) as c:
+        switch(c, True)
+        assert c.post("/api/me/tokens", json={"name": "x", "expires_in_days": "never"}).status_code == 400
+        assert create_app  # the app was made by signed_in_client
+
+
+def test_a_device_token_can_never_expire_too(admin):
+    r = admin.patch("/api/admin/settings", json={"push.enabled": True})
+    assert r.status_code == 200
+    r = admin.post("/api/me/tokens", json={"name": "Scale", "expires_in_days": "never", "family": "device"})
+    assert r.status_code == 201 and r.json()["expires_at"] is None and r.json()["never_expires"] is True

@@ -30,7 +30,8 @@ Keys (defaults in brackets):
 * ``ALLOW_INSECURE_HTTP`` [automatic: allowed while one account exists]
 * Sign-in with an OpenID Connect provider (design note 24; :class:`OidcEnv`, ``Settings.oidc``): ``OIDC_ENABLED`` [false],
   ``OIDC_ISSUER``, ``OIDC_CLIENT_ID``, ``OIDC_CLIENT_SECRET_FILE`` (only as a file: ``OIDC_CLIENT_SECRET`` is refused),
-  ``OIDC_SCOPES`` [``openid email profile``], ``OIDC_ALLOW_PRIVATE_ISSUER`` [false]. Env only: what the server connects to is never
+  ``OIDC_SCOPES`` [``openid email profile``], ``OIDC_ALLOW_PRIVATE_ISSUER`` [false]; ``OIDC_PROVIDERS`` (named providers, each with
+  ``OIDC_<NAME>_*``, at most four in all) and ``OIDC_ONLY`` [false] (note 24 §13). Env only: what the server connects to is never
   changed at run time. Who may sign in is in the settings registry (``auth.oidc.*``). On needs ``AUTH_MODE=local`` and ``PUBLIC_URL``.
 * Test accounts (design note 26): ``TEST_ACCOUNT_PASSWORD_FILE`` (only as a file: ``TEST_ACCOUNT_PASSWORD`` is refused). The file
   is read when the accounts are made or reset. The switches ``TEST_ACCOUNT_ENABLED`` and ``TEST_ACCOUNT_AI`` are settings
@@ -80,7 +81,7 @@ import re
 import stat
 from dataclasses import dataclass, field, replace
 from pathlib import Path
-from typing import Mapping
+from typing import Any, Mapping
 from urllib.parse import urlsplit
 
 from . import brand
@@ -306,9 +307,21 @@ OIDC_DEFAULT_SCOPES = "openid email profile"
 _SCOPE_TOKEN = re.compile(r"^[\x21\x23-\x5b\x5d-\x7e]{1,64}$")  # RFC 6749 §3.3 scope-token
 
 
+OIDC_MAX_PROVIDERS = 4
+OIDC_DEFAULT_ID = "default"  # the id of the provider of OIDC_ISSUER… (no name); named ones use their name
+_OIDC_NAME = re.compile(r"^[a-z][a-z0-9]{1,19}$")
+_OIDC_LABEL = re.compile(r"^[^\x00-\x1f\x7f]{1,60}$")
+_OIDC_DOMAINS = re.compile(r"^[A-Za-z0-9., -]{0,500}$")
+_OIDC_GROUPS = re.compile(r"^[^\x00-\x1f\x7f]{0,500}$")
+
+
 @dataclass(frozen=True)
 class OidcEnv:
-    """Sign-in with an OpenID Connect provider (design note 24 §4): the connection, from the environment only."""
+    """Sign-in with OpenID Connect providers (design note 24 §4, §13): the connection, from the environment only.
+
+    The top-level object is the first provider, from ``OIDC_ISSUER``, ``OIDC_CLIENT_ID``… (its ``name`` is empty; its words,
+    domains, groups and sign-up switch are the registry settings ``auth.oidc.*``). ``providers`` holds the named ones of
+    ``OIDC_PROVIDERS`` (``OIDC_<NAME>_ISSUER``…), each of which may override those four. ``only`` is ``OIDC_ONLY``."""
 
     enabled: bool = False  # OIDC_ENABLED
     issuer: str | None = None  # OIDC_ISSUER, exactly as the provider names it (a trailing / is kept)
@@ -316,68 +329,148 @@ class OidcEnv:
     client_secret: str | None = field(default=None, repr=False)  # OIDC_CLIENT_SECRET_FILE; None: a public client (PKCE only)
     scopes: str = OIDC_DEFAULT_SCOPES  # OIDC_SCOPES, space-separated, always with openid
     allow_private_issuer: bool = False  # OIDC_ALLOW_PRIVATE_ISSUER: the provider may be on a private address (a home Authentik)
+    name: str = ""  # "" for the first provider; the lower-case name from OIDC_PROVIDERS for the others
+    button_label: str | None = None  # OIDC_<NAME>_BUTTON_LABEL; None: the registry's (first) or "Sign in with <Name>"
+    allowed_domains: str | None = None  # OIDC_<NAME>_ALLOWED_DOMAINS; None: the registry's auth.oidc.allowed_domains
+    admin_groups: str | None = None  # OIDC_<NAME>_ADMIN_GROUPS; None: the registry's auth.oidc.admin_groups
+    allow_signup: bool | None = None  # OIDC_<NAME>_ALLOW_SIGNUP; None: the registry's auth.oidc.allow_signup
+    providers: tuple["OidcEnv", ...] = ()  # OIDC_PROVIDERS: the named providers (only on the top-level object)
+    only: bool = False  # OIDC_ONLY: no password sign-in (design note 24 §13)
 
     @property
     def secret_set(self) -> bool:
         return bool(self.client_secret)
 
+    @property
+    def id(self) -> str:
+        return self.name or OIDC_DEFAULT_ID
 
-def check_oidc_issuer(raw: str) -> str:
+    @property
+    def var_prefix(self) -> str:
+        """``OIDC_`` for the first provider, ``OIDC_<NAME>_`` for a named one (for messages)."""
+        return f"OIDC_{self.name.upper()}_" if self.name else "OIDC_"
+
+    def all(self) -> tuple["OidcEnv", ...]:
+        """Every configured provider in order (the first one only when it has an issuer); empty while ``OIDC_ENABLED`` is off."""
+        if not self.enabled:
+            return ()
+        first = (self,) if self.issuer else ()
+        return first + tuple(self.providers)
+
+
+def check_oidc_issuer(raw: str, var: str = "OIDC_ISSUER") -> str:
     """``OIDC_ISSUER``: ``https://`` with a host (plain ``http://`` only for a loopback host, for tests), no query, no fragment."""
     try:
         parts = urlsplit(raw)
         _ = parts.port
     except ValueError:
-        raise ConfigError(f"OIDC_ISSUER is not a valid URL: {raw!r}.") from None
+        raise ConfigError(f"{var} is not a valid URL: {raw!r}.") from None
     scheme = parts.scheme.lower()
     host = (parts.hostname or "").lower()
     if scheme not in ("https", "http") or not host:
-        raise ConfigError(f"OIDC_ISSUER must look like https://accounts.google.com, not {raw!r}.")
+        raise ConfigError(f"{var} must look like https://accounts.google.com, not {raw!r}.")
     if scheme == "http" and host not in ("localhost", "127.0.0.1", "::1"):
-        raise ConfigError("OIDC_ISSUER must use https:// (plain http:// only for localhost).")
+        raise ConfigError(f"{var} must use https:// (plain http:// only for localhost).")
     if parts.username is not None or parts.password is not None or parts.query or parts.fragment:
-        raise ConfigError("OIDC_ISSUER must not contain a user name, a password, a ?query or a #fragment.")
+        raise ConfigError(f"{var} must not contain a user name, a password, a ?query or a #fragment.")
     return raw
 
 
-def load_oidc_env(env: Mapping[str, str]) -> OidcEnv:
-    if env.get("OIDC_CLIENT_SECRET"):
-        raise ConfigError("Give the OIDC client secret as a file: put it in a file and set OIDC_CLIENT_SECRET_FILE to its path. "
-                          "Remove OIDC_CLIENT_SECRET.")
-    secret, _, _ = read_secret({k: v for k, v in env.items() if k == "OIDC_CLIENT_SECRET_FILE"}, "OIDC_CLIENT_SECRET")
-    scopes = " ".join((_raw(env, "OIDC_SCOPES") or OIDC_DEFAULT_SCOPES).split())
-    return OidcEnv(
-        enabled=parse_bool(env, "OIDC_ENABLED", False),
-        issuer=_raw(env, "OIDC_ISSUER"),
-        client_id=_raw(env, "OIDC_CLIENT_ID"),
-        client_secret=(secret or "").strip() or None,
-        scopes=scopes,
-        allow_private_issuer=parse_bool(env, "OIDC_ALLOW_PRIVATE_ISSUER", False),
+def _oidc_connection(env: Mapping[str, str], prefix: str) -> dict[str, Any]:
+    """``<prefix>ISSUER``, ``CLIENT_ID``, ``CLIENT_SECRET_FILE``, ``SCOPES`` and ``ALLOW_PRIVATE_ISSUER`` of one provider."""
+    if env.get(f"{prefix}CLIENT_SECRET"):
+        raise ConfigError(f"Give the client secret as a file: put it in a file and set {prefix}CLIENT_SECRET_FILE to its path. "
+                          f"Remove {prefix}CLIENT_SECRET.")
+    value, _, _ = read_secret({k: v for k, v in env.items() if k == f"{prefix}CLIENT_SECRET_FILE"}, f"{prefix}CLIENT_SECRET")
+    return dict(
+        issuer=_raw(env, f"{prefix}ISSUER"),
+        client_id=_raw(env, f"{prefix}CLIENT_ID"),
+        client_secret=(value or "").strip() or None,
+        scopes=" ".join((_raw(env, f"{prefix}SCOPES") or OIDC_DEFAULT_SCOPES).split()),
+        allow_private_issuer=parse_bool(env, f"{prefix}ALLOW_PRIVATE_ISSUER", False),
     )
+
+
+def oidc_provider_names(env: Mapping[str, str]) -> list[str]:
+    """``OIDC_PROVIDERS``: the names of the extra providers, lower case, in order."""
+    names = [part.strip().lower() for part in (_raw(env, "OIDC_PROVIDERS") or "").split(",") if part.strip()]
+    for name in names:
+        if not _OIDC_NAME.match(name) or name == OIDC_DEFAULT_ID:
+            raise ConfigError(f"OIDC_PROVIDERS: {name!r} is not a usable name. Use 2 to 20 letters and digits, starting with a "
+                              f"letter, for example authentik or google (not {OIDC_DEFAULT_ID!r}).")
+    if len(set(names)) != len(names):
+        raise ConfigError("OIDC_PROVIDERS names the same provider twice.")
+    return names
+
+
+def load_oidc_env(env: Mapping[str, str]) -> OidcEnv:
+    named = []
+    for name in oidc_provider_names(env):
+        prefix = f"OIDC_{name.upper()}_"
+        signup = _raw(env, f"{prefix}ALLOW_SIGNUP")
+        named.append(OidcEnv(
+            enabled=True, name=name, **_oidc_connection(env, prefix),
+            button_label=_raw(env, f"{prefix}BUTTON_LABEL"),
+            allowed_domains=_raw(env, f"{prefix}ALLOWED_DOMAINS"),
+            admin_groups=_raw(env, f"{prefix}ADMIN_GROUPS"),
+            allow_signup=None if signup is None else parse_bool(env, f"{prefix}ALLOW_SIGNUP", False),
+        ))
+    return OidcEnv(enabled=parse_bool(env, "OIDC_ENABLED", False), **_oidc_connection(env, "OIDC_"), providers=tuple(named),
+                   only=parse_bool(env, "OIDC_ONLY", False))
+
+
+def _check_oidc_provider(o: OidcEnv) -> list[str]:
+    """The connection of one provider (``o.var_prefix`` names its variables in the messages)."""
+    v = o.var_prefix
+    if not o.issuer:
+        raise ConfigError(f"{v}ISSUER is missing: the provider's issuer, for example https://accounts.google.com.")
+    check_oidc_issuer(o.issuer, f"{v}ISSUER")
+    if not o.client_id:
+        raise ConfigError(f"{v}CLIENT_ID is missing: the client ID your provider gave you.")
+    if len(o.client_id) > 255 or any(ord(c) < 0x21 or ord(c) > 0x7E for c in o.client_id):
+        raise ConfigError(f"{v}CLIENT_ID must be printable characters without spaces, at most 255.")
+    scopes = o.scopes.split()
+    if "openid" not in scopes or len(scopes) > 20 or not all(_SCOPE_TOKEN.match(t) for t in scopes):
+        raise ConfigError(f"{v}SCOPES must be a space-separated list that includes openid (the default is {OIDC_DEFAULT_SCOPES!r}).")
+    if o.button_label is not None and not _OIDC_LABEL.match(o.button_label):
+        raise ConfigError(f"{v}BUTTON_LABEL must be 1 to 60 characters on one line.")
+    if o.allowed_domains is not None and not _OIDC_DOMAINS.match(o.allowed_domains):
+        raise ConfigError(f"{v}ALLOWED_DOMAINS must be a comma list of domains, for example example.org, family.net.")
+    if o.admin_groups is not None and not _OIDC_GROUPS.match(o.admin_groups):
+        raise ConfigError(f"{v}ADMIN_GROUPS must be a comma list of group names on one line, at most 500 characters.")
+    if not o.secret_set:
+        return [f"{v}CLIENT_SECRET_FILE is not set: the server signs in to this provider as a public client (PKCE only)."]
+    return []
 
 
 def _validate_oidc(s: "Settings") -> list[str]:
     o = s.oidc
     if not o.enabled:
-        stray = [n for n, v in (("OIDC_ISSUER", o.issuer), ("OIDC_CLIENT_ID", o.client_id)) if v]
+        if o.only:
+            raise ConfigError("OIDC_ONLY=true needs a sign-in provider: set OIDC_ENABLED=true and the provider's OIDC_ISSUER and "
+                              "OIDC_CLIENT_ID (or OIDC_PROVIDERS). Without one nobody could sign in. Remove OIDC_ONLY to start.")
+        stray = [n for n, val in (("OIDC_ISSUER", o.issuer), ("OIDC_CLIENT_ID", o.client_id), ("OIDC_PROVIDERS", o.providers)) if val]
         return [f"{', '.join(stray)} set without OIDC_ENABLED=true: sign-in with a provider stays off."] if stray else []
     if s.auth_mode != "local":
         raise ConfigError("OIDC_ENABLED=true needs AUTH_MODE=local (with AUTH_MODE=proxy your proxy signs people in).")
-    if not o.issuer:
-        raise ConfigError("OIDC_ENABLED=true needs OIDC_ISSUER, for example https://accounts.google.com.")
-    check_oidc_issuer(o.issuer)
-    if not o.client_id:
-        raise ConfigError("OIDC_ENABLED=true needs OIDC_CLIENT_ID: the client ID your provider gave you.")
-    if len(o.client_id) > 255 or any(ord(c) < 0x21 or ord(c) > 0x7E for c in o.client_id):
-        raise ConfigError("OIDC_CLIENT_ID must be printable characters without spaces, at most 255.")
+    if not o.issuer and not o.providers:
+        raise ConfigError("OIDC_ENABLED=true needs OIDC_ISSUER, for example https://accounts.google.com (or OIDC_PROVIDERS "
+                          "with OIDC_<NAME>_ISSUER for each).")
     if not s.public_url:
         raise ConfigError("OIDC_ENABLED=true needs PUBLIC_URL: the provider sends people back to <PUBLIC_URL>/api/auth/oidc/callback.")
-    scopes = o.scopes.split()
-    if "openid" not in scopes or len(scopes) > 20 or not all(_SCOPE_TOKEN.match(t) for t in scopes):
-        raise ConfigError(f"OIDC_SCOPES must be a space-separated list that includes openid (the default is {OIDC_DEFAULT_SCOPES!r}).")
+    providers = o.all()
+    if len(providers) > OIDC_MAX_PROVIDERS:
+        raise ConfigError(f"At most {OIDC_MAX_PROVIDERS} sign-in providers are allowed (OIDC_ISSUER counts as one, "
+                          "plus each name in OIDC_PROVIDERS).")
     warnings: list[str] = []
-    if not o.secret_set:
-        warnings.append("OIDC_ENABLED=true without OIDC_CLIENT_SECRET_FILE: the server signs in as a public client (PKCE only).")
+    for provider in providers:
+        warnings += _check_oidc_provider(provider)
+    issuers = [p.issuer for p in providers]
+    if len(set(issuers)) != len(issuers):
+        raise ConfigError("Two sign-in providers have the same issuer. Each provider needs its own issuer; remove one of them.")
+    if o.only:
+        warnings.append("OIDC_ONLY=true: nobody can sign in with a password (test accounts still can). If the provider is down, "
+                        "set OIDC_ONLY=false and restart to sign in with a password (docs/accounts.md).")
     return warnings
 
 
@@ -493,7 +586,8 @@ class Settings:
     def secret_values(self) -> list[str]:
         """Every secret value loaded from the environment, for the log-redaction filter."""
         values = [self.usda_api_key, self.app_password, self.admin_password, self.trusted_proxy_secret, self.ai.api_key,
-                  self.ai.cloud.api_key, self.ai.stt_api_key, self.oidc.client_secret]
+                  self.ai.cloud.api_key, self.ai.stt_api_key, self.oidc.client_secret,
+                  *(p.client_secret for p in self.oidc.providers)]
         return [v for v in values if v] + self.secret_key_lines()
 
     def validate(self) -> tuple[str, ...]:

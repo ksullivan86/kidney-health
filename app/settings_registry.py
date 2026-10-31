@@ -960,6 +960,20 @@ register(
         "or been revoked work again.",
     ),
 )
+# Tokens that never expire (design note 24 §13, the owner's question 7; read by app/auth/api_tokens.py). Both families.
+register(
+    SettingDef(
+        key="tokens.allow_never_expiring",
+        model=bool,
+        default=True,
+        scope="instance",
+        env="TOKENS_ALLOW_NEVER_EXPIRING",
+        label="Let people make tokens that never expire",
+        help="On by default. When on, a person making a token in Settings → Outside AI apps or Phone shortcuts can choose "
+        "\"Never (until you remove it)\" as well as 30 days, 90 days or 1 year. When off, every new token expires. Tokens already "
+        "made keep working until they are removed; to end them, use Revoke tokens in People.",
+    ),
+)
 # --------------------------------------------------------------------------- #
 # Test accounts (design note 26; read by app/test_accounts.py). The one password is env only (TEST_ACCOUNT_PASSWORD_FILE in
 # app/config.py), never a setting: it is a secret, and the API never returns a secret.

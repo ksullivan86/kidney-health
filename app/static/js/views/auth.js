@@ -234,10 +234,24 @@
     });
     $('#login-demo').hidden = !MOCK;
     $('#login-passkey').hidden = !(st.passkeys && KH.passkeys && KH.passkeys.supported());
-    if (KH.oidc) KH.oidc.applyStatus(); // the provider's button (design note 24), on the sign-in and invite screens
+    if (KH.oidc) KH.oidc.applyStatus(); // the providers' buttons (design note 24), on the sign-in and invite screens
+    applyPasswordMode();
     const proxy = st.auth_mode === 'proxy';
     $$('.setup-local').forEach((el) => { el.hidden = proxy; });
     $$('.setup-proxy').forEach((el) => { el.hidden = !proxy; });
+  }
+
+  // OIDC_ONLY (design note 24 §13): no password form and no password sign-up. With the test accounts on, a button shows the password
+  // form for them (they sign in with a password; nobody else can). Passkeys stay: they cannot be phished.
+  let testFormShown = false;
+  function applyPasswordMode() {
+    const mode = KH.oidc ? KH.oidc.passwordMode() : 'on';
+    const showPw = mode === 'on' || (mode === 'test_accounts' && testFormShown);
+    $$('#form-login .pw-signin').forEach((el) => { el.hidden = !showPw; });
+    $('#login-only-note').hidden = mode === 'on';
+    $('#login-test-toggle').hidden = !(mode === 'test_accounts' && !testFormShown);
+    $$('#form-register .pw-signup').forEach((el) => { el.hidden = mode !== 'on'; });
+    if (mode !== 'on') $('#register-intro').textContent = `You have been invited to ${instanceName()}. Create your account with your sign-in provider: no username or password to choose.`;
   }
 
   // ---------------------------------------------------------------------------
@@ -354,7 +368,10 @@
       showLogin({ error: 'This link is incomplete or damaged. Open the whole link again, or ask for a new one.' });
       return;
     }
-    if (kind === 'invite') $('#register-intro').textContent = `You have been invited to ${instanceName()}. Choose a username and a password for your account.`;
+    if (kind === 'invite') {
+      $('#register-intro').textContent = `You have been invited to ${instanceName()}. Choose a username and a password for your account.`;
+      applyPasswordMode();
+    }
     if (kind === 'reset') {
       // Whose account it is: an admin-created account's person has never seen the username.
       resetTarget = null;
@@ -468,7 +485,7 @@
       linkScreen(route.screen);
       return false;
     }
-    const oidcText = oidcResult ? KH.oidc.message(oidcResult.word, (st.oidc || {}).label) : '';
+    const oidcText = oidcResult ? KH.oidc.message(oidcResult.word, KH.oidc.labelOf(oidcResult.provider)) : '';
     if (!st.user) {
       const notice = takeReloadNotice();
       if (st.auth_mode === 'proxy') showProxyScreen({ notice });
@@ -732,8 +749,14 @@
     if (KH.passkeys) KH.passkeys.reauthAvailable().then((yes) => { if (reauthWaiter && reauthWaiter.promise === promise) $('#reauth-passkey').hidden = !yes; });
     $('#reauth-oidc').hidden = true;
     if (KH.oidc) {
-      $('#reauth-oidc-btn').textContent = `Confirm with ${KH.oidc.shortLabel((status().oidc || {}).label)}`;
-      KH.oidc.reauthAvailable().then((yes) => { if (reauthWaiter && reauthWaiter.promise === promise) $('#reauth-oidc').hidden = !yes; });
+      // One button for each provider this person has linked (design note 24 §13).
+      KH.oidc.reauthProviders().then((list) => {
+        if (!reauthWaiter || reauthWaiter.promise !== promise) return;
+        const box = clear($('#reauth-oidc-list'));
+        list.forEach((p, i) => box.append(h('button', { class: 'btn secondary auth-passkey-btn', type: 'button',
+          id: i === 0 ? 'reauth-oidc-btn' : `reauth-oidc-btn-${p.id}`, 'data-provider': p.id || '' }, `Confirm with ${KH.oidc.shortLabel(p.label)}`)));
+        $('#reauth-oidc').hidden = !list.length;
+      });
     }
     sheets.open(reauthDlg, null, $('#reauth-password'));
     reauthDlg._returnFocus = null; // handled below, once the waiting request has settled
@@ -809,26 +832,34 @@
   });
 
   // The sign-in provider instead of the password (design note 24 §8): the page goes there and comes back to Settings.
-  $('#reauth-oidc-btn').addEventListener('click', async () => {
-    const btn = $('#reauth-oidc-btn');
+  $('#reauth-oidc').addEventListener('click', async (e) => {
+    const btn = e.target instanceof Element ? e.target.closest('button[data-provider]') : null;
     const errBox = $('#reauth-error');
-    if (btn.disabled) return;
+    if (!btn || btn.disabled) return;
     btn.disabled = true;
     clear(errBox);
-    try { await KH.oidc.reauth(); } catch (err) {
+    try { await KH.oidc.reauth(btn.dataset.provider || null); } catch (err) {
       if (!err.handled) errBox.append(h('p', {}, err.detail || err.message || 'That did not work. Try again.'));
       btn.disabled = false;
     }
   });
 
-  // An invite redeemed with the sign-in provider (design note 24 §6): no username or password to choose.
-  $('#register-oidc-btn').addEventListener('click', async () => {
-    const btn = $('#register-oidc-btn');
+  // An invite redeemed with a sign-in provider (design note 24 §6): no username or password to choose. One button per provider.
+  $('#register-oidc').addEventListener('click', async (e) => {
+    const btn = e.target instanceof Element ? e.target.closest('button[data-provider]') : null;
+    if (!btn) return;
     await busy(btn, async () => {
       setError('');
       if (!linkToken || linkToken.kind !== 'invite' || !linkToken.token) { setError('This link is incomplete or damaged. Open the whole link again.'); return; }
-      try { await KH.oidc.startInvite(linkToken.token); } catch (err) { showApiError(err, $('#form-register'), btn); }
+      try { await KH.oidc.startInvite(linkToken.token, btn.dataset.provider || null); } catch (err) { showApiError(err, $('#form-register'), btn); }
     });
+  });
+
+  // OIDC_ONLY with the test accounts on: show the password form for them.
+  $('#login-test-toggle').addEventListener('click', () => {
+    testFormShown = true;
+    applyPasswordMode();
+    $('#login-username').focus();
   });
 
   // ---------------------------------------------------------------------------

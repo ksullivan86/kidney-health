@@ -34,7 +34,12 @@ def install(app: "FastAPI", settings: "Settings", store: "SettingsStore") -> Aut
 
     ctx = AuthContext(settings=settings, store=store)
     app.state.auth = ctx
-    app.state.oidc = oidc.OidcClient(settings.oidc, settings.public_origin)
+    # Every sign-in provider (design note 24 §13), in order, sharing one flow store: each gets an equal share of it.
+    providers = settings.oidc.all()
+    flows = oidc.FlowStore(per_provider=oidc.MAX_FLOWS // max(1, len(providers)))
+    clients = [oidc.OidcClient(p, settings.public_origin, flows=flows) for p in providers]
+    app.state.oidc_providers = {c.id: c for c in clients if c.enabled}
+    app.state.oidc = clients[0] if clients else oidc.OidcClient(settings.oidc, settings.public_origin, flows=flows)
     app.add_exception_handler(ApiProblem, api_problem_handler)
     app.include_router(routes.router)
     app.include_router(me.router)

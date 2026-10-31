@@ -68,3 +68,17 @@ def test_the_activity_list_names_what_the_assistant_remembered_in_the_preference
             "neutral: 'stop learning' };") in SETTINGS_JS
     assert "kind === 'group' && value === 'not_for_me' ? 'never suggest'" in SETTINGS_JS  # a group's "Not for me" is "Never suggest"
     assert "can_prefs: canPrefs.checked" in SETTINGS_JS
+
+
+def test_a_token_can_be_made_to_never_expire_with_a_plain_warning():
+    """Design note 24 §13 (the owner's question 7): "Never (until you remove it)" when the server offers it, a one-line warning
+    under the choice, "never expires" in the list, and the value sent as the word "never"."""
+    assert "never: 'Never (until you remove it)' };" in SETTINGS_JS
+    assert "const NEVER_WARNING = 'This token works until you remove it. Remove a token you no longer use.';" in SETTINGS_JS
+    assert "function expiryValue(select) { return select.value === 'never' ? 'never' : Number(select.value); }" in SETTINGS_JS
+    assert SETTINGS_JS.count("expires_in_days: expiryValue(expiry)") == 2  # Outside AI apps and Phone shortcuts
+    assert SETTINGS_JS.count("parts.push(expiryText(t));") == 2
+    assert "if (t.never_expires || !t.expires_at) return 'never expires';" in SETTINGS_JS
+    assert "['Tokens for outside apps and phone shortcuts', ['tokens.allow_never_expiring']]," in SETTINGS_JS
+    mock = (ROOT / "app" / "static" / "js" / "mock" / "auth.js").read_text(encoding="utf-8")
+    assert "expiry_days: [30, 90, 365, 'never'], default_expiry_days: 90, never_allowed: true," in mock

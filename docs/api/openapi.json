@@ -10618,14 +10618,22 @@
             "type": "boolean"
           },
           "expires_in_days": {
-            "default": 90,
-            "enum": [
-              30,
-              90,
-              365
+            "anyOf": [
+              {
+                "enum": [
+                  30,
+                  90,
+                  365
+                ],
+                "type": "integer"
+              },
+              {
+                "const": "never",
+                "type": "string"
+              }
             ],
-            "title": "Expires In Days",
-            "type": "integer"
+            "default": 90,
+            "title": "Expires In Days"
           },
           "family": {
             "default": "assistant",
@@ -11394,7 +11402,7 @@
   "info": {
     "description": "Self-hosted food log with renal-diet and type 1 diabetes nutrient warnings, meal planning and period summaries.\n\nThis document is checked in as `docs/api/openapi.json`. `info.version` is the app's version; `info.x-api-version` is the API version, an integer that is raised only for a breaking change. Every error answer is `{\"detail\": string, ...}`; request validation is **400** with `errors`, never 422. Sign in with `POST /api/auth/login` (a cookie, see the `session` scheme); `/mcp` and `/push/v1/body` take bearer tokens.",
     "title": "Kidney Health Food Log",
-    "version": "0.14.0",
+    "version": "0.15.0",
     "x-api-version": 1
   },
   "openapi": "3.1.0",
@@ -14185,7 +14193,7 @@
     },
     "/api/auth/login": {
       "post": {
-        "description": "Sign in. Database work runs in worker threads; the two waits (a slot of the instance-wide budget,\nthen a hashing slot, up to 5 s each) are awaited on the event loop, so a flood of sign-ins holds no\nworker thread and every other route keeps answering.",
+        "description": "Sign in. Database work runs in worker threads; the two waits (a slot of the instance-wide budget,\nthen a hashing slot, up to 5 s each) are awaited on the event loop, so a flood of sign-ins holds no\nworker thread and every other route keeps answering. With ``OIDC_ONLY`` only a test account may use a password (403\n``oidc_only`` for everyone else, before any work).",
         "operationId": "auth_login",
         "requestBody": {
           "content": {
@@ -14277,7 +14285,7 @@
     },
     "/api/auth/oidc/callback": {
       "get": {
-        "description": "Where the provider sends the browser back. Never reflects what the provider sent.\n\nAny web page can send a browser here with a made-up state, so an unknown state or a cookie that does not match counts as\nnothing: not a failed sign-in for the address, and the browser's cookie (perhaps for its own waiting sign-in) stays. Only a\nflow this browser really started, once taken, counts as a failure when it is refused, and only then is the cookie cleared.",
+        "description": "Where the first provider (``OIDC_ISSUER``) sends the browser back. Never reflects what the provider sent.\n\nAny web page can send a browser here with a made-up state, so an unknown state or a cookie that does not match counts as\nnothing: not a failed sign-in for the address, and the browser's cookie (perhaps for its own waiting sign-in) stays. Only a\nflow this browser really started, once taken, counts as a failure when it is refused, and only then is the cookie cleared.",
         "operationId": "auth_callback",
         "parameters": [
           {
@@ -14362,10 +14370,131 @@
         ]
       }
     },
+    "/api/auth/oidc/callback/{name}": {
+      "get": {
+        "description": "Where a named provider of ``OIDC_PROVIDERS`` sends the browser back (each has its own address). A flow started with\nanother provider is not taken here: it stays waiting, as for an unknown state.",
+        "operationId": "auth_callback_named",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "pattern": "^[a-z][a-z0-9]{1,19}$",
+              "title": "Name",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Code"
+            }
+          },
+          {
+            "in": "query",
+            "name": "state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "State"
+            }
+          },
+          {
+            "in": "query",
+            "name": "error",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Error"
+            }
+          },
+          {
+            "in": "query",
+            "name": "iss",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Iss"
+            }
+          }
+        ],
+        "responses": {
+          "307": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "summary": "Callback Named",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
     "/api/auth/oidc/invite": {
       "post": {
         "description": "An invite link redeemed with the provider: ``{url}`` to go to; the account is made when the person comes back.",
         "operationId": "auth_start_with_invite",
+        "parameters": [
+          {
+            "description": "The provider: `default` for the one of OIDC_ISSUER, else its name from OIDC_PROVIDERS. Left out: the first.",
+            "in": "query",
+            "name": "provider",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-z][a-z0-9]{1,19}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The provider: `default` for the one of OIDC_ISSUER, else its name from OIDC_PROVIDERS. Left out: the first.",
+              "title": "Provider"
+            }
+          }
+        ],
         "requestBody": {
           "content": {
             "application/json": {
@@ -14412,9 +14541,33 @@
       "get": {
         "description": "Go to the provider to sign in (a plain link on the sign-in page).",
         "operationId": "auth_start",
+        "parameters": [
+          {
+            "description": "The provider: `default` for the one of OIDC_ISSUER, else its name from OIDC_PROVIDERS. Left out: the first.",
+            "in": "query",
+            "name": "provider",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-z][a-z0-9]{1,19}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The provider: `default` for the one of OIDC_ISSUER, else its name from OIDC_PROVIDERS. Left out: the first.",
+              "title": "Provider"
+            }
+          }
+        ],
         "responses": {
           "303": {
             "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
           },
           "default": {
             "$ref": "#/components/responses/Error"
@@ -14572,8 +14725,29 @@
     },
     "/api/auth/reauth/oidc": {
       "post": {
-        "description": "Confirm with the provider instead of the password (note 24 §8): ``{url}``; the provider asks the person to sign in again.",
+        "description": "Confirm with a provider instead of the password (note 24 §8): ``{url}``; the provider asks the person to sign in again.\nWithout ``provider``, the first provider this person has linked.",
         "operationId": "auth_reauth_start",
+        "parameters": [
+          {
+            "description": "The provider: `default` for the one of OIDC_ISSUER, else its name from OIDC_PROVIDERS. Left out: the first.",
+            "in": "query",
+            "name": "provider",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-z][a-z0-9]{1,19}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The provider: `default` for the one of OIDC_ISSUER, else its name from OIDC_PROVIDERS. Left out: the first.",
+              "title": "Provider"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -14586,6 +14760,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
@@ -19275,7 +19452,7 @@
     },
     "/api/me/oidc": {
       "get": {
-        "description": "``{available, enabled, label, links, can_link, has_password, passkeys}`` (never a subject or a token).",
+        "description": "``{available, enabled, label, providers, links, can_link, has_password, passkeys}`` (never a subject or a token).\n``providers`` lists each provider in use with ``linked`` (this person has a link to it); ``can_link`` is whether any is\nleft to link. ``label`` is the first provider's words.",
         "operationId": "me_my_links",
         "responses": {
           "200": {
@@ -19313,8 +19490,29 @@
     },
     "/api/me/oidc/link": {
       "post": {
-        "description": "Link the provider to this account *(re-auth)*: ``{url}``. The callback links only in this same session.",
+        "description": "Link a provider to this account *(re-auth)*: ``{url}``. The callback links only in this same session.",
         "operationId": "me_link_start",
+        "parameters": [
+          {
+            "description": "The provider: `default` for the one of OIDC_ISSUER, else its name from OIDC_PROVIDERS. Left out: the first.",
+            "in": "query",
+            "name": "provider",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^[a-z][a-z0-9]{1,19}$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The provider: `default` for the one of OIDC_ISSUER, else its name from OIDC_PROVIDERS. Left out: the first.",
+              "title": "Provider"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -19327,6 +19525,9 @@
               }
             },
             "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
           },
           "401": {
             "$ref": "#/components/responses/Unauthorized"
