@@ -30,6 +30,8 @@ Whoop (activity, sleep and recovery) comes in a later version, on the same groun
   its access; the person can check it in the Withings app under their account's connected apps.
 * If Withings stops accepting the sign-in (the person removed the app at Withings, or a year passed without a sync), the section
   says "Withings needs you to connect again" and shows **Connect again**.
+* Deleting the account deletes the connection here at once. Withings may still list the app until the person removes it in their
+  Withings account (the server does not ask Withings for that, only Disconnect does).
 * Settings → Account → Activity lists connect, disconnect, and a sync that stopped working.
 * **Test accounts cannot connect a device**: they are shared by testers. The demo shows a sample Withings connection with
   sample readings, and never contacts Withings.
