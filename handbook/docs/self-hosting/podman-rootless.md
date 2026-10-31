@@ -61,7 +61,7 @@ A typo makes systemd skip the unit **silently**; the dry run in step 4 is what c
 | `Volume=…:/data:noexec,nosuid,nodev` | the only writable place holds data, never programs |
 | `Secret=kidney-secret-key,…,mode=0400` | the key is a file owned by UID 10001, outside `/data` |
 | `HealthCmd=["python", "-m", "app.healthcheck"]` | exec form: the image has no shell |
-| `AutoUpdate=registry` | `podman-auto-update` pulls new `:0.15` patch releases |
+| `AutoUpdate=registry` | `podman-auto-update` pulls new `:0.16` patch releases |
 
 ## User namespaces: keep the default
 

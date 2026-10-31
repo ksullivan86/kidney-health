@@ -540,7 +540,7 @@ def quadlet(path: str) -> dict[str, list[str]]:
 def test_quadlet_unit_is_hardened():
     q = quadlet("deploy/quadlet/kidney-health.container")
     one = lambda key: q[f"Container.{key}"][0]  # noqa: E731
-    assert one("Image") == "ghcr.io/ksullivan86/kidney-health:0.15"
+    assert one("Image") == "ghcr.io/ksullivan86/kidney-health:0.16"
     assert one("Network") == "pasta"
     assert one("PublishPort").startswith("127.0.0.1:")
     assert one("ReadOnly") == "true" and one("NoNewPrivileges") == "true"
@@ -574,7 +574,7 @@ def test_compose_is_hardened_and_uses_file_secrets():
         "SECRET_KEY_FILE: /run/secrets/secret_key",
         "file: ./secrets/secret_key",
         'test: ["CMD", "python", "-m", "app.healthcheck"]',
-        "image: ghcr.io/ksullivan86/kidney-health:0.15",
+        "image: ghcr.io/ksullivan86/kidney-health:0.16",
     ):
         assert needle in text, needle
     active = "\n".join(ln for ln in text.splitlines() if not ln.lstrip().startswith("#"))
