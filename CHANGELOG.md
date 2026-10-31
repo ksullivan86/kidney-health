@@ -7,17 +7,21 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+## 0.17.0 — 2026-10-31
+
 This version adds **Whoop** to Connected devices, an **Activity and recovery** card in Trends, and a choice to add Whoop's
 calories on active days to your calorie target. All of it is off until you set it up.
 
-### Upgrading
+### Upgrading from 0.16 (read this first)
 
-1. **Back up first.** Schema step 30 runs at the first start. It adds three tables and rebuilds the Care team tables `shares`
+1. **Back up first** (`podman exec kidney-health python -m app.admin backup /data/before-0.17.0.db`). Schema step 30 runs at the first start. It adds three tables and rebuilds the Care team tables `shares`
    and `care_invites` so a fifth area fits; every row stays. The server also copies the database to `<db>.pre-v30.bak` before
    this step.
 2. **Nothing new is switched on.** To use Whoop, register a Whoop developer app (up to 10 Whoop members need no approval) and
    set `WHOOP_ENABLED`, `WHOOP_CLIENT_ID` and `WHOOP_CLIENT_SECRET_FILE`, with `DEVICES_ENABLED` on
    ([devices.md](docs/devices.md#whoop)). The server then needs HTTPS to `api.prod.whoop.com`.
+3. **Coming from 0.15 or older**, read [Upgrading from 0.15](#upgrading-from-015-read-this-first) and the notes before it too.
+4. **Change the tag** to `:0.17`, or pin a digest from the release notes. The shipped files already say `:0.17`.
 
 ### Known limitations
 
@@ -42,6 +46,12 @@ calories on active days to your calorie target. All of it is off until you set i
 * The export has `activity.csv`, `workouts.csv` and the same data in `export.json`. Importing a file leaves them out:
   connecting Whoop again fetches them.
 * The demo shows a sample Whoop connection and sample days.
+
+### Fixed
+
+* **Settings → Connected devices did not show in 0.16.** It shared its page id with Account → Signed-in devices, so Withings
+  could not be connected from the screen. It shows now.
+* A Care helper's **Plan several days** uses the base calorie target unless the activity area is shared.
 
 ## 0.16.0 — 2026-10-31
 

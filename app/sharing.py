@@ -905,5 +905,7 @@ def helper_clear(share_id: ShareId, body: ClearPlanned, request: Request, care: 
 def helper_plan_days(share_id: ShareId, body: PlanDaysRequest, request: Request, care: Helper,
                      conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """Plan several days for the person against their targets (computes only; "Add to plan" sends the entries to
-    ``POST …/log/batch``). The person's saved meals are never used, so a plan never shows them (design note 25 §7)."""
-    return guidance_api.plan_several_days(body.model_copy(update={"use_saved_meals": False}), request, care.owner, conn)
+    ``POST …/log/batch``). The person's saved meals are never used, so a plan never shows them (design note 25 §7), and without the
+    activity area the plan uses the base calorie target (design note 28): the active-day extra would tell how active they were."""
+    return guidance_api.plan_days_for(body.model_copy(update={"use_saved_meals": False}), request, care.owner, conn,
+                                      activity_extra=_shares_activity(conn, care.share_id))

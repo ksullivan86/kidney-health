@@ -333,6 +333,12 @@ def plan_several_days(body: PlanDaysRequest, request: Request, user: CurrentUser
     """Plan 1 to ``PLAN_DAYS_MAX`` days at once (design note 23; default 60): each day against its own room, the days seeing
     each other (the phosphorus week, the dialysis interval, no meal twice in a row unless the person said it may repeat).
     Computes only; "Add to plan" sends ``apply.entries`` to ``POST /api/log/batch``, at most 40 a request."""
+    return plan_days_for(body, request, user, conn)
+
+
+def plan_days_for(body: PlanDaysRequest, request: Request, user: Any, conn: sqlite3.Connection, *,
+                  activity_extra: bool = True) -> dict[str, Any]:
+    """The work of ``POST /plan-days``; a Care helper's route passes ``activity_extra=False`` when the activity area is not shared."""
     store = settings_store(request)
     limits = plan_days_limits(conn, store)
     if body.days > limits["days_max"]:
@@ -340,7 +346,7 @@ def plan_several_days(body: PlanDaysRequest, request: Request, user: CurrentUser
     off = gate(conn, store, user.id, "plan")
     if off is not None:
         return off
-    ctx = load_ctx(request, conn, user.id, body.start)
+    ctx = load_ctx(request, conn, user.id, body.start, C.LoadOptions(activity_extra=activity_extra))
     if not C.has_targets(ctx.profile):
         return unavailable("no_targets", M.NO_TARGETS)
     settings = C.user_settings(conn, store, user.id)

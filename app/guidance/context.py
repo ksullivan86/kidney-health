@@ -425,6 +425,9 @@ class LoadOptions:
     history60: bool = True  # eaten entries of the previous 60 days (usual meals)
     saved_meals: bool = True
     combos: bool = True
+    # The active-day calorie extra (design note 28). Off for a Care helper whose share leaves out the activity area: the raised
+    # target would tell how active the person was.
+    activity_extra: bool = True
 
 
 def _days_before(day: str, n: int) -> str:
@@ -459,7 +462,7 @@ def load(conn: sqlite3.Connection, user_id: int, day: str, *, store: SettingsSto
             eaten30 = load_history(conn, user_id, start30, yesterday)
     return GuidanceContext(
         date=day,
-        profile=load_profile(conn, user_id, day),
+        profile=load_profile(conn, user_id, day if options.activity_extra else None),
         prefs=prefs,
         foods=foods,
         day=entries,

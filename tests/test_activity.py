@@ -231,6 +231,22 @@ def test_a_care_team_view_needs_the_activity_area(team) -> None:  # noqa: F811
     assert ana.get("/api/me/shares").json()["areas"] == ["food", "labs", "body", "symptoms", "activity"]
 
 
+def test_a_care_helpers_plan_uses_the_base_target_without_the_activity_area(team) -> None:  # noqa: F811
+    """Plan several days for the person: without the activity area the raised target would tell how active they were."""
+    ana, sam, _ = team
+    targets(ana)
+    seed(ana, QUIET_DAYS, 3000)
+    turn_on(ana)
+    body = {"start": TODAY.isoformat(), "days": 1}
+    sid = join(ana, sam, areas=["food"], role="care_helper")
+    r = sam.post(f"/api/shared/{sid}/guidance/plan-days", json=body)
+    assert r.status_code == 200, r.text
+    assert r.json()["targets"]["values"]["calories_kcal"] == 2000
+    assert ana.post("/api/guidance/plan-days", json=body).json()["targets"]["values"]["calories_kcal"] == 2750  # the person's own plan
+    sid2 = join(ana, sam, areas=["food", "activity"], role="care_helper")
+    assert sam.post(f"/api/shared/{sid2}/guidance/plan-days", json=body).json()["targets"]["values"]["calories_kcal"] == 2750
+
+
 # --------------------------------------------------------------------------- #
 # The twin
 # --------------------------------------------------------------------------- #
