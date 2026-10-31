@@ -131,6 +131,7 @@ USER_AGENT_USDA = "kidney-health/0.3 (self-hosted food log)"  # USDA FoodData Ce
 USER_AGENT_OFF = "KidneyHealth/{version} ({contact})"  # Open Food Facts asks for ``name/version (contact)`` (``app/off.py``)
 USER_AGENT_HIBP = "kidney-health"  # the Pwned Passwords range lookup (``app/auth/policy.py``)
 USER_AGENT_OIDC = "kidney-health"  # discovery, keys and the token request of sign-in with a provider (``app/auth/oidc.py``)
+USER_AGENT_DEVICES = "kidney-health"  # connected devices: Withings token and measure requests (``app/devices/withings.py``)
 
 # --------------------------------------------------------------------------- #
 # Key derivation labels (the HKDF ``info`` of ``app.crypto.Keyring``)

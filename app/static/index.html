@@ -1223,6 +1223,12 @@
       <div id="set-body-body" class="settings-body"></div>
     </section>
 
+    <!-- Connected devices (design note 27; js/views/devices.js): shown only while the server has it on (GET /api/devices answers). -->
+    <section class="card settings-section" id="set-devices" data-title="Connected devices" aria-labelledby="set-devices-h" hidden>
+      <h2 class="card-title" id="set-devices-h">Connected devices</h2>
+      <div id="set-devices-body" class="settings-body" role="region" aria-labelledby="set-devices-h"></div>
+    </section>
+
     <section class="card settings-section" id="set-guidance" data-title="Meal guidance" aria-labelledby="set-guidance-h">
       <h2 class="card-title" id="set-guidance-h">Meal guidance</h2>
       <div id="set-guidance-body" class="settings-body"></div>
@@ -2428,6 +2434,7 @@
 <script src="js/mock/auth.js"></script>
 <script src="js/mock/settings.js"></script>
 <script src="js/mock/care.js"></script>
+<script src="js/mock/devices.js"></script>
 <script src="js/mock/handbook.js"></script>
 <script src="js/mock/meta.js"></script>
 <script src="js/mock/ai.js"></script>
@@ -2456,6 +2463,7 @@
 <script src="js/views/passkeys.js"></script>
 <script src="js/views/sharing.js"></script>
 <script src="js/views/oidc.js"></script>
+<script src="js/views/devices.js"></script>
 <script src="js/views/ai.js"></script>
 <script src="js/views/ai_routing.js"></script>
 <script src="js/views/ai_quality.js"></script>

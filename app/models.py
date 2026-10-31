@@ -1200,7 +1200,7 @@ class SymptomList(BaseModel):
 
 WeightContext = Literal["morning", "before_dialysis", "after_dialysis", "other"]
 BloodPressureContext = Literal["morning", "evening", "before_dialysis", "after_dialysis", "other"]
-BodySourceKey = Literal["manual", "apple_health", "import", "shortcut"]  # where a stored row came from ("shortcut": a phone shortcut's device token, app/push.py)
+BodySourceKey = Literal["manual", "apple_health", "import", "shortcut", "withings"]  # where a stored row came from ("shortcut": a phone shortcut's device token, app/push.py; "withings": a connected device, app/devices/)
 BodyImportSource = Literal["apple_health", "import"]  # what a batch row may say (a typed row is "manual")
 # The plausibility ranges below are the project's own choice, not clinical numbers (note 10 §3): they only keep a typing
 # error out of the log. 20 to 400 kg is the profile's ``weight_6_months_ago_kg`` range.

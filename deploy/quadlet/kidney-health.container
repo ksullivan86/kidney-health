@@ -155,6 +155,14 @@ Environment=TRUSTED_PROXIES=127.0.0.1,::1
 # Secret=kidney-test-password,type=mount,target=test_account_password,uid=10001,gid=10001,mode=0400
 # Environment=TEST_ACCOUNT_PASSWORD_FILE=/run/secrets/test_account_password
 # Environment=TEST_ACCOUNT_AI=false
+# Connected devices (docs/devices.md): each person may connect their own Withings scale or blood pressure monitor. Needs PUBLIC_URL.
+# Withings sends people back to <PUBLIC_URL>/api/devices/withings/callback. The client secret of your free Withings developer app is
+# a Podman secret (podman secret create kidney-withings-secret FILE). Off by default.
+# Environment=DEVICES_ENABLED=true
+# Environment=WITHINGS_ENABLED=true
+# Environment=WITHINGS_CLIENT_ID=your-withings-client-id
+# Secret=kidney-withings-secret,type=mount,target=withings_client_secret,uid=10001,gid=10001,mode=0400
+# Environment=WITHINGS_CLIENT_SECRET_FILE=/run/secrets/withings_client_secret
 # Names listed here are first values, not locks: written once, then changeable in the app (docs/deployment.md).
 # Environment=SETTINGS_INITIAL_ONLY=SHARING_ENABLED,PUSH_ENABLED
 # Admins must use two-step sign-in before they can open Server administration (docs/accounts.md). Off by default.

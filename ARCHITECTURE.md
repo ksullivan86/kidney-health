@@ -841,6 +841,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 26 | `m026_oidc.py` | sign-in with a provider (note 24) | `oidc_links` (`user_id` `ON DELETE CASCADE`, `issuer`, `subject` (the `sub` claim, 1 to 255 characters), `email`, `created_at`, `last_used_at`; `UNIQUE (issuer, subject)` and `UNIQUE (user_id, issuer)`; no token is ever stored) and `sessions.signed_in_with` (`oidc` or NULL; NULL for every earlier session). Nobody is linked after the upgrade. |
 | 27 | `m027_care_team.py` | the Care team (note 25 §4) | `shares.role` (`viewer` or `care_helper`, default `viewer`: every existing share becomes a Viewer), `shares.helper_changes` (JSON `{day, added, changed, removed}` or NULL), `log_entries.added_by_user_id` (`ON DELETE SET NULL`; set only when a Care helper adds a planned entry) and a new table `care_invites` (`owner_user_id`, `invitee_user_id` NULL when no active account had the name, `username` as typed, `areas`, `role`, `lasts_days`, `created_at`, `expires_at`, `answered_at`, `answer` (`accepted`, `declined`, `cancelled`, `replaced`), `share_id`; `ON DELETE CASCADE` on both accounts; never yourself). Nothing else changes. |
 | 28 | `m028_test_accounts.py` | test accounts (note 26 §4) | `users.is_test_account` (0 or 1, default 0: every existing account is real), two triggers that refuse a row with `role = 'admin'` and `is_test_account = 1` (insert or update), and a new table `feedback` (`user_id` `ON DELETE SET NULL`, `username` kept as text, `screen`, `trying`, `happened`, `useful` (`yes`, `somewhat`, `no` or NULL), `unsafe`, `app_version`, `created_at`, `done_at`, `done_by`). Nothing else changes. |
+| 29 | `m029_connected_devices.py` | connected devices (note 27 §3) | two new tables: `device_connections` (`user_id` `ON DELETE CASCADE`, `provider`, `external_user_id`, `tokens_enc` (access and refresh token sealed with the keyring, purpose `device:<provider>`, owner the person), `key_id`, `access_expires_at`, `scopes`, `status` (`active` or `needs_reconnect`), `sync_cursor`, `last_sync_at`, `last_success_at`, `last_error`, `next_sync_after`; `UNIQUE (user_id, provider)` and `UNIQUE (provider, external_user_id)`) and `device_imports` (the ledger: `user_id`, `provider`, `external_id`, `kind`, `row_id`, `imported_at`; primary key `(user_id, provider, external_id)`). Imported rows go into `weights` and `blood_pressures` with `source = 'withings'`. Nothing else changes. |
 | 23 | `m023_passkeys.py` | passkeys (note 18) | `passkeys` (one row per passkey: `credential_id` BLOB, unique, 1 to 1,023 bytes; `public_key`, the COSE key as sent; `alg`; `user_handle`, 32 random bytes shared by one person's passkeys; `sign_count`; `name`; `backed_up`; `created_at`; `last_used_at`). `ON DELETE CASCADE`. Nothing is sealed: a public key is not a secret. Nobody has a passkey after the upgrade. |
 
 ## Backend file ownership
@@ -1078,7 +1079,8 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
 
-**Status (2026-10-31): v0.15.0 is prepared.** It adds several sign-in providers at once (`OIDC_PROVIDERS`, up to four),
+**Unreleased (0.16):** Connected devices and Withings (note 27, schema step 29, `/api/devices`, off until `DEVICES_ENABLED` and
+`WITHINGS_ENABLED`); see "Connected devices" below. **Status (2026-10-31): v0.15.0 is prepared.** It adds several sign-in providers at once (`OIDC_PROVIDERS`, up to four),
 `OIDC_ONLY`, and tokens that never expire (`tokens.allow_never_expiring`); note 24 §13, no schema step; CHANGELOG.md 0.15.0.
 **v0.14.0 (2026-10-31)** It adds the Care team (note 25, schema step 27: invites by user name, the
 Viewer and Care helper roles, "Planning for"), test accounts with Send feedback and Reset (note 26, schema step 28, off until
@@ -2298,7 +2300,8 @@ service address are always refused; private, loopback, CGNAT and ULA only for an
 it connects to the checked IP with the original `Host` and SNI. Clients never follow redirects. When the
 standard `HTTPS_PROXY`/`ALL_PROXY` variables name a proxy (honouring `NO_PROXY`), requests go to the proxy
 and pinning is its job. `read_capped` counts decoded bytes. Every outbound client in the app uses it (USDA
-`app/foods.py`, Open Food Facts `app/off.py`, the breached-password check `app/auth/policy.py`) or, for AI,
+`app/foods.py`, Open Food Facts `app/off.py`, the breached-password check `app/auth/policy.py`, sign-in providers
+`app/auth/oidc.py`, Withings `app/devices/withings.py`) or, for AI,
 `app/ai/transport.py`'s `PinnedTransport`; `tests/test_egress.py` fails on any other client.
 
 ### Parity
@@ -4543,6 +4546,62 @@ are in the Swift package `ios/KidneyHealthCore` (design note 15 §4.1): the rang
 `source_key` and requests of at most 50 rows. It has no dependencies and no HealthKit code, so CI tests it on Linux against
 `tests/data/body_vectors.json`, `apple_health_vectors.json`, `push_vectors.json` and `pairing_vectors.json`. The app checks each row as
 this route does before sending, because one refused row makes the whole request a `400`.
+
+## Connected devices (schema step 29; design note 27)
+
+The server signs in to a device company with the person's consent and fetches only that person's own readings into their log.
+Nothing about the person is sent out. 0.16 has Withings (weight, blood pressure, pulse); Whoop (0.17) adds a provider module.
+
+* **Switches.** `devices.enabled` (`DEVICES_ENABLED`, off) and `devices.sync_hours` (`DEVICES_SYNC_HOURS`, 1 to 24, default 4)
+  are settings. The provider app is env only (`app/config.py` `WithingsEnv`): `WITHINGS_ENABLED`, `WITHINGS_CLIENT_ID`,
+  `WITHINGS_CLIENT_SECRET_FILE` (`WITHINGS_CLIENT_SECRET` is a `ConfigError`); on needs `PUBLIC_URL`. While `devices.enabled` is
+  off every `/api/devices` route is 404 and nothing syncs; a provider that is not set up is 404 for its routes.
+* **Modules.** `app/devices/base.py` (`Provider`, `TokenSet`, `Reading`, `ProviderError` with the codes `auth`, `rate_limited`,
+  `unreachable`, `provider_error`, `scope`, `account_taken`), `withings.py` (the client, through `egress.CheckedTransport`, no
+  redirects, 2 MiB, 15 s), `store.py` (connections, sealed tokens, the ledger, adding rows), `sync.py` (one sync, the loop,
+  `app.state.devices`), `api.py` (the routes, the in-memory flow store, `about_view`).
+* **Withings.** Authorize at `account.withings.com/oauth2_user/authorize2` with `scope=user.metrics` (the browser only); tokens at
+  `wbsapi.withings.net/v2/oauth2` (`action=requesttoken`); measures at `/measure` (`action=getmeas`, `meastypes=1,9,10,11`,
+  `category=1`, `lastupdate`, `offset` while `more`); revoke on disconnect with a signed nonce (`/v2/signature`). A group is
+  taken only with `attrib` 0, 2, 5, 7 or 8 (not 1, ambiguous, or 4); `value × 10^unit` exactly; the date and time in the group's
+  or the account's time zone, else UTC. A reading needs both 10 and 9; a pulse alone is left out.
+* **Tokens** are sealed with `Keyring.seal(purpose="device:<provider>", owner=user_id)`; `device_connections.tokens_enc` is in
+  `ENCRYPTED_COLUMNS`. They are never logged, never in an audit row and never in a response. A refresh is saved at once (Withings
+  ends the old refresh token 8 hours after a new one).
+* **Sync** (`sync_connection`): refresh when the access token has under 5 minutes left; fetch since `sync_cursor` (the first time,
+  365 days back); on `auth` one refresh and one retry, then `needs_reconnect` (tokens deleted); `rate_limited` pauses the
+  connection for an hour (`next_sync_after`); other errors are kept as `last_error`. One `device.sync_failed` audit row when the
+  error changes. `store.add_readings` (one `BEGIN IMMEDIATE` transaction) only inserts: it skips a measure in the ledger, a reading
+  the person has at the same date and `HH:MM` with the same numbers **from any source, typed ones included**, a `source_key` already
+  there, a value the request models refuse (a pulse out of range drops the pulse), and a full day; every measure seen goes into
+  `device_imports`, so a deleted reading never comes back. Rows: `source = 'withings'`, `source_key = 'withings:<grpid>:weight|bp'`,
+  context by `body.context_for`.
+* **The loop** (`sync.loop`, started in the lifespan): every 10 minutes, in a worker thread, while `devices.enabled` is on, each
+  active connection of an account that is not disabled and not a test account whose last try is older than
+  `devices.sync_hours`, one after another (0.6 s apart). A connection being synced is claimed (`Devices.claim`), so Sync now and
+  the loop never run it twice at once.
+* **Test accounts** cannot connect (403, and `test_account` on the way back). **Care team**: the rows follow the `body` area.
+  **Export**: they are weights and readings like any other; `BodySourceKey` has `withings`, so an export with them imports.
+
+| Method and path | Auth | Body → response |
+|---|---|---|
+| `GET /api/devices` | signed in | `{enabled, can_connect, sync_hours, providers: [{id, name, what, available, connection: null \| {status, connected_at, last_sync_at, last_success_at, last_error, imported: {weights, readings}}}]}` |
+| `POST /api/devices/{provider}/start` | signed in | `{url}`: the state (32 random bytes, 10 minutes, single use, tied to the person and the SHA-256 of the session id; at most 5 waiting a person). 403 test account, 409 already connected, 429 too many waiting |
+| `GET /api/devices/{provider}/callback?code=&state=&error=` | signed in | 303 to `/#/devices/<word>/<provider>`: `connected`, `cancelled`, `expired`, `wrong_account`, `scope`, `taken`, `test_account`, `unavailable`, `failed`. The code is used only after the state, person and session matched |
+| `POST /api/devices/{provider}/sync` | signed in | `{connection, result: {added: {weights, readings}, already_there, skipped, left_out} \| null, error}`. 404 not connected, 409 needs reconnect or already running, 429 within 10 minutes or while paused |
+| `DELETE /api/devices/{provider}?delete_readings=` | signed in | `{removed: {weights, readings}, revoked}`. Deletes the connection (and with `delete_readings` the rows still `source = 'withings'` and the ledger), then asks Withings to revoke |
+
+`GET /api/admin/about` has `devices: {enabled, providers: [{id, name, enabled, client_id, secret: "set"|"not set", hosts,
+connected: {status: count}, redirect_uri}]}`. Audit (person-visible): `device.connected`, `device.disconnected`
+(`deleted_weights`, `deleted_readings`), `device.sync_failed` (`provider`, `error`).
+
+**Screens.** `js/views/devices.js` (`KH.devices`): Settings → Connected devices (`#set-devices`, hidden while `GET /api/devices`
+is 404), the "Before you connect" box, Sync now, Disconnect with "Also delete the readings that came from Withings". The way back
+`#/devices/<word>/<provider>` is taken out of the address when the page opens and shown once someone is signed in (`openPending`,
+called from `js/main.js`), which syncs at once after `connected`. `KH.bodyUi.originText` says "from Withings". Server
+administration shows the switch group and the About rows. The demo (`js/mock/devices.js`) has a sample connection and marks the
+sample morning readings `withings`; Connect is refused there. Tests: `tests/test_connected_devices.py` (a fake Withings behind the
+real checked transport, `tests/devices_support.py`), `tests/test_connected_devices_ui.py`, `tests/js/devices_demo.mjs`.
 
 ## The API document and `GET /api/meta` (design note 14 changes 2 and 4)
 

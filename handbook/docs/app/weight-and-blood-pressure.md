@@ -1,6 +1,6 @@
 ---
 title: Weight and blood pressure
-description: "Write down your weights and blood pressure readings, or send them from an iPhone Shortcut, enter the two numbers your care team gave you, and see what the app shows, what it points to in this handbook and what it leaves to your team."
+description: "Write down your weights and blood pressure readings, send them from an iPhone Shortcut or a Withings scale or monitor, enter the two numbers your care team gave you, and see what the app shows, what it points to in this handbook and what it leaves to your team."
 slug: weight-and-blood-pressure
 audience: [app-user, patient, caregiver]
 applies_to: [all]
@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-22
 fact_checked: 2026-10-22
-sources: [NOTE10, NOTE12, APPLE-SHORTCUTS, ARCH, NOTE05, MEDLINE-BPM, NHLBI-BPS, K21BP, AHA25BP, AHA-CUFFLESS, DG28a, NKF-HDaccess]
+sources: [NOTE10, NOTE12, NOTE27, APPLE-SHORTCUTS, ARCH, NOTE05, MEDLINE-BPM, NHLBI-BPS, K21BP, AHA25BP, AHA-CUFFLESS, DG28a, NKF-HDaccess]
 ---
 
 # Weight and blood pressure
@@ -242,6 +242,33 @@ the check happens when you open the app: if a reading is past a limit, the red b
 time you open it. If you feel unwell, or a number worries you, do not wait for the app: follow
 [Get help now](../get-help-now.md) and call your care team.
 
+## From a Withings scale or monitor {#from-withings}
+
+If you have a **Withings** scale or blood pressure monitor, the server can fetch your readings from Withings for you. It
+is off until your admin sets it up ([design note 27][NOTE27]). If your admin has, **Settings → Connected devices** shows
+**Connect Withings**.
+
+1. Press **Connect Withings**. A short box says what the server will fetch: your weight, blood pressure and pulse.
+2. Press **Continue to Withings**. Withings' own page opens. Sign in there and say yes.
+3. Withings sends you back to the app. It says "Withings is connected" and fetches the readings of the last year.
+
+After that the server fetches new readings every few hours. **Sync now** fetches at once.
+
+- Each reading is marked "from Withings" in the lists and in Trends. It counts like a reading you typed: in your 7-day
+  average, your weight-gain alarm and your visit summary, and for your Care team if you share weight and blood pressure.
+- The app **never changes a reading you typed**. If you typed the same reading at the same minute, it is not added twice.
+- If you delete a reading that came from Withings, it does not come back. If you edit it, it becomes yours.
+- Withings sometimes is not sure who stepped on the scale. It marks such a weighing as unclear, and the app leaves it out
+  until you choose the right person in the Withings app.
+- Nothing about you is sent to Withings: the server only signs in and reads.
+- **Disconnect** stops the fetching. Your readings stay, unless you tick **Also delete the readings that came from
+  Withings** (readings you edited stay either way).
+- If the section says **Withings needs you to connect again**, press **Connect again**. This happens when Withings stops
+  accepting the server's sign-in, for example after you removed the app in your Withings account.
+- Like a shortcut, nothing here sends you an alert. A reading past a limit shows its warning when you open the app.
+
+Test accounts cannot connect a device. The demo shows a sample Withings connection and does not contact Withings.
+
 ## What the app does not do
 
 - It does not say what causes a number, whether a number is good or bad for you, or what medicine to take,
@@ -266,7 +293,8 @@ time you open it. If you feel unwell, or a number worries you, do not wait for t
 - **The pounds and kilograms look swapped.** Check the unit in **Settings → Weight and blood pressure**.
 - **I do not see "between sessions".** It is offered only when your Profile says **Hemodialysis**.
 - **A weight or reading I did not type is in the list.** The row says where it came from: "from a shortcut (name)",
-  "from the Health app" or "from a file". For a shortcut, see
+  "from Withings", "from the Health app" or "from a file". For Withings, see [From a Withings scale or
+  monitor](#from-withings). For a shortcut, see
   [If the phone is lost or the shortcut was shared](#if-the-phone-is-lost-or-the-shortcut-was-shared).
 
 ## Ask your care team
@@ -290,7 +318,7 @@ The warning signs, including the ones for a very high blood pressure reading, ar
 
 - [Design note 10][NOTE10]: how the alarm, the goal, the averages and the warning lines work;
   [project architecture contract][ARCH]. [Design note 12][NOTE12]: the phone shortcut, its token and what the
-  server accepts.
+  server accepts. [Design note 27][NOTE27]: Withings, what the server fetches and what it leaves out.
 - [Apple Shortcuts User Guide][APPLE-SHORTCUTS]: the Shortcuts actions for Health samples, dates, dictionaries,
   web requests and automations.
 - [MedlinePlus: measuring blood pressure][MEDLINE-BPM] and [NHLBI: high blood pressure symptoms][NHLBI-BPS]:

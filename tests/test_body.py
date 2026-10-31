@@ -444,7 +444,7 @@ def test_a_row_from_a_later_version_is_kept_hidden_and_exported(client):
     conn.execute("INSERT INTO weights (user_id, date, time, kg, context, note, source, created_at, updated_at) "
                  "VALUES (1, ?, NULL, 70, 'bedtime', NULL, 'manual', 'x', 'x')", (day(0),))
     conn.execute("INSERT INTO weights (user_id, date, time, kg, context, note, source, created_at, updated_at) "
-                 "VALUES (1, ?, NULL, 71, 'morning', NULL, 'withings', 'x', 'x')", (day(0),))
+                 "VALUES (1, ?, NULL, 71, 'morning', NULL, 'fitbit', 'x', 'x')", (day(0),))
     conn.execute("INSERT INTO blood_pressures (user_id, date, time, systolic, diastolic, pulse, context, note, source, created_at, updated_at) "
                  "VALUES (1, ?, NULL, 120, 80, NULL, 'nap', NULL, 'manual', 'x', 'x')", (day(0),))
     conn.commit()
@@ -452,7 +452,7 @@ def test_a_row_from_a_later_version_is_kept_hidden_and_exported(client):
     assert [x["id"] for x in weights(client)] == [mine["id"]] and [x["id"] for x in readings(client)] == [mine_bp["id"]]
     doc = export_doc(client)
     assert [row["context"] for row in doc["weights"]] == ["morning", "bedtime", "morning"]
-    assert [row["source"] for row in doc["weights"]] == ["manual", "manual", "withings"]
+    assert [row["source"] for row in doc["weights"]] == ["manual", "manual", "fitbit"]
     assert len(doc["blood_pressures"]) == 2 and doc["blood_pressures"][1]["context"] == "nap"
     assert summary(client)["weight"]["latest"]["id"] == mine["id"]  # the summary leaves them out too
 
@@ -1002,7 +1002,7 @@ def sample(client: TestClient) -> dict[str, Any]:
     (lambda d: d["weights"][0].__setitem__("kg", 401), "weights[0]"),
     (lambda d: d["weights"][0].__setitem__("kg", "70"), "weights[0].kg"),  # strict: a number, not text
     (lambda d: d["weights"][0].__setitem__("context", "evening"), "weights[0].context"),
-    (lambda d: d["weights"][0].__setitem__("source", "withings"), "weights[0].source"),
+    (lambda d: d["weights"][0].__setitem__("source", "fitbit"), "weights[0].source"),
     (lambda d: d["weights"][0].__setitem__("date", "2999-01-01"), "weights[0]"),
     (lambda d: d["weights"][0].__setitem__("date", "yesterday"), "weights[0]"),
     (lambda d: d["weights"][0].__setitem__("time", "25:00"), "weights[0]"),
