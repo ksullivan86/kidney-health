@@ -109,3 +109,11 @@ def test_the_demo_answers_with_a_fake_list_app_and_a_sample_page() -> None:
     assert got["badLink"]["status"] == 400 and got["badLink"]["extra"] == {"code": "bad_link"}
     assert [line["text"] for line in got["text"]["lines"]] == ["2 cups cooked white rice", "1 tsp dried thyme"]
     assert got["saved"]["source_url"] == page["source_url"] and got["saved"]["note"] == "Not counted: 1 tsp dried thyme"
+
+
+def test_the_vectors_are_current() -> None:
+    import sys
+
+    out = subprocess.run([sys.executable, str(ROOT / "tests" / "data" / "gen_lists_recipes_vectors.py"), "--check"], capture_output=True,
+                         text=True, timeout=120)
+    assert out.returncode == 0, out.stderr

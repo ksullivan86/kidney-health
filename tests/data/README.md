@@ -44,6 +44,7 @@ Run the commands from the repository root.
 | `import_vectors.json` | `python3 tests/data/gen_import_vectors.py` |
 | `kidney_function_vectors.json` | `python3 tests/data/gen_kidney_function_vectors.py` |
 | `lab_import_vectors.json` | `node tests/js/gen_lab_import_vectors.mjs` |
+| `lists_recipes_vectors.json` | `python3 tests/data/gen_lists_recipes_vectors.py` |
 | `menu_link_vectors.json` | none: written by hand |
 | `meta_vectors.json` | `python3 tests/data/gen_meta_vectors.py` |
 | `personal_target_vectors.json` | none: copied from a design note |
@@ -399,6 +400,35 @@ What a replayer must get right:
 * A value such as `<0.5` is never guessed. It is listed as not imported, with a reason.
 * `display` shows the converted value as the server will store it. The conversions follow `kidney_function_vectors.json`.
 * `problem` and each row's `problem` are sentences shown to people.
+
+## lists_recipes_vectors.json
+
+Your own list app and recipe import (design note 30): reading a recipe page's schema.org `Recipe` data, the ingredient-line parser,
+the food search words, amounts in servings, and the words each shopping list line is sent with.
+
+* Server: `app/recipe_import/parse.py` and `app/list_sync/api.py` (`list_item`).
+* Browser twin: `app/static/js/engine/recipe_import.js` (`KH.recipeImport`) and the demo's `app/static/js/mock/lists.js`
+  (`KH.mock.lists.listItem`).
+* Made by `tests/data/gen_lists_recipes_vectors.py`.
+
+Top-level keys:
+
+* `constants`: `max_lines`, `max_line_chars`, `max_steps` and `max_step_chars`.
+* `text_cases`: `{value: any, text: string}`, a page value with its tags and entities removed.
+* `recipe_cases`: `{doc: any, found: bool, recipe: {name, servings_made, steps, steps_cut, lines, lines_cut} | null}`.
+* `yield_cases`: `{value: any, servings: number | null}`.
+* `line_cases`: `{line: string, parsed: {text, amount, unit, food_text, note}}`.
+* `paste_cases`: `{text: string, lines: [string], cut: bool}`.
+* `term_cases`: `{food: string, terms: [string]}`, the searches to try, best first.
+* `serving_cases`: `{amount, unit, serving_desc, serving_g, servings: number | null}`.
+* `list_text_cases`: `{food_name, servings, serving_desc, name, amount, text}`.
+
+What a replayer must get right:
+
+* Digits are ASCII only (`[0-9]`), as in the server's patterns.
+* `1,5` is 1.5 but `1,000` is 1000; a range keeps its first number; "a" or "an" counts as 1 only before a unit.
+* Servings round half up to 0.01 (`floor(x * 100 + 0.5) / 100`) and are `null` outside 0.01 to 1000: never a guess, never 0.
+* Only the common named entities and numeric ones are decoded by the twin; the server decodes every HTML entity.
 
 ## menu_link_vectors.json
 

@@ -1,15 +1,15 @@
 ---
 title: Planning meals and using the menus
-description: "Plan meals ahead, plan several days at once, reuse saved meals, copy a day, make a shopping list, and put the handbook's sample menus into the app."
+description: "Plan meals ahead, plan several days at once, reuse saved meals, import a recipe, copy a day, make a shopping list and send it to your list app, and put the handbook's sample menus into the app."
 slug: planning-and-menus
 audience: [app-user, patient, caregiver]
 applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-30
+last_checked: 2026-10-31
 fact_checked: 2026-10-05
-sources: [ARCH, NOTE06, NOTE08, NOTE25, NOTE29, FDC, Q20, A26-5, K24, DG23, JBDS22]
+sources: [ARCH, NOTE06, NOTE08, NOTE25, NOTE29, NOTE30, SCHEMA-NUTRITION, FDC, Q20, A26-5, K24, DG23, JBDS22]
 ---
 
 # Planning meals and using the menus
@@ -74,8 +74,9 @@ The preview while creating or editing a meal says **not listed** for a missing n
 ### Recipes
 
 A recipe is a saved meal that makes more than one serving. Put the amounts for the whole pot in the foods, and the number of
-servings in **Makes**. You can also keep the cooking steps and a link to where the recipe came from. The app never opens the
-link. Ask or a connected assistant can save a recipe for you too.
+servings in **Makes**. You can also keep the cooking steps and a link to where the recipe came from. The app opens that link
+only when you import a recipe from the page ([below](#import-a-recipe)). Ask or a connected assistant can save a recipe for you
+too.
 
 The list shows a recipe's numbers for one serving, and **What fits now** offers it one serving at a time.
 **Add to a day** asks for **Servings to add**, starting at 1. Enter 2 for two recipe servings, or 0.5 for half a serving.
@@ -127,6 +128,27 @@ sheet shows **Rework with AI**. Pick the meal, the kind of dish and how many ser
   not for cooking times or food safety. Check them before you cook."
 
 See [Optional AI](ai.md) for what is sent and where.
+
+### Import a recipe
+
+**Plan** → **Saved meals** → **Import a recipe** turns a recipe you found into a saved recipe the app can count
+([design note 30][NOTE30]).
+
+1. **Paste the ingredients**, one on each line, with how many servings the recipe makes. This always works, and nothing leaves
+   your server. If your server can read recipe pages, you can paste the **link of a recipe page** instead: your server opens
+   the page (your phone does not), reads its ingredients and steps, and keeps only the link.
+2. The app shows each line with the food it chose from your food list and the amount in servings. Check every line:
+   * pick another suggestion, or **Search for another food…**;
+   * change the servings if they are wrong. If the box is empty, the app could not tell the amount from the line: type it in;
+   * or choose **Leave this out**. A line left out is not counted, and the recipe's note names it.
+   * Then tick **Checked**. **Save recipe** works only when every line is checked.
+3. Under the lines you see one serving's numbers and kidney warnings. A food that does not list a value makes the number
+   "at least" (or "not listed"); it is never counted as 0.
+
+**These numbers are estimates.** Recipe pages rarely list potassium or phosphorus: the standard recipe data that sites use has
+no place for them ([schema.org][SCHEMA-NUTRITION]). So the app works every number out from its own food list. Cooking, soaking
+and draining change what ends up on the plate, and the app does not count that. A food you use to treat a low stays marked as
+one in the recipe, as in any saved meal.
 
 ## Copy a day
 
@@ -202,6 +224,18 @@ only; **Clear checks** removes them.
 Reminders, Google Keep, Bring!, or a family list app such as KitchenOwl or Grocy. Nothing is sent anywhere until you choose
 where it goes. Where the browser does not allow copying, the list appears as text to select and copy yourself.
 
+### Send it to your own list app
+
+If you run **Grocy**, **KitchenOwl** or **Mealie** and your server allows it, add it once in **Settings** → **Shopping list app**:
+the app, its address, and a key you make in that app. Press **Test** and pick the list the food should go to. The key is kept
+locked on the server and is never shown again.
+
+Then **Plan** → **Shopping list** → **Send to Grocy** (or your app) shows the exact lines first, one per food. Foods you already
+ticked start unticked. Untick what you have, then press **Send**. Only the foods' names and amounts are sent, nothing else
+about you ([design note 30][NOTE30]). Sending again adds the lines again.
+
+A list app on your home network works only if the person who runs your server allowed its address.
+
 ## Planning for someone on your Care team
 
 If someone on your Care team lets you plan, log food or suggest meals for them, the Plan tab shows **Planning for** at the top.
@@ -264,6 +298,10 @@ Your sessions are Monday, Wednesday and Friday. On Sunday evening:
 - **Planned food is counted as eaten.** It is not: eaten totals and alerts use eaten entries only; the
   gray "if you eat what's planned" line and the lighter bar show the plan.
 - **The shopping list is empty.** It lists **planned** entries only, for the week on screen.
+- **Send to my list app is missing.** The person who runs your server has not turned it on, or you have not set it up in
+  **Settings** → **Shopping list app**. **Test** says what is wrong: the address, the key, or an address the server may not reach.
+- **An imported recipe matched the wrong food.** Pick another suggestion or search for the right one before you save. After
+  saving, change it like any saved meal.
 - **I added a plan by mistake.** Tap **Undo** in the sheet, or use **Plan several days… → Clear planned days…**
   for those days. Food you ate and planned low treatments stay.
 - **A saved meal shows a hidden food.** You deleted that food; the meal still works with the stored
@@ -279,7 +317,9 @@ Your sessions are Monday, Wednesday and Friday. On Sunday evening:
 
 - [Project architecture contract][ARCH], v0.2: planned entries, saved meals, copy day, shopping list; planning several days.
 - [Design note 08][NOTE08]: the sample menus; [design note 06][NOTE06]: the plan builder (v0.3); [design note 25][NOTE25]: the
-  Care team; [design note 29][NOTE29]: the Caregiver, saved meals and suggestions.
+  Care team; [design note 29][NOTE29]: the Caregiver, saved meals and suggestions; [design note 30][NOTE30]: importing a recipe
+  and sending the list to your own list app.
+- [schema.org NutritionInformation][SCHEMA-NUTRITION]: recipe pages have no standard place for potassium or phosphorus.
 - [USDA FoodData Central][FDC]: the food list behind the app and the menus.
 - [KDOQI 2020 nutrition guideline][Q20]; [ADA Standards of Care 2026, section 5][A26-5], Rec 5.28.
 - [KDIGO 2024 CKD guideline][K24], [DaVita: hemodialysis fluid intake][DG23] and [JBDS 2022][JBDS22]: no separate daily

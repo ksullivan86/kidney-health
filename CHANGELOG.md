@@ -5,6 +5,27 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## Unreleased
+
+Your own list app and recipe import (design note 30, schema step 32). Both are off until the server owner turns them on, except
+pasting a recipe's ingredients, which needs no network.
+
+* **Send the shopping list to your own Grocy, KitchenOwl or Mealie.** In Settings → Shopping list app, each person adds their list
+  app's address and their key, presses **Test** and picks a list. Plan → Shopping list → **Send to Grocy** (or KitchenOwl,
+  Mealie) shows the exact lines first, then adds each ticked food as one item. Only the foods' names and amounts are sent,
+  nothing else about you. The key is kept locked on the server and never shown again; a new address needs it again. Off until
+  `LIST_SYNC_ENABLED`. A list app on your home network works only when you list it in `LIST_SYNC_ALLOWED_HOSTS` (host names,
+  addresses or networks); every other private address stays refused, plain http works only for those, and redirects are never
+  followed. See [docs/list-sync.md](docs/list-sync.md).
+* **Import a recipe.** Plan → Saved meals → **Import a recipe** reads pasted ingredients, or, with `RECIPE_IMPORT_ENABLED`, a
+  recipe page whose link you paste. The server reads the page (never your phone), takes its recipe data, and keeps only the
+  link. Each line is matched to a food from your list with its amount; you check or fix every line, or leave it out, before
+  **Save recipe**. One serving's numbers and kidney warnings are shown with a plain sentence that they are estimates: sites rarely
+  list potassium or phosphorus, and cooking changes them. An amount the app cannot work out stays empty for you to fill in,
+  never 0. See [docs/recipe-import.md](docs/recipe-import.md).
+* Schema step 32 adds one table, `list_sync`. Recipe import adds none.
+* The demo shows a sample Grocy and a sample recipe page, and never leaves the page.
+
 ## 0.18.0 — 2026-10-31
 
 The full **Care team** (design note 29, schema step 31).

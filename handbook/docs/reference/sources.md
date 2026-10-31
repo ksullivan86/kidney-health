@@ -475,6 +475,8 @@ Pages cite these by id, for example `[KDIGO 2024 CKD guideline][K24]`. The list 
   Licence: Public domain (US government work). Checked 2026-10-05. *Returns 403 to automated checkers; works in a browser.*
 - **CCI**: Centers for Disease Control and Prevention. The CDC Clear Communication Index. <https://www.cdc.gov/ccindex/index.html>  
   Licence: Public domain (US government work). Checked 2026-10-05.
+- **SCHEMA-NUTRITION**: schema.org. NutritionInformation (the nutrition data a recipe page can carry). <https://schema.org/NutritionInformation>  
+  Licence: CC BY-SA 3.0: cite and paraphrase. Checked 2026-10-31. *Its properties are calories, carbohydrate, cholesterol, fat, fiber, protein, saturated fat, serving size, sodium, sugar, trans fat and unsaturated fat: there is none for potassium or phosphorus.*
 - **WHOOP-API**: WHOOP. Developer platform: OAuth 2.0, API reference (v2), rate limiting, webhooks and app approval. <https://developer.whoop.com/api> Also: <https://developer.whoop.com/docs/developing/oauth>, <https://developer.whoop.com/docs/developing/app-approval>.  
   Licence: Publisher copyright: cite and paraphrase only. Checked 2026-10-31.
 - **APPLE-SHORTCUTS**: Apple Support. Shortcuts User Guide (Health actions, Format Date, Dictionary, Get Contents of URL, personal automations). <https://support.apple.com/guide/shortcuts/welcome/ios>  
@@ -577,6 +579,8 @@ Pages cite these by id, for example `[KDIGO 2024 CKD guideline][K24]`. The list 
 - **NOTE28**: kidney-health design note 28: Whoop, the Activity and recovery card, and the active-day calorie extra. <https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/28-whoop-activity.md>  
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-31.
 - **NOTE29**: kidney-health design note 29: the full Care team: switches, a Caregiver who logs eaten food, saved meals and meal suggestions. <https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/29-full-care-team.md>  
+  Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-31.
+- **NOTE30**: kidney-health design note 30: the shopping list in your own list app (Grocy, KitchenOwl, Mealie), and recipes from a web page or pasted ingredients. <https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/30-list-sync-and-recipe-import.md>  
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-31.
 - **DEPLOY**: kidney-health project. docs/deployment.md: Podman, Quadlet and Kubernetes. <https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md>  
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-05.

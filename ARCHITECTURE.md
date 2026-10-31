@@ -707,6 +707,7 @@ A food referenced by a template may be hidden later; keep the item, return `hidd
 ### Shopping list
 `GET /api/plan/shopping?start=&end=` → `{"items": [{"food_id", "food_name", "serving_desc", "servings", "grams", "days": 3}]}`
 aggregating **planned** entries in the range by food (servings summed; `grams = servings × serving_g`), ordered by name.
+The same list can be sent to the person's own list app (`/api/list-sync`, "Your own list app" below).
 
 
 ## Conventions
@@ -844,6 +845,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 28 | `m028_test_accounts.py` | test accounts (note 26 §4) | `users.is_test_account` (0 or 1, default 0: every existing account is real), two triggers that refuse a row with `role = 'admin'` and `is_test_account = 1` (insert or update), and a new table `feedback` (`user_id` `ON DELETE SET NULL`, `username` kept as text, `screen`, `trying`, `happened`, `useful` (`yes`, `somewhat`, `no` or NULL), `unsafe`, `app_version`, `created_at`, `done_at`, `done_by`). Nothing else changes. |
 | 29 | `m029_connected_devices.py` | connected devices (note 27 §3) | two new tables: `device_connections` (`user_id` `ON DELETE CASCADE`, `provider`, `external_user_id`, `tokens_enc` (access and refresh token sealed with the keyring, purpose `device:<provider>`, owner the person), `key_id`, `access_expires_at`, `scopes`, `status` (`active` or `needs_reconnect`), `sync_cursor`, `last_sync_at`, `last_success_at`, `last_error`, `next_sync_after`; `UNIQUE (user_id, provider)` and `UNIQUE (provider, external_user_id)`) and `device_imports` (the ledger: `user_id`, `provider`, `external_id`, `kind`, `row_id`, `imported_at`; primary key `(user_id, provider, external_id)`). Imported rows go into `weights` and `blood_pressures` with `source = 'withings'`. Nothing else changes. |
 | 30 | `m030_activity.py` | Whoop, activity and recovery (note 28 §5) | three new tables: `activity_days` (`user_id` `ON DELETE CASCADE`, `date`, `source`, `source_key` (`whoop:cycle:<id>`), `kcal`, `strain`, `recovery_pct`, `resting_hr`, `hrv_ms`, `sleep_minutes`, `sleep_performance_pct`, `finished`, `started_at`; `UNIQUE (user_id, date, source)` and `UNIQUE (user_id, source_key)`), `activity_workouts` (`date`, `start_time`, `end_time`, `minutes`, `sport`, `kcal`, `strain`, `source`, `source_key` `whoop:workout:<uuid>`; `UNIQUE (user_id, source_key)`) and `activity_extra` (`user_id` primary key, `enabled`, `share_pct` 10–100, `ceiling_kcal` 50–3000 or NULL). `shares` and `care_invites` are rebuilt from their stored definitions with `json_array_length(areas) BETWEEN 1 AND 5` (the area `activity`); every row stays and the invite → share links are restored after `DROP TABLE shares` set them NULL. `BACKUP_BEFORE`. |
+| 32 | `m032_list_sync.py` | your own list app (note 30 §4) | new table `list_sync` (`user_id` primary key `ON DELETE CASCADE`, `app`, `base_url`, `list_id`, `list_name`, `key_enc` (the person's key sealed, purpose `list-sync`), `key_id`, `last_test_at`, `last_test_error`, `last_sent_at`, `last_sent_count`, `created_at`, `updated_at`). No CHECK on `app`. Recipe import needs no table. |
 | 31 | `m031_care_team_full.py` | the full Care team (note 29 §6) | `shares` and `care_invites` each gain four switches, `INTEGER NOT NULL DEFAULT 0 CHECK (… IN (0, 1))`: `may_plan`, `may_log`, `may_use_saved_meals`, `may_suggest`. When the columns are first added, a `care_helper` row gets `may_plan = 1`, so every share keeps its meaning. The `role` column of step 27 stays with its `CHECK`; the app writes it `care_helper` exactly when `may_plan` is on. New table `care_suggestions` (`share_id` `ON DELETE CASCADE`, `owner_user_id` and `from_user_id` `ON DELETE CASCADE`, never the same; `date`, `meal`, `items_json` a JSON list of 1 to 30, `note` at most 280 characters, `created_at`, `expires_at`, `answered_at`, `answer` (`accepted`, `declined`, `expired`, `ended`)). |
 | 23 | `m023_passkeys.py` | passkeys (note 18) | `passkeys` (one row per passkey: `credential_id` BLOB, unique, 1 to 1,023 bytes; `public_key`, the COSE key as sent; `alg`; `user_handle`, 32 random bytes shared by one person's passkeys; `sign_count`; `name`; `backed_up`; `created_at`; `last_used_at`). `ON DELETE CASCADE`. Nothing is sealed: a public key is not a secret. Nobody has a passkey after the upgrade. |
 
@@ -1082,6 +1084,12 @@ preferences and the Python 3.15 image. What it could not verify is listed under 
 checks a maintainer runs before tagging are in `docs/maintainers.md`, and everything deferred or left open, with its owner, is in
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
+
+**v0.19 work (2026-10-31, not released yet; the version is still 0.18.0).** Your own list app and recipe import (note 30, schema
+step 32): send the Plan's shopping list to a person's own Grocy, KitchenOwl or Mealie (`/api/list-sync`, off until
+`LIST_SYNC_ENABLED`; home addresses only through `LIST_SYNC_ALLOWED_HOSTS`), and import a recipe from pasted ingredients (always)
+or a web page the server reads (`/api/recipe-import`, pages off until `RECIPE_IMPORT_ENABLED`); see "Your own list app" and
+"Recipe import" below; CHANGELOG.md "Unreleased".
 
 **Status (2026-10-31): v0.18.0 is prepared.** The full Care team (note 29, schema step 31): per-person switches with Viewer, Care
 helper and Caregiver as presets, a Caregiver who logs eaten food, saved meals for helpers, and meal suggestions; see "The full Care
@@ -2313,7 +2321,9 @@ it connects to the checked IP with the original `Host` and SNI. Clients never fo
 standard `HTTPS_PROXY`/`ALL_PROXY` variables name a proxy (honouring `NO_PROXY`), requests go to the proxy
 and pinning is its job. `read_capped` counts decoded bytes. Every outbound client in the app uses it (USDA
 `app/foods.py`, Open Food Facts `app/off.py`, the breached-password check `app/auth/policy.py`, sign-in providers
-`app/auth/oidc.py`, Withings `app/devices/withings.py`, Whoop `app/devices/whoop.py`) or, for AI,
+`app/auth/oidc.py`, Withings `app/devices/withings.py`, Whoop `app/devices/whoop.py`, a person's list app
+`app/list_sync/apps.py` (its `ListTransport` subclass allows the private hosts of `LIST_SYNC_ALLOWED_HOSTS` and keeps plain
+`http` on them), recipe pages `app/recipe_import/fetch.py`) or, for AI,
 `app/ai/transport.py`'s `PinnedTransport`; `tests/test_egress.py` fails on any other client.
 
 ### Parity
@@ -4717,6 +4727,81 @@ the Whoop box of Settings → Connected devices (`extraBlock`). `js/views/device
 The demo (`js/mock/activity.js`) has 45 sample days and workouts, the extra off; `_dayExtra` raises the demo's day and guidance
 targets with the engine. Tests: `tests/test_whoop.py` (a fake Whoop in `tests/devices_support.py`), `tests/test_activity.py`,
 `tests/test_activity_ui.py`, `tests/test_migration_m030.py`.
+
+## Your own list app (schema step 32; design note 30)
+
+A person sends the Plan's shopping list to their own Grocy, KitchenOwl or Mealie. Only the foods' names and amounts leave.
+
+* **Switch and config.** `lists.sync_enabled` (`LIST_SYNC_ENABLED`, off) is a setting. `LIST_SYNC_ALLOWED_HOSTS` is env only
+  (`Settings.list_sync_allowed_hosts`): host names, IP addresses or networks; `0.0.0.0/0`, `::/0`, wildcards, ports and URLs are
+  a `ConfigError`. While off, `GET /api/list-sync` answers `enabled: false` and every other route is 404.
+* **Modules.** `app/list_sync/apps.py`: `check_base_url` (http or https, a host, no user info, no query or fragment; a path kept;
+  plain `http` refused when the allowlist is empty), `HostAllowlist`, `ListTransport` (a `CheckedTransport` with private
+  addresses allowed only when the host name, the address or its network is listed; denied addresses always refused; an `http`
+  request to a public address refused), `Net` (`app.state.list_sync_net`; tests set `resolver`, `direct`, `use_env_proxy`), and
+  `Grocy`, `KitchenOwl`, `Mealie` (requests in `docs/list-sync.md`; no redirects, 1 MiB, 15 s; `ListAppError` codes
+  `unreachable`, `blocked`, `redirect`, `auth`, `not_found`, `app_error`, and `.sent` for a send that stopped half way).
+  `app/list_sync/api.py`: the routes, `servings_words` and `list_item` (the words of Plan's "Share list").
+* **The key** is sealed with `Keyring.seal(purpose="list-sync", owner=user_id)`; `list_sync.key_enc` is in `ENCRYPTED_COLUMNS`.
+  It is write-only (`key_set` only), registered with the log redaction when read, never in a log line, an audit row or a
+  response. `PUT` without a key is accepted only while the app and the address stay the same.
+* **Limits** (`app.auth.ratelimit`): `list_send` 6 an hour, `list_test` 30 an hour per person; 200 foods a send.
+* **Test accounts** get 403 on `PUT`. Audit (person-visible): `list_sync.set_up` (`app`), `list_sync.removed` (`app`),
+  `list_sync.sent` (`app`, `items`). Not in the export (a key is a secret); deleted with the account.
+
+| Method and path | Auth | Body → response |
+|---|---|---|
+| `GET /api/list-sync` | signed in | `{enabled, can_use, private_hosts, apps: [{id, name, key_name, key_help}], connection: null \| {app, base_url, list_id, list_name, key_set, last_test_at, last_test_error, last_sent_at, last_sent_count}}`. Always 200 |
+| `PUT /api/list-sync` | signed in | `{app: grocy\|kitchenowl\|mealie, base_url, key?, list_id?, list_name?}` → the connection. 400 address or "enter the key again"; 403 test account |
+| `DELETE /api/list-sync` | signed in | 204; 404 when there is none |
+| `POST /api/list-sync/test` | signed in | `{ok, error, message, lists: [{id, name}], connection}`. The one list is chosen; a chosen list keeps its name up to date |
+| `POST /api/list-sync/preview` | signed in | `{start, end}` → `{app, app_name, list_name, ready, items: [{food_id, name, amount, text}], last_sent_at, last_sent_count}` |
+| `POST /api/list-sync/send` | signed in | `{start, end, food_ids (1–200)}` → `{sent, error, message, connection}`. Only foods of that range's list; 400 none of them; 409 no list chosen; 429 |
+
+**Screens.** `js/views/list_sync.js` (`KH.listSync`): Settings → Shopping list app (`#set-lists`, hidden while off), the key box
+(password type, empty, "Saved"), Test with a list picker, Remove; Plan → Shopping list → **Send to <app>** (`#shopping-send`) and
+its sheet `#sheet-list-send` (the exact lines, ticked foods on this phone start unticked). The demo (`js/mock/lists.js`) has a
+sample Grocy and a fake list app in the page. Tests: `tests/test_list_sync.py` (fakes of the three apps behind the real transport,
+`tests/lists_support.py`), `tests/test_lists_recipes_ui.py`, `tests/js/lists_recipes_demo.mjs`.
+
+## Recipe import (design note 30)
+
+A recipe from pasted ingredients (always) or from a web page the server reads (`recipes.import_enabled`,
+`RECIPE_IMPORT_ENABLED`, off). The owner's decision (2026-10-31) replaces "web fetching stays in the chat client".
+
+* **`app/recipe_import/parse.py`** (pure; JS twin `js/engine/recipe_import.js`, vectors `tests/data/lists_recipes_vectors.json`
+  from `tests/data/gen_lists_recipes_vectors.py`): `ld_json_blocks` (stdlib `html.parser`, `application/ld+json` scripts only,
+  at most 20 blocks of 1 MiB; server only), `find_recipe` (an object, an array, `@graph`, `mainEntity`; `@type` a string or a
+  list, `…/Recipe` or `schema:Recipe`; depth 6), `recipe_from_jsonld` (`name` ≤ 200, `recipeYield` → the first number 0–100,
+  `recipeIngredient` or `ingredients` ≤ 60 lines of 300, `recipeInstructions` as text, lists, `HowToStep`, `HowToSection` →
+  ≤ 20 steps of ≤ 500, longer ones split at sentence ends; tags and entities removed; `nutrition` ignored), `parse_line`
+  (`{text, amount, unit, food_text, note}`), `search_terms`, `recipe_servings` (weight via `serving_g`; volume via a volume
+  serving; a count via a count serving; else `null`; rounded to 0.01, 0.01–1000), `lines_of_text`.
+* **`app/recipe_import/fetch.py`** (`RecipeFetcher`, `app.state.recipe_fetcher`): `check_page_url` (`check_source_url`, ports 80
+  and 443), `CheckedTransport` with private addresses refused, redirects followed by hand (3, each checked again), 2 MiB, 15 s
+  in all, HTML only, the charset of the header or a `<meta>`. `PageError` codes: `bad_link`, `blocked`, `unreachable`, `timeout`,
+  `too_large`, `not_html`, `http_error`, `too_many_redirects`. The page is never stored.
+* **`app/recipe_import/api.py`**: each line's food search is `foods.search_foods` (the person's visible foods) with the first
+  search term that finds any, up to 3 foods with `recipe_servings` for each. Limit `recipe_page` 20 an hour per person.
+
+| Method and path | Auth | Body → response |
+|---|---|---|
+| `GET /api/recipe-import` | signed in | `{web, max_lines, estimate}`. Always 200 |
+| `POST /api/recipe-import/page` | signed in | `{url}` → a draft. 404 while off; 400 `bad_link`; 422 with `code` (a fetch error, `no_recipe`, `no_lines`); 429 |
+| `POST /api/recipe-import/text` | signed in | `{text (≤ 20,000), name?, servings? (0–100)}` → a draft; 422 `no_lines` |
+
+A draft: `{name, servings_made, steps, steps_cut, lines_cut, source_url, lines: [{text, amount, unit, food_text, note, matches:
+[{food: {id, name, brand, category, source, serving_desc, serving_g, nutrients, flags, warnings, kidney_rating, hidden},
+servings}]}], notice, estimate}`. Nothing is saved: the screen saves with `POST /api/meals` (every saved-meal rule runs).
+
+**Screens.** `js/views/recipe_import.js` (`KH.recipeImportView`): Plan → Saved meals → **Import a recipe** (`#sheet-recipe-import`).
+Step 1: the link (only with `web`) or pasted lines, a name and Makes. Step 2: each line with a food choice (the matches, "Search
+for another food…", "Leave this out"), servings (empty when unknown) and **Checked**; Save is off until every line is checked.
+One serving's key numbers ("≥", "not listed"; a missing value is never 0), the warnings for one serving
+(`KH.rules.evaluateWarnings` over the chosen foods, additive flags, each food's `avoid_ckd` note; carbohydrate left out only when
+every counted food is a low treatment), and the fixed estimate sentence. Lines left out go into the note ("Not counted: …").
+The demo answers any link with a sample page (`js/mock/lists.js`). Tests: `tests/test_recipe_import.py`,
+`tests/test_lists_recipes_ui.py`, `tools/e2e/lists_recipes.py`.
 
 ## The API document and `GET /api/meta` (design note 14 changes 2 and 4)
 
