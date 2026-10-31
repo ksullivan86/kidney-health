@@ -627,6 +627,19 @@ class PatternAlert(BaseModel):
     message: str
 
 
+class CalorieExtra(BaseModel):
+    """What Today shows about the active-day calorie extra (design note 28 §4.2)."""
+
+    base_kcal: Number
+    extra_kcal: int
+    burned_kcal: int
+    quiet_kcal: int | None  # None while fewer than 14 finished Whoop days exist
+    share_pct: int
+    ceiling_kcal: int | None
+    history_days: int
+    source: str
+
+
 class DaySummary(BaseModel):
     date: str
     entries: list[Entry]
@@ -652,6 +665,9 @@ class DaySummary(BaseModel):
     carb_tolerance_g: Number = 0
     # v0.3.1: warnings that join the last few days with the plan; empty before today or with nothing planned.
     pattern_alerts: list[PatternAlert] = Field(default_factory=list)
+    # Design note 28: the active-day calorie extra (Whoop) when it is on and the day has a Whoop figure; ``targets`` then holds
+    # the raised calorie target.
+    calorie_extra: CalorieExtra | None = None
 
 
 class DayTotals(BaseModel):

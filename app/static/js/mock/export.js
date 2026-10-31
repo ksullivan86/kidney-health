@@ -84,6 +84,7 @@
         ai_consents: [],
         ai_provider: null,
         builtin_foods: builtin,
+        ...(this._activityExport ? this._activityExport() : { activity_days: [], activity_workouts: [], activity_extra: null }),
       };
     },
   });

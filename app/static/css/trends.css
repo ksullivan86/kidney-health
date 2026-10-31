@@ -54,3 +54,21 @@
 .period-notes { list-style: disc; padding-left: 18px; margin-top: 10px; color: var(--text-2); font-size: 0.82rem; line-height: 1.4; }
 .period-notes:empty { display: none; }
 .period-notes li + li { margin-top: 3px; }
+
+/* ---------- Activity and recovery from Whoop (js/views/activity.js; design note 28) ---------- */
+.activity-summary { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin: 4px 0 10px; }
+.activity-summary dt { color: var(--text-2); }
+.activity-summary dd { margin: 0; font-variant-numeric: tabular-nums; }
+.activity-chart { max-height: 160px; margin: 6px 0; }
+.chart-svg .activity-bar { fill: var(--accent); }
+.chart-svg .activity-bar.ongoing { fill: var(--accent-tint); stroke: var(--accent); stroke-width: 1; stroke-dasharray: 3 2; }
+.activity-sub { margin: 12px 0 4px; font-size: 0.95rem; }
+.activity-workouts { margin: 0; padding-left: 18px; }
+.activity-workouts li { margin: 2px 0; overflow-wrap: anywhere; }
+/* Today: the base target and the active-day extra, under the daily status */
+.activity-extra { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
+.activity-extra-lines { margin: 0; padding: 0; list-style: none; font-variant-numeric: tabular-nums; }
+.activity-extra-lines li { margin: 2px 0; }
+.activity-why summary { cursor: pointer; font-weight: 600; text-decoration: underline; min-height: var(--tap); display: flex; align-items: center; }
+.activity-extra-setting { margin-top: 10px; }
+.activity-extra-fields { display: grid; gap: 4px; max-width: 22rem; margin: 6px 0; }

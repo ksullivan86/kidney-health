@@ -152,6 +152,10 @@ Pages cite these by id, for example `[KDIGO 2024 CKD guideline][K24]`. The list 
   Licence: CC BY-NC-ND 4.0: cite and paraphrase only. Checked 2026-10-05. Diet-guide source 45.
 - **DG55a**: Pecoits-Filho R, et al. Interactions between kidney disease and diabetes: dangerous liaisons. Diabetol Metab Syndr 2016;8:50. <https://pmc.ncbi.nlm.nih.gov/articles/PMC4964290/>  
   Licence: CC BY 4.0 (open access). Checked 2026-10-05. Diet-guide source 55.
+- **ODRISCOLL20**: O'Driscoll R, Turicchi J, Beaulieu K, et al. How well do activity monitors estimate energy expenditure? A systematic review and meta-analysis of the validity of current technologies. Br J Sports Med 2020;54(6):332–340. doi:10.1136/bjsports-2018-099643 <https://bjsm.bmj.com/content/54/6/332>  
+  Licence: Publisher copyright: cite and paraphrase only. Checked 2026-10-31. *60 studies, 41 devices: pooled energy expenditure underestimated (Hedges' g -0.23); accuracy varied by activity; I² > 75 % for many devices.*
+- **GERMINI22**: Germini F, Noronha N, Borg Debono V, et al. Accuracy and acceptability of wrist-wearable activity-tracking devices: systematic review of the literature. J Med Internet Res 2022;24(1):e30791. doi:10.2196/30791 <https://www.jmir.org/2022/1/e30791>  
+  Licence: CC BY 4.0: cite and paraphrase. Checked 2026-10-31. *65 studies: energy expenditure mean absolute percentage error over 30 % for every brand; "none of the tested devices proved to be accurate in measuring energy expenditure".*
 
 ## Product labels
 
@@ -471,6 +475,8 @@ Pages cite these by id, for example `[KDIGO 2024 CKD guideline][K24]`. The list 
   Licence: Public domain (US government work). Checked 2026-10-05. *Returns 403 to automated checkers; works in a browser.*
 - **CCI**: Centers for Disease Control and Prevention. The CDC Clear Communication Index. <https://www.cdc.gov/ccindex/index.html>  
   Licence: Public domain (US government work). Checked 2026-10-05.
+- **WHOOP-API**: WHOOP. Developer platform: OAuth 2.0, API reference (v2), rate limiting, webhooks and app approval. <https://developer.whoop.com/api> Also: <https://developer.whoop.com/docs/developing/oauth>, <https://developer.whoop.com/docs/developing/app-approval>.  
+  Licence: Publisher copyright: cite and paraphrase only. Checked 2026-10-31.
 - **APPLE-SHORTCUTS**: Apple Support. Shortcuts User Guide (Health actions, Format Date, Dictionary, Get Contents of URL, personal automations). <https://support.apple.com/guide/shortcuts/welcome/ios>  
   Licence: © Apple: link and paraphrase. Checked 2026-10-22. *Named in design note 12 (P1). The articles were not re-read for this page and the steps were not tried on a phone: action names can differ between iOS versions, and handbook/REVIEW.md holds the owner's real-iPhone check.*
 - **MATERIAL**: Material for MkDocs 9.7.7 (MIT licence). <https://squidfunk.github.io/mkdocs-material/>  
@@ -567,6 +573,8 @@ Pages cite these by id, for example `[KDIGO 2024 CKD guideline][K24]`. The list 
 - **NOTE26**: kidney-health design note 26: test accounts (tester and tester-helper), Reset and Send feedback. <https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/26-test-accounts.md>  
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-31.
 - **NOTE27**: kidney-health design note 27: connected devices, and Withings weight, blood pressure and pulse. <https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/27-connected-devices.md>  
+  Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-31.
+- **NOTE28**: kidney-health design note 28: Whoop, the Activity and recovery card, and the active-day calorie extra. <https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/28-whoop-activity.md>  
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-31.
 - **DEPLOY**: kidney-health project. docs/deployment.md: Podman, Quadlet and Kubernetes. <https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md>  
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-05.

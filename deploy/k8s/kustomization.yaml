@@ -3,7 +3,7 @@
 #   cp -r deploy/k8s-overlays/example deploy/k8s-overlays/home   # then edit the files it lists
 #   kubectl apply -k deploy/k8s-overlays/home
 # From a separate GitOps repository, use this base remotely in your own kustomization.yaml:
-#   resources: [https://github.com/ksullivan86/kidney-health//deploy/k8s?ref=v0.16.0]
+#   resources: [https://github.com/ksullivan86/kidney-health//deploy/k8s?ref=v0.17.0]
 # Applied alone, the base starts the app but lets no traffic in (the NetworkPolicy allows no ingress
 # until the overlay names your Gateway's namespace). Guide: docs/deployment.md (Kubernetes / Talos).
 # Create the Secret first (secret.example.yaml shows the command).
@@ -23,8 +23,8 @@ resources:
 images:
   # The base tracks the minor release. Pin the release you verified in your overlay, by tag AND
   # digest (the digest wins; the tag is for humans; each GitHub release's notes carry it):
-  #   scripts/verify-image.sh 0.16.0        prints the verified digest, then, in the overlay directory:
-  #   kustomize edit set image ghcr.io/ksullivan86/kidney-health=ghcr.io/ksullivan86/kidney-health:0.16.0@sha256:<digest>
+  #   scripts/verify-image.sh 0.17.0        prints the verified digest, then, in the overlay directory:
+  #   kustomize edit set image ghcr.io/ksullivan86/kidney-health=ghcr.io/ksullivan86/kidney-health:0.17.0@sha256:<digest>
   # Never :latest or :edge here.
   - name: ghcr.io/ksullivan86/kidney-health
     newTag: "0.10"

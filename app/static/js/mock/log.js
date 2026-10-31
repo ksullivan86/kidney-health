@@ -288,13 +288,15 @@
       // log.get_day: from today on, the week before as well (v0.3.1's "running high" warnings).
       const window = this._fetchEntries({ start: date >= today ? addDays(date, -(WEEKLY_DAYS - 1)) : date, end: date });
       const rows = window.filter((r) => r.date === date);
-      const f = this._dayFigures(rows, this._carbTolerance());
+      // activity.day_extra (design note 28): the active-day calorie extra from Whoop raises the calorie target of this day only.
+      const [targets, calorieExtra] = this._dayExtra ? this._dayExtra(date, this._profileView().targets) : [this._profileView().targets, null];
+      const f = MockApi.prototype._dayFigures.call({ _profile: { ...this._profile, targets } }, rows, this._carbTolerance());
       return { date, entries: rows.map((r) => this._entryView(r)), totals: f.totals, planned_totals: f.planned_totals, projected_totals: f.projected_totals,
-        targets: this._profileView().targets, status: f.status, projected_status: f.projected_status, meals: f.meals, planned_meals: f.planned_meals,
+        targets, status: f.status, projected_status: f.projected_status, meals: f.meals, planned_meals: f.planned_meals,
         alerts: f.alerts, projected_alerts: f.projected_alerts, counts: f.counts,
         unknown: f.unknown, planned_unknown: f.planned_unknown, projected_unknown: f.projected_unknown,
         meal_unknown: f.meal_unknown, planned_meal_unknown: f.planned_meal_unknown, carb_tolerance_g: f.carb_tolerance_g,
-        pattern_alerts: dayPatternAlerts(date, patternInputs(window, today), this._profile, today) };
+        pattern_alerts: dayPatternAlerts(date, patternInputs(window, today), { ...this._profile, targets }, today), calorie_extra: calorieExtra };
     },
     _range(start, end) {
       start = this._dateParam(start, 'start'); end = this._dateParam(end, 'end');

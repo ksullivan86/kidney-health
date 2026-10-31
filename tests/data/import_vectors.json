@@ -6,7 +6,8 @@
    "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
    "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
    "Your sign-in activity list",
-   "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+   "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+   "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
   ],
   "imported_settings": [
    "guidance",
@@ -23,7 +24,10 @@
    "activity",
    "ai_usage",
    "ai_consents",
-   "ai_provider"
+   "ai_provider",
+   "activity_days",
+   "activity_workouts",
+   "activity_extra"
   ],
   "max_depth": 32
  },
@@ -2774,7 +2778,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -3810,7 +3815,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -4131,7 +4137,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -4695,7 +4702,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -5836,7 +5844,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -6184,7 +6193,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -6609,7 +6619,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -6858,7 +6869,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -7083,7 +7095,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -7284,7 +7297,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -7485,7 +7499,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -8271,7 +8286,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -14995,7 +15011,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -15289,7 +15306,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -15490,7 +15508,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -15881,7 +15900,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -16163,7 +16183,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -16364,7 +16385,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -16661,7 +16683,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -16886,7 +16909,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -17919,7 +17943,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -30816,7 +30841,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -31131,7 +31157,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -32106,7 +32133,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -32594,7 +32622,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -32795,7 +32824,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -32995,7 +33025,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -33197,7 +33228,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -33409,7 +33441,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -33600,7 +33633,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -33801,7 +33835,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -34002,7 +34037,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -34193,7 +34229,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -34296,7 +34333,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -34380,7 +34418,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -34490,7 +34529,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -34576,7 +34616,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -34668,7 +34709,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -34754,7 +34796,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -34849,7 +34892,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -35050,7 +35094,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -35140,7 +35185,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -35366,7 +35412,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -35567,7 +35614,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -36077,7 +36125,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -36266,7 +36315,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -36459,7 +36509,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -36589,7 +36640,8 @@
       "Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)",
       "AI activity, AI usage counts, the AI providers you agreed to send data to, and an AI provider of your own (agree to those again on this server)",
       "Your sign-in activity list",
-      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)"
+      "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
+      "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -37058,7 +37110,8 @@
       "snack": {}
      },
      "carb_tolerance_g": 15.0,
-     "pattern_alerts": []
+     "pattern_alerts": [],
+     "calorie_extra": null
     }
    }
   },
@@ -37398,7 +37451,8 @@
       "snack": {}
      },
      "carb_tolerance_g": 15.0,
-     "pattern_alerts": []
+     "pattern_alerts": [],
+     "calorie_extra": null
     }
    }
   },

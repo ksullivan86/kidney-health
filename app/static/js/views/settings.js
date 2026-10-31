@@ -26,7 +26,7 @@
   const REG = KH.settings;
 
   // Kept equal to APP_VERSION in app/main.py (tests/test_settings_ui.py).
-  const APP_VERSION = '0.16.0';
+  const APP_VERSION = '0.17.0';
 
   const A = {
     sessions: () => request('GET', '/api/me/sessions'),
@@ -552,7 +552,7 @@
     browser: 'This browser cannot open a .zip here. Open the .zip on your device and choose the export.json inside it.',
   };
   // Parts of an export the import never reads (AI activity, sign-in activity, the account itself): not even sent.
-  const IMPORT_NEVER_SENT = ['user', 'ai_audit', 'activity', 'ai_usage', 'ai_consents', 'ai_provider'];
+  const IMPORT_NEVER_SENT = ['user', 'ai_audit', 'activity', 'ai_usage', 'ai_consents', 'ai_provider', 'activity_days', 'activity_workouts', 'activity_extra'];
   const IMPORT_KINDS = [
     ['log_entries', 'log entry', 'log entries'],
     ['custom_foods', 'food of yours', 'foods of yours'],
@@ -757,6 +757,7 @@
     'care.role_changed': 'Care team role changed', 'care.plan_changed': 'Your Care helper changed your plan',
     'oidc.linked': 'Sign-in provider linked', 'oidc.unlinked': 'Sign-in provider link removed',
     'device.connected': 'Device connected', 'device.disconnected': 'Device disconnected', 'device.sync_failed': 'Device sync stopped working',
+    'activity.extra_on': 'Active-day calories turned on', 'activity.extra_off': 'Active-day calories turned off',
     'test_accounts.created': 'Test account made', 'test_accounts.enabled': 'Test account turned on', 'test_accounts.disabled': 'Test account turned off',
     'test_accounts.reset': 'Test accounts reset',
   };
@@ -780,9 +781,10 @@
   const TOKEN_REVOKED_WHY = { password_changed: 'password changed', password_reset: 'password reset', account_disabled: 'account disabled',
     account_deleted: 'account deleted', admin: 'revoked by an admin', auth_mode_changed: 'sign-in mode changed' };
   // Connected devices (design note 27): the provider's name and the short error code in words.
-  const DEVICE_NAME = { withings: 'Withings' };
+  const DEVICE_NAME = { withings: 'Withings', whoop: 'Whoop' };
   const DEVICE_ERROR = { auth: 'it needs you to connect again', rate_limited: 'too many requests, paused for an hour',
-    unreachable: 'it could not be reached', provider_error: 'it did not answer as expected' };
+    unreachable: 'it could not be reached', provider_error: 'it did not answer as expected', scope: 'it was not allowed to read what it needs',
+    account_taken: 'that account is connected to someone else here' };
   function eventDetail(ev) {
     const d = ev.details || {};
     if (ev.action === 'settings.changed') return `${(REG.BY_KEY[d.key] || {}).label || d.key}: ${JSON.stringify(d.old)} → ${JSON.stringify(d.new)}${d.env ? ` (first value from ${d.env})` : ''}`;
@@ -818,9 +820,14 @@
     if (ev.action === 'login.succeeded' && d.via === 'oidc') return 'with the sign-in provider';
     if (ev.action === 'device.connected') return DEVICE_NAME[d.provider] || d.provider || '';
     if (ev.action === 'device.disconnected') {
+      if (d.provider === 'whoop') {
+        const n = (d.deleted_days || 0) + (d.deleted_workouts || 0);
+        return ['Whoop', n ? `${d.deleted_days || 0} days and ${d.deleted_workouts || 0} workouts deleted` : 'days and workouts kept'].join(', ');
+      }
       const gone = (d.deleted_weights || 0) + (d.deleted_readings || 0);
       return [DEVICE_NAME[d.provider] || d.provider || '', gone ? `${gone === 1 ? '1 reading' : `${gone} readings`} deleted` : 'readings kept'].filter(Boolean).join(', ');
     }
+    if (ev.action === 'activity.extra_on') return `${d.share_pct}% of the extra${d.ceiling_kcal != null ? `, at most ${d.ceiling_kcal} kcal a day` : ''}`;
     if (ev.action === 'device.sync_failed') return `${DEVICE_NAME[d.provider] || d.provider || ''}: ${DEVICE_ERROR[d.error] || d.error || ''}`;
     if (ev.action === 'passkey.counter_went_back') return 'a passkey answered like an old copy of itself, so the sign-in was refused';
     if ((ev.action === 'share.code_created' || ev.action === 'share.accepted') && KH.sharing && d.areas) return KH.sharing.areasText(d.areas);
@@ -2161,7 +2168,7 @@
       const waiting = (p.connected || {}).needs_reconnect || 0;
       rows.push([p.name, p.enabled
         ? `client ${p.client_id || 'not set'}, secret ${p.secret}, return address ${p.redirect_uri || 'needs PUBLIC_URL'}, ${people === 1 ? '1 person' : `${people} people`} connected${waiting ? ` (${waiting} must connect again)` : ''}`
-        : `Off (WITHINGS_ENABLED)${people ? `, ${people === 1 ? '1 person' : `${people} people`} still connected` : ''}`]);
+        : `Off (${String(p.id || 'withings').toUpperCase()}_ENABLED)${people ? `, ${people === 1 ? '1 person' : `${people} people`} still connected` : ''}`]);
     }
     return rows;
   }
@@ -2301,7 +2308,7 @@
   // Settings → Connected devices (js/views/devices.js, design note 27): shown only while the server has it on.
   let devicesDraw = 0;
   async function renderConnected() {
-    const sec = $('#set-devices');
+    const sec = $('#set-connected'); // not #set-devices: that is Account → Signed-in devices
     if (!sec || !KH.devices) return;
     const ticket = ++devicesDraw;
     const show = await KH.devices.render($('#set-devices-body'));

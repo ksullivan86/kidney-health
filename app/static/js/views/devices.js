@@ -1,4 +1,4 @@
-/* Kidney Diet Log — Settings → Connected devices (design note 27; app/devices/api.py).
+/* Kidney Diet Log — Settings → Connected devices (design notes 27 and 28; app/devices/api.py).
 
    * KH.devices.render(body) fills the section and answers whether it should show: false while the server has the feature off
      (GET /api/devices answers enabled: false then), so Settings hides the section.
@@ -8,7 +8,11 @@
      someone is signed in, Settings opens at this section with the sentence for the word (KH.devices.openPending). After
      "connected" the first sync runs at once.
    * Sync now, and Disconnect with "Also delete the readings that came from Withings" (edited readings stay).
-   * The demo shows a sample Withings connection (js/mock/devices.js) and never leaves the page.
+   * Whoop (note 28): its days and workouts go to Trends (Activity and recovery); while connected, its box also holds the
+     active-day calorie setting (KH.activityViews.extraBlock, js/views/activity.js).
+   * The demo shows sample Withings and Whoop connections (js/mock/devices.js) and never leaves the page.
+
+   Sentences with {name} are said with the provider's name.
 
    All text goes in with h() children (textContent), never as HTML. */
 (() => {
@@ -24,29 +28,38 @@
     remove: (p, alsoReadings) => request('DELETE', `/api/devices/${encodeURIComponent(p)}${alsoReadings ? '?delete_readings=true' : ''}`, undefined, { noQueue: true }),
   };
 
-  const INTRO = 'Connect a Withings scale or blood pressure monitor. This server then fetches your readings from Withings every few '
-    + 'hours and adds them to Weight and blood pressure, marked "from Withings".';
-  const NOT_SET_UP = 'Withings is not set up on this server yet.';
-  const NOT_SET_UP_ADMIN = 'Withings is not set up on this server yet. Register a free Withings developer app, then set WITHINGS_ENABLED, '
-    + 'WITHINGS_CLIENT_ID and WITHINGS_CLIENT_SECRET_FILE (see docs/devices.md).';
+  const INTRO = 'Connect a Withings scale or blood pressure monitor, or a Whoop strap. This server then fetches your data every few hours: '
+    + 'Withings readings go to Weight and blood pressure, marked "from Withings"; Whoop days go to Trends, under Activity and recovery.';
+  const NOT_SET_UP = '{name} is not set up on this server yet.';
+  const NOT_SET_UP_ADMIN = {
+    withings: 'Withings is not set up on this server yet. Register a free Withings developer app, then set WITHINGS_ENABLED, '
+      + 'WITHINGS_CLIENT_ID and WITHINGS_CLIENT_SECRET_FILE (see docs/devices.md).',
+    whoop: 'Whoop is not set up on this server yet. Register a Whoop developer app, then set WHOOP_ENABLED, '
+      + 'WHOOP_CLIENT_ID and WHOOP_CLIENT_SECRET_FILE (see docs/devices.md).',
+  };
   const TEST_ACCOUNT = 'Test accounts cannot connect a device. Sign in with your own account to connect yours.';
   const ERRORS = {
-    auth: 'Withings no longer lets this server read your data. Connect again to carry on.',
-    rate_limited: 'Withings asked this server to slow down. It tries again in an hour.',
-    unreachable: 'Withings could not be reached at the last try. The server tries again later.',
-    provider_error: 'Withings did not answer as expected at the last try. The server tries again later.',
+    auth: '{name} no longer lets this server read your data. Connect again to carry on.',
+    rate_limited: '{name} asked this server to slow down. It tries again in an hour.',
+    unreachable: '{name} could not be reached at the last try. The server tries again later.',
+    provider_error: '{name} did not answer as expected at the last try. The server tries again later.',
+    scope: '{name} did not let this server read what it needs. Connect again and allow it.',
+    account_taken: 'This {name} account is already connected to someone else on this server.',
   };
   const RESULTS = {
-    connected: { ok: true, text: 'Withings is connected. Fetching your readings now.' },
-    cancelled: { text: 'Nothing was connected: you said no at Withings.' },
-    expired: { text: 'That took too long, or the link was already used. Press Connect Withings again.' },
+    connected: { ok: true, text: '{name} is connected. Fetching your data now.' },
+    cancelled: { text: 'Nothing was connected: you said no at {name}.' },
+    expired: { text: 'That took too long, or the link was already used. Press Connect {name} again.' },
     wrong_account: { text: 'You came back on another device or as someone else. Start again from this device.' },
-    scope: { text: 'Withings did not let this server read your measurements. Connect again and allow it.' },
-    taken: { text: 'This Withings account is already connected to someone else on this server.' },
+    scope: { text: '{name} did not let this server read your data. Connect again and allow it.' },
+    taken: { text: 'This {name} account is already connected to someone else on this server.' },
     test_account: { text: TEST_ACCOUNT },
-    unavailable: { text: 'Withings could not be reached. Try again in a few minutes.' },
-    failed: { text: 'Connecting to Withings did not work. Try again.' },
+    unavailable: { text: '{name} could not be reached. Try again in a few minutes.' },
+    failed: { text: 'Connecting to {name} did not work. Try again.' },
   };
+  const NAMES = { withings: 'Withings', whoop: 'Whoop' };
+  /** A sentence above with the provider's name in it. */
+  const said = (text, name) => String(text || '').split('{name}').join(name || 'Withings');
   const RESULT_RE = /^#\/devices\/([a-z_]{1,30})\/([a-z]{1,20})$/;
 
   const isAdmin = () => !!(state.me && state.me.role === 'admin');
@@ -56,22 +69,26 @@
     return d.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   }
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
-  function countsText(c) {
+  function countsText(c, providerId = 'withings') {
     if (!c) return '';
+    if (providerId === 'whoop') return `${plural(c.days || 0, 'day', 'days')} and ${plural(c.workouts || 0, 'workout', 'workouts')}`;
     return `${plural(c.weights || 0, 'weight', 'weights')} and ${plural(c.readings || 0, 'blood pressure reading', 'blood pressure readings')}`;
   }
+  const countOf = (c, providerId) => (providerId === 'whoop' ? (c.days || 0) + (c.workouts || 0) : (c.weights || 0) + (c.readings || 0));
   /** The words after a sync: what was added, or that nothing was new. */
-  function syncText(result) {
+  function syncText(result, provider = { id: 'withings', name: 'Withings' }) {
     if (!result || !result.added) return '';
-    const n = (result.added.weights || 0) + (result.added.readings || 0);
-    return n ? `Added ${countsText(result.added)}.` : 'Nothing new from Withings.';
+    const n = countOf(result.added, provider.id);
+    if (n) return `Added ${countsText(result.added, provider.id)}.`;
+    if (provider.id === 'whoop' && result.updated) return 'Brought today up to date from Whoop.';
+    return `Nothing new from ${provider.name}.`;
   }
   function statusText(provider) {
     const c = provider.connection;
     if (!c) return '';
     if (c.status === 'needs_reconnect') return `${provider.name} needs you to connect again.`;
     const last = c.last_success_at ? `Last sync ${whenText(c.last_success_at)}.` : 'Not synced yet.';
-    return `Connected. ${last} ${countsText(c.imported)} came from ${provider.name}.`;
+    return `Connected. ${last} ${countsText(c.imported, provider.id || 'withings')} came from ${provider.name}.`;
   }
   function whatText(provider) {
     const what = provider.what || [];
@@ -97,7 +114,7 @@
     const parts = [h('p', {}, INTRO)];
     if (!res.can_connect) parts.push(h('p', { class: 'hint', id: 'set-devices-test' }, TEST_ACCOUNT));
     for (const provider of res.providers || []) parts.push(providerBlock(body, res, provider));
-    if (MOCK) parts.push(h('p', { class: 'hint', id: 'set-devices-demo' }, 'This is a sample. The demo never contacts Withings.'));
+    if (MOCK) parts.push(h('p', { class: 'hint', id: 'set-devices-demo' }, 'These are samples. The demo never contacts Withings or Whoop.'));
     clear(body).append(...parts);
     if (focusSel) { const el = $(focusSel, body); if (el) el.focus(); }
     return true;
@@ -107,7 +124,7 @@
     const id = provider.id;
     const box = h('div', { class: 'device-provider', id: `set-devices-${id}` }, h('h3', { class: 'settings-subtitle' }, provider.name));
     if (!provider.available) {
-      box.append(h('p', { class: 'hint', id: `set-devices-${id}-off` }, isAdmin() ? NOT_SET_UP_ADMIN : NOT_SET_UP));
+      box.append(h('p', { class: 'hint', id: `set-devices-${id}-off` }, isAdmin() && NOT_SET_UP_ADMIN[id] ? NOT_SET_UP_ADMIN[id] : said(NOT_SET_UP, provider.name)));
       return box;
     }
     const c = provider.connection;
@@ -115,7 +132,7 @@
       box.append(h('p', { class: 'setting-status', id: `set-devices-${id}-status` },
         h('span', { class: `state-pill ${c.status === 'active' ? 'on' : 'off'}` }, c.status === 'active' ? 'Connected' : 'Connect again'), ' ',
         statusText(provider)));
-      if (c.status === 'active' && c.last_error && ERRORS[c.last_error]) box.append(h('p', { class: 'hint', id: `set-devices-${id}-error` }, ERRORS[c.last_error]));
+      if (c.last_error && ERRORS[c.last_error]) box.append(h('p', { class: 'hint', id: `set-devices-${id}-error` }, said(ERRORS[c.last_error], provider.name)));
     }
     const actions = h('div', { class: 'settings-actions' });
     const consentHost = h('div', { class: 'device-consent-host' });
@@ -132,8 +149,8 @@
         btn.disabled = true;
         try {
           const out = await A.sync(id);
-          if (out.error) toast(ERRORS[out.error] || 'The sync did not work. The server tries again later.', 'error');
-          else toast(syncText(out.result), 'ok');
+          if (out.error) toast(ERRORS[out.error] ? said(ERRORS[out.error], provider.name) : 'The sync did not work. The server tries again later.', 'error');
+          else toast(syncText(out.result, provider), 'ok');
           await render(body, `#set-devices-${id}-sync`);
         } catch (err) { if (!err.handled) toastError(err); } finally { btn.disabled = false; }
       });
@@ -145,6 +162,7 @@
       actions.append(btn);
     }
     box.append(actions, consentHost);
+    if (id === 'whoop' && c && c.status === 'active' && KH.activityViews) box.append(KH.activityViews.extraBlock());
     return box;
   }
 
@@ -183,16 +201,17 @@
       try {
         const out = await A.remove(provider.id, tick.checked);
         const removed = out.removed || {};
-        const n = (removed.weights || 0) + (removed.readings || 0);
-        toast(`${provider.name} is disconnected.${n ? ` Deleted ${countsText(removed)}.` : ''}`, 'ok');
+        const n = countOf(removed, provider.id);
+        toast(`${provider.name} is disconnected.${n ? ` Deleted ${countsText(removed, provider.id)}.` : ''}`, 'ok');
         await render(body);
       } catch (err) { yes.disabled = false; if (!err.handled) toastError(err); }
     });
     actions.hidden = true;
     clear(host).append(h('div', { class: 'device-consent', role: 'group', 'aria-labelledby': `set-devices-${provider.id}-off-h` },
       h('h4', { id: `set-devices-${provider.id}-off-h` }, `Disconnect ${provider.name}?`),
-      h('p', {}, `The server stops fetching and forgets its sign-in to ${provider.name}. Readings already here stay, unless you tick the box.`),
-      h('label', { class: 'check', for: tickId }, tick, ` Also delete the readings that came from ${provider.name} (readings you edited stay)`),
+      h('p', {}, `The server stops fetching and forgets its sign-in to ${provider.name}. ${provider.id === 'whoop' ? 'Days and workouts' : 'Readings'} already here stay, unless you tick the box.`),
+      h('label', { class: 'check', for: tickId }, tick, provider.id === 'whoop' ? ' Also delete the days and workouts that came from Whoop'
+        : ` Also delete the readings that came from ${provider.name} (readings you edited stay)`),
       h('div', { class: 'settings-actions' }, no, yes)));
     no.focus();
   }
@@ -216,9 +235,10 @@
     const { word, provider } = pending;
     pending = null;
     const r = RESULTS[word];
+    const name = NAMES[provider] || 'Withings';
     KH.router.show('settings');
-    toast(r.text, r.ok ? 'ok' : 'error');
-    const sec = $('#set-devices');
+    toast(said(r.text, name), r.ok ? 'ok' : 'error');
+    const sec = $('#set-connected');
     const body = $('#set-devices-body');
     if (!sec || !body) return;
     const reveal = (shown) => {
@@ -231,12 +251,12 @@
     if (word !== 'connected') { reveal(await render(body)); return; }
     try {
       const out = await A.sync(provider);
-      if (out && out.result) toast(`Withings is connected. ${syncText(out.result)}`, 'ok');
+      if (out && out.result) toast(`${name} is connected. ${syncText(out.result, { id: provider, name })}`, 'ok');
     } catch (err) { /* the server syncs again within a few hours; the section shows the state */ }
     reveal(await render(body));
   }
 
   takeResult(); // the address the page was opened with, before any sign-in screen rewrites it
 
-  KH.devices = { render, takeResult, openPending, statusText, syncText, countsText, RESULTS, ERRORS, INTRO };
+  KH.devices = { render, takeResult, openPending, statusText, syncText, countsText, said, RESULTS, ERRORS, INTRO };
 })();

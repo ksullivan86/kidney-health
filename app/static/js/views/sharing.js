@@ -18,8 +18,9 @@
   const { h, $, clear, request, toast, toastError, confirm, sheets, state } = KH;
   const { MOCK } = KH.flags;
 
-  const AREAS = ['food', 'labs', 'body', 'symptoms'];
-  const AREA_LABEL = { food: 'food log', labs: 'lab results', body: 'weight and blood pressure', symptoms: 'symptoms' };
+  const AREAS = ['food', 'labs', 'body', 'symptoms', 'activity'];
+  const AREA_LABEL = { food: 'food log', labs: 'lab results', body: 'weight and blood pressure', symptoms: 'symptoms',
+    activity: 'activity and recovery' };
   const ROLES = ['viewer', 'care_helper'];
   const ROLE_LABEL = { viewer: 'Viewer', care_helper: 'Care helper' };
   const ROLE_HINT = { viewer: 'can look at what you choose, and never change anything',
@@ -64,6 +65,7 @@
       bodySummary: (date) => request('GET', `${base}/body/summary?${qs({ date })}`),
       bodyWeights: (start, end) => request('GET', `${base}/body/weights?${qs({ start, end })}`),
       bloodPressures: (start, end) => request('GET', `${base}/body/blood-pressure?${qs({ start, end })}`),
+      activity: (start, end) => request('GET', `${base}/activity?${qs({ start, end })}`),
       day: (date) => request('GET', `${base}/log?${qs({ date })}`),
       profile: () => request('GET', `${base}/profile`),
     };

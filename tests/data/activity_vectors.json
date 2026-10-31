@@ -1,0 +1,878 @@
+{
+ "constants": {
+  "window_days": 28,
+  "min_days": 14,
+  "percentile": 25,
+  "share_default": 100,
+  "share_min": 10,
+  "share_max": 100,
+  "ceiling_min": 50,
+  "ceiling_max": 3000
+ },
+ "quiet_cases": [
+  {
+   "name": "none",
+   "history": [],
+   "quiet_kcal": null
+  },
+  {
+   "name": "13 days: not enough",
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700
+   ],
+   "quiet_kcal": null
+  },
+  {
+   "name": "14 days",
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700,
+    2750
+   ],
+   "quiet_kcal": 2250
+  },
+  {
+   "name": "14 days, unsorted",
+   "history": [
+    2750,
+    2700,
+    2650,
+    2600,
+    2550,
+    2500,
+    2450,
+    2400,
+    2350,
+    2300,
+    2250,
+    2200,
+    2150,
+    2100
+   ],
+   "quiet_kcal": 2250
+  },
+  {
+   "name": "28 days",
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700,
+    2750,
+    2125,
+    2175,
+    2225,
+    2275,
+    2325,
+    2375,
+    2425,
+    2475,
+    2525,
+    2575,
+    2625,
+    2675,
+    2725,
+    2775
+   ],
+   "quiet_kcal": 2250
+  },
+  {
+   "name": "15 days (rank rounds up)",
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700,
+    2750,
+    1900
+   ],
+   "quiet_kcal": 2200
+  },
+  {
+   "name": "zeros and gaps are not days",
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700,
+    0,
+    null,
+    -5
+   ],
+   "quiet_kcal": null
+  },
+  {
+   "name": "fractions are not whole kcal",
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700,
+    2222.5
+   ],
+   "quiet_kcal": null
+  },
+  {
+   "name": "true is not a number",
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700,
+    true
+   ],
+   "quiet_kcal": null
+  },
+  {
+   "name": "all the same",
+   "history": [
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000,
+    2000
+   ],
+   "quiet_kcal": 2000
+  }
+ ],
+ "extra_cases": [
+  {
+   "name": "off: nothing",
+   "setting": {
+    "enabled": false,
+    "share_pct": 100,
+    "ceiling_kcal": null
+   },
+   "target": 2000,
+   "burned": 3000,
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700,
+    2750
+   ],
+   "calorie_extra": null,
+   "raised": 2000
+  },
+  {
+   "name": "on, an active day: all of it",
+   "setting": {
+    "enabled": true,
+    "share_pct": 100,
+    "ceiling_kcal": null
+   },
+   "target": 2000,
+   "burned": 3000,
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700,
+    2750
+   ],
+   "calorie_extra": {
+    "base_kcal": 2000,
+    "extra_kcal": 750,
+    "burned_kcal": 3000,
+    "quiet_kcal": 2250,
+    "share_pct": 100,
+    "ceiling_kcal": null,
+    "history_days": 14,
+    "source": "whoop"
+   },
+   "raised": 2750
+  },
+  {
+   "name": "on, a quiet day: no extra",
+   "setting": {
+    "enabled": true,
+    "share_pct": 100,
+    "ceiling_kcal": null
+   },
+   "target": 2000,
+   "burned": 2100,
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700,
+    2750
+   ],
+   "calorie_extra": {
+    "base_kcal": 2000,
+    "extra_kcal": 0,
+    "burned_kcal": 2100,
+    "quiet_kcal": 2250,
+    "share_pct": 100,
+    "ceiling_kcal": null,
+    "history_days": 14,
+    "source": "whoop"
+   },
+   "raised": 2000
+  },
+  {
+   "name": "on, exactly the quiet level",
+   "setting": {
+    "enabled": true,
+    "share_pct": 100,
+    "ceiling_kcal": null
+   },
+   "target": 2000,
+   "burned": 2250,
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700,
+    2750
+   ],
+   "calorie_extra": {
+    "base_kcal": 2000,
+    "extra_kcal": 0,
+    "burned_kcal": 2250,
+    "quiet_kcal": 2250,
+    "share_pct": 100,
+    "ceiling_kcal": null,
+    "history_days": 14,
+    "source": "whoop"
+   },
+   "raised": 2000
+  },
+  {
+   "name": "half of it",
+   "setting": {
+    "enabled": true,
+    "share_pct": 50,
+    "ceiling_kcal": null
+   },
+   "target": 2000,
+   "burned": 3000,
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700,
+    2750
+   ],
+   "calorie_extra": {
+    "base_kcal": 2000,
+    "extra_kcal": 380,
+    "burned_kcal": 3000,
+    "quiet_kcal": 2250,
+    "share_pct": 50,
+    "ceiling_kcal": null,
+    "history_days": 14,
+    "source": "whoop"
+   },
+   "raised": 2380
+  },
+  {
+   "name": "half, rounding half up to 10",
+   "setting": {
+    "enabled": true,
+    "share_pct": 50,
+    "ceiling_kcal": null
+   },
+   "target": 2000,
+   "burned": 2260,
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700,
+    2750
+   ],
+   "calorie_extra": {
+    "base_kcal": 2000,
+    "extra_kcal": 10,
+    "burned_kcal": 2260,
+    "quiet_kcal": 2250,
+    "share_pct": 50,
+    "ceiling_kcal": null,
+    "history_days": 14,
+    "source": "whoop"
+   },
+   "raised": 2010
+  },
+  {
+   "name": "a third, rounding down",
+   "setting": {
+    "enabled": true,
+    "share_pct": 33,
+    "ceiling_kcal": null
+   },
+   "target": 2000,
+   "burned": 2264,
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700,
+    2750
+   ],
+   "calorie_extra": {
+    "base_kcal": 2000,
+    "extra_kcal": 0,
+    "burned_kcal": 2264,
+    "quiet_kcal": 2250,
+    "share_pct": 33,
+    "ceiling_kcal": null,
+    "history_days": 14,
+    "source": "whoop"
+   },
+   "raised": 2000
+  },
+  {
+   "name": "ceiling",
+   "setting": {
+    "enabled": true,
+    "share_pct": 100,
+    "ceiling_kcal": 400
+   },
+   "target": 2000,
+   "burned": 3000,
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700,
+    2750
+   ],
+   "calorie_extra": {
+    "base_kcal": 2000,
+    "extra_kcal": 400,
+    "burned_kcal": 3000,
+    "quiet_kcal": 2250,
+    "share_pct": 100,
+    "ceiling_kcal": 400,
+    "history_days": 14,
+    "source": "whoop"
+   },
+   "raised": 2400
+  },
+  {
+   "name": "ceiling not reached",
+   "setting": {
+    "enabled": true,
+    "share_pct": 100,
+    "ceiling_kcal": 1000
+   },
+   "target": 2000,
+   "burned": 3000,
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700,
+    2750
+   ],
+   "calorie_extra": {
+    "base_kcal": 2000,
+    "extra_kcal": 750,
+    "burned_kcal": 3000,
+    "quiet_kcal": 2250,
+    "share_pct": 100,
+    "ceiling_kcal": 1000,
+    "history_days": 14,
+    "source": "whoop"
+   },
+   "raised": 2750
+  },
+  {
+   "name": "10 percent and a ceiling",
+   "setting": {
+    "enabled": true,
+    "share_pct": 10,
+    "ceiling_kcal": 50
+   },
+   "target": 2000,
+   "burned": 4000,
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700,
+    2750
+   ],
+   "calorie_extra": {
+    "base_kcal": 2000,
+    "extra_kcal": 50,
+    "burned_kcal": 4000,
+    "quiet_kcal": 2250,
+    "share_pct": 10,
+    "ceiling_kcal": 50,
+    "history_days": 14,
+    "source": "whoop"
+   },
+   "raised": 2050
+  },
+  {
+   "name": "waiting for 14 days",
+   "setting": {
+    "enabled": true,
+    "share_pct": 100,
+    "ceiling_kcal": null
+   },
+   "target": 2000,
+   "burned": 3000,
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700
+   ],
+   "calorie_extra": {
+    "base_kcal": 2000,
+    "extra_kcal": 0,
+    "burned_kcal": 3000,
+    "quiet_kcal": null,
+    "share_pct": 100,
+    "ceiling_kcal": null,
+    "history_days": 13,
+    "source": "whoop"
+   },
+   "raised": 2000
+  },
+  {
+   "name": "no Whoop figure",
+   "setting": {
+    "enabled": true,
+    "share_pct": 100,
+    "ceiling_kcal": null
+   },
+   "target": 2000,
+   "burned": null,
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700,
+    2750
+   ],
+   "calorie_extra": null,
+   "raised": 2000
+  },
+  {
+   "name": "a Whoop figure of 0",
+   "setting": {
+    "enabled": true,
+    "share_pct": 100,
+    "ceiling_kcal": null
+   },
+   "target": 2000,
+   "burned": 0,
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700,
+    2750
+   ],
+   "calorie_extra": null,
+   "raised": 2000
+  },
+  {
+   "name": "no calorie target",
+   "setting": {
+    "enabled": true,
+    "share_pct": 100,
+    "ceiling_kcal": null
+   },
+   "target": null,
+   "burned": 3000,
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700,
+    2750
+   ],
+   "calorie_extra": null,
+   "raised": null
+  },
+  {
+   "name": "a range target moves both ends",
+   "setting": {
+    "enabled": true,
+    "share_pct": 100,
+    "ceiling_kcal": null
+   },
+   "target": {
+    "min": 1800,
+    "max": 2200
+   },
+   "burned": 3000,
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700,
+    2750
+   ],
+   "calorie_extra": {
+    "base_kcal": 2200,
+    "extra_kcal": 750,
+    "burned_kcal": 3000,
+    "quiet_kcal": 2250,
+    "share_pct": 100,
+    "ceiling_kcal": null,
+    "history_days": 14,
+    "source": "whoop"
+   },
+   "raised": {
+    "min": 2550,
+    "max": 2950
+   }
+  },
+  {
+   "name": "a range with only a minimum",
+   "setting": {
+    "enabled": true,
+    "share_pct": 100,
+    "ceiling_kcal": null
+   },
+   "target": {
+    "min": 1800,
+    "max": null
+   },
+   "burned": 3000,
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700,
+    2750
+   ],
+   "calorie_extra": {
+    "base_kcal": 1800,
+    "extra_kcal": 750,
+    "burned_kcal": 3000,
+    "quiet_kcal": 2250,
+    "share_pct": 100,
+    "ceiling_kcal": null,
+    "history_days": 14,
+    "source": "whoop"
+   },
+   "raised": {
+    "min": 2550,
+    "max": null
+   }
+  },
+  {
+   "name": "a fractional target",
+   "setting": {
+    "enabled": true,
+    "share_pct": 100,
+    "ceiling_kcal": null
+   },
+   "target": 2012.5,
+   "burned": 2600,
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700,
+    2750
+   ],
+   "calorie_extra": {
+    "base_kcal": 2012.5,
+    "extra_kcal": 350,
+    "burned_kcal": 2600,
+    "quiet_kcal": 2250,
+    "share_pct": 100,
+    "ceiling_kcal": null,
+    "history_days": 14,
+    "source": "whoop"
+   },
+   "raised": 2362.5
+  },
+  {
+   "name": "a 28-day history",
+   "setting": {
+    "enabled": true,
+    "share_pct": 100,
+    "ceiling_kcal": null
+   },
+   "target": 2000,
+   "burned": 3300,
+   "history": [
+    2100,
+    2150,
+    2200,
+    2250,
+    2300,
+    2350,
+    2400,
+    2450,
+    2500,
+    2550,
+    2600,
+    2650,
+    2700,
+    2750,
+    2125,
+    2175,
+    2225,
+    2275,
+    2325,
+    2375,
+    2425,
+    2475,
+    2525,
+    2575,
+    2625,
+    2675,
+    2725,
+    2775
+   ],
+   "calorie_extra": {
+    "base_kcal": 2000,
+    "extra_kcal": 1050,
+    "burned_kcal": 3300,
+    "quiet_kcal": 2250,
+    "share_pct": 100,
+    "ceiling_kcal": null,
+    "history_days": 28,
+    "source": "whoop"
+   },
+   "raised": 3050
+  }
+ ]
+}

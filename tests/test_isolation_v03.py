@@ -40,6 +40,9 @@ import test_care_team
 import test_symptoms
 import test_test_accounts
 import test_connected_devices
+import test_activity
+import test_migration_m030
+import test_whoop
 from ai_support import FakeProvider, attach, chat
 from conftest import DAY, HTTPS_URL, TestClient, add_user, find_food, sign_in
 from app.config import AiEnv
@@ -117,6 +120,14 @@ MATRIX: dict[str, tuple[str, ...]] = {
                            "test_connected_devices.test_deleting_the_account_deletes_its_connection_and_ledger"),
     "device_imports": ("test_connected_devices.test_the_ledger_skips_what_was_seen_and_a_deleted_reading_stays_deleted",
                        "test_connected_devices.test_deleting_the_account_deletes_its_connection_and_ledger"),
+    "activity_days": ("test_whoop.test_people_never_see_each_others_whoop",  # Whoop, step 30 (note 28)
+                      "test_activity.test_people_never_see_or_change_each_others",
+                      "test_activity.test_a_care_team_view_needs_the_activity_area",
+                      "test_migration_m030.test_activity_tables_cascade_and_check"),
+    "activity_workouts": ("test_whoop.test_people_never_see_each_others_whoop",
+                          "test_whoop.test_disconnect_revokes_with_the_persons_token_and_can_delete"),
+    "activity_extra": ("test_activity.test_people_never_see_or_change_each_others",
+                       "test_migration_m030.test_activity_tables_cascade_and_check"),
 }
 SHARED_OR_SYSTEM = {
     "users": "the accounts themselves (admins only, tests/test_auth_coverage.py)",
@@ -134,7 +145,8 @@ MODULES = {"test_isolation": test_isolation, "test_export_delete": test_export_d
            "test_ai_chat_save": test_ai_chat_save, "test_symptoms": test_symptoms, "test_body": test_body, "test_lab_photo": test_lab_photo,
            "test_log_if_match": test_log_if_match, "test_totp": test_totp,
            "test_passkeys": test_passkeys, "test_sharing": test_sharing, "test_oidc": test_oidc, "test_care_team": test_care_team,
-           "test_test_accounts": test_test_accounts, "test_connected_devices": test_connected_devices}
+           "test_test_accounts": test_test_accounts, "test_connected_devices": test_connected_devices,
+           "test_whoop": test_whoop, "test_activity": test_activity, "test_migration_m030": test_migration_m030}
 
 
 def _tables_with_people(conn: sqlite3.Connection) -> dict[str, list[str]]:

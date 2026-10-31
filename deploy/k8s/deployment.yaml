@@ -47,7 +47,7 @@ spec:
       containers:
         - name: app
           # The tag and digest are set in kustomization.yaml (`images:`).
-          image: ghcr.io/ksullivan86/kidney-health:0.16
+          image: ghcr.io/ksullivan86/kidney-health:0.17
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -141,6 +141,12 @@ spec:
             #   value: your-withings-client-id
             # - name: WITHINGS_CLIENT_SECRET_FILE # from the Secret (add withings_client_secret there)
             #   value: /run/secrets/kidney-health/withings_client_secret
+            # - name: WHOOP_ENABLED               # each person's own Whoop strap (docs/devices.md)
+            #   value: "true"
+            # - name: WHOOP_CLIENT_ID
+            #   value: your-whoop-client-id
+            # - name: WHOOP_CLIENT_SECRET_FILE    # from the Secret (add whoop_client_secret there)
+            #   value: /run/secrets/kidney-health/whoop_client_secret
             # - name: TEST_ACCOUNT_ENABLED        # tester and tester-helper for people who test the app
             #   value: "true"                     # (docs/test-the-full-app.md); never admins
             # - name: TEST_ACCOUNT_PASSWORD_FILE  # their one password, from the Secret (add test_account_password there)

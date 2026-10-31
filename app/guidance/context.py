@@ -33,6 +33,7 @@ from ..db import database_file, get_meta
 from ..foods import access_clause, access_params, parse_flags
 from ..meals import parse_items
 from ..nutrients import NUTRIENT_KEYS
+from ..activity import day_extra
 from ..profile import get_profile
 from ..settings_store import SettingsStore, default_store
 from . import rules as R
@@ -58,10 +59,13 @@ EXPLICIT_PER_LIST = 10  # names per list that ``explicit_preferences`` returns
 # --------------------------------------------------------------------------- #
 
 
-def load_profile(conn: sqlite3.Connection, user_id: int) -> Profile:
+def load_profile(conn: sqlite3.Connection, user_id: int, day: str | None = None) -> Profile:
     """The targets and profile fields guidance uses: exactly what the Today screen reads
-    (``GET /api/log`` → ``app.profile.get_profile``), so guidance and the day's status always agree."""
+    (``GET /api/log`` → ``app.profile.get_profile``), so guidance and the day's status always agree. With ``day``, the calorie
+    target is that day's (the active-day extra from Whoop, design note 28, as ``GET /api/log`` adds it); nothing else changes."""
     p = get_profile(conn, user_id)
+    if day is not None:
+        p = {**p, "targets": day_extra(conn, user_id, day, p["targets"] or {})[0]}
     try:
         warn = float(p["warn_fraction"])
     except (TypeError, ValueError):
@@ -421,6 +425,9 @@ class LoadOptions:
     history60: bool = True  # eaten entries of the previous 60 days (usual meals)
     saved_meals: bool = True
     combos: bool = True
+    # The active-day calorie extra (design note 28). Off for a Care helper whose share leaves out the activity area: the raised
+    # target would tell how active the person was.
+    activity_extra: bool = True
 
 
 def _days_before(day: str, n: int) -> str:
@@ -455,7 +462,7 @@ def load(conn: sqlite3.Connection, user_id: int, day: str, *, store: SettingsSto
             eaten30 = load_history(conn, user_id, start30, yesterday)
     return GuidanceContext(
         date=day,
-        profile=load_profile(conn, user_id),
+        profile=load_profile(conn, user_id, day if options.activity_extra else None),
         prefs=prefs,
         foods=foods,
         day=entries,

@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-07
 fact_checked: 2026-10-05
-sources: [ARCH, DG5, DG20, DG12, DG15, DG34, Q20, DG28a, DG53, NOTE05, K24, A26-5, A26-11, FDC, MEDLINE-K]
+sources: [ARCH, DG5, DG20, DG12, DG15, DG34, Q20, DG28a, DG53, NOTE05, K24, A26-5, A26-11, FDC, MEDLINE-K, NOTE28, ODRISCOLL20, GERMINI22]
 ---
 
 # Targets and warnings
@@ -207,6 +207,27 @@ Other details that change the suggestion:
 - No starting targets during pregnancy or breastfeeding, under age 18, or in the first 12 weeks after a
   transplant.
 
+## More calories on active days (Whoop) {#active-day-calories}
+
+If you connected a **Whoop** strap (Settings → Connected devices), you can let the app raise your **calorie** target on days you
+burn more than usual. It is off until you turn on **Add active-day calories to my target** under Whoop.
+
+- **Your usual quiet day** is a typical rest day of yours as Whoop counts it: the lower quarter of your finished Whoop days in
+  the last 4 weeks. The app needs 14 such days before it adds anything.
+- On a day Whoop has counted more than that, the difference is added to that day's calorie target, as the day goes on. Early in
+  the day it is usually nothing yet.
+- You choose how much of it counts (100 % by default, for example 50 %) and, if you like, the most it may add in a day.
+- **Only calories change.** Protein, potassium, phosphorus, sodium, fluid and carbohydrate targets stay the same. Your base
+  target is the same as before, inside KDOQI's 25–35 kcal per kg ([KDOQI 2020][Q20], 3.1.1).
+- Today shows two lines, **Base target** and **Active-day extra (from Whoop)**, and **Why this number** says how it was worked
+  out. "What fits now" and the other meal ideas for that day use the raised target. Trends compares with your base target.
+- On a day with an extra, Today adds one line: "Extra calories on active days change your carbs; your care team can help you
+  plan insulin for exercise." The app does not suggest insulin changes. Treat a low as your team taught you, every time.
+- **Tracker calories can be off by a lot, in either direction.** Reviews of many studies found that wrist trackers often miss
+  the energy you burn by a third or more ([O'Driscoll 2020][ODRISCOLL20]; [Germini 2022][GERMINI22]). That is why the app
+  compares Whoop with your own Whoop days, and why you can count only part of it. Recovery, heart rate variability (HRV), sleep
+  and strain are shown on Trends; the app never changes a target because of them ([design note 28][NOTE28]).
+
 ## Import lab results from the iPhone Health app
 
 If you linked your health system (your hospital or clinic) in the iPhone **Health** app, your lab results are in the Health
@@ -346,6 +367,8 @@ because of its carbohydrate, which you count for insulin; for your kidneys it is
 - [NKF: potassium][DG5]; [NKF: phosphorus][DG20]; [FDA: sodium in your diet][DG34].
 - [Kalantar-Zadeh 2010][DG12]; [St-Jules 2017][DG15].
 - [KDOQI 2020 nutrition guideline][Q20]; [Cabrera 2015][DG28a]; [Foley 2011][DG53].
+- [Design note 28][NOTE28]: the active-day calorie extra from Whoop; [O'Driscoll 2020][ODRISCOLL20] and [Germini 2022][GERMINI22]:
+  how accurate trackers' calories are.
 - [KDIGO 2024 CKD guideline][K24], Table 28 (action levels for high potassium) and Rec 3.3.1.1 (protein);
   [MedlinePlus: high potassium level][MEDLINE-K] (warning signs).
 - [ADA Standards of Care 2026, section 11][A26-11], Rec 11.3 (protein with diabetes and CKD).

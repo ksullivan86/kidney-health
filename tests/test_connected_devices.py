@@ -121,8 +121,9 @@ def test_on_without_a_withings_app_shows_it_as_not_set_up(client: TestClient) ->
     assert client.patch("/api/admin/settings", json={"devices.enabled": True}).status_code == 200
     body = client.get("/api/devices").json()
     assert body["enabled"] is True and body["sync_hours"] == 4
-    (w,) = body["providers"]
+    w, whoop = body["providers"]
     assert w["id"] == "withings" and w["available"] is False and w["connection"] is None
+    assert whoop["id"] == "whoop" and whoop["available"] is False and whoop["connection"] is None
     assert w["what"] == ["weight", "blood pressure", "pulse"]
     assert client.post("/api/devices/withings/start").status_code == 404
 
@@ -155,7 +156,7 @@ def test_connect_asks_only_for_measures_and_returns_to_the_exact_address(dev) ->
     assert token_call["host"] == "wbsapi.withings.net"
     assert set(token_call["form"]) == {"action", "grant_type", "client_id", "client_secret", "code", "redirect_uri"}
     conn = admin.get("/api/devices").json()["providers"][0]["connection"]
-    assert conn["status"] == "active" and conn["last_error"] is None and conn["imported"] == {"weights": 0, "readings": 0}
+    assert conn["status"] == "active" and conn["last_error"] is None and conn["imported"] == {"weights": 0, "readings": 0, "days": 0, "workouts": 0}
     acts = [e["action"] for e in admin.get("/api/me/activity").json()["events"]]
     assert "device.connected" in acts
 
@@ -286,7 +287,7 @@ def test_sync_brings_weights_and_readings_on_the_persons_clock(dev) -> None:
     ]
     out = sync(admin)
     assert out["error"] is None
-    assert out["result"]["added"] == {"weights": 1, "readings": 2}
+    assert out["result"]["added"] == {"weights": 1, "readings": 2, "days": 0, "workouts": 0}
     assert out["result"]["left_out"] == 3
     day, clock = local(w_at)
     weights = admin.get("/api/body/weights", params={"start": day, "end": day}).json()["weights"]
@@ -295,7 +296,7 @@ def test_sync_brings_weights_and_readings_on_the_persons_clock(dev) -> None:
     got = sorted((r["date"], r["time"], r["systolic"], r["diastolic"], r["pulse"], r["context"]) for r in rows)
     assert got == sorted([(*local(bp_at), 131, 82, 66, "morning"), (*local(eve), 140, 90, None, "evening")])
     conn_view = out["connection"]
-    assert conn_view["imported"] == {"weights": 1, "readings": 2} and conn_view["last_success_at"]
+    assert conn_view["imported"] == {"weights": 1, "readings": 2, "days": 0, "workouts": 0} and conn_view["last_success_at"]
     # the "changed since" mark: the first fetch reached a year back, the next one sends Withings' updatetime
     measure_calls = [c["form"] for c in fake.calls if c["form"].get("action") == "getmeas"]
     assert measure_calls[0]["meastypes"] == "1,9,10,11" and measure_calls[0]["category"] == "1"
@@ -322,7 +323,7 @@ def test_the_ledger_skips_what_was_seen_and_a_deleted_reading_stays_deleted(dev)
     with db(admin) as conn:
         conn.execute("UPDATE device_connections SET sync_cursor = NULL")  # Withings sends everything again
     second = sync(admin)["result"]
-    assert second["added"] == {"weights": 0, "readings": 0} and second["already_there"] == 2
+    assert second["added"] == {"weights": 0, "readings": 0, "days": 0, "workouts": 0} and second["already_there"] == 2
     day = local(t)[0]
     (w,) = admin.get("/api/body/weights", params={"start": day, "end": day}).json()["weights"]
     assert admin.delete(f"/api/body/weights/{w['id']}").status_code == 204
@@ -342,7 +343,7 @@ def test_a_typed_reading_is_never_changed_or_doubled(dev) -> None:
     connect_withings(admin, fake)
     fake.groups = [bp_group(31, t, systolic=128, diastolic=79), weight_group(32, t, value=7512, unit=-2)]
     out = sync(admin)["result"]
-    assert out["added"] == {"weights": 1, "readings": 0} and out["already_there"] == 1
+    assert out["added"] == {"weights": 1, "readings": 0, "days": 0, "workouts": 0} and out["already_there"] == 1
     readings = admin.get("/api/body/blood-pressure", params={"start": day, "end": day}).json()["readings"]
     assert [(r["id"], r["note"], r["source"]) for r in readings] == [(typed["id"], "left arm", "manual")]
     weights = admin.get("/api/body/weights", params={"start": day, "end": day}).json()["weights"]
@@ -357,7 +358,7 @@ def test_out_of_range_values_are_skipped(dev) -> None:
     fake.groups = [weight_group(41, t, value=5, unit=0), bp_group(42, t, systolic=80, diastolic=90),
                    bp_group(43, t + 60, systolic=120, diastolic=80, pulse=400)]
     out = sync(admin)["result"]
-    assert out["added"] == {"weights": 0, "readings": 1} and out["skipped"] == 2
+    assert out["added"] == {"weights": 0, "readings": 1, "days": 0, "workouts": 0} and out["skipped"] == 2
     (r,) = admin.get("/api/body/blood-pressure", params={"start": local(t)[0], "end": local(t)[0]}).json()["readings"]
     assert r["pulse"] is None  # a pulse out of range is dropped, the reading kept
 
@@ -453,7 +454,7 @@ def test_disconnect_keeps_readings_and_asks_withings_to_end_access(dev) -> None:
     fake.groups = [weight_group(71, at_local(1, 7, 0))]
     sync(admin)
     r = admin.delete("/api/devices/withings")
-    assert r.status_code == 200 and r.json() == {"removed": {"weights": 0, "readings": 0}, "revoked": True}
+    assert r.status_code == 200 and r.json() == {"removed": {"weights": 0, "readings": 0, "days": 0, "workouts": 0}, "revoked": True}
     assert fake.revoked == ["4242"]
     assert admin.get("/api/devices").json()["providers"][0]["connection"] is None
     day = local(fake.groups[0]["date"])[0]
@@ -474,7 +475,7 @@ def test_disconnect_can_delete_the_readings_but_keeps_edited_ones(dev) -> None:
     edited = admin.put(f"/api/body/weights/{w['id']}", json={"date": w["date"], "time": w["time"], "kg": 74, "context": "morning"})
     assert edited.json()["source"] == "manual"
     r = admin.delete("/api/devices/withings", params={"delete_readings": "true"})
-    assert r.json()["removed"] == {"weights": 1, "readings": 1}
+    assert r.json()["removed"] == {"weights": 1, "readings": 1, "days": 0, "workouts": 0}
     assert [x["kg"] for x in admin.get("/api/body/weights", params={"start": day, "end": day}).json()["weights"]] == [74]
     with db(admin) as conn:
         assert conn.execute("SELECT COUNT(*) FROM device_imports").fetchone()[0] == 0

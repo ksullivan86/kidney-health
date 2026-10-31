@@ -34,6 +34,7 @@ from . import data_import  # POST /api/me/import: the person's own export.json (
 from . import meta  # design note 14 change 4: GET /api/meta (versions, capabilities, the nutrient registry)
 from . import sharing  # schema step 24: read-only sharing with a caregiver or dietitian (/api/me/shares, /api/shared)
 from . import feedback, test_accounts  # schema step 28: test accounts, Send feedback (/api/feedback, /api/admin/feedback)
+from . import activity as activity_api  # schema step 30: Whoop days, workouts, the active-day calorie extra (/api/activity)
 from .devices import api as devices_api, sync as devices_sync  # schema step 29: connected devices (/api/devices)
 from . import openapi_doc  # design note 14 change 2: stable operation ids, honest errors and security schemes in the OpenAPI document
 from .auth import bootstrap as auth_bootstrap
@@ -43,7 +44,7 @@ from .settings_store import SettingsStore, default_store
 
 logger = logging.getLogger(brand.LOGGER_NAME)
 
-APP_VERSION = "0.16.0"
+APP_VERSION = "0.17.0"
 STATIC_DIR = DEFAULT_STATIC_DIR
 
 
@@ -166,6 +167,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(feedback.router)
     app.include_router(feedback.admin_router)
     app.include_router(devices_api.router)
+    app.include_router(activity_api.router)
 
     @app.get("/healthz")
     def healthz(conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:

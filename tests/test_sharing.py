@@ -231,6 +231,7 @@ SAME = [  # (shared path, the owner's own path, area)
     ("body/weights?start={s}&end={d}", "/api/body/weights?start={s}&end={d}", "body"),
     ("body/blood-pressure?start={s}&end={d}", "/api/body/blood-pressure?start={s}&end={d}", "body"),
     ("symptoms?start={s}&end={d}", "/api/symptoms?start={s}&end={d}", "symptoms"),
+    ("activity?start={s}&end={d}", "/api/activity?start={s}&end={d}", "activity"),  # Whoop (design note 28)
 ]
 
 
@@ -243,7 +244,8 @@ def test_each_shared_answer_is_the_owners_own(people):
         got = sam.get(f"/api/shared/{sid}/" + shared_path.format(d=TODAY, s=start))
         want = ana.get(own_path.format(d=TODAY, s=start))
         assert got.status_code == 200 and want.status_code == 200, (shared_path, got.text)
-        assert got.json() == want.json(), shared_path
+        expected = {**want.json(), "extra": None} if _area == "activity" else want.json()  # the person's own setting stays theirs
+        assert got.json() == expected, shared_path
     assert sam.get("/api/log", params={"date": TODAY}).json()["entries"] == []  # sam's own log is still his own
 
 

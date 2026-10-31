@@ -14,7 +14,7 @@
   const M = KH.mock;
   const { route, MockApi, fail } = M;
 
-  const AREAS = ['food', 'labs', 'body', 'symptoms'];
+  const AREAS = ['food', 'labs', 'body', 'symptoms', 'activity'];
   const ROLES = ['viewer', 'care_helper'];
   const NOT_SHARED = 'Not shared with you.';
   const DAY_MS = 86400000;
@@ -57,9 +57,9 @@
       return w;
     },
     _asPerson(world, fn) {
-      const saved = [this._entries, this._profile, this._templates];
-      this._entries = world.entries; this._profile = world.profile; this._templates = world.templates;
-      try { return fn(); } finally { [this._entries, this._profile, this._templates] = saved; }
+      const saved = [this._entries, this._profile, this._templates, this._inCareWorld];
+      this._entries = world.entries; this._profile = world.profile; this._templates = world.templates; this._inCareWorld = true;
+      try { return fn(); } finally { [this._entries, this._profile, this._templates, this._inCareWorld] = saved; }
     },
     // sharing._check_share: the share is yours, has the area and (for a write) the role; else the one 404.
     _careShare(id, area, role = null) {

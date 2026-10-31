@@ -34,7 +34,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from fastapi.responses import StreamingResponse
 
-from . import brand
+from . import activity, brand
 from .auth.deps import CurrentUser, current_user
 from .auth.errors import ApiProblem
 from .db import get_db, utcnow
@@ -552,16 +552,23 @@ def summarize_day(date: str, rows: list[sqlite3.Row], profile: dict[str, Any], c
     }
 
 
-def day_summary(conn: sqlite3.Connection, request: Request, user_id: int, day: str) -> dict[str, Any]:
+def day_summary(conn: sqlite3.Connection, request: Request, user_id: int, day: str, *, activity_extra: bool = True) -> dict[str, Any]:
     """The ``GET /api/log?date=`` answer for ``user_id`` on ``day``: Today's numbers. The assistant's ``get_today``
-    (``app/mcp``) answers from this same function, so the two can never disagree."""
+    (``app/mcp``) answers from this same function, so the two can never disagree. With the active-day extra on and a Whoop
+    figure for ``day`` (design note 28), the calorie target is raised and ``calorie_extra`` says by how much;
+    ``activity_extra=False`` (a Care team view without the activity area) keeps the base target."""
     profile = get_profile(conn, user_id)
+    extra = None
+    if activity_extra:
+        targets, extra = activity.day_extra(conn, user_id, day, profile["targets"])
+        profile = {**profile, "targets": targets}
     today = today_local()
     # From today on, read the week before as well: v0.3.1's "running high" warnings join it with the plan.
     window = fetch_entries(conn, user_id, pattern_window_start(day) if day >= today else day, day)
     rows = [r for r in window if r["date"] == day]
     summary = summarize_day(day, rows, profile, carb_tolerance_for(conn, request, user_id))
     summary["pattern_alerts"] = day_pattern_alerts(day, pattern_inputs(window, today), profile, today)
+    summary["calorie_extra"] = extra
     return summary
 
 

@@ -31,8 +31,11 @@ def test_the_scripts_are_loaded_in_order_and_kept_offline() -> None:
 
 
 def test_settings_has_its_own_section_hidden_until_the_server_answers() -> None:
-    sec = '<section class="card settings-section" id="set-devices" data-title="Connected devices" aria-labelledby="set-devices-h" hidden>'
+    sec = '<section class="card settings-section" id="set-connected" data-title="Connected devices" aria-labelledby="set-connected-h" hidden>'
     assert INDEX.index('id="set-body"') < INDEX.index(sec) < INDEX.index('id="set-guidance"')
+    # Its own id: #set-devices is Account → Signed-in devices, which comes first, so $('#set-devices') never found this section.
+    assert "const sec = $('#set-connected');" in SETTINGS and "const sec = $('#set-connected');" in VIEW
+    assert INDEX.count('id="set-devices"') == 0 and "id: 'set-devices'" in SETTINGS
     assert "const show = await KH.devices.render($('#set-devices-body'));" in SETTINGS
     assert "['Connected devices', ['devices.enabled', 'devices.sync_hours']]," in SETTINGS
     assert "if (err && err.status === 404) { clear(body); return false; }" in VIEW
@@ -62,7 +65,7 @@ def test_every_way_back_has_a_sentence_and_the_server_words_match() -> None:
     assert words == set(api.RESULTS)
     assert "if (KH.devices) KH.devices.openPending()" in MAIN
     errors = set(re.findall(r"^    ([a-z_]+): '", VIEW[VIEW.index("const ERRORS = {"):VIEW.index("const RESULTS = {")], re.M))
-    assert errors == {"auth", "rate_limited", "unreachable", "provider_error"}
+    assert errors == {"auth", "rate_limited", "unreachable", "provider_error", "scope", "account_taken"}
 
 
 def test_activity_and_server_administration_name_it() -> None:
@@ -99,11 +102,12 @@ def test_the_result_address_is_read_once_and_replaced() -> None:
 def test_the_demo_shows_a_sample_connection_and_never_calls_out() -> None:
     got = json.loads(subprocess.run(["node", str(ROOT / "tests" / "js" / "devices_demo.mjs")], capture_output=True, text=True,
                                     check=True, timeout=120).stdout)
-    (w,) = got["list"]["providers"]
+    w, whoop = got["list"]["providers"]
+    assert whoop["id"] == "whoop" and whoop["connection"]["imported"]["days"] > 0
     assert w["available"] is True and w["connection"]["status"] == "active" and w["connection"]["imported"]["readings"] > 0
     assert got["sources"] == ["manual", "withings"] and got["origin"] == "from Withings"
     assert got["start"]["status"] == 400 and "demo cannot go to Withings" in got["start"]["detail"]
-    assert got["sync"]["error"] is None and got["sync"]["result"]["added"] == {"weights": 0, "readings": 0}
+    assert got["sync"]["error"] is None and got["sync"]["result"]["added"] == {"weights": 0, "readings": 0, "days": 0, "workouts": 0}
     assert got["remove"]["removed"]["readings"] == w["connection"]["imported"]["readings"]
     assert got["after"] is None and "withings" not in got["left"]
     assert "fetch(" not in MOCK and "location.assign" not in MOCK

@@ -279,7 +279,7 @@ Everything is in **Settings → Care team**, its own section near the top of Set
 
 **Two roles.** The person picks one when they invite someone, and can change it at any time in their Care team list.
 
-* A **Viewer** can look at the parts the person ticked: food log, lab results, weight and blood pressure, symptoms. They never
+* A **Viewer** can look at the parts the person ticked: food log, lab results, weight and blood pressure, symptoms, activity and recovery (from Whoop). They never
   change anything.
 * A **Care helper** can also plan meals for the person and use their shopping list. A Care helper always sees the food log, so
   choosing this role adds it. They never change eaten food, targets, the profile, labs, weight, symptoms, preferences, AI

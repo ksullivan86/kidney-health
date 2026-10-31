@@ -56,7 +56,7 @@ MAX_FLOWS = 1000
 CALLBACK = "/api/devices/{provider}/callback"
 RESULTS = ("connected", "cancelled", "expired", "wrong_account", "scope", "taken", "test_account", "unavailable", "failed")
 TEST_ACCOUNT_REFUSAL = "Test accounts cannot connect a device. Sign in with your own account to connect yours."
-ProviderId = Literal["withings"]
+ProviderId = Literal["withings", "whoop"]
 
 
 # --------------------------------------------------------------------------- #
@@ -115,6 +115,8 @@ class FlowStore:
 class ImportedCounts(BaseModel):
     weights: int
     readings: int
+    days: int = 0  # Whoop days (design note 28)
+    workouts: int = 0
 
 
 class ConnectionOut(BaseModel):
@@ -150,6 +152,7 @@ class SyncCounts(BaseModel):
     already_there: int
     skipped: int
     left_out: int
+    updated: int = 0  # Whoop days and workouts whose numbers were replaced by newer ones
 
 
 class SyncOut(BaseModel):
@@ -322,13 +325,32 @@ def disconnect(request: Request, user: CurrentUser, provider_id: ProviderId = Pa
     if provider is None or row is None:
         raise HTTPException(status_code=404, detail="Not Found")
     external = row["external_user_id"]
+    pair = store.load_tokens(auth_context(request).require_keyring(), row) if provider.available else None
     removed = store.disconnect(conn, user.id, provider_id, delete_readings=delete_readings)
     audit(conn, user.id, "device.disconnected", "device", provider_id, ip=request_ip(request), provider=provider_id,
-          deleted_weights=removed["weights"], deleted_readings=removed["readings"])
+          deleted_weights=removed["weights"], deleted_readings=removed["readings"], deleted_days=removed["days"],
+          deleted_workouts=removed["workouts"])
     conn.commit()
-    # After the commit: the tokens are gone here whatever Withings answers.
-    revoked = bool(external) and provider.available and provider.revoke(str(external))
+    # After the commit: the tokens are gone here whatever the company answers.
+    revoked = provider.available and _revoke(provider, str(external or ""), pair, row["access_expires_at"])
     return {"removed": removed, "revoked": bool(revoked)}
+
+
+def _revoke(provider: Any, external: str, pair: tuple[str, str] | None, expires_at: str | None) -> bool:
+    """Ask the company to end its access (best effort). Withings needs its id for the person; Whoop needs the person's access token,
+    refreshed first when it has run out (the new pair is thrown away with the rest)."""
+    if provider.id == "withings":
+        return bool(external) and provider.revoke(external)
+    if pair is None:
+        return False
+    access = pair[0]
+    left = seconds_since(expires_at)
+    if left is None or left > -60:
+        try:
+            access = provider.refresh(pair[1]).access
+        except ProviderError:
+            return False
+    return bool(provider.revoke(external, access))
 
 
 def about_view(request: Request, conn: sqlite3.Connection) -> dict[str, Any]:
