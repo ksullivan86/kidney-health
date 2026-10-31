@@ -847,3 +847,29 @@ def test_podman_debug_command_overrides_the_python_entrypoint():
     guide = read("docs/deployment.md")
     assert "--entrypoint sh --user 10001:0 --volumes-from kidney-health" in guide
     assert "latest-dev sh`" not in guide
+
+
+def test_a_merge_that_changes_the_version_tags_itself():
+    """Releases tag themselves (ARCHITECTURE.md decision 7, owner 2026-10-31): tag-release.yml runs on main when
+    pyproject.toml changes, creates the GitHub release (and so the tag) from the CHANGELOG section, and starts
+    release.yml on the tag, because a tag made with the workflow's token starts no workflow by itself."""
+    wf = read(".github/workflows/tag-release.yml")
+    assert re.search(r"^  push:\n    branches: \[main\]\n    paths: \[pyproject\.toml\]$", wf, re.M)
+    assert "workflow_dispatch:" in wf
+    jobs = job_blocks(wf)
+    assert list(jobs) == ["tag"]
+    job = jobs["tag"]
+    assert "github.repository == 'ksullivan86/kidney-health' && github.ref == 'refs/heads/main'" in job
+    assert sorted(re.findall(r"^      (\S+): (read|write)", job, re.M)) == [("actions", "write"), ("contents", "write")]
+    assert "persist-credentials: false" in job
+    # an existing tag is never moved, and the version must be the one in pyproject.toml on that commit
+    assert 'git/ref/tags/${tag}' in job and 'echo "skip=true"' in job
+    assert "merge-base --is-ancestor" in job and "pyproject.toml on" in job
+    assert 'gh release create "$TAG" --target "$COMMIT"' in job and "CHANGELOG.md" in job
+    assert 'gh workflow run release.yml --ref "$TAG"' in job
+    # untrusted inputs reach the scripts only through env, never inline
+    assert "${{ inputs." not in "".join(line for line in job.splitlines() if not line.lstrip().startswith(("IN_", "TAG:", "VERSION:", "COMMIT:")))
+    rel = read(".github/workflows/release.yml")
+    assert re.search(r"^  workflow_dispatch:$", rel, re.M)
+    build = job_blocks(rel)["build"]
+    assert "(github.event_name == 'push' || startsWith(github.ref, 'refs/tags/v'))" in build

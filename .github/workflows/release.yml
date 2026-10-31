@@ -4,6 +4,7 @@
 #
 #   push to main  ->  :edge  and  :sha-<short>
 #   tag vX.Y.Z    ->  :X.Y.Z, :X.Y and :latest   (a pre-release such as v0.3.0-rc1 gets only its own tag)
+#                    (tag-release.yml makes the tag when a merge changes the version, and starts this run)
 #
 # A malicious or mistaken merge therefore reaches only people who track :edge; :latest and :0.18
 # move only on a version tag, which the tag ruleset protects. Tags move after the Grype gate passed
@@ -20,6 +21,9 @@ on:
   push:
     branches: [main]
     tags: ["v*"]
+  # tag-release.yml starts this on a tag it created (a tag made by a workflow starts no workflow by
+  # itself). A run started by hand on anything but a v* tag builds nothing.
+  workflow_dispatch:
 
 permissions: {}
 
@@ -38,8 +42,8 @@ env:
 jobs:
   build:
     name: build (amd64 + arm64, push by digest)
-    # Forks never publish.
-    if: github.repository == 'ksullivan86/kidney-health'
+    # Forks never publish; a run started by hand publishes only a v* tag.
+    if: github.repository == 'ksullivan86/kidney-health' && (github.event_name == 'push' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:

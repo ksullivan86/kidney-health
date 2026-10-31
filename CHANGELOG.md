@@ -5,6 +5,11 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## Unreleased
+
+* **Releases tag themselves.** When a release is merged, GitHub now creates the release, its tag and the image on its own.
+  Nobody has to push a version tag by hand any more (`.github/workflows/tag-release.yml`).
+
 ## 0.18.0 — 2026-10-31
 
 The full **Care team** (design note 29, schema step 31).
