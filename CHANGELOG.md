@@ -7,6 +7,34 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+## 0.14.0 — 2026-10-31
+
+Version 0.14 adds the **Care team**: invite a family member or caregiver who already has an account, and let them help plan
+meals. It also adds **test accounts** for people who try the app on your server, and makes clear that the AI features are AI.
+Nothing new is switched on.
+
+**Before you upgrade, read [Upgrading from 0.13](#upgrading-from-013-read-this-first).** Two schema steps run at the first
+start.
+
+### Upgrading from 0.13 (read this first)
+
+1. **Back up first** (`podman exec kidney-health python -m app.admin backup /data/before-0.14.0.db`). Schema steps 27 and 28
+   run at the first start. Step 27 gives every existing share the Viewer role, so people keep seeing what they saw. Step 28
+   adds test accounts and the feedback table. Nothing that is there changes.
+2. **Coming from 0.12 or older**, read [Upgrading from 0.12](#upgrading-from-012-read-this-first) and the notes before it too.
+3. **Change the tag** to `:0.14`, or pin a digest from the release notes. The shipped files already say `:0.14`.
+4. **Nothing new is switched on.** The Care team needs `SHARING_ENABLED`, as sharing did. Test accounts need
+   `TEST_ACCOUNT_ENABLED` and a password in `TEST_ACCOUNT_PASSWORD_FILE` ([accounts.md](docs/accounts.md#test-accounts)).
+5. **"Sharing" is now "Care team"** on every screen. The API keeps its old route names.
+
+### Known limitations
+
+* A Care helper plans meals and uses the shopping list. A caregiver who logs eaten food, per-permission switches and using
+  the person's saved meals come later.
+* Planning for someone else needs a connection; it is not saved for later offline.
+* Test accounts need HTTPS, like any server with more than one account. A new test password takes effect at the next
+  restart or Reset.
+
 ### Care team
 
 * **Settings → Care team** is now its own section near the top of Settings, and Profile links to it. It replaces "Sharing" on
