@@ -183,8 +183,8 @@ def _app_words() -> frozenset[str]:
 
         for value in vars(prompts).values():
             take(value)
-        for key in NUTRIENT_BY_KEY:
-            take(key.replace("_", " "))
+        for nutrient in NUTRIENT_BY_KEY:
+            take(nutrient.replace("_", " "))
         _APP_WORDS = frozenset(words)
     return _APP_WORDS
 
@@ -222,9 +222,9 @@ def expand_terms(values: Iterable[Any]) -> tuple[str, ...]:
     seen: set[str] = set()
     for value in values:
         for term in _term_variants(value):
-            key = _fold(term)
-            if key not in seen and usable_term(term):
-                seen.add(key)
+            folded = _fold(term)
+            if folded not in seen and usable_term(term):
+                seen.add(folded)
                 out.append(term)
             if len(out) >= MAX_TERMS:
                 return tuple(out)
@@ -556,8 +556,8 @@ class Shield:
 
     def _label(self, kind: str, original: str) -> str:
         """The label of ``original``: the same words (any case, any spacing) always get the same label in one request."""
-        key = _fold(original)
-        label = self._labels.get(key)
+        folded = _fold(original)
+        label = self._labels.get(folded)
         if label is None:
             n = self._counts.get(kind, 0)
             while True:
@@ -566,7 +566,7 @@ class Shield:
                 if label not in self._taken:
                     break
             self._counts[kind] = n
-            self._labels[key] = label
+            self._labels[folded] = label
             self._words[label] = original
         return label
 
