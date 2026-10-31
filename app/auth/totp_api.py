@@ -64,6 +64,8 @@ def setup_totp(request: Request, user: RecentUser, conn: sqlite3.Connection = De
     """A new secret, kept as not on yet until :func:`enable_totp` sees a code from it. Replaces an earlier unfinished one."""
     _only_local(request, user)
     ctx = auth_context(request)
+    if user.is_test_account:  # a second step on a shared account would lock the other testers out (design note 26)
+        raise ApiProblem(409, "Two-step sign-in is not available on a test account: the testers share it.")
     if totp.is_enabled(conn, user.id):
         raise ApiProblem(409, ALREADY_ON)
     key = totp.start(conn, ctx.require_keyring(), user.id)

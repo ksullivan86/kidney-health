@@ -36,6 +36,7 @@ class User:
     can_use_shared: bool = True
     created_at: str | None = None
     last_login_at: str | None = None
+    is_test_account: bool = False  # schema step 28: made by the server for testers (design note 26); never an admin
 
     @property
     def is_admin(self) -> bool:
@@ -48,7 +49,7 @@ class User:
 
 USER_COLUMNS = (
     "id, username, username_norm, display_name, role, status, auth_source, external_subject, password_hash, "
-    "password_changed_at, must_change_password, can_use_shared, created_at, updated_at, last_login_at"
+    "password_changed_at, must_change_password, can_use_shared, created_at, updated_at, last_login_at, is_test_account"
 )
 
 
@@ -82,7 +83,13 @@ def user_from_row(row: sqlite3.Row | dict[str, Any]) -> User:
         can_use_shared=bool(row["can_use_shared"]),
         created_at=row["created_at"],
         last_login_at=row["last_login_at"],
+        is_test_account=bool(_column(row, "is_test_account")),
     )
+
+
+def _column(row: sqlite3.Row | dict[str, Any], name: str) -> Any:
+    keys = row.keys() if hasattr(row, "keys") else ()
+    return row[name] if name in keys else None
 
 
 def user_row(conn: sqlite3.Connection, user_id: int) -> sqlite3.Row | None:
@@ -113,6 +120,7 @@ def me_dict(user: User) -> dict[str, Any]:
         "auth_source": user.auth_source,
         "must_change_password": user.must_change_password,
         "created_at": user.created_at,
+        "test_account": user.is_test_account,
     }
 
 

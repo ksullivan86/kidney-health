@@ -30,7 +30,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, FastAPI, HTTPException,
 from pydantic import BaseModel, ConfigDict, Field, SecretStr, StringConstraints, field_validator
 from starlette.concurrency import run_in_threadpool
 
-from .. import brand
+from .. import brand, test_accounts
 from ..auth import housekeeping as auth_housekeeping
 from ..auth.context import auth_context, request_ip
 from ..auth.deps import AdminUser, CurrentUser, RecentAdmin, RecentUser, current_user, require_admin
@@ -119,9 +119,16 @@ def ai_state(request: Request) -> AiState:
     return request.app.state.ai
 
 
-def require_ai_enabled(request: Request, conn: sqlite3.Connection = Depends(get_db)) -> None:
-    """``/api/ai/*`` and ``/api/vision/*`` behave as unregistered (404) while ``ai.enabled`` is off."""
-    if not ai_state(request).store.get(conn, "ai.enabled"):
+def ai_on_for(request: Request, conn: sqlite3.Connection, user: User) -> bool:
+    """``ai.enabled``, and for a test account also ``test_accounts.ai`` (design note 26)."""
+    store = ai_state(request).store
+    return bool(store.get(conn, "ai.enabled")) and test_accounts.ai_allowed(conn, store, user.id)
+
+
+def require_ai_enabled(request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> None:
+    """``/api/ai/*`` and ``/api/vision/*`` behave as unregistered (404) while ``ai.enabled`` is off (and for a test account while
+    ``test_accounts.ai`` is off)."""
+    if not ai_on_for(request, conn, user):
         raise HTTPException(status_code=404, detail="Not Found")
 
 
@@ -1273,7 +1280,7 @@ def _secret(value: SecretStr | None) -> str | None:
 def me_view(request: Request, conn: sqlite3.Connection, user: User) -> dict[str, Any]:
     state = ai_state(request)
     keyring = _keyring(request)
-    enabled = bool(state.store.get(conn, "ai.enabled"))
+    enabled = ai_on_for(request, conn, user)
     allow_custom = bool(state.store.get(conn, "ai.allow_user_base_url")) and not state.settings.ai.http_proxy
     own = K.own_row(conn, user.id)
     routes = R.resolve_all(conn, state.store, keyring, state.settings, state.policy, user_id=user.id,
@@ -1440,8 +1447,7 @@ async def _probe_row(request: Request, conn: sqlite3.Connection, user: User, row
 @me_router.post("/probe")
 async def probe_my_provider(request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """Test your own provider (5 per hour; counts toward today's AI calls; §9 A5 e)."""
-    state = ai_state(request)
-    if not await run_in_threadpool(state.store.get, conn, "ai.enabled"):
+    if not await run_in_threadpool(ai_on_for, request, conn, user):
         raise HTTPException(status_code=404, detail="Not Found")
     row = await run_in_threadpool(K.own_row, conn, user.id)
     if row is None:

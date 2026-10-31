@@ -58,7 +58,7 @@ import logging
 import sqlite3
 from typing import Any, Literal, Mapping
 
-from .. import brand
+from .. import brand, test_accounts
 from ..config import Settings
 from ..crypto import InvalidToken, Keyring
 from ..db import get_meta, set_meta, table_exists
@@ -176,7 +176,7 @@ def is_private(row: Mapping[str, Any], policy: NetPolicy) -> bool:
 def resolve_feature(conn: sqlite3.Connection, store: SettingsStore, keyring: Keyring, settings: Settings, policy: NetPolicy, *,
                     user_id: int, can_use_shared: bool, feature: str, require_opt_in: bool = True) -> K.Resolved:
     """Which provider serves ``feature`` for ``user_id`` now (no quota is taken, nothing is sent)."""
-    if not store.get(conn, "ai.enabled"):
+    if not store.get(conn, "ai.enabled") or not test_accounts.ai_allowed(conn, store, user_id):
         return K.Resolved(None, None, "disabled", feature=feature)
     prefs = K.ai_prefs(conn, store, user_id)
     if require_opt_in and not prefs.get("opt_in"):

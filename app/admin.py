@@ -799,6 +799,32 @@ def cmd_disable_user(args: argparse.Namespace, settings: Settings, out: TextIO) 
     return EXIT_OK
 
 
+def cmd_reset_test_accounts(args: argparse.Namespace, settings: Settings, out: TextIO) -> int:
+    """Server administration → Reset test accounts, from the command line (design note 26): delete everything ``tester`` and
+    ``tester-helper`` made and make both again (Sam's sample data, the Care team link, the password from
+    ``TEST_ACCOUNT_PASSWORD_FILE``). Both are signed out; the feedback stays. Refused while test accounts are off. The
+    server's foods must be in the database (start the server once first)."""
+    from . import test_accounts
+    from .auth import passwords
+    from .settings_store import SettingsStore
+
+    conn = _accounts_db(args, settings)
+    try:
+        passwords.configure(settings.password_hash)
+        store = SettingsStore(env=args.env)
+        try:
+            test_accounts.reset(conn, settings, store, actor_id=None)
+        except test_accounts.ResetRefused as exc:
+            conn.rollback()
+            raise CliError(str(exc)) from None
+        state = test_accounts.status(conn, settings, store)
+    finally:
+        conn.close()
+    names = ", ".join(a["username"] for a in state["accounts"]) or "none"
+    print(f"test accounts reset: {names}. They start again from the sample data; their devices were signed out.", file=out)
+    return EXIT_OK
+
+
 def cmd_remove_two_step(args: argparse.Namespace, settings: Settings, out: TextIO) -> int:
     """Turn off one person's two-step sign-in (design note 17 §2), for someone who has lost both the phone and the recovery
     codes, including the only admin. They then sign in with the password alone and can turn it on again. Audited
@@ -982,6 +1008,9 @@ def build_parser() -> argparse.ArgumentParser:
     p = sub.add_parser("disable-user", help="disable an account and sign out its devices (not the only admin)")
     p.add_argument("username")
     p.set_defaults(func=cmd_disable_user)
+
+    p = sub.add_parser("reset-test-accounts", help="start tester and tester-helper again from the sample data (TEST_ACCOUNT_ENABLED)")
+    p.set_defaults(func=cmd_reset_test_accounts)
 
     p = sub.add_parser("remove-two-step", help="turn off one account's two-step sign-in (lost phone and recovery codes)")
     p.add_argument("username")

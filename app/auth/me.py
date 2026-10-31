@@ -35,6 +35,8 @@ from .throttle import HARD_STOP, REAUTH_MAX_FAILURES
 router = APIRouter(prefix="/api/me", tags=["me"], dependencies=[Depends(current_user)])
 
 USAGE_DAYS = 30
+TEST_ACCOUNT_PASSWORD = ("This is a test account, shared by the testers, so its password stays the one the person who runs the "
+                         "server gave you.")
 
 
 # --------------------------------------------------------------------------- #
@@ -93,6 +95,8 @@ def change_password(body: PasswordChangeBody, request: Request, response: Respon
     ctx = auth_context(request)
     if ctx.settings.auth_mode != "local" or user.auth_source != "local":
         raise HTTPException(status_code=404, detail="Not Found")
+    if user.is_test_account:  # one password for every tester, from TEST_ACCOUNT_PASSWORD_FILE (design note 26)
+        raise ApiProblem(409, TEST_ACCOUNT_PASSWORD)
     check_own_password(request, conn, ctx, user, body.current_password.get_secret_value())
     new = body.new_password.get_secret_value()
     try:
@@ -121,6 +125,8 @@ def delete_me(request: Request, user: CurrentUser, body: DeleteMeBody = Body(...
             409,
             "This server runs without sign-in (AUTH_MODE=none), so there is no personal account to delete.",
         )
+    if user.is_test_account:
+        raise ApiProblem(409, "This is a test account, shared by the testers. The person who runs the server can reset it instead.")
     if body.confirm != "DELETE":
         raise ApiProblem(400, 'Type DELETE to confirm.', field="confirm")
     if ctx.settings.auth_mode == "local":

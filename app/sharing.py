@@ -256,7 +256,8 @@ def _today() -> str:
 
 _PEOPLE = """
 SELECT s.*, o.username AS owner_username, o.display_name AS owner_display, o.status AS owner_status,
-       g.username AS grantee_username, g.display_name AS grantee_display, g.status AS grantee_status
+       g.username AS grantee_username, g.display_name AS grantee_display, g.status AS grantee_status,
+       o.is_test_account AS owner_test, g.is_test_account AS grantee_test
 FROM shares s JOIN users o ON o.id = s.owner_user_id LEFT JOIN users g ON g.id = s.grantee_user_id
 """
 
@@ -281,9 +282,18 @@ def person_item(row: sqlite3.Row) -> dict[str, Any]:
 
 
 _INVITES = """
-SELECT i.*, o.username AS owner_username, o.display_name AS owner_display, o.status AS owner_status
+SELECT i.*, o.username AS owner_username, o.display_name AS owner_display, o.status AS owner_status,
+       o.is_test_account AS owner_test
 FROM care_invites i JOIN users o ON o.id = i.owner_user_id
 """
+
+
+def _same_kind(row: sqlite3.Row, user: User | None = None) -> bool:
+    """Test accounts are on a Care team only with test accounts, never with a real account, either way (design note 26). Compares
+    the row's owner with its grantee, or with ``user`` (the grantee or invitee asking)."""
+    owner = bool(row["owner_test"])
+    other = bool(user.is_test_account) if user is not None else bool(row["grantee_test"])
+    return owner == other
 
 
 def sent_invite_item(row: sqlite3.Row) -> dict[str, Any]:
@@ -355,6 +365,8 @@ def _find_code(conn: sqlite3.Connection, request: Request, user: User, raw: str)
                        (m.group(1), clock.now_iso())).fetchone()
     if row is None or row["owner_status"] != "active" or not hmac.compare_digest(bytes(row["verifier_hash"]), _sha(m.group(2))):
         raise ApiProblem(404, BAD_LINK)
+    if not _same_kind(row, user):  # a test account's link for a real account, or the other way round (design note 26)
+        raise ApiProblem(404, BAD_LINK)
     if int(row["owner_user_id"]) == user.id:
         raise ApiProblem(400, OWN_LINK)
     return row
@@ -374,8 +386,8 @@ def list_my_shares(request: Request, user: CurrentUser, conn: sqlite3.Connection
             raise HTTPException(status_code=404, detail="Not Found")
         return {"enabled": False, "areas": list(AREAS), "roles": list(ROLES), "max": MAX_SHARES, "sharing": [], "codes": [], "invites": []}
     expire(conn)
-    sharing = conn.execute(_PEOPLE + " WHERE s.owner_user_id = ? AND s.accepted_at IS NOT NULL AND s.ended_at IS NULL "
-                                     "ORDER BY s.accepted_at, s.id", (user.id,)).fetchall()
+    sharing = [r for r in conn.execute(_PEOPLE + " WHERE s.owner_user_id = ? AND s.accepted_at IS NOT NULL AND s.ended_at IS NULL "
+                                                 "ORDER BY s.accepted_at, s.id", (user.id,)).fetchall() if _same_kind(r)]
     codes = conn.execute(_PEOPLE + " WHERE s.owner_user_id = ? AND s.accepted_at IS NULL AND s.ended_at IS NULL AND s.expires_at > ? "
                                    "ORDER BY s.created_at, s.id", (user.id, clock.now_iso())).fetchall()
     return {"enabled": True, "areas": list(AREAS), "roles": list(ROLES), "max": MAX_SHARES, "sharing": [sharing_item(r) for r in sharing],
@@ -442,7 +454,9 @@ def invite_by_username(body: CareInviteCreate, request: Request, user: RecentUse
     norm = normalize_username(body.username)
     if not norm:
         raise ApiProblem(400, "Type the user name of the person you want to invite.")
-    found = conn.execute("SELECT id FROM users WHERE username_norm = ? AND status = 'active'", (norm,)).fetchone()
+    found = conn.execute("SELECT id, is_test_account FROM users WHERE username_norm = ? AND status = 'active'", (norm,)).fetchone()
+    if found is not None and bool(found["is_test_account"]) != user.is_test_account:
+        found = None  # a test account and a real account: the same answer as a name nobody has (design note 26)
     invitee = int(found["id"]) if found is not None else None
     if invitee == user.id:
         raise ApiProblem(400, OWN_NAME)
@@ -518,13 +532,14 @@ def list_shared_with_me(request: Request, user: CurrentUser, conn: sqlite3.Conne
                                   "AND o.status = 'active' ORDER BY s.accepted_at, s.id", (user.id,)).fetchall()
     invites = conn.execute(_INVITES + " WHERE i.invitee_user_id = ? AND i.answer IS NULL AND i.expires_at > ? AND o.status = 'active' "
                                       "ORDER BY i.created_at, i.id", (user.id, clock.now_iso())).fetchall()
-    return {"people": [person_item(r) for r in rows], "invites": [invite_for_me_item(r) for r in invites]}
+    return {"people": [person_item(r) for r in rows if _same_kind(r, user)],
+            "invites": [invite_for_me_item(r) for r in invites if _same_kind(r, user)]}
 
 
 def _open_invite(conn: sqlite3.Connection, invite_id: int, user: User) -> sqlite3.Row:
     row = conn.execute(_INVITES + " WHERE i.id = ? AND i.invitee_user_id = ? AND i.answer IS NULL AND i.expires_at > ?",
                        (invite_id, user.id, clock.now_iso())).fetchone()
-    if row is None or row["owner_status"] != "active":
+    if row is None or row["owner_status"] != "active" or not _same_kind(row, user):
         raise ApiProblem(404, NO_INVITE)
     return row
 
@@ -648,7 +663,7 @@ def _check_share(share_id: int, request: Request, user: User, conn: sqlite3.Conn
     _available(request, conn)
     row = conn.execute(_PEOPLE + " WHERE s.id = ? AND s.grantee_user_id = ? AND s.accepted_at IS NOT NULL AND s.ended_at IS NULL",
                        (share_id, user.id)).fetchone()
-    if row is None or row["owner_status"] != "active" or (area is not None and area not in _areas(row["areas"])):
+    if row is None or row["owner_status"] != "active" or (area is not None and area not in _areas(row["areas"])) or not _same_kind(row):
         raise ApiProblem(404, NOT_SHARED)
     if role is not None and _role(row) != role:
         raise ApiProblem(404, NOT_SHARED)

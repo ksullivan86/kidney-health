@@ -80,7 +80,7 @@ class Meta(BaseModel):
 
 def ai_flags(request: Request, conn: sqlite3.Connection, user: Any) -> tuple[bool, dict[str, bool]]:
     """``(available, features)`` of the AI status for this person; nothing is available while ``ai.enabled`` is off."""
-    if not ai_routes.ai_state(request).store.get(conn, "ai.enabled"):
+    if not ai_routes.ai_on_for(request, conn, user):  # also off for a test account unless the admin allows it (design note 26)
         return False, {}
     view = ai_routes.status_view(request, conn, user)
     return bool(view["available"]), {name: bool(on) for name, on in view["features"].items()}

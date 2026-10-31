@@ -960,3 +960,33 @@ register(
         "or been revoked work again.",
     ),
 )
+# --------------------------------------------------------------------------- #
+# Test accounts (design note 26; read by app/test_accounts.py). The one password is env only (TEST_ACCOUNT_PASSWORD_FILE in
+# app/config.py), never a setting: it is a secret, and the API never returns a secret.
+# --------------------------------------------------------------------------- #
+
+register(
+    SettingDef(
+        key="test_accounts.enabled",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="TEST_ACCOUNT_ENABLED",
+        label="Test accounts: let testers sign in as tester and tester-helper",
+        help="Off by default. When on, the server makes two accounts if they are missing: tester, who starts with the sample "
+        "person Sam's food log, lab results and weights, and tester-helper, a Care helper on tester's Care team. Both use the "
+        "password in the file TEST_ACCOUNT_PASSWORD_FILE. They are never admins, can only be on a Care team with each other, "
+        "and get a Send feedback button. Turned off, they are disabled and signed out (not deleted); turned on again, they work "
+        "again. Turn on the Care team too, to test it.",
+    ),
+    SettingDef(
+        key="test_accounts.ai",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="TEST_ACCOUNT_AI",
+        label="Let the test accounts use the server's AI",
+        help="Off by default: the AI features are off for test accounts, whatever else is set. When on, they work for test "
+        "accounts as for everyone else (AI must also be on).",
+    ),
+)

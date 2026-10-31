@@ -6,6 +6,7 @@ profile or keys (note 07 §0.7). Every write needs a password entry within ``REA
 """
 from __future__ import annotations
 
+import logging
 import sqlite3
 from datetime import timedelta
 from pathlib import Path
@@ -13,7 +14,7 @@ from typing import Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Query, Request, Response
 
-from .. import account, credentials, sharing
+from .. import account, brand, credentials, sharing, test_accounts
 from ..audit import audit, list_events
 from ..crypto import secret_report
 from ..db import database_file, get_db, get_meta, get_schema_version, utcnow
@@ -35,9 +36,11 @@ from .proxy import clean_subject
 from .routes import start_session
 from .schemas import InviteCreate, KeyPut, UserCreate, UserDeleteBody, UserPatch
 
+log = logging.getLogger(f"{brand.LOGGER_NAME}.admin")
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
 RESET_LINK_HOURS = 24
+TEST_PASSWORD_ONLY = "Test accounts use the password in TEST_ACCOUNT_PASSWORD_FILE. Reset test accounts puts it back."
 PRE_V3_BACKUP_DAYS = 30
 
 
@@ -159,6 +162,8 @@ def update_account(user_id: int, body: UserPatch, request: Request, response: Re
     data = body.model_dump(exclude_unset=True)
 
     if data.get("role") is not None and data["role"] != row["role"]:
+        if data["role"] == "admin" and row["is_test_account"]:
+            raise ApiProblem(409, "A test account can never be an admin.")
         if data["role"] != "admin" and would_remove_last_admin(conn, uid):
             raise ApiProblem(409, "This is the only admin. Make someone else an admin first.")
         conn.execute("UPDATE users SET role = ?, updated_at = ? WHERE id = ?", (data["role"], utcnow(), uid))
@@ -184,6 +189,8 @@ def update_account(user_id: int, body: UserPatch, request: Request, response: Re
         else:  # active
             if row["status"] != "disabled":
                 raise ApiProblem(409, "Only a disabled account can be enabled here. A locked or new account needs a reset link.")
+            if row["is_test_account"] and not ctx.store.get(conn, test_accounts.SWITCH):
+                raise ApiProblem(409, "Test accounts are off. Turn them on in Server settings → Test accounts.")
             conn.execute("UPDATE users SET status = 'active', updated_at = ? WHERE id = ?", (utcnow(), uid))
             audit(conn, admin.id, "user.enabled", "user", uid, ip=ip)
 
@@ -194,6 +201,8 @@ def update_account(user_id: int, body: UserPatch, request: Request, response: Re
     if data.get("must_change_password") and not row["must_change_password"]:
         if row["auth_source"] != "local":
             raise ApiProblem(409, "This account signs in through the proxy and has no password here.")
+        if row["is_test_account"]:
+            raise ApiProblem(409, TEST_PASSWORD_ONLY)
         conn.execute("UPDATE users SET must_change_password = 1, updated_at = ? WHERE id = ?", (utcnow(), uid))
         audit(conn, admin.id, "user.must_change_password", "user", uid, ip=ip)
 
@@ -232,6 +241,8 @@ def issue_reset_link(user_id: int, request: Request, admin: RecentAdmin, conn: s
         raise ApiProblem(409, "This account signs in through the proxy and has no password here.")
     if row["status"] == "disabled":
         raise ApiProblem(409, "Enable the account first.")
+    if row["is_test_account"]:
+        raise ApiProblem(409, TEST_PASSWORD_ONLY)
     tokens.void_reset_links(conn, int(row["id"]))
     token, token_row = tokens.create_token(
         conn, tokens.RESET, ttl=timedelta(hours=RESET_LINK_HOURS), user_id=int(row["id"]), created_by=admin.id
@@ -406,6 +417,12 @@ def update_instance_settings(request: Request, admin: RecentAdmin, body: dict[st
     for key, old, new in changed:
         audit(conn, admin.id, "settings.changed", "setting", key, ip=ip, key=key, old=old, new=new)
     conn.commit()
+    if any(key == test_accounts.SWITCH for key, _, _ in changed):  # design note 26: make, enable or disable them now
+        try:
+            test_accounts.sync(conn, ctx.settings, store, actor_id=admin.id, ip=ip)
+        except Exception:  # the setting is saved; Server administration → Test accounts shows the state
+            conn.rollback()
+            log.exception("test accounts: could not be brought in line with the switch")
     return {"settings": store.admin_view(conn)}
 
 

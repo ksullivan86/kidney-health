@@ -494,9 +494,12 @@ def _sync_role(conn: sqlite3.Connection, ctx: AuthContext, user_id: int, claims:
     found = oidc.groups(claims)
     if not names or found is None:
         return
-    row = conn.execute("SELECT role FROM users WHERE id = ?", (int(user_id),)).fetchone()
+    row = conn.execute("SELECT role, is_test_account FROM users WHERE id = ?", (int(user_id),)).fetchone()
     wanted = "admin" if found & names else "user"
     if row is None or row["role"] == wanted:
+        return
+    if row["is_test_account"]:  # a test account is never an admin, whatever the provider says (design note 26)
+        log.warning("the provider's groups would make test account %s an admin; ignored", user_id)
         return
     if wanted == "user" and would_remove_last_admin(conn, user_id):
         log.warning("the provider's groups would demote the last admin (user %s); the role is kept", user_id)

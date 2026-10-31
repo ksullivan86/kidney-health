@@ -31,6 +31,7 @@ from . import mcp as assistant_mcp  # assistant step 1: POST /mcp, the MCP serve
 from . import data_import  # POST /api/me/import: the person's own export.json (own body limit, MAX_IMPORT_BYTES)
 from . import meta  # design note 14 change 4: GET /api/meta (versions, capabilities, the nutrient registry)
 from . import sharing  # schema step 24: read-only sharing with a caregiver or dietitian (/api/me/shares, /api/shared)
+from . import feedback, test_accounts  # schema step 28: test accounts, Send feedback (/api/feedback, /api/admin/feedback)
 from . import openapi_doc  # design note 14 change 2: stable operation ids, honest errors and security schemes in the OpenAPI document
 from .auth import bootstrap as auth_bootstrap
 from .config import DEFAULT_STATIC_DIR, ConfigError, Settings, load_settings
@@ -96,6 +97,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             except auth_bootstrap.StartupError as exc:
                 logger.error("start-up stopped: %s", exc)
                 raise
+            try:  # design note 26: make, enable or disable the test accounts; a problem is logged, never stops the start
+                test_accounts.sync(conn, settings, store)
+            except Exception:
+                conn.rollback()
+                logger.exception("test accounts: could not be brought in line with TEST_ACCOUNT_ENABLED")
         finally:
             conn.close()
         logger.info("database %s ready; builtin foods: %s", settings.db_path, result.get("status"))
@@ -146,6 +152,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(meta.router)
     app.include_router(sharing.me_router)
     app.include_router(sharing.shared_router)
+    app.include_router(feedback.router)
+    app.include_router(feedback.admin_router)
 
     @app.get("/healthz")
     def healthz(conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:

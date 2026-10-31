@@ -8,6 +8,7 @@ setup and registration. Every unsafe request also needs ``X-Requested-With: kidn
 """
 from __future__ import annotations
 
+import logging
 import sqlite3
 from datetime import timedelta
 from typing import Any
@@ -15,7 +16,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from starlette.concurrency import run_in_threadpool
 
-from .. import settings_registry
+from .. import brand, settings_registry
 from ..audit import audit
 from ..db import get_db
 from . import api_tokens, clock, passwords, sessions, tokens, totp
@@ -54,6 +55,7 @@ from .proxy import trusted_subject
 from .schemas import LinkInfoBody, LoginBody, ReauthBody, RegisterBody, ResetBody, SetupBody
 from .throttle import HARD_STOP, REAUTH_MAX_FAILURES, ip_key
 
+log = logging.getLogger(f"{brand.LOGGER_NAME}.auth")
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
 LOGIN_FAILED = "Username or password is incorrect"
@@ -365,7 +367,19 @@ def setup(body: SetupBody, request: Request, response: Response, conn: sqlite3.C
         start_session(request, response, conn, ctx, user_id)
     conn.commit()
     ctx.setup_complete = True
+    _sync_test_accounts(conn, ctx)
     return {"user": me_dict(load_user(conn, user_id))}
+
+
+def _sync_test_accounts(conn: sqlite3.Connection, ctx: AuthContext) -> None:
+    """Make the test accounts now that the first admin exists, when TEST_ACCOUNT_ENABLED is on (design note 26)."""
+    from .. import test_accounts
+
+    try:
+        test_accounts.sync(conn, ctx.settings, ctx.store)
+    except Exception:  # never fails the setup; the reason is logged
+        conn.rollback()
+        log.exception("test accounts: could not be made after the first-run setup")
 
 
 # --------------------------------------------------------------------------- #
