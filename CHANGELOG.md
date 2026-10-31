@@ -5,10 +5,19 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
-## Unreleased
+## 0.19.0 — 2026-10-31
 
-Your own list app and recipe import (design note 30, schema step 32). Both are off until the server owner turns them on, except
-pasting a recipe's ingredients, which needs no network.
+Your own list app and recipe import (design note 30, schema step 32).
+
+### Upgrading from 0.18 (read this first)
+
+* **Back up first** (`python -m app.admin backup`). Schema step 32 runs at the first start and adds one table, `list_sync`.
+* Change the image tag to `:0.19`. The shipped deployment files already say `:0.19`.
+* Nothing new is switched on: `LIST_SYNC_ENABLED` and `RECIPE_IMPORT_ENABLED` are off until you set them.
+
+### Your own list app and recipe import
+
+Both are off until the server owner turns them on, except pasting a recipe's ingredients, which needs no network.
 
 * **Send the shopping list to your own Grocy, KitchenOwl or Mealie.** In Settings → Shopping list app, each person adds their list
   app's address and their key, presses **Test** and picks a list. Plan → Shopping list → **Send to Grocy** (or KitchenOwl,
@@ -23,8 +32,12 @@ pasting a recipe's ingredients, which needs no network.
   **Save recipe**. One serving's numbers and kidney warnings are shown with a plain sentence that they are estimates: sites rarely
   list potassium or phosphorus, and cooking changes them. An amount the app cannot work out stays empty for you to fill in,
   never 0. See [docs/recipe-import.md](docs/recipe-import.md).
-* Schema step 32 adds one table, `list_sync`. Recipe import adds none.
 * The demo shows a sample Grocy and a sample recipe page, and never leaves the page.
+* The security review's fixes are in: one deadline for each whole outside request, list sync never through an outbound
+  proxy, and safe handling of odd pages.
+
+### Also
+
 * **Releases tag themselves.** When a release is merged, GitHub now creates the release, its tag and the image on its own.
   Nobody has to push a version tag by hand any more (`.github/workflows/tag-release.yml`).
 

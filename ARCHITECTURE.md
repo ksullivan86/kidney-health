@@ -1091,13 +1091,13 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
 
-**v0.19 work (2026-10-31, not released yet; the version is still 0.18.0).** Your own list app and recipe import (note 30, schema
+**Status (2026-10-31): v0.19.0 is prepared.** Your own list app and recipe import (note 30, schema
 step 32): send the Plan's shopping list to a person's own Grocy, KitchenOwl or Mealie (`/api/list-sync`, off until
 `LIST_SYNC_ENABLED`; home addresses only through `LIST_SYNC_ALLOWED_HOSTS`), and import a recipe from pasted ingredients (always)
 or a web page the server reads (`/api/recipe-import`, pages off until `RECIPE_IMPORT_ENABLED`); see "Your own list app" and
 "Recipe import" below; CHANGELOG.md "Unreleased".
 
-**Status (2026-10-31): v0.18.0 is prepared.** The full Care team (note 29, schema step 31): per-person switches with Viewer, Care
+**v0.18.0 (2026-10-31)** adds the full Care team (note 29, schema step 31): per-person switches with Viewer, Care
 helper and Caregiver as presets, a Caregiver who logs eaten food, saved meals for helpers, and meal suggestions; see "The full Care
 team" below; CHANGELOG.md 0.18.0. **v0.17.0 (2026-10-31)** adds Whoop, Activity and recovery and the active-day calorie extra (note 28, schema step 30, `/api/activity`, off until `DEVICES_ENABLED` and
 `WHOOP_ENABLED`; the active-day calorie extra off until the person turns it on); see "Activity and recovery" below; CHANGELOG.md
@@ -4866,7 +4866,7 @@ Signed in only (`current_user`; an anonymous caller gets the generic `401`, so a
 (`no-store` like every `/api` answer). The answer:
 
 ```json
-{"app_version": "0.18.0", "api_version": 1,
+{"app_version": "0.19.0", "api_version": 1,
  "capabilities": {"ai": false, "ai_next_meal": false, "ai_parse_meal": false, "ai_label": false, "ai_plate": false, "ai_lab_report": false,
                   "chat": false, "voice": false, "assistant": false, "push": false,
                   "barcode": false, "barcode_off": false, "barcode_usda": false, "handbook": false},

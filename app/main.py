@@ -49,7 +49,7 @@ from .settings_store import SettingsStore, default_store
 
 logger = logging.getLogger(brand.LOGGER_NAME)
 
-APP_VERSION = "0.18.0"
+APP_VERSION = "0.19.0"
 STATIC_DIR = DEFAULT_STATIC_DIR
 
 
