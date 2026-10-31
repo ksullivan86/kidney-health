@@ -358,8 +358,8 @@ class ChatClient:
         shield = privacy_filter.shield_for(cfg)  # one request's labels, in memory only; None for the local AI
         while True:
             if shield is not None:
-                try:
-                    sent = shield.filter_body(current)
+                try:  # plain CPU work, kept off the event loop (a long Ask conversation is tens of kilobytes)
+                    sent = await anyio.to_thread.run_sync(shield.filter_body, current)
                 except privacy_filter.FilterLimit:
                     result.status, result.error = "error", "privacy_filter"
                     break
