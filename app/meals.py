@@ -15,7 +15,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from .auth.deps import CurrentUser, current_user
 from .db import get_db, utcnow
 from .foods import fetch_food, fetch_user_food, get_food_or_404, parse_flags, raw_nutrients
-from .log import fetch_entries, fetch_entry, insert_entry, parse_range, row_to_entry
+from .log import fetch_entries, fetch_entry, insert_entry, parse_range, resolve_purpose, row_to_entry
 from .models import (
     MealApply,
     MealApplyResult,
@@ -269,13 +269,20 @@ def delete_meal(meal_id: int, user: CurrentUser, conn: sqlite3.Connection = Depe
 @router.post("/{meal_id}/apply", response_model=MealApplyResult, status_code=201)
 def apply_meal(meal_id: int, body: MealApply, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """Log every item of the template on ``date``/``meal`` with the given status, scaled."""
-    row = get_template_or_404(conn, user.id, meal_id)
+    return apply_template(conn, user.id, meal_id, body)
+
+
+def apply_template(conn: sqlite3.Connection, user_id: int, meal_id: int, body: MealApply, *,
+                   added_by: int | None = None) -> dict[str, Any]:
+    """The work of ``POST /api/meals/{id}/apply`` for ``user_id``'s saved meal; ``added_by`` is the helper who applied it for
+    the person (``app/sharing.py``, design note 29 §4). Commits."""
+    row = get_template_or_404(conn, user_id, meal_id)
     items = parse_items(row["items_json"])
     if not items:
         raise HTTPException(status_code=400, detail="this saved meal has no items")
     created: list[int] = []
     for item in items:
-        food = fetch_user_food(conn, user.id, item["food_id"])
+        food = fetch_user_food(conn, user_id, item["food_id"])
         if food is None:
             raise HTTPException(
                 status_code=404,
@@ -283,12 +290,14 @@ def apply_meal(meal_id: int, body: MealApply, user: CurrentUser, conn: sqlite3.C
             )
         created.append(
             insert_entry(
-                conn, user_id=user.id, date=body.date, meal=body.meal, food=food, servings=item["servings"] * body.scale,
-                grams=None, note=None, status=body.status,
+                conn, user_id=user_id, date=body.date, meal=body.meal, food=food, servings=item["servings"] * body.scale,
+                grams=None, note=None, status=body.status, added_by=added_by,
+                # A food for treating a low stays marked as one, so nobody else can change it (note 29 §3).
+                purpose=resolve_purpose(food, None),
             )
         )
     conn.commit()
-    return {"entries": [row_to_entry(fetch_entry(conn, user.id, entry_id)) for entry_id in created]}
+    return {"entries": [row_to_entry(fetch_entry(conn, user_id, entry_id)) for entry_id in created]}
 
 
 # --------------------------------------------------------------------------- #

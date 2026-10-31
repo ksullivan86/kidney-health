@@ -1,6 +1,7 @@
-/* Kidney Diet Log — the Care team (design notes 19 and 25; app/sharing.py).
+/* Kidney Diet Log — the Care team (design notes 19, 25 and 29; app/sharing.py).
 
-   * KH.sharing.block(): Settings → Care team. Invites for you (Accept, Decline), your Care team (the role, Remove), what waits
+   * KH.sharing.block(): Settings → Care team. Invites for you (Accept, Decline), your Care team (the role, What they may do with
+     a switch for each thing they may see and do, saved at once, and Remove), what waits
      for an answer (user name invites and links nobody has used, Cancel), Add someone (by user name, or a link shown once with
      Copy link), and the Care teams you are on (Open, Trends, Plan meals for a Care helper, Leave).
    * A link #/share/<code> is taken out of the address bar into memory when the page opens (so a sign-in screen does not lose
@@ -21,16 +22,29 @@
   const AREAS = ['food', 'labs', 'body', 'symptoms', 'activity'];
   const AREA_LABEL = { food: 'food log', labs: 'lab results', body: 'weight and blood pressure', symptoms: 'symptoms',
     activity: 'activity and recovery' };
-  const ROLES = ['viewer', 'care_helper'];
-  const ROLE_LABEL = { viewer: 'Viewer', care_helper: 'Care helper' };
+  const ROLES = ['viewer', 'care_helper', 'caregiver'];
+  const ROLE_LABEL = { viewer: 'Viewer', care_helper: 'Care helper', caregiver: 'Caregiver', custom: 'Custom' };
   const ROLE_HINT = { viewer: 'can look at what you choose, and never change anything',
-    care_helper: 'can also plan your meals and use your shopping list. They never change what you ate, your targets or your profile' };
+    care_helper: 'can also plan your meals and use your shopping list. They never change what you ate, your targets or your profile',
+    caregiver: 'can also log food you ate. They never change your targets, labs, profile or medicines, or a low treatment' };
+  // The four "Do" switches of a share (design note 29 §2). A role is a preset over them; any other mix shows as Custom.
+  const SWITCHES = ['may_plan', 'may_log', 'may_use_saved_meals', 'may_suggest'];
+  const PRESETS = {
+    viewer: { may_plan: false, may_log: false, may_use_saved_meals: false, may_suggest: false },
+    care_helper: { may_plan: true, may_log: false, may_use_saved_meals: false, may_suggest: false },
+    caregiver: { may_plan: true, may_log: true, may_use_saved_meals: false, may_suggest: false },
+  };
+  const SWITCH_LABEL = { may_plan: 'Plan my meals and use my shopping list', may_log: 'Log food I ate', may_use_saved_meals: 'Use my saved meals',
+    may_suggest: 'Suggest meals for me to add' };
+  const SWITCH_NOUN = { may_plan: 'planning', may_log: 'logging food', may_use_saved_meals: 'saved meals', may_suggest: 'suggestions' };
+  const NEEDS_FOOD = 'Planning, logging, saved meals and suggestions need your food log.';
   // How long a share lasts once accepted (POST /api/me/shares `days`; the server takes 1 to 365).
   const DAY_CHOICES = [['', 'Until I stop it'], ['7', '1 week'], ['30', '30 days'], ['90', '90 days'], ['365', '1 year']];
   const LINK_RE = /^#\/share\/([0-9a-f]{16}\.[A-Za-z0-9_-]{43})$/;
   const INTRO = 'Your Care team is family, a caregiver or a dietitian with an account on this server. A Viewer can look at the '
-    + 'parts of your log you choose. A Care helper can also plan your meals and use your shopping list. You can change this or '
-    + 'stop it at any time.';
+    + 'parts of your log you choose. A Care helper can also plan your meals and use your shopping list. A Caregiver can also log '
+    + 'food you ate. You choose what each person may see and do, and you can change it or stop it at any time. Nobody on your '
+    + 'Care team can change your targets, labs, profile or medicines, or a low treatment.';
   const OFF = 'The Care team is off on this server. Your admin can turn it on.';
   const OFF_ADMIN = 'The Care team is off on this server. You can turn it on in Server administration → Server settings → Care team, '
     + 'or with SHARING_ENABLED=true.';
@@ -45,6 +59,7 @@
     invite: (username, areas, days, role) => request('POST', '/api/me/shares/invite', { username, areas, days: days || null, role }),
     cancelInvite: (id) => request('DELETE', `/api/me/shares/invites/${id}`),
     role: (id, role) => request('PUT', `/api/me/shares/${id}/role`, { role }),
+    switches: (id, changes) => request('PUT', `/api/me/shares/${id}/switches`, changes),
     end: (id) => request('DELETE', `/api/me/shares/${id}`),
     people: () => request('GET', '/api/shared'),
     stop: (id) => request('DELETE', `/api/shared/${id}`),
@@ -94,20 +109,38 @@
   function lastsText(days) { return days ? `for ${days} ${days === 1 ? 'day' : 'days'}` : 'until one of you stops it'; }
   function untilText(until) { return until ? `until ${fmtDay(until)}` : null; }
   function roleText(role) { return ROLE_LABEL[role] || ROLE_LABEL.viewer; }
-  /** A Care helper's changes on the latest day: "changed your plan today: 3 added, 1 removed" (null when none). */
+  /** sharing.role_of: the role these switches match, or "custom". */
+  function roleOf(sw) {
+    return ROLES.find((r) => SWITCHES.every((k) => PRESETS[r][k] === !!(sw && sw[k]))) || 'custom';
+  }
+  /** What a share lets someone do, in words: "may: planning, logging food and suggestions" (null for a Viewer). */
+  function doText(s) {
+    const names = SWITCHES.filter((k) => s && s[k]).map((k) => SWITCH_NOUN[k]);
+    if (!names.length) return null;
+    return `may: ${names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}`}`;
+  }
+  /** Whether turning on `switches` (merged over the share) needs the food log added first. */
+  function needsFood(s, switches) {
+    const merged = { ...s, ...switches };
+    return SWITCHES.some((k) => merged[k]) && !(s.areas || []).includes('food');
+  }
+  /** A helper's changes on the latest day: "changed your plan today: 3 added, 1 removed; logged 2 foods" (null when none). */
   function changesText(c, today) {
     if (!c) return null;
+    const when = String(c.day) === today ? 'today' : `on ${fmtDay(c.day)}`;
     const parts = [['added', c.added], ['changed', c.changed], ['removed', c.removed]].filter(([, n]) => n > 0).map(([w, n]) => `${n} ${w}`);
-    if (!parts.length) return null;
-    return `changed your plan ${String(c.day) === today ? 'today' : `on ${fmtDay(c.day)}`}: ${parts.join(', ')}`;
+    const out = [];
+    if (parts.length) out.push(`changed your plan ${when}: ${parts.join(', ')}`);
+    if (c.logged > 0) out.push(`logged ${c.logged} ${c.logged === 1 ? 'food' : 'foods'} you ate ${when}`);
+    return out.length ? out.join('; ') : null;
   }
   function sharingLine(s, today) {
-    const parts = [roleText(s.role), areasText(s.areas), `since ${fmtDay(s.since)}`, untilText(s.until), lastLooked(s.last_viewed_at, today),
+    const parts = [roleText(s.role), areasText(s.areas), doText(s), `since ${fmtDay(s.since)}`, untilText(s.until), lastLooked(s.last_viewed_at, today),
       changesText(s.helper_changes, today)].filter(Boolean);
     if (s.active === false) parts.push('their account is turned off');
     return parts.join(' · ');
   }
-  function personLine(p) { return [roleText(p.role), areasText(p.areas), `since ${fmtDay(p.since)}`, untilText(p.until)].filter(Boolean).join(' · '); }
+  function personLine(p) { return [roleText(p.role), areasText(p.areas), doText(p), `since ${fmtDay(p.since)}`, untilText(p.until)].filter(Boolean).join(' · '); }
   function whoText(p) { return p.name && p.name !== p.username ? `${p.name} (${p.username})` : p.username || p.name || ''; }
   /** What joining someone's Care team means, for a link or an invite. */
   function questionText(info) {
@@ -115,8 +148,11 @@
     const lasts = info.days ? ` It ends by itself after ${info.days} ${info.days === 1 ? 'day' : 'days'}.` : '';
     const what = info.role === 'care_helper'
       ? 'as a Care helper. You can see this and plan their meals and use their shopping list, but not change what they ate, their targets or their profile. '
-      : 'You can look, but not change anything. ';
-    return `${who} wants to add you to their Care team and share their ${areasText(info.areas)} with you${info.role === 'care_helper' ? ', ' : '. '}${what}`
+      : info.role === 'caregiver'
+        ? 'as a Caregiver. You can see this, plan their meals, use their shopping list and log food they ate, but not change their targets, their profile or a low treatment. '
+        : 'You can look, but not change anything. ';
+    const helper = info.role === 'care_helper' || info.role === 'caregiver';
+    return `${who} wants to add you to their Care team and share their ${areasText(info.areas)} with you${helper ? ', ' : '. '}${what}`
       + `${who} can stop this at any time, and so can you.${lasts}`;
   }
   /** One entry of a shared day as a line: "Banana, 1 serving (planned, added by Sam)". */
@@ -206,8 +242,8 @@
           onConfirm: async () => { await A.end(s.id); toast(`${s.name || s.username} is no longer on your Care team`, 'ok'); await load(body, null, '#set-care-invite-name'); return true; },
         }));
         actions.append(stop);
-        ul.append(h('li', { class: 'device' }, h('div', { class: 'device-main' }, h('span', { class: 'row-title' }, whoText(s)),
-          h('span', { class: 'row-sub' }, sharingLine(s, today()))), actions));
+        ul.append(h('li', { class: 'device care-member' }, h('div', { class: 'device-main' }, h('span', { class: 'row-title' }, whoText(s)),
+          h('span', { class: 'row-sub' }, sharingLine(s, today()))), actions, switchesBox(body, s)));
       }
       body.append(ul);
     }
@@ -260,8 +296,9 @@
         const actions = h('div', { class: 'token-actions' });
         const open = button('Open', 'primary', () => openShared(p), { 'aria-label': `Open what ${whoText(p)} shares with you` });
         const trends = button('Trends', 'secondary', () => openTrends(p), { 'aria-label': `Open ${whoText(p)}'s trends` });
-        const plan = p.role === 'care_helper' && KH.carePlan
-          ? button('Plan meals', 'secondary', () => KH.carePlan.open(p), { 'aria-label': `Plan meals for ${whoText(p)}` }) : null;
+        const helpLabel = p.may_plan ? 'Plan meals' : p.may_log ? 'Log food' : 'Suggest a meal';
+        const plan = KH.carePlan && KH.carePlan.canHelp(p)
+          ? button(helpLabel, 'secondary', () => KH.carePlan.open(p), { 'aria-label': `${helpLabel} for ${whoText(p)}` }) : null;
         const stop = h('button', { class: 'btn secondary', type: 'button', 'aria-label': `Leave ${whoText(p)}'s Care team` }, 'Leave');
         stop.addEventListener('click', () => confirm.inline(actions, stop, {
           message: `Leave ${whoText(p)}'s Care team? They would have to invite you again.`,
@@ -298,10 +335,12 @@
     return box;
   }
 
-  /** The role of someone on your Care team, changed in place. A Care helper always sees the food log, so it is added (said first). */
+  /** The role of someone on your Care team, changed in place. A role is a preset of the switches; "Custom" shows when the switches
+      match none and is never chosen. A Care helper or Caregiver always sees the food log, so it is added (said first). */
   function roleSelect(body, s, actions) {
     const id = `set-care-role-${s.id}`;
-    const select = h('select', { id, 'aria-label': `Role of ${whoText(s)}` }, ...ROLES.map((r) => h('option', { value: r }, ROLE_LABEL[r])));
+    const select = h('select', { id, 'aria-label': `Role of ${whoText(s)}` }, ...ROLES.map((r) => h('option', { value: r }, ROLE_LABEL[r])),
+      h('option', { value: 'custom', disabled: true, hidden: s.role !== 'custom' || null }, ROLE_LABEL.custom));
     select.value = s.role || 'viewer';
     const apply = async (role) => {
       select.disabled = true;
@@ -314,10 +353,10 @@
     };
     select.addEventListener('change', () => {
       const role = select.value;
-      if (role === 'care_helper' && !(s.areas || []).includes('food')) {
+      if (role !== 'viewer' && !(s.areas || []).includes('food')) {
         confirm.inline(actions, select, {
-          message: `A Care helper sees your food log so they can plan meals. Share your food log with ${whoText(s)} and make them a Care helper?`,
-          confirmText: 'Make Care helper',
+          message: `A ${ROLE_LABEL[role]} sees your food log so they can help with meals. Share your food log with ${whoText(s)} and make them a ${ROLE_LABEL[role]}?`,
+          confirmText: `Make ${ROLE_LABEL[role]}`,
           onConfirm: () => apply(role),
           onCancel: () => { select.value = s.role || 'viewer'; },
         });
@@ -326,6 +365,61 @@
       apply(role);
     });
     return select;
+  }
+
+  /** What someone on your Care team may see and do: one switch each, saved at once (PUT /api/me/shares/{id}/switches). Turning on
+      a "Do" switch while the food log is not shared asks first, then shares it. */
+  function switchesBox(body, s) {
+    const box = h('details', { class: 'care-switches', id: `set-care-switches-${s.id}` },
+      h('summary', {}, `What ${s.name || s.username} may see and do`));
+    const save = async (changes, focusId) => {
+      try {
+        const got = await A.switches(s.id, changes);
+        toast(`Saved. ${s.name || s.username} is now ${got.role === 'custom' ? 'on a custom set of switches' : `a ${roleText(got.role)}`}.`, 'ok');
+      } catch (err) { if (!err.handled) toastError(err); }
+      await load(body, null, `#${focusId}`);
+      const again = $(`#set-care-switches-${s.id}`, body);
+      if (again) again.open = true;
+    };
+    const row = (id, label, checked, onChange) => {
+      const cb = h('input', { type: 'checkbox', id });
+      cb.checked = !!checked;
+      cb.addEventListener('change', () => onChange(cb));
+      return h('label', { class: 'check', for: id }, cb, h('span', { class: 'check-text' }, label));
+    };
+    const see = AREAS.map((a) => {
+      const id = `set-care-${s.id}-see-${a}`;
+      const locked = a === 'food' && SWITCHES.some((k) => s[k]);
+      const label = row(id, `My ${AREA_LABEL[a]}`, (s.areas || []).includes(a), (cb) => {
+        const areas = AREAS.filter((x) => (x === a ? cb.checked : (s.areas || []).includes(x)));
+        if (!areas.length) { cb.checked = true; toast('Leave at least one thing they can see, or remove them from your Care team.'); return; }
+        save({ areas }, id);
+      });
+      if (locked) { const cb = $('input', label); cb.disabled = true; label.append(h('span', { class: 'hint' }, ` (${NEEDS_FOOD.replace(' need your food log.', ' need it')})`)); }
+      return label;
+    });
+    const doRows = SWITCHES.map((k) => {
+      const id = `set-care-${s.id}-${k.replace(/_/g, '-')}`;
+      const label = row(id, SWITCH_LABEL[k], s[k], (cb) => {
+        const change = { [k]: cb.checked };
+        if (cb.checked && needsFood(s, change)) {
+          confirm.inline(label, cb, {
+            message: `${NEEDS_FOOD} Share your food log with ${whoText(s)}?`,
+            confirmText: 'Share and turn on',
+            tone: 'primary',
+            onConfirm: () => { save(change, id); return true; },
+            onCancel: () => { cb.checked = false; },
+          });
+          return;
+        }
+        save(change, id);
+      });
+      return label;
+    });
+    box.append(h('fieldset', {}, h('legend', {}, 'They may see'), see),
+      h('fieldset', {}, h('legend', {}, 'They may do'), doRows),
+      h('p', { class: 'hint' }, 'Each change is saved at once. Nobody on your Care team can change your targets, labs, profile or medicines, or a low treatment.'));
+    return box;
   }
 
   /** The parts of the form both ways of adding someone use: the role, what they see, how long. `prefix` keeps the ids apart. */
@@ -348,7 +442,7 @@
     const read = (form) => {
       const role = (ROLES.find((r) => $(`#${prefix}-role-${r}`, form).checked)) || 'viewer';
       const areas = AREAS.filter((a) => $(`#${prefix}-${a}`, form).checked);
-      return { role, areas: role === 'care_helper' && !areas.includes('food') ? ['food', ...areas] : areas, days: Number(lasts.value) || null };
+      return { role, areas: role !== 'viewer' && !areas.includes('food') ? ['food', ...areas] : areas, days: Number(lasts.value) || null };
     };
     return { nodes, read };
   }
@@ -569,5 +663,5 @@
   setupSheet();
 
   KH.sharing = { block, reads, renderDay, openShared, openPending, takeLink, areasText, lastLooked, lastsText, sharingLine, personLine, whoText,
-    questionText, entryLine, roleText, changesText, people: A.people, AREAS, AREA_LABEL, ROLES, ROLE_LABEL };
+    questionText, entryLine, roleText, roleOf, doText, needsFood, changesText, people: A.people, AREAS, AREA_LABEL, ROLES, ROLE_LABEL, SWITCHES, PRESETS };
 })();

@@ -1,20 +1,24 @@
-"""The Care team: sharing with a caregiver or dietitian (design notes 19 and 25; ARCHITECTURE.md "Sharing" and "Care team").
+"""The Care team: sharing with a caregiver or dietitian (design notes 19, 25 and 29; ARCHITECTURE.md "Sharing" and "Care team").
 
 A person (the **owner**) adds someone with an account on the same server (the **grantee**) to their Care team in Settings → Care
 team: by a link they send, or by that person's user name (an invite the other person accepts or declines in their own Settings).
 From then on the grantee can read the areas the owner ticked, and nothing else, until either side stops it, or until the end date
-the owner chose (``days``; :func:`expire` ends it then). Each share has a **role** (schema step 27): a ``viewer`` only reads; a
-``care_helper`` may also plan meals on the owner's days and use their shopping list.
+the owner chose (``days``; :func:`expire` ends it then). Each share has four **switches** (schema step 31): ``may_plan`` (plan
+meals and use the shopping list), ``may_log`` (log eaten food), ``may_use_saved_meals`` and ``may_suggest``. The **role** is a
+preset over them (:data:`PRESETS`): a ``viewer`` only reads, a ``care_helper`` also plans, a ``caregiver`` also logs eaten food;
+any other mix is ``custom``.
 
-* ``/api/me/shares``: the owner's list, a new link or a user name invite (recent password), the role, stopping a share,
-  cancelling a link or an invite.
+* ``/api/me/shares``: the owner's list, a new link or a user name invite (recent password), the role and the switches, stopping a
+  share, cancelling a link or an invite.
 * ``/api/shared``: the grantee's list and invites, stopping, ``info`` / ``accept`` for a link, accept / decline for an invite.
 * ``/api/shared/{share_id}/…``: the reads. Each goes through :func:`shared_owner`, the one check: the share is the signed-in
   person's, active, both accounts are active, and the area was shared. It returns the **owner's** user, and the handler calls the
   owner's own route function with it, so the answer is exactly what the owner sees. Anything else is the same ``404``.
-* The Care helper's writes (planned food, Clear planned days, Plan several days, the shopping list and a food search as the owner)
-  go through :func:`care_helper`, which adds to that check, on every request, that the role is ``care_helper`` now and the food log
-  is shared. A helper never touches eaten food or a planned low treatment, and never anything but the owner's planned food.
+* The helpers' writes (planned and eaten food, Clear planned days, Plan several days, saved meals, the shopping list and a food
+  search as the owner) go through one of :func:`care_helper`, :func:`care_planner`, :func:`care_food_search` and
+  :func:`care_saved_meals`, which add to that check, on every request, that the food log is shared and the switch the route needs
+  is on. A helper never changes, removes or moves a low treatment, changes only the eaten food they added, and never touches
+  anything but the owner's food log. Suggestions are in :mod:`app.care_suggestions`.
 
 Every route answers ``404`` while ``sharing.enabled`` is off and in ``AUTH_MODE=none``. The link is ``/#/share/<id>.<verifier>``
 (the fragment never reaches the server or its logs); only the SHA-256 of the verifier is stored, and a link works once. A user
@@ -35,7 +39,7 @@ from typing import Annotated, Any, Literal
 from dataclasses import dataclass
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request, Response
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, StrictBool, field_validator
 
 from . import activity as activity_module
 from . import body as body_module
@@ -76,6 +80,9 @@ from .models import (
     LogCreate,
     LogUpdate,
     Meal,
+    MealApply,
+    MealApplyResult,
+    MealList,
     Number,
     PeriodSummary,
     RangeSummary,
@@ -91,8 +98,14 @@ from .profile import get_profile
 SWITCH = "sharing.enabled"
 AREAS = ("food", "labs", "body", "symptoms", "activity")  # "activity": activity and recovery (design note 28 §4.4, step 30)
 Area = Literal["food", "labs", "body", "symptoms", "activity"]
-ROLES = ("viewer", "care_helper")  # schema step 27 (design note 25 §2)
-Role = Literal["viewer", "care_helper"]
+ROLES = ("viewer", "care_helper", "caregiver")  # presets over the switches (design note 29 §2)
+Role = Literal["viewer", "care_helper", "caregiver"]
+SWITCHES = ("may_plan", "may_log", "may_use_saved_meals", "may_suggest")  # schema step 31
+PRESETS: dict[str, dict[str, bool]] = {
+    "viewer": {"may_plan": False, "may_log": False, "may_use_saved_meals": False, "may_suggest": False},
+    "care_helper": {"may_plan": True, "may_log": False, "may_use_saved_meals": False, "may_suggest": False},
+    "caregiver": {"may_plan": True, "may_log": True, "may_use_saved_meals": False, "may_suggest": False},
+}
 CODE_DAYS = 7
 INVITE_DAYS = 7  # a user name invite waits this long for an answer
 MAX_DAYS = 365  # the longest time limit a share can have
@@ -111,6 +124,8 @@ OWN_NAME = "That is your own user name. Type the user name of the person you wan
 TOO_MANY_INVITES = f"You have {MAX_INVITES} invites waiting for an answer. Cancel one first."
 NO_INVITE = "That invite is no longer open."
 NO_ENTRY = "log entry {} not found"
+LOW_TREATMENT = "Only {} can change or remove a low treatment."
+NOT_YOUR_EATEN = "You can change only the eaten food you added."
 
 register_limit("share_link", 20, 3600, "Too many tries with share links. Try again in an hour.")
 register_limit("care_invite", 20, 3600, "Too many invites. Try again in an hour.")
@@ -132,7 +147,7 @@ class ShareCreate(BaseModel):
     model_config = ConfigDict(extra="forbid")
     areas: list[Area] = Field(min_length=1, max_length=len(AREAS))
     days: int | None = Field(default=None, ge=1, le=MAX_DAYS)  # how long the share lasts once accepted; None: until stopped
-    role: Role = "viewer"  # schema step 27: a Care helper also plans meals (the food log is added)
+    role: Role = "viewer"  # the preset the share starts with; a "Do" switch adds the food log (design note 29 §2)
 
 
 class CareInviteCreate(BaseModel):
@@ -150,10 +165,23 @@ class RoleChange(BaseModel):
     role: Role
 
 
-class HelperEntry(LogCreate):
-    """One entry a Care helper adds: always planned. ``client_id`` is not used (the helper's device never queues it)."""
+class SwitchChange(BaseModel):
+    """``PUT /api/me/shares/{id}/switches``: what someone on your Care team may see and do. Only what is sent changes. Any "Do"
+    switch on adds the food log (design note 29 §2)."""
 
-    status: Literal["planned"] = "planned"
+    model_config = ConfigDict(extra="forbid")
+    areas: list[Area] | None = Field(default=None, min_length=1, max_length=len(AREAS))
+    may_plan: StrictBool | None = None
+    may_log: StrictBool | None = None
+    may_use_saved_meals: StrictBool | None = None
+    may_suggest: StrictBool | None = None
+
+
+class HelperEntry(LogCreate):
+    """One entry a helper adds: ``planned`` (needs ``may_plan``) or ``eaten`` (needs ``may_log``). ``client_id`` is not used (the
+    helper's device never queues it)."""
+
+    status: Literal["planned", "eaten"] = "planned"
 
 
 class HelperBatch(BaseModel):
@@ -162,10 +190,11 @@ class HelperBatch(BaseModel):
 
 
 class HelperUpdate(BaseModel):
-    """What a Care helper may change on a planned entry: the amount, the meal, the day and the note. Never the status or
-    whether it treats a low."""
+    """What a helper may change on an entry: the amount, the meal, the day and the note; and ``status: "eaten"`` to mark a
+    planned food eaten (needs ``may_log``). Never back to planned, and never whether it treats a low."""
 
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    status: Literal["eaten"] | None = None
     date: str | None = None
     meal: Meal | None = None
     servings: float | None = Field(default=None, gt=0, le=MAX_SERVINGS, allow_inf_nan=False)
@@ -224,19 +253,48 @@ def _areas(raw: str) -> list[str]:
     return [a for a in AREAS if a in got] if isinstance(got, list) else []
 
 
-def _clean_areas(areas: list[str], role: str = "viewer") -> list[str]:
-    """One each, in the order of AREAS. A Care helper plans meals, so the food log is always shared with one."""
-    wanted = set(areas) | ({"food"} if role == "care_helper" else set())
+def _clean_areas(areas: list[str], switches: dict[str, bool] | None = None) -> list[str]:
+    """One each, in the order of AREAS. Planning, logging, saved meals and suggestions all need the food log, so any "Do"
+    switch on adds it (design note 29 §2)."""
+    wanted = set(areas) | ({"food"} if switches and any(switches.values()) else set())
     return [a for a in AREAS if a in wanted]
 
 
+def _switches(row: sqlite3.Row) -> dict[str, bool]:
+    """The four switches of a share, a link or an invite. A row without them (before schema step 31) reads from its role."""
+    keys = row.keys()
+    if all(k in keys for k in SWITCHES):
+        return {k: bool(row[k]) for k in SWITCHES}
+    return dict(PRESETS["care_helper" if "role" in keys and row["role"] == "care_helper" else "viewer"])
+
+
+def role_of(switches: dict[str, bool]) -> str:
+    """The preset these switches match (``viewer``, ``care_helper``, ``caregiver``), or ``custom``."""
+    return next((name for name, preset in PRESETS.items() if preset == {k: bool(switches.get(k)) for k in SWITCHES}), "custom")
+
+
 def _role(row: sqlite3.Row) -> str:
-    role = row["role"] if "role" in row.keys() else None
-    return role if role in ROLES else "viewer"
+    return role_of(_switches(row))
+
+
+def _role_column(switches: dict[str, bool]) -> str:
+    """What the ``role`` column of schema step 27 stores: ``care_helper`` exactly when planning is on, so an older build reading
+    the same database lets that person plan and nothing more."""
+    return "care_helper" if switches.get("may_plan") else "viewer"
+
+
+def _switch_values(switches: dict[str, bool]) -> tuple[int, ...]:
+    return tuple(int(bool(switches.get(k))) for k in SWITCHES)
+
+
+_SWITCH_COLUMNS = ", ".join(SWITCHES)
+_SWITCH_MARKS = ", ".join("?" for _ in SWITCHES)
+_CHANGE_KINDS = ("added", "changed", "removed", "logged")
 
 
 def _helper_changes(row: sqlite3.Row) -> dict[str, Any] | None:
-    """The Care helper's changes on the latest day they changed the plan: ``{day, added, changed, removed}``, or None."""
+    """The helpers' changes on the latest day they changed the food log: ``{day, added, changed, removed, logged}`` (``logged``:
+    eaten entries added or marked eaten), or None."""
     raw = row["helper_changes"] if "helper_changes" in row.keys() else None
     try:
         got = json.loads(raw) if raw else None
@@ -244,7 +302,7 @@ def _helper_changes(row: sqlite3.Row) -> dict[str, Any] | None:
         return None
     if not isinstance(got, dict) or not isinstance(got.get("day"), str):
         return None
-    return {"day": got["day"], **{k: int(got.get(k) or 0) for k in ("added", "changed", "removed")}}
+    return {"day": got["day"], **{k: int(got.get(k) or 0) for k in _CHANGE_KINDS}}
 
 
 def _name(row: sqlite3.Row, prefix: str) -> str:
@@ -267,19 +325,19 @@ def sharing_item(row: sqlite3.Row) -> dict[str, Any]:
     """One person who can see the owner's data, as the owner's list shows it. ``until`` is when it ends (None: until stopped)."""
     return {"id": int(row["id"]), "name": _name(row, "grantee"), "username": row["grantee_username"], "areas": _areas(row["areas"]),
             "since": row["accepted_at"], "until": row["ends_at"], "last_viewed_at": row["last_viewed_at"],
-            "active": row["grantee_status"] == "active", "role": _role(row), "helper_changes": _helper_changes(row)}
+            "active": row["grantee_status"] == "active", "role": _role(row), **_switches(row), "helper_changes": _helper_changes(row)}
 
 
 def code_item(row: sqlite3.Row) -> dict[str, Any]:
     """An unused link. ``days`` is how long the share will last once accepted (None: until stopped)."""
     return {"id": int(row["id"]), "areas": _areas(row["areas"]), "days": row["lasts_days"], "created_at": row["created_at"],
-            "expires_at": row["expires_at"], "role": _role(row)}
+            "expires_at": row["expires_at"], "role": _role(row), **_switches(row)}
 
 
 def person_item(row: sqlite3.Row) -> dict[str, Any]:
-    """One person who shares with the signed-in person, as the grantee's list shows it."""
+    """One person who shares with the signed-in person, as the grantee's list shows it: what they share and what you may do."""
     return {"id": int(row["id"]), "name": _name(row, "owner"), "username": row["owner_username"], "areas": _areas(row["areas"]),
-            "since": row["accepted_at"], "until": row["ends_at"], "role": _role(row)}
+            "since": row["accepted_at"], "until": row["ends_at"], "role": _role(row), **_switches(row)}
 
 
 _INVITES = """
@@ -300,14 +358,14 @@ def _same_kind(row: sqlite3.Row, user: User | None = None) -> bool:
 def sent_invite_item(row: sqlite3.Row) -> dict[str, Any]:
     """A user name invite waiting for an answer, as the inviter's list shows it: the name as typed, never whether it is an
     account (design note 25 §3)."""
-    return {"id": int(row["id"]), "username": row["username"], "areas": _areas(row["areas"]), "role": _role(row),
+    return {"id": int(row["id"]), "username": row["username"], "areas": _areas(row["areas"]), "role": _role(row), **_switches(row),
             "days": row["lasts_days"], "created_at": row["created_at"], "expires_at": row["expires_at"]}
 
 
 def invite_for_me_item(row: sqlite3.Row) -> dict[str, Any]:
     """An invite to the signed-in person, as their list shows it: who and what."""
     return {"id": int(row["id"]), "name": _name(row, "owner"), "username": row["owner_username"], "areas": _areas(row["areas"]),
-            "role": _role(row), "days": row["lasts_days"], "expires_at": row["expires_at"]}
+            "role": _role(row), **_switches(row), "days": row["lasts_days"], "expires_at": row["expires_at"]}
 
 
 def expire(conn: sqlite3.Connection) -> int:
@@ -319,9 +377,24 @@ def expire(conn: sqlite3.Connection) -> int:
     for row in rows:
         conn.execute("UPDATE shares SET ended_at = ?, ended_by = 'owner' WHERE id = ? AND ended_at IS NULL", (now, int(row["id"])))
         audit(conn, None, "share.ended", "user", int(row["owner_user_id"]), share=int(row["id"]), by="time")
-    if rows:
+    closed = expire_suggestions(conn, now)
+    if rows or closed:
         conn.commit()
     return len(rows)
+
+
+def expire_suggestions(conn: sqlite3.Connection, now: str) -> int:
+    """Close the open suggestions (design note 29 §5) that waited 14 days (``expired``, with ``suggestion.expired`` in the person's
+    activity) and those whose share has ended (``ended``; the share's own row says so). No commit. Returns how many it closed."""
+    late = conn.execute("SELECT id, owner_user_id, share_id FROM care_suggestions WHERE answer IS NULL AND expires_at <= ?",
+                        (now,)).fetchall()
+    for row in late:
+        conn.execute("UPDATE care_suggestions SET answer = 'expired', answered_at = ? WHERE id = ? AND answer IS NULL",
+                     (now, int(row["id"])))
+        audit(conn, None, "suggestion.expired", "user", int(row["owner_user_id"]), suggestion=int(row["id"]), share=int(row["share_id"]))
+    ended = conn.execute("UPDATE care_suggestions SET answer = 'ended', answered_at = ? WHERE answer IS NULL AND share_id IN "
+                         "(SELECT id FROM shares WHERE ended_at IS NOT NULL)", (now,)).rowcount
+    return len(late) + int(ended)
 
 
 def active_count(conn: sqlite3.Connection, owner_id: int) -> int:
@@ -402,7 +475,8 @@ def create_share_link(body: ShareCreate, request: Request, user: RecentUser, con
     someone stops it. ``role`` (``viewer`` or ``care_helper``) is the role the share starts with. Needs a recent password, like
     making a token."""
     _available(request, conn)
-    areas = _clean_areas(body.areas, body.role)
+    switches = PRESETS[body.role]
+    areas = _clean_areas(body.areas, switches)
     now = clock.now()
     open_codes = int(conn.execute("SELECT COUNT(*) FROM shares WHERE owner_user_id = ? AND accepted_at IS NULL AND ended_at IS NULL "
                                   "AND expires_at > ?", (user.id, clock.iso(now))).fetchone()[0])
@@ -411,9 +485,10 @@ def create_share_link(body: ShareCreate, request: Request, user: RecentUser, con
     if active_count(conn, user.id) >= MAX_SHARES:
         raise ApiProblem(409, TOO_MANY_SHARES)
     code_id, verifier = secrets.token_hex(8), secrets.token_urlsafe(32)
-    cur = conn.execute("INSERT INTO shares (owner_user_id, code_id, verifier_hash, areas, created_at, expires_at, lasts_days, role) "
-                       "VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (user.id, code_id, _sha(verifier), json.dumps(areas), clock.iso(now),
-                                                           clock.iso(now + timedelta(days=CODE_DAYS)), body.days, body.role))
+    cur = conn.execute(f"INSERT INTO shares (owner_user_id, code_id, verifier_hash, areas, created_at, expires_at, lasts_days, role, "
+                       f"{_SWITCH_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, {_SWITCH_MARKS})",
+                       (user.id, code_id, _sha(verifier), json.dumps(areas), clock.iso(now), clock.iso(now + timedelta(days=CODE_DAYS)),
+                        body.days, _role_column(switches), *_switch_values(switches)))
     share_id = int(cur.lastrowid or 0)
     audit(conn, user.id, "share.code_created", "share", share_id, ip=request_ip(request), areas=areas, days=body.days, role=body.role)
     conn.commit()
@@ -470,10 +545,12 @@ def invite_by_username(body: CareInviteCreate, request: Request, user: RecentUse
             raise ApiProblem(409, TOO_MANY_INVITES)
         if active_count(conn, user.id) >= MAX_SHARES:
             raise ApiProblem(409, TOO_MANY_SHARES)
-        areas = _clean_areas(body.areas, body.role)
-        cur = conn.execute("INSERT INTO care_invites (owner_user_id, invitee_user_id, username, areas, role, lasts_days, created_at, expires_at) "
-                           "VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (user.id, invitee, norm, json.dumps(areas), body.role, body.days,
-                                                               clock.iso(now), clock.iso(now + timedelta(days=INVITE_DAYS))))
+        switches = PRESETS[body.role]
+        areas = _clean_areas(body.areas, switches)
+        cur = conn.execute(f"INSERT INTO care_invites (owner_user_id, invitee_user_id, username, areas, role, lasts_days, created_at, "
+                           f"expires_at, {_SWITCH_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, {_SWITCH_MARKS})",
+                           (user.id, invitee, norm, json.dumps(areas), _role_column(switches), body.days, clock.iso(now),
+                            clock.iso(now + timedelta(days=INVITE_DAYS)), *_switch_values(switches)))
         invite_id = int(cur.lastrowid or 0)
         audit(conn, user.id, "care.invited", "care_invite", invite_id, ip=request_ip(request), areas=areas, role=body.role, days=body.days)
         conn.commit()
@@ -497,23 +574,60 @@ def cancel_invite(invite_id: InviteId, request: Request, user: CurrentUser, conn
     return Response(status_code=204)
 
 
-@me_router.put("/{share_id}/role")
-def change_role(share_id: ShareId, body: RoleChange, request: Request, user: CurrentUser,
-                conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    """Change what someone on your Care team may do: ``viewer`` (look only) or ``care_helper`` (also plan your meals and use
-    your shopping list). A Care helper always sees your food log, so it is added. The next request they make uses the new
-    role. Not yours or ended is ``404``."""
-    _available(request, conn)
+def _my_share(conn: sqlite3.Connection, share_id: int, user: User) -> sqlite3.Row:
     row = conn.execute(_PEOPLE + " WHERE s.id = ? AND s.owner_user_id = ? AND s.accepted_at IS NOT NULL AND s.ended_at IS NULL",
                        (share_id, user.id)).fetchone()
     if row is None:
         raise HTTPException(status_code=404, detail="share not found")
-    if _role(row) != body.role:
+    return row
+
+
+def _store_switches(conn: sqlite3.Connection, share_id: int, switches: dict[str, bool], areas: list[str]) -> None:
+    conn.execute(f"UPDATE shares SET role = ?, areas = ?, {', '.join(f'{k} = ?' for k in SWITCHES)} WHERE id = ?",
+                 (_role_column(switches), json.dumps(areas), *_switch_values(switches), share_id))
+
+
+@me_router.put("/{share_id}/role")
+def change_role(share_id: ShareId, body: RoleChange, request: Request, user: CurrentUser,
+                conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Choose a role for someone on your Care team: ``viewer`` (look only), ``care_helper`` (also plan your meals and use your
+    shopping list) or ``caregiver`` (also log food you ate). A role sets the four switches (design note 29 §2); what you share
+    stays, and the food log is added when the role needs it. The next request they make uses it. Not yours or ended is ``404``."""
+    _available(request, conn)
+    row = _my_share(conn, share_id, user)
+    switches = dict(PRESETS[body.role])
+    if _switches(row) != switches:
         before = _areas(row["areas"])
-        areas = _clean_areas(before, body.role)
-        conn.execute("UPDATE shares SET role = ?, areas = ? WHERE id = ?", (body.role, json.dumps(areas), share_id))
+        areas = _clean_areas(before, switches)
+        _store_switches(conn, share_id, switches, areas)
         audit(conn, user.id, "care.role_changed", "share", share_id, ip=request_ip(request), role=body.role,
-              food_added=areas != before)
+              food_added=areas != before, **switches)
+        conn.commit()
+        row = conn.execute(_PEOPLE + " WHERE s.id = ?", (share_id,)).fetchone()
+    return sharing_item(row)
+
+
+@me_router.put("/{share_id}/switches")
+def change_switches(share_id: ShareId, body: SwitchChange, request: Request, user: CurrentUser,
+                    conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Change what someone on your Care team may see (``areas``) and do (``may_plan``, ``may_log``, ``may_use_saved_meals``,
+    ``may_suggest``). Only what you send changes, at once: their next request uses it. Any "Do" switch on adds the food log. The
+    role is worked out from the switches (``custom`` when they match no role). Not yours or ended is ``404``."""
+    _available(request, conn)
+    row = _my_share(conn, share_id, user)
+    old_switches = _switches(row)
+    sent = body.model_dump(exclude_unset=True)
+    if any(sent.get(k) is None and k in sent for k in (*SWITCHES, "areas")):
+        raise ApiProblem(400, "Send true or false for each switch, and at least one area.")
+    switches = {k: bool(sent[k]) if k in sent else old_switches[k] for k in SWITCHES}
+    before = _areas(row["areas"])
+    wanted = _clean_areas(sent["areas"] if "areas" in sent else before)
+    areas = _clean_areas(wanted, switches)
+    if switches != old_switches or areas != before:
+        _store_switches(conn, share_id, switches, areas)
+        changed = {k: switches[k] for k in SWITCHES if switches[k] != old_switches[k]}
+        audit(conn, user.id, "care.switches_changed", "share", share_id, ip=request_ip(request), areas=areas,
+              food_added="food" in areas and "food" not in wanted, role=role_of(switches), **changed)
         conn.commit()
         row = conn.execute(_PEOPLE + " WHERE s.id = ?", (share_id,)).fetchone()
     return sharing_item(row)
@@ -563,8 +677,11 @@ def accept_invite(invite_id: InviteId, request: Request, user: CurrentUser, conn
         ends = clock.iso(moment + timedelta(days=int(row["lasts_days"]))) if row["lasts_days"] else None
         if old is not None:
             conn.execute("UPDATE shares SET ended_at = ?, ended_by = 'replaced' WHERE id = ?", (now, int(old["id"])))
-        cur = conn.execute("INSERT INTO shares (owner_user_id, grantee_user_id, areas, created_at, accepted_at, lasts_days, ends_at, role) "
-                           "VALUES (?, ?, ?, ?, ?, ?, ?, ?)", (owner_id, user.id, row["areas"], now, now, row["lasts_days"], ends, _role(row)))
+        switches = _switches(row)
+        cur = conn.execute(f"INSERT INTO shares (owner_user_id, grantee_user_id, areas, created_at, accepted_at, lasts_days, ends_at, role, "
+                           f"{_SWITCH_COLUMNS}) VALUES (?, ?, ?, ?, ?, ?, ?, ?, {_SWITCH_MARKS})",
+                           (owner_id, user.id, row["areas"], now, now, row["lasts_days"], ends, _role_column(switches),
+                            *_switch_values(switches)))
         share_id = int(cur.lastrowid or 0)
         conn.execute("UPDATE care_invites SET answered_at = ?, answer = 'accepted', share_id = ? WHERE id = ?", (now, share_id, invite_id))
         audit(conn, user.id, "care.invite_answered", "user", owner_id, ip=request_ip(request), invite=invite_id, answer="accepted",
@@ -658,15 +775,15 @@ def shared_owner(area: str | None) -> Callable[..., User]:
 
 
 def _check_share(share_id: int, request: Request, user: User, conn: sqlite3.Connection, area: str | None,
-                 role: str | None = None) -> tuple[User, sqlite3.Row]:
-    """The one check (see :func:`shared_owner`), and with ``role`` that the share has that role now. Returns the owner and the
-    share's row as it is now."""
+                 any_of: tuple[str, ...] = ()) -> tuple[User, sqlite3.Row]:
+    """The one check (see :func:`shared_owner`), and with ``any_of`` that at least one of those switches is on now. Returns the
+    owner and the share's row as it is now."""
     _available(request, conn)
     row = conn.execute(_PEOPLE + " WHERE s.id = ? AND s.grantee_user_id = ? AND s.accepted_at IS NOT NULL AND s.ended_at IS NULL",
                        (share_id, user.id)).fetchone()
     if row is None or row["owner_status"] != "active" or (area is not None and area not in _areas(row["areas"])) or not _same_kind(row):
         raise ApiProblem(404, NOT_SHARED)
-    if role is not None and _role(row) != role:
+    if any_of and not any(_switches(row)[k] for k in any_of):
         raise ApiProblem(404, NOT_SHARED)
     owner = load_user(conn, int(row["owner_user_id"]))
     if owner is None or not owner.is_active or not user.is_active:
@@ -680,46 +797,106 @@ def _check_share(share_id: int, request: Request, user: User, conn: sqlite3.Conn
 
 @dataclass(frozen=True)
 class CareShare:
-    """What a Care helper's write needs: the person (``owner``), the helper (``helper``) and the share's id."""
+    """What a helper's write needs: the person (``owner``), the helper (``helper``), the share's id and its switches as they are
+    now."""
 
     owner: User
     helper: User
     share_id: int
+    switches: dict[str, bool]
+
+    @property
+    def owner_name(self) -> str:
+        return (self.owner.display_name or "").strip() or self.owner.username
+
+    def need(self, switch: str) -> None:
+        """The one ``404`` unless ``switch`` is on (the share was checked for this request)."""
+        if not self.switches.get(switch):
+            raise ApiProblem(404, NOT_SHARED)
+
+
+def _care(share_id: int, request: Request, user: User, conn: sqlite3.Connection, *any_of: str) -> CareShare:
+    owner, row = _check_share(share_id, request, user, conn, "food", any_of=any_of)
+    return CareShare(owner=owner, helper=user, share_id=share_id, switches=_switches(row))
 
 
 def care_helper(share_id: ShareId, request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> CareShare:
-    """A dependency for every Care helper route, checked on each request against the share as it is now (design note 25 §5):
-    the signed-in person's, accepted, not stopped or past its end date, the role is ``care_helper``, the food log is shared,
-    both accounts are active and sharing is on. Anything else is the one ``404``."""
-    owner, _row = _check_share(share_id, request, user, conn, "food", role="care_helper")
-    return CareShare(owner=owner, helper=user, share_id=share_id)
+    """A dependency for the writes on the person's food log, checked on each request against the share as it is now (design notes
+    25 §5 and 29 §3): the signed-in person's, accepted, not stopped or past its end date, the food log shared, ``may_plan`` or
+    ``may_log`` on, both accounts active and sharing on. Each route then needs the switch its entry calls for. Anything else is
+    the one ``404``."""
+    return _care(share_id, request, user, conn, "may_plan", "may_log")
+
+
+def care_planner(share_id: ShareId, request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> CareShare:
+    """As :func:`care_helper`, with ``may_plan`` on: the shopping list, Clear planned days and Plan several days."""
+    return _care(share_id, request, user, conn, "may_plan")
+
+
+def care_food_search(share_id: ShareId, request: Request, user: CurrentUser,
+                     conn: sqlite3.Connection = Depends(get_db)) -> CareShare:
+    """As :func:`care_helper`, for the food search: ``may_plan``, ``may_log`` or ``may_suggest`` on."""
+    return _care(share_id, request, user, conn, "may_plan", "may_log", "may_suggest")
+
+
+def care_saved_meals(share_id: ShareId, request: Request, user: CurrentUser,
+                     conn: sqlite3.Connection = Depends(get_db)) -> CareShare:
+    """As :func:`care_helper`, with ``may_use_saved_meals`` on: the person's saved meals, listed and applied, never changed."""
+    return _care(share_id, request, user, conn, "may_use_saved_meals")
+
+
+def care_suggester(share_id: ShareId, request: Request, user: CurrentUser,
+                   conn: sqlite3.Connection = Depends(get_db)) -> CareShare:
+    """As :func:`care_helper`, with ``may_suggest`` on: sending a suggestion (``app/care_suggestions.py``)."""
+    return _care(share_id, request, user, conn, "may_suggest")
 
 
 Helper = Annotated[CareShare, Depends(care_helper)]
+Suggester = Annotated[CareShare, Depends(care_suggester)]
+Planner = Annotated[CareShare, Depends(care_planner)]
+FoodSearch = Annotated[CareShare, Depends(care_food_search)]
+SavedMeals = Annotated[CareShare, Depends(care_saved_meals)]
 
 
 def note_change(conn: sqlite3.Connection, care: CareShare, kind: str, n: int, request: Request) -> None:
-    """Count a Care helper's change for the person's Care team list, and write ``care.plan_changed`` to the person's activity at
-    the helper's first change of the day (UTC). Commits."""
+    """Count a helper's change for the person's Care team list (``added``, ``changed``, ``removed`` for the plan; ``logged`` for
+    eaten food), and write to the person's activity at the helper's first change of each kind that day (UTC):
+    ``care.plan_changed`` or ``care.food_logged``. Commits."""
     if n <= 0:
         return
     row = conn.execute("SELECT helper_changes FROM shares WHERE id = ?", (care.share_id,)).fetchone()
     today = _today()
     got = _helper_changes(row) if row is not None else None
     if got is None or got["day"] != today:
-        got = {"day": today, "added": 0, "changed": 0, "removed": 0}
-        audit(conn, care.helper.id, "care.plan_changed", "user", care.owner.id, ip=request_ip(request), share=care.share_id)
+        got = {"day": today, **{k: 0 for k in _CHANGE_KINDS}}
+    logged = kind == "logged"
+    if (got["logged"] if logged else got["added"] + got["changed"] + got["removed"]) == 0:
+        audit(conn, care.helper.id, "care.food_logged" if logged else "care.plan_changed", "user", care.owner.id,
+              ip=request_ip(request), share=care.share_id)
     got[kind] += int(n)
     conn.execute("UPDATE shares SET helper_changes = ? WHERE id = ?", (json.dumps(got, sort_keys=True), care.share_id))
     conn.commit()
 
 
-def _planned_entry(conn: sqlite3.Connection, owner_id: int, entry_id: int) -> sqlite3.Row:
-    """A planned entry of the owner that is not a low treatment, or ``404`` as if it did not exist: a helper never changes eaten
-    food or a low treatment, and only ever reaches the owner's log."""
-    row = log_module.fetch_entry(conn, owner_id, entry_id)
-    if row is None or row["status"] != "planned" or row["purpose"] == log_module.HYPO_PURPOSE:
+def _helper_entry(conn: sqlite3.Connection, care: CareShare, entry_id: int, *, eating: bool = False) -> sqlite3.Row:
+    """An entry of the person's a helper may change or remove (design note 29 §3), or why not:
+
+    * not in the person's log: ``404`` as if it did not exist (a helper only ever reaches the person's log);
+    * a low treatment, whoever logged it: ``403`` with one sentence; no helper changes, removes, moves or marks one eaten;
+    * planned: ``may_plan`` on, or ``may_log`` when it is being marked eaten (``eating``); else the one ``404``;
+    * eaten: with ``may_log`` off it is ``404`` as before; with it on, only the eaten food this helper added, else ``403``."""
+    row = log_module.fetch_entry(conn, care.owner.id, entry_id)
+    if row is None:
         raise HTTPException(status_code=404, detail=NO_ENTRY.format(entry_id))
+    if row["purpose"] == log_module.HYPO_PURPOSE:
+        raise ApiProblem(403, LOW_TREATMENT.format(care.owner_name))
+    if row["status"] == "planned":
+        care.need("may_log" if eating else "may_plan")
+        return row
+    if not care.switches.get("may_log"):
+        raise HTTPException(status_code=404, detail=NO_ENTRY.format(entry_id))
+    if row["added_by_user_id"] != care.helper.id:
+        raise ApiProblem(403, NOT_YOUR_EATEN)
     return row
 
 
@@ -731,7 +908,7 @@ SymptomsShare = Annotated[User, Depends(shared_owner("symptoms"))]
 ActivityShare = Annotated[User, Depends(shared_owner("activity"))]
 
 
-def _shares_activity(conn: sqlite3.Connection, share_id: int) -> bool:
+def shares_activity(conn: sqlite3.Connection, share_id: int) -> bool:
     row = conn.execute("SELECT areas FROM shares WHERE id = ?", (share_id,)).fetchone()  # shared_owner checked it is this person's
     return row is not None and "activity" in _areas(row["areas"])
 
@@ -754,7 +931,7 @@ def shared_day(share_id: ShareId, request: Request, owner: FoodShare, date: str 
     """A day of the owner's food log, as ``GET /api/log`` answers it to them; without the activity area with the base calorie target
     (the active-day extra would tell how active they were)."""
     day = log_module.parse_date_param(date, "date") if date else log_module.today_local()
-    return log_module.day_summary(conn, request, owner.id, day, activity_extra=_shares_activity(conn, share_id))
+    return log_module.day_summary(conn, request, owner.id, day, activity_extra=shares_activity(conn, share_id))
 
 
 @shared_router.get("/{share_id}/log/range", response_model=RangeSummary)
@@ -816,40 +993,49 @@ def shared_activity(share_id: ShareId, owner: ActivityShare, conn: sqlite3.Conne
 
 
 # --------------------------------------------------------------------------- #
-# The Care helper: planned food, Plan several days and the shopping list (design note 25 §5)
+# The helpers: planned and eaten food, saved meals, Plan several days and the shopping list (design notes 25 §5 and 29)
 # --------------------------------------------------------------------------- #
 
 
 @shared_router.get("/{share_id}/foods", response_model=FoodList)
-def helper_foods(share_id: ShareId, care: Helper, q: str = Query("", max_length=MAX_SEARCH_QUERY_CHARS),
+def helper_foods(share_id: ShareId, care: FoodSearch, q: str = Query("", max_length=MAX_SEARCH_QUERY_CHARS),
                  limit: int = Query(25, ge=1, le=200), conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    """Food search as the person sees it (their own foods too), so a food the helper plans is one the person can use."""
+    """Food search as the person sees it (their own foods too), so a food the helper plans, logs or suggests is one the person
+    can use."""
     return {"foods": search_foods(conn, care.owner.id, q=q, limit=limit)}
 
 
 @shared_router.get("/{share_id}/plan/shopping", response_model=ShoppingList)
-def helper_shopping(share_id: ShareId, care: Helper, start: str | None = None, end: str | None = None,
+def helper_shopping(share_id: ShareId, care: Planner, start: str | None = None, end: str | None = None,
                     conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """The person's shopping list, as ``GET /api/plan/shopping`` answers it to them. Ticks stay on the helper's device."""
     return meals_module.shopping_list(care.owner, start, end, conn)
 
 
+def _kind(status: str) -> str:
+    return "logged" if status == "eaten" else "added"
+
+
 @shared_router.post("/{share_id}/log", response_model=Entry, status_code=201)
 def helper_add(share_id: ShareId, body: HelperEntry, request: Request, care: Helper,
                conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    """Plan one food on the person's day. It is always ``planned`` and records the helper (``added_by``). The food must be one
-    the person can use (``404`` otherwise). A planned low treatment may be added, like any food."""
+    """Add one food to the person's day: ``planned`` (needs ``may_plan``) or ``eaten`` (needs ``may_log``). It records the helper
+    (``added_by``). The food must be one the person can use (``404`` otherwise). A low treatment may be added, planned or eaten:
+    recording what happened is never blocked."""
+    care.need("may_log" if body.status == "eaten" else "may_plan")
     item = body.model_copy(update={"client_id": None})
     entry_id = log_module.insert_logged(conn, care.owner.id, item, added_by=care.helper.id)
     conn.commit()
-    note_change(conn, care, "added", 1, request)
+    note_change(conn, care, _kind(body.status), 1, request)
     return log_module.row_to_entry(log_module.fetch_entry(conn, care.owner.id, entry_id))
 
 
 @shared_router.post("/{share_id}/log/batch", response_model=LogBatchResult, status_code=201)
 def helper_add_batch(share_id: ShareId, body: HelperBatch, request: Request, care: Helper,
                      conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    """Plan 1 to 40 foods on the person's days in one go ("Add to plan"), all or nothing, each as ``POST …/log``."""
+    """Add 1 to 40 foods to the person's days in one go ("Add to plan"), all or nothing, each as ``POST …/log``."""
+    for item in body.entries:
+        care.need("may_log" if item.status == "eaten" else "may_plan")
     created: list[int] = []
     try:
         for index, item in enumerate(body.entries):
@@ -859,7 +1045,8 @@ def helper_add_batch(share_id: ShareId, body: HelperBatch, request: Request, car
         conn.rollback()
         raise
     conn.commit()
-    note_change(conn, care, "added", len(created), request)
+    for kind in ("added", "logged"):
+        note_change(conn, care, kind, sum(1 for item in body.entries if _kind(item.status) == kind), request)
     entries = [log_module.row_to_entry(log_module.fetch_entry(conn, care.owner.id, i)) for i in created]
     return {"entries": entries, "results": [{"index": i, "id": e["id"], "result": "created"} for i, e in enumerate(entries)]}
 
@@ -868,24 +1055,33 @@ def _tag(row: sqlite3.Row) -> str:
     return f'"{log_module.row_to_entry(row)["version"]}"'
 
 
-@shared_router.put("/{share_id}/log/{entry_id}", response_model=Entry, responses=log_module.PRECONDITION_FAILED)
+HELPER_ANSWERS: dict[int | str, dict[str, Any]] = {
+    **log_module.PRECONDITION_FAILED,
+    403: {"description": "A low treatment (only the person changes or removes it), or eaten food this helper did not add."},
+}
+
+
+@shared_router.put("/{share_id}/log/{entry_id}", response_model=Entry, responses=HELPER_ANSWERS)
 def helper_change(share_id: ShareId, entry_id: ShareId, body: HelperUpdate, request: Request, care: Helper,
                   if_match: log_module.IfMatch = None, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    """Change the amount, meal, day or note of one of the person's planned entries. Eaten food and planned low treatments are
-    ``404``: only the person changes those. ``If-Match`` works as on the person's own route."""
-    row = _planned_entry(conn, care.owner.id, entry_id)
+    """Change the amount, meal, day or note of one of the person's entries, or mark a planned one eaten (``status: "eaten"``,
+    needs ``may_log``). Planned food needs ``may_plan``; eaten food only the helper added, with ``may_log``. A low treatment is
+    ``403``: only the person changes it. ``If-Match`` works as on the person's own route."""
+    eating = body.status == "eaten"
+    row = _helper_entry(conn, care, entry_id, eating=eating)
     log_module.require_current_version(row, if_match)
-    # The write lands only on the row checked here: if the person marks it eaten in between, the answer is 412.
+    # The write lands only on the row checked here: if the person changes it in between, the answer is 412.
     out = log_module.update_entry(entry_id, LogUpdate(**body.model_dump(exclude_unset=True)), care.owner, _tag(row), conn)
-    note_change(conn, care, "changed", 1, request)
+    note_change(conn, care, "logged" if eating and row["status"] == "planned" else "changed", 1, request)
     return out
 
 
-@shared_router.delete("/{share_id}/log/{entry_id}", status_code=204, response_class=Response, responses=log_module.PRECONDITION_FAILED)
+@shared_router.delete("/{share_id}/log/{entry_id}", status_code=204, response_class=Response, responses=HELPER_ANSWERS)
 def helper_remove(share_id: ShareId, entry_id: ShareId, request: Request, care: Helper,
                   if_match: log_module.IfMatch = None, conn: sqlite3.Connection = Depends(get_db)) -> Response:
-    """Take one of the person's planned entries off their plan. Eaten food and planned low treatments are ``404``."""
-    row = _planned_entry(conn, care.owner.id, entry_id)
+    """Take one of the person's entries off: planned food with ``may_plan``, eaten food the helper added with ``may_log``. A low
+    treatment is ``403``."""
+    row = _helper_entry(conn, care, entry_id)
     log_module.require_current_version(row, if_match)
     log_module.delete_entry(entry_id, care.owner, _tag(row), conn)
     note_change(conn, care, "removed", 1, request)
@@ -893,7 +1089,7 @@ def helper_remove(share_id: ShareId, entry_id: ShareId, request: Request, care: 
 
 
 @shared_router.post("/{share_id}/log/clear-planned", response_model=ClearPlannedResult)
-def helper_clear(share_id: ShareId, body: ClearPlanned, request: Request, care: Helper,
+def helper_clear(share_id: ShareId, body: ClearPlanned, request: Request, care: Planner,
                  conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """Clear planned days for the person, exactly as their own route: eaten food and planned low treatments always stay."""
     out = log_module.clear_planned(body, request, care.owner, conn)
@@ -902,10 +1098,30 @@ def helper_clear(share_id: ShareId, body: ClearPlanned, request: Request, care: 
 
 
 @shared_router.post("/{share_id}/guidance/plan-days", response_model=PlanDaysResponse | GuidanceUnavailable)
-def helper_plan_days(share_id: ShareId, body: PlanDaysRequest, request: Request, care: Helper,
+def helper_plan_days(share_id: ShareId, body: PlanDaysRequest, request: Request, care: Planner,
                      conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """Plan several days for the person against their targets (computes only; "Add to plan" sends the entries to
-    ``POST …/log/batch``). The person's saved meals are never used, so a plan never shows them (design note 25 §7), and without the
-    activity area the plan uses the base calorie target (design note 28): the active-day extra would tell how active they were."""
-    return guidance_api.plan_days_for(body.model_copy(update={"use_saved_meals": False}), request, care.owner, conn,
-                                      activity_extra=_shares_activity(conn, care.share_id))
+    ``POST …/log/batch``). The person's saved meals are used only when the helper asks and the person turned on
+    ``may_use_saved_meals`` (design note 29 §4); without the activity area the plan uses the base calorie target (design note
+    28): the active-day extra would tell how active they were."""
+    use_saved = bool(body.use_saved_meals) and care.switches["may_use_saved_meals"]
+    return guidance_api.plan_days_for(body.model_copy(update={"use_saved_meals": use_saved}), request, care.owner, conn,
+                                      activity_extra=shares_activity(conn, care.share_id))
+
+
+@shared_router.get("/{share_id}/meals", response_model=MealList)
+def helper_saved_meals(share_id: ShareId, care: SavedMeals, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """The person's saved meals, as ``GET /api/meals`` answers them, when they turned on ``may_use_saved_meals``. A helper never
+    changes or deletes them: there is no route for it."""
+    return meals_module.list_meals(care.owner, conn)
+
+
+@shared_router.post("/{share_id}/meals/{meal_id}/apply", response_model=MealApplyResult, status_code=201)
+def helper_apply_meal(share_id: ShareId, meal_id: ShareId, body: MealApply, request: Request, care: SavedMeals,
+                      conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Add one of the person's saved meals to a day, as ``POST /api/meals/{id}/apply``: ``planned`` needs ``may_plan``, ``eaten``
+    needs ``may_log``. Each entry records the helper (``added_by``)."""
+    care.need("may_log" if body.status == "eaten" else "may_plan")
+    out = meals_module.apply_template(conn, care.owner.id, meal_id, body, added_by=care.helper.id)
+    note_change(conn, care, _kind(body.status), len(out["entries"]), request)
+    return out

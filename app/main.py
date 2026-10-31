@@ -32,6 +32,7 @@ from .ai import routes as ai_routes  # M2 ai: /api/ai, /api/me/ai, /api/admin/ai
 from . import mcp as assistant_mcp  # assistant step 1: POST /mcp, the MCP server for a chat assistant
 from . import data_import  # POST /api/me/import: the person's own export.json (own body limit, MAX_IMPORT_BYTES)
 from . import meta  # design note 14 change 4: GET /api/meta (versions, capabilities, the nutrient registry)
+from . import care_suggestions  # schema step 31: suggestions from the Care team (/api/shared/{id}/suggestions, /api/me/suggestions)
 from . import sharing  # schema step 24: read-only sharing with a caregiver or dietitian (/api/me/shares, /api/shared)
 from . import feedback, test_accounts  # schema step 28: test accounts, Send feedback (/api/feedback, /api/admin/feedback)
 from . import activity as activity_api  # schema step 30: Whoop days, workouts, the active-day calorie extra (/api/activity)
@@ -44,7 +45,7 @@ from .settings_store import SettingsStore, default_store
 
 logger = logging.getLogger(brand.LOGGER_NAME)
 
-APP_VERSION = "0.17.0"
+APP_VERSION = "0.18.0"
 STATIC_DIR = DEFAULT_STATIC_DIR
 
 
@@ -164,6 +165,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(meta.router)
     app.include_router(sharing.me_router)
     app.include_router(sharing.shared_router)
+    app.include_router(care_suggestions.shared_router)  # schema step 31: suggestions from the Care team (note 29 §5)
+    app.include_router(care_suggestions.me_router)
     app.include_router(feedback.router)
     app.include_router(feedback.admin_router)
     app.include_router(devices_api.router)

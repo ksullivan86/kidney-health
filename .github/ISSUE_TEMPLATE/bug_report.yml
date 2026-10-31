@@ -15,7 +15,7 @@ body:
     attributes:
       label: Version
       description: Settings → About & privacy → App version, or the image tag and digest you run.
-      placeholder: "0.17.0 (ghcr.io/ksullivan86/kidney-health:0.17@sha256:…)"
+      placeholder: "0.18.0 (ghcr.io/ksullivan86/kidney-health:0.18@sha256:…)"
     validations:
       required: true
   - type: dropdown

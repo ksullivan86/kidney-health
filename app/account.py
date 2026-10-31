@@ -250,6 +250,7 @@ def _csv(header: Iterable[str], rows: Iterable[Iterable[Any]]) -> str:
 
 def export_data(conn: sqlite3.Connection, user_id: int, *, app_version: str) -> dict[str, Any]:
     """The ``export.json`` document for ``user_id`` (only that person's rows)."""
+    from . import care_suggestions
     from .foods import row_to_food
     from .log import entry_fields, fetch_entries
     from .meals import row_to_template
@@ -287,6 +288,7 @@ def export_data(conn: sqlite3.Connection, user_id: int, *, app_version: str) -> 
         "ai_provider": _own_ai_provider(conn, uid),
         "builtin_foods": _builtin_foods(conn, uid),
         **_activity(conn, uid),
+        "care_suggestions": care_suggestions.export_rows(conn, uid),  # schema step 31 (note 29 §9); the import skips it
     }
 
 

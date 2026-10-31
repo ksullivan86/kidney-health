@@ -73,6 +73,7 @@ CONFLICT: frozenset[str] = frozenset({
     "me_setup_totp", "me_enable_totp", "me_renew_recovery_codes",
     "me_passkey_creation_options", "me_add_passkey", "auth_passkey_reauth_options",
     "me_create_share_link", "shared_accept_share_link", "me_invite_by_username", "shared_accept_invite",
+    "shared_send_suggestion", "me_accept_suggestion",
 })
 UNSUPPORTED_MEDIA: frozenset[str] = frozenset({
     "vision_read_label", "vision_plate", "vision_read_lab_report", "ai_transcribe", "me_import_my_data", "push_body",
@@ -86,6 +87,7 @@ RATE_LIMITED: frozenset[str] = frozenset({
     "mcp_post", "push_body", "push_check", "me_enable_totp",
     "me_passkey_creation_options", "auth_passkey_request_options", "auth_passkey_sign_in", "auth_passkey_reauth_options",
     "auth_passkey_reauth", "shared_share_link_info", "shared_accept_share_link", "me_invite_by_username",
+    "shared_send_suggestion",
 })
 # Public routes that answer 401: the sign-in with a wrong name or password, and a passkey that did not work.
 UNAUTHORIZED_PUBLIC: frozenset[str] = frozenset({"auth_login", "auth_passkey_sign_in"})

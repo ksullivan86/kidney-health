@@ -50,7 +50,9 @@ SECTIONS = ("keep", "export", "stop", "tabs", "private", "newer")
 # app/account.py export_data, in its order (tests/test_demo_local_ui.py keeps this list equal to the server's)
 EXPORT_KEYS = ["format", "version", "exported_at", "app_version", "user", "profile", "settings", "log_entries", "custom_foods", "linked_foods",
                "meal_templates", "lab_results", "symptoms", "weights", "blood_pressures", "ai_audit", "activity", "food_preferences", "ai_usage",
-               "ai_consents", "ai_provider", "builtin_foods"]
+               "ai_consents", "ai_provider", "builtin_foods", "care_suggestions"]
+# Whoop's keys come from a helper spread into the export (app/account.py _activity), so they are not in the list above.
+SPREAD_KEYS = ("activity_days", "activity_workouts", "activity_extra")
 ENTRY = "Oat bar for the test"
 # a browser that grants the request (and remembers it across a reload, as persisted() does)
 PERSIST_YES = ("() => { Object.defineProperty(navigator, 'storage', { value: { persist: async () => { sessionStorage.setItem('stub-persisted', '1'); return true; }, "
@@ -276,7 +278,8 @@ def export_stop_import(browser: Any, base: str, out: Path) -> None:
     check("[export] the download is named export.json", download.suggested_filename == "export.json", download.suggested_filename)
     path = Path(download.path())
     doc = json.loads(path.read_text(encoding="utf-8"))
-    check("[export] it has the server's keys in the server's order", list(doc) == EXPORT_KEYS, str(list(doc)))
+    check("[export] it has the server's keys in the server's order", [k for k in doc if k not in SPREAD_KEYS] == EXPORT_KEYS
+          and all(k in doc for k in SPREAD_KEYS), str(list(doc)))
     check("[export] format, version, the entry, the lab result and the symptom", doc["format"] == "kidney-health-export" and doc["version"] == 1
           and [e["food_name"] for e in doc["log_entries"]] == [ENTRY] and len(doc["lab_results"]) == 1 and len(doc["symptoms"]) == 1,
           json.dumps({k: doc[k] for k in ("log_entries",)})[:200])

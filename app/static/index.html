@@ -503,6 +503,8 @@
       <select id="care-for-select"></select>
     </div>
     <div id="care-plan" class="care-plan" hidden></div>
+    <!-- js/views/suggestions.js (design note 29 §5): meals your Care team suggested, waiting for Add to my plan or No thanks. -->
+    <section id="plan-suggestions" class="card care-suggestions" aria-labelledby="plan-suggestions-h" hidden></section>
     <div class="date-nav week-nav">
       <button class="icon-btn" type="button" id="week-prev" aria-label="Previous week">
         <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
@@ -2481,6 +2483,7 @@
 <script src="js/views/guidance.js"></script>
 <script src="js/views/plandays.js"></script>
 <script src="js/views/careplan.js"></script>
+<script src="js/views/suggestions.js"></script>
 <script src="js/views/ask.js"></script>
 <script src="js/views/ask-voice.js"></script>
 <script src="js/views/demo_local.js"></script>

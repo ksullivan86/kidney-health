@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The Care team (design notes 19 and 25) in Chromium, against a real server and the demo.
+"""The Care team (design notes 19, 25 and 29) in Chromium, against a real server and the demo.
 
     python tools/e2e/sharing.py                     # port 8096
     python tools/e2e/sharing.py --port 8096 --out /tmp/kh-sharing
@@ -19,7 +19,14 @@ Ana logs a banana and a potassium result. Walks:
 * Kim at 375x812 dark accepts in her own Settings, presses Plan meals, sees whose plan she is changing, adds apple to Ana's
   tomorrow (planned, "added by kim", on Ana's shopping list, never in Kim's own log; every write to /api/shared), and goes back to
   her own plan; Ana's Today then says "Added by kim";
-* the demo (``/?mock=1``): a sample Care team, and planning for Ana, with no shared route asked over the network;
+* Ana turns on more switches for Kim in Settings → Care team (log food she ate, then her saved meals and suggestions): the role
+  says Caregiver, then Custom;
+* Kim, now able to log, marks the planned apple eaten, adds a banana as eaten today, adds Ana's saved meal to her plan, sees that
+  Ana's low treatment is hers alone to change, and sends a suggestion with a note: the answer shows how it fits Ana's day;
+* Ana's Plan tab shows the suggestion from kim; Add to my plan puts it on her plan, and Kim's list then says it was added;
+  Ana's Today says "Added by kim" on the banana Kim logged;
+* the demo (``/?mock=1``): a sample Care team, a suggestion from Jordan on your own Plan tab, and helping Ana (log, saved meals,
+  suggest), with no shared route asked over the network;
 * no console error, no CSP violation, no browser dialog, no sideways scroll at 375, no other host.
 
 Nothing leaves the machine. Prints PASS / FAIL lines, writes ``<out>/report.json`` and screenshots in ``<out>/shots/``; exit status 1 on
@@ -68,7 +75,9 @@ class Watch:
         self.requests: list[str] = []
         self.errors: list[str] = []
         self.dialogs: list[str] = []
+        self.refused: list[str] = []  # 400 answers: a refusal the walk asked for on purpose is checked by the walk itself
         page.on("request", self._request)
+        page.on("response", lambda r: self.refused.append(f"{r.request.method} {urlsplit(r.url).path}") if r.status == 400 else None)
         page.on("console", self._console)
         page.on("pageerror", lambda e: self.errors.append(str(e)))
         page.on("dialog", self._dialog)
@@ -79,6 +88,8 @@ class Watch:
             return
         # A signed-out page's first status check and an "enter your password again" answer (both asked for).
         if "status of 401" in m.text or "status of 403" in m.text:
+            return
+        if "status of 400" in m.text:  # listed in .refused; finish() checks it holds only what the walk expected
             return
         self.errors.append(m.text)
 
@@ -117,7 +128,9 @@ class Pass:
         wide = self.page.evaluate("() => document.documentElement.scrollWidth > window.innerWidth + 1")
         check(f"[{self.tag}] no sideways scroll ({where})", not wide)
 
-    def finish(self, demo: bool = False) -> None:
+    def finish(self, demo: bool = False, refused: list[str] | None = None) -> None:
+        check(f"[{self.tag}] the server refused only what the walk meant it to", sorted(self.watch.refused) == sorted(refused or []),
+              str(self.watch.refused))
         csp = self.page.evaluate("window.__csp || []")
         check(f"[{self.tag}] no console error, no CSP violation, no browser dialog", not self.watch.errors and not csp and not self.watch.dialogs,
               "; ".join(self.watch.errors + csp + self.watch.dialogs))
@@ -158,6 +171,7 @@ def walk_ana_shares(p: Pass) -> str:
                         " return s.indexOf(document.querySelector('#set-care')) === 1; }"))
     page.click("#set-share-form summary")  # Make a link instead
     page.uncheck("#set-share-symptoms")
+    page.uncheck("#set-share-activity")
     page.select_option("#set-share-days", "30")
     page.click("#set-sharing-make")
     answer_reauth(page)
@@ -337,7 +351,6 @@ def walk_kim_plans(p: Pass, kim: Any, ana: Any) -> None:
     page.wait_for_selector("#care-plan", state="hidden", timeout=15000)
     page.wait_for_selector("#plan-grid", state="visible", timeout=15000)
     check(f"[{p.tag}] Back to my own plan shows her own week again", page.input_value("#care-for-select") == "")
-    p.finish()
 
 
 def walk_ana_sees_who(p: Pass) -> None:
@@ -349,7 +362,150 @@ def walk_ana_sees_who(p: Pass) -> None:
     wait_text(page, "#view-today", "Added by kim")
     check(f"[{p.tag}] Today says who planned it", "Added by kim" in text_of(page, "#view-today"))
     p.shot("added-by")
-    p.finish()
+
+
+def switch_on(page: Any, share_id: int, switch: str) -> None:
+    """Tick one of the "may do" switches of share ``share_id`` in Settings → Care team, and wait for it to be saved."""
+    box = f"#set-care-switches-{share_id}"
+    if not page.evaluate("(sel) => !!document.querySelector(sel) && document.querySelector(sel).open", box):
+        page.click(f"{box} summary")
+    page.check(f"#set-care-{share_id}-{switch}")
+    noun = {"may-plan": "planning", "may-log": "logging food", "may-use-saved-meals": "saved meals", "may-suggest": "suggestions"}[switch]
+    wait_text(page, "#set-sharing-list .row-sub", noun)  # saved: the list was drawn again from the server
+    page.wait_for_selector(f"{box}[open]", timeout=15000)
+
+
+def walk_ana_switches(p: Pass, ana: Any) -> int:
+    """Ana turns on logging for Kim (Caregiver), then her saved meals and suggestions (Custom), each saved at once."""
+    page = p.page
+    open_sharing(page)
+    wait_text(page, "#set-sharing-list", "kim")
+    share_id = next(s["id"] for s in ana.json("GET", "/api/me/shares")["sharing"] if s["username"] == "kim")
+    switch_on(page, share_id, "may-log")
+    wait_text(page, "#set-sharing-list .row-sub", "Caregiver")
+    line = text_of(page, "#set-sharing-list .row-sub")
+    check(f"[{p.tag}] turning on Log food I ate makes Kim a Caregiver", "Caregiver" in line and "logging food" in line, line[:300])
+    switch_on(page, share_id, "may-use-saved-meals")
+    switch_on(page, share_id, "may-suggest")
+    wait_text(page, "#set-sharing-list .row-sub", "saved meals and suggestions")
+    line = text_of(page, "#set-sharing-list .row-sub")
+    check(f"[{p.tag}] with saved meals and suggestions too, the role says Custom and lists what Kim may do",
+          "Custom" in line and "may: planning, logging food, saved meals and suggestions" in line, line[:300])
+    item = next(s for s in ana.json("GET", "/api/me/shares")["sharing"] if s["id"] == share_id)
+    check(f"[{p.tag}] the server has all four switches on", all(item[k] for k in ("may_plan", "may_log", "may_use_saved_meals", "may_suggest")), str(item))
+    p.shot("switches", "#set-sharing")
+    p.no_overflow("switches")
+    return share_id
+
+
+def walk_kim_helps(p: Pass, kim: Any, ana: Any) -> None:
+    """Kim, now a helper with every switch: marks a planned food eaten, logs a food eaten, adds Ana's saved meal, leaves Ana's low
+    treatment alone and sends a suggestion."""
+    page = p.page
+    today = date.today().isoformat()
+    tomorrow = (date.today() + timedelta(days=1)).isoformat()
+    chicken = ana.json("GET", "/api/foods", params={"q": "chicken"})["foods"][0]["id"]
+    ana.json("POST", "/api/log", {"date": tomorrow, "meal": "dinner", "food_id": chicken, "servings": 1, "status": "planned"})
+    page.goto("/#plan")
+    page.wait_for_selector("#care-for:not([hidden])", timeout=30000)
+    page.select_option("#care-for-select", label="ana")
+    page.wait_for_selector("#care-banner", timeout=20000)
+    wait_text(page, "#care-banner", "You are helping")  # opening someone reads their switches as they are now
+    banner = text_of(page, "#care-banner")
+    check(f"[{p.tag}] the banner says what she adds goes into Ana's food log", "You are helping ana. What you add goes into ana's food log" in banner, banner)
+    wait_text(page, "#care-day", "Chicken")
+    page.locator("#care-day li", has_text="Chicken").locator("button", has_text="Mark eaten").click()
+    page.wait_for_function("() => [...document.querySelectorAll('#care-day li')].some((li) => li.innerText.includes('Chicken') && li.innerText.includes('serving · eaten'))",
+                           timeout=15000)
+    check(f"[{p.tag}] Mark eaten turns Ana's planned chicken into eaten food",
+          [e["status"] for e in ana.json("GET", "/api/log", params={"date": tomorrow})["entries"] if e["food_name"].startswith("Chicken")] == ["eaten"])
+    # today: a banana eaten, through the form
+    page.locator("#care-grid button[aria-label^='Today,']").click()
+    wait_text(page, "#care-day-h", "Today,")
+    wait_text(page, "#care-day", "A low treatment: only ana changes it.")
+    low_row = page.locator("#care-day li", has_text="Glucose")
+    check(f"[{p.tag}] Ana's low treatment says only she changes it, with no button to change it",
+          low_row.count() == 1 and low_row.locator("button").count() == 0, text_of(page, "#care-day")[:300])
+    page.fill("#care-add-q", "banana")
+    page.wait_for_selector("#care-add-results button", timeout=20000)
+    page.locator("#care-add-results button").first.click()
+    page.select_option("#care-add-meal", "snack")
+    page.select_option("#care-add-status", "eaten")
+    check(f"[{p.tag}] the button says it goes into the food log as eaten", "as eaten" in page.inner_text("#care-add"))
+    page.click("#care-add")
+    page.wait_for_function("() => [...document.querySelectorAll('#care-day li')].some((li) => li.innerText.includes('Banana') && li.innerText.includes('eaten · added by kim'))",
+                           timeout=15000)
+    eaten = [(e["food_name"], e["status"], e["added_by"]) for e in ana.json("GET", "/api/log", params={"date": today})["entries"]]
+    check(f"[{p.tag}] the banana is in Ana's log as eaten, added by kim", ("Banana, raw", "eaten", "kim") in eaten, str(eaten))
+    # Ana's saved meal, added to her plan
+    wait_text(page, "#care-meals", "Ana's lunch")
+    page.locator("#care-meals-list li", has_text="Ana's lunch").get_by_role("button", name="Add to plan").click()
+    page.wait_for_function("() => [...document.querySelectorAll('#care-day li')].filter((li) => li.innerText.includes('planned · added by kim')).length >= 1",
+                           timeout=15000)
+    check(f"[{p.tag}] Ana's saved meal is on her plan, added by kim, and the meal itself is unchanged",
+          any(e["added_by"] == "kim" and e["status"] == "planned" for e in ana.json("GET", "/api/log", params={"date": today})["entries"])
+          and [m["name"] for m in ana.json("GET", "/api/meals")["meals"]] == ["Ana's lunch"])
+    # a suggestion with a note
+    page.wait_for_selector("#care-suggest-q", timeout=20000)
+
+    def pick(word: str) -> None:
+        page.fill("#care-suggest-q", word)
+        page.wait_for_function("(w) => { const b = document.querySelector('#care-suggest-results button'); "
+                               "return !!b && b.innerText.toLowerCase().includes(w); }", arg=word, timeout=20000)
+        page.locator("#care-suggest-results button").first.click()
+        page.wait_for_function("() => !document.querySelector('#care-suggest-items li.muted')", timeout=15000)
+
+    page.fill("#care-suggest-date", tomorrow)
+    page.select_option("#care-suggest-meal", "dinner")
+    pick("rice")
+    page.fill("#care-suggest-note", "Apples are in the fruit bowl.")
+    page.click("#care-suggest-send")
+    wait_text(page, "#care-suggest-result", "for the day with this meal")
+    check(f"[{p.tag}] the answer shows how the suggestion fits Ana's day", "Potassium" in text_of(page, "#care-suggest-result"),
+          text_of(page, "#care-suggest-result")[:200])
+    wait_text(page, "#care-sent", "waiting for an answer")
+    pick("apple")  # the first is apple juice, a food for treating a low
+    page.click("#care-suggest-send")
+    wait_text(page, "#care-suggest-result", "for treating a low")
+    check(f"[{p.tag}] a food for treating a low is left out of suggestions, said plainly",
+          "how to treat a low stays ana's choice" in text_of(page, "#care-suggest-result"), text_of(page, "#care-suggest-result"))
+    page.locator("#care-suggest-items button", has_text="Take out").first.click()
+    pick("rice")
+    page.fill("#care-suggest-note", "Take your insulin first")
+    page.click("#care-suggest-send")
+    wait_text(page, "#care-suggest-result", "Please leave out")
+    check(f"[{p.tag}] a note about insulin is refused with a plain reason", "insulin" in text_of(page, "#care-suggest-result"))
+    p.shot("care-helps")
+    p.no_overflow("care-helps")
+    writes = [r for r in p.watch.requests if r.split(" ", 1)[0] in ("POST", "PUT", "DELETE") and "/api/" in r]
+    check(f"[{p.tag}] every write went to the shared routes or her Settings", all("/api/shared" in r for r in writes), str(writes))
+    p.page.evaluate("() => KH.carePlan.leave()")
+
+
+def walk_ana_suggestion(p: Pass, ana: Any, kim: Any, share_id: int) -> None:
+    """Ana sees Kim's suggestion on her Plan tab and adds it with one tap; Kim's list then says so."""
+    page = p.page
+    tomorrow = (date.today() + timedelta(days=1)).isoformat()
+    page.goto("/#plan")
+    page.wait_for_selector("#plan-suggestions:not([hidden])", timeout=30000)
+    card = text_of(page, "#plan-suggestions")
+    check(f"[{p.tag}] her Plan tab shows the suggestion from kim, with the note and how it fits her day",
+          "1 suggestion from your Care team" in card and "kim suggests dinner" in card.lower() and "Apples are in the fruit bowl." in card
+          and "for the day with this meal" in card, card[:400])
+    p.shot("suggestion", "#plan-suggestions")
+    p.no_overflow("suggestion")
+    before = len(ana.json("GET", "/api/log", params={"date": tomorrow})["entries"])
+    page.locator("#plan-suggestions").get_by_role("button", name="Add to my plan").click()
+    page.wait_for_selector("#plan-suggestions", state="hidden", timeout=15000)
+    after = ana.json("GET", "/api/log", params={"date": tomorrow})["entries"]
+    check(f"[{p.tag}] Add to my plan puts it on her plan as her own planned food",
+          len(after) == before + 1 and after[-1]["status"] == "planned" and after[-1]["meal"] == "dinner" and after[-1]["added_by"] is None, str(after))
+    answers = [sg["answer"] for sg in kim.json("GET", f"/api/shared/{share_id}/suggestions")["suggestions"]]
+    check(f"[{p.tag}] Kim's list then says it was added", answers == ["accepted"], str(answers))
+    page.goto("/")
+    page.wait_for_selector("#date-next", state="visible", timeout=30000)
+    wait_text(page, "#view-today", "Added by kim")
+    check(f"[{p.tag}] Today says kim added the banana she ate", "Banana" in text_of(page, "#view-today") and "Added by kim" in text_of(page, "#view-today"))
 
 
 def walk_demo(p: Pass) -> None:
@@ -367,9 +523,16 @@ def walk_demo(p: Pass) -> None:
     check(f"[{p.tag}] the demo shows a sample Care team", "Jordan" in text and "invites for you" in text.lower() and "Ana" in text, text[:300])
     page.click("#tab-plan")
     page.wait_for_selector("#care-for:not([hidden])", timeout=20000)
+    page.wait_for_selector("#plan-suggestions:not([hidden])", timeout=20000)
+    check(f"[{p.tag}] the demo shows a suggestion from Jordan on your own Plan tab", "jordan suggests dinner" in text_of(page, "#plan-suggestions").lower(),
+          text_of(page, "#plan-suggestions")[:200])
     page.select_option("#care-for-select", label="Ana")
     page.wait_for_selector("#care-banner", timeout=20000)
-    check(f"[{p.tag}] the demo can plan for Ana", "You are planning for Ana" in text_of(page, "#care-banner"))
+    check(f"[{p.tag}] the demo can help Ana", "You are helping Ana" in text_of(page, "#care-banner"))
+    check(f"[{p.tag}] helping someone hides your own suggestions", not page.is_visible("#plan-suggestions"))
+    wait_text(page, "#care-meals", "Rice and chicken")
+    page.wait_for_selector("#care-suggest-send", timeout=20000)
+    check(f"[{p.tag}] the demo shows Ana's saved meal and Suggest a meal", page.is_visible("#care-suggest-send"))
     p.no_overflow("demo")
     p.finish(demo=True)
 
@@ -460,6 +623,11 @@ def main(argv: list[str] | None = None) -> int:
         banana = ana.json("GET", "/api/foods", params={"q": "banana"})["foods"][0]["id"]
         ana.json("POST", "/api/log", {"date": date.today().isoformat(), "meal": "breakfast", "food_id": banana, "servings": 1})
         ana.json("POST", "/api/labs", {"analyte": "potassium", "value": 4.8, "unit": "mmol/L", "taken_on": date.today().isoformat()})
+        glucose = ana.json("GET", "/api/foods", params={"q": "glucose"})["foods"][0]["id"]
+        ana.json("POST", "/api/log", {"date": date.today().isoformat(), "meal": "snack", "food_id": glucose, "servings": 1})
+        ana.json("PUT", "/api/profile", {"targets": {"potassium_mg": 2000, "phosphorus_mg": 800, "sodium_mg": 1500}})
+        rice = ana.json("GET", "/api/foods", params={"q": "rice"})["foods"][0]["id"]
+        ana.json("POST", "/api/meals", {"name": "Ana's lunch", "meal_hint": "lunch", "items": [{"food_id": rice, "servings": 1}]})
         base = server.base
         with sync_playwright() as pw:
             browser = pw.chromium.launch(executable_path=khserver.chromium_executable(), args=["--no-sandbox"])
@@ -475,8 +643,14 @@ def main(argv: list[str] | None = None) -> int:
                 walk_ana_stops(ana_pass)
                 walk_sam_after(sam_pass, sam, share_id)
                 walk_ana_invites(ana_pass)
-                walk_kim_plans(Pass(browser, base, out, 375, 812, "dark", "kim-375-dark", kim.cookies()), kim, ana)
+                kim_pass = Pass(browser, base, out, 375, 812, "dark", "kim-375-dark", kim.cookies())
+                walk_kim_plans(kim_pass, kim, ana)
                 walk_ana_sees_who(ana_pass)
+                kim_share = walk_ana_switches(ana_pass, ana)
+                walk_kim_helps(kim_pass, kim, ana)
+                kim_pass.finish(refused=[f"POST /api/shared/{kim_share}/suggestions"] * 2)  # a food for a low, and a note about insulin
+                walk_ana_suggestion(ana_pass, ana, kim, kim_share)
+                ana_pass.finish()
                 walk_demo(Pass(browser, base, out, 375, 812, "light", "demo-375-light"))
             finally:
                 browser.close()

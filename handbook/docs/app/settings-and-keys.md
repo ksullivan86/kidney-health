@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-14
 fact_checked: 2026-10-05
-sources: [NOTE07, NOTE03, NOTE04, NOTE06, NOTE02, FDC-API, NOTE17, NOTE18, NOTE19, NOTE25, NOTE28]
+sources: [NOTE07, NOTE03, NOTE04, NOTE06, NOTE02, FDC-API, NOTE17, NOTE18, NOTE19, NOTE25, NOTE28, NOTE29]
 ---
 
 # Settings and keys
@@ -23,7 +23,7 @@ can be shared by your admin or added by you ([design note 07][NOTE07]).
 | Section | What you find there |
 |---|---|
 | **Account** | your name, user name, **Change password**, **Two-step sign-in**, **Passkeys**, **Signed-in devices**, **Your data** (export, import, **Phone shortcuts** for an iPhone Shortcut that sends your weight and blood pressure: [Weight and blood pressure](weight-and-blood-pressure.md#from-a-phone-shortcut); delete account), your recent sign-in activity, **Sign out** |
-| **Care team** | family, a caregiver or a dietitian on your server who can look at your log (**Viewer**) or also plan your meals and use your shopping list (**Care helper**); invites for you; the Care teams you are on ([Care team](#sharing)) |
+| **Care team** | family, a caregiver or a dietitian on your server who can look at your log (**Viewer**), also plan your meals (**Care helper**) or also log food you ate (**Caregiver**), with a switch for each thing; invites for you; the Care teams you are on ([Care team](#sharing)) |
 | **Connected devices** (when your admin sets it up) | **Connect Withings** so the server fetches your weight, blood pressure and pulse ([Weight and blood pressure](weight-and-blood-pressure.md#from-withings)); **Connect Whoop** for calories burned, strain, recovery, HRV, sleep and workouts ([Activity and recovery](reports-for-your-team.md#activity-and-recovery)), and **Add active-day calories to my target** ([More calories on active days](targets-and-warnings.md#active-day-calories)); **Sync now**; **Disconnect** |
 | **Preferences** | theme (match device, light, dark), the day your week starts on, **Units for lab results** (US or SI: the unit offered first) |
 | **Meal guidance** | on or off, carbohydrate tolerance, low-treatment amount, foods to leave out, your "Not for me" foods ([Meal guidance](guidance.md)) |
@@ -166,53 +166,72 @@ computers you can also tap the user name box: your passkey is listed there, and 
 ## Care team {#sharing}
 
 Your **Care team** is family, a caregiver or a dietitian who has their own account on your server. You choose what each person
-can do, and you can change it or stop it at any time ([design notes 19][NOTE19] and [25][NOTE25]). Your admin turns the Care
-team on first; until then, Settings says so. **Profile → Open Care team** takes you there too.
+can see and do, and you can change it or stop it at any time ([design notes 19][NOTE19], [25][NOTE25] and [29][NOTE29]). Your
+admin turns the Care team on first; until then, Settings says so. **Profile → Open Care team** takes you there too.
 
-There are two roles:
+There are three roles. A role is a quick way to set what someone may do:
 
 - A **Viewer** can look at the parts you tick: your food log, lab results, weight and blood pressure, symptoms, activity and
-  recovery (from Whoop). They never change
-  anything.
-- A **Care helper** can also plan your meals and use your shopping list. They see your food log so they can plan. They never
-  change what you ate, your targets, your profile, your labs, your weight, your symptoms or your settings.
+  recovery (from Whoop). They never change anything.
+- A **Care helper** can also plan your meals and use your shopping list.
+- A **Caregiver** can also log food you ate. They can mark planned food as eaten, and fix or remove eaten food they added
+  themselves. They never change food you logged yourself.
+
+Two more things are off unless you turn them on for someone: **Use my saved meals** and **Suggest meals for me to add**. A
+coach or dietitian can be a Viewer who may suggest meals. When the switches match no role, the role says **Custom**.
+
+Nobody on your Care team ever changes your targets, labs, profile, medicines or settings. Nobody changes, removes or moves a low
+treatment, whoever logged it. A Caregiver may log a low treatment you had, because writing down what happened is never blocked.
+Nothing in the app warns against treating a low.
 
 To add someone:
 
-1. **Settings → Care team → Add someone**. Type their user name on this server, pick **Viewer** or **Care helper**, tick what
-   they can see and pick how long: until you stop it, a week, 30 days, 90 days or a year. Tap **Send invite**. The app may ask
-   for your password again.
+1. **Settings → Care team → Add someone**. Type their user name on this server, pick a role, tick what they can see and pick
+   how long: until you stop it, a week, 30 days, 90 days or a year. Tap **Send invite**. The app may ask for your password again.
 2. They see your invite in their own **Settings → Care team** and tap **Accept** or **Decline**. Nothing changes until they do.
    Your invite waits 7 days under **Waiting for an answer**, where you can cancel it.
 3. If you do not know their user name, open **Make a link instead**, make a link and send it to them. It works once, for 7 days.
    Send it only to them: whoever opens it first can accept it.
 
-They never see your saved meals, your recipes, your food preferences, your AI settings, your keys or your sign-in activity. They
-see the weight in your profile only if you shared weight and blood pressure.
+They never see your recipes, your food preferences, your AI settings, your keys or your sign-in activity, and they see your saved
+meals only if you turn that on. They see the weight in your profile only if you shared weight and blood pressure.
 
-- **Your Care team** lists each person, their role, until when, when they last looked, and what a Care helper changed in your
-  plan that day. Change the role in the list. **Remove** ends it at once.
-- Food a Care helper planned for you says **Added by** and their name on your Today. You can change or remove it like any
-  planned food.
-- Your activity shows invites, answers, role changes, and once a day that a Care helper changed your plan.
+- **Your Care team** lists each person, their role and what they may do, until when, when they last looked, and what they changed
+  in your plan or logged that day. Change the role in the list, or open **What they may see and do** and change one switch.
+  Each change is saved at once. **Remove** ends it at once.
+- Turning on planning, logging, saved meals or suggestions needs your food log. The app asks first, then shares it.
+- Food someone on your Care team added says **Added by** and their name on your Today. You can change or remove it like any
+  of your food.
+- Your activity shows invites, answers, role and switch changes, once a day that someone changed your plan or logged food, and
+  each suggestion.
 - A share with an end date stops by itself on that day.
+
+**Suggestions from your Care team.** If you turned on **Suggest meals for me to add** for someone, their suggestions wait at the
+top of your **Plan** tab. Each one shows who sent it, the day and meal, the foods, what it adds to that day against your targets,
+and their note. **Add to my plan** adds it as planned food of your own, which you can change like any other. **No thanks** says
+no. They see which one you chose, never why. A suggestion goes away by itself after 14 days. Suggestions never hold a food for
+treating a low, and a note about lows, insulin, doses, medicines or lab results cannot be sent. Turning the switch off keeps
+what was already sent; removing the person closes them.
 
 **When you are on someone's Care team**, they are under **Care teams you are on**. **Open** shows their summary page, **Trends**
 their charts; **Leave** ends it. Their weight chart uses their dry weight, never yours. If a part cannot load, tap **Retry**.
 
-**Planning meals for someone (Care helper).** Tap **Plan meals**, or choose their name under **Planning for** at the top of the
-Plan tab. A banner says whose plan you are changing. **Back to my own plan** takes you back; your own plan is never mixed with
-theirs.
+**Helping someone with meals.** Tap **Plan meals** (or **Log food**, or **Suggest a meal**), or choose their name under
+**Planning for** at the top of the Plan tab. A banner says whose food you are changing. **Back to my own plan** takes you back;
+your own plan is never mixed with theirs. What you see follows what they allow:
 
-- Pick a day to see what they ate and what is planned. Change an amount and tap **Save**, or **Remove** a planned food.
-- **Add food** searches the foods they can use.
-- **Plan several days** makes a plan that follows their targets. Look it over, then tap **Add to their plan**. Their saved meals
-  are not used.
-- **Clear planned days** takes planned food off. Eaten food and a planned low treatment always stay. Only the person changes a
-  planned low treatment, and nothing in the app ever warns against treating a low.
-- Their **shopping list** works like yours: tick items, **Copy list** or **Share list**. Ticks stay on your device, apart from
-  your own list.
-- Planning for someone needs a connection to your server. Changes for them never wait on your phone.
+- Pick a day to see what they ate and what is planned. **Add food** searches the foods they can use. If you may log food, choose
+  **Planned** or **Eaten**.
+- If you may plan: change an amount and tap **Save**, or **Remove** a planned food. **Plan several days** makes a plan that
+  follows their targets; look it over, then tap **Add to their plan**. **Clear planned days** takes planned food off; eaten food
+  and a planned low treatment always stay. Their **shopping list** works like yours; ticks stay on your device.
+- If you may log food: **Mark eaten** on a planned food, and change or remove eaten food you added.
+- If you may use their saved meals: each one has **Add to plan** and **Add as eaten**, and **Plan several days** can use them.
+  You never change their saved meals.
+- If you may suggest meals: **Suggest a meal** takes a day, a meal, foods and a short note (up to 280 characters). After you
+  send it, the app shows how it fits their day. **Suggestions you sent** shows their answers.
+- A low treatment says only they change it.
+- Helping someone needs a connection to your server. Changes for them never wait on your phone.
 
 ## Assistant access
 
@@ -268,5 +287,6 @@ change is listed in your activity, and a food it set shows in **Settings → Mea
 - [Design note 07: accounts, settings and secrets][NOTE07], sections 4.11, 4.12 and 4.17.
 - [Design note 02][NOTE02] (This device); [design note 03][NOTE03] (barcode settings); [design note 04][NOTE04] (AI keys);
   [design note 06][NOTE06] (guidance settings).
-- [Design note 19][NOTE19]: read-only sharing. [Design note 25][NOTE25]: the Care team.
+- [Design note 19][NOTE19]: read-only sharing. [Design note 25][NOTE25]: the Care team. [Design note 29][NOTE29]: switches,
+  the Caregiver, saved meals and suggestions.
 - [USDA FoodData Central API guide][FDC-API]: free keys and rate limits.

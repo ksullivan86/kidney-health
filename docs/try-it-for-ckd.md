@@ -68,8 +68,11 @@ Go to **Plan** and find **Plan several days…**. Plan a week.
 * Is there enough variety, or too much? Can you choose which meals may repeat, like the same breakfast every day?
 * Open the shopping list. Is it something you could take to the store or send to someone? Try **Copy list** or **Share list**.
 * If you plan days by mistake, can you clear them again?
-* At the top of Plan, choose **Ana** under **Planning for**. This is how a family member plans meals for someone on their Care
-  team. Is it clear whose plan you are changing, and how to get back to Sam's?
+* At the top of Plan you may see a meal suggested by Jordan, from Sam's Care team. Is it clear what **Add to my plan** and
+  **No thanks** do?
+* At the top of Plan, choose **Ana** under **Planning for**. This is how a family member helps someone on their Care team: plan
+  meals, log food they ate, use their saved meals and suggest a meal. Is it clear whose food you are changing, and how to get back
+  to Sam's?
 
 ### 6. Lab results and targets (7 minutes)
 
@@ -100,7 +103,8 @@ Look for the links to the handbook (the **Learn** pages, about potassium, phosph
 Open **Settings** (the gear).
 
 * Is it clear where Sam's data is kept and how to get a copy of it?
-* Look at **Care team**: the demo shows a sample. Is it clear what a Viewer and a Care helper can do?
+* Look at **Care team**: the demo shows a sample. Is it clear what a Viewer, a Care helper and a Caregiver can do, and what
+  each switch under **What they may see and do** means?
 * Is there anything here that worries you about privacy?
 
 ## Questions for the end

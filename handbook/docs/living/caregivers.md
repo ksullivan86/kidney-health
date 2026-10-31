@@ -109,8 +109,9 @@ parent with a serious health condition, which can be taken in short blocks
 If you have your own account on the same server, the person can add you to their **Care team** in **Settings → Care team**
 ([how it works](../app/settings-and-keys.md#sharing)). As a **Viewer** you can look at what they choose to share. As a
 **Care helper** you can also plan their meals and use their shopping list: on the Plan tab, choose their name under
-**Planning for**. Food you plan shows "Added by" and your name on their day. You never change what they ate, their targets or
-their settings, and a planned low treatment stays as it is.
+**Planning for**. As a **Caregiver** you can also log food they ate, for example when you help at mealtimes. They can also let
+you use their saved meals or send them meal ideas to add. Food you add shows "Added by" and your name on their day. You never
+change their targets, labs, profile or medicines, or a low treatment. If they treated a low with you, you can log it as eaten.
 
 ## What to do
 

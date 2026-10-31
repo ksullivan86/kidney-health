@@ -26,7 +26,7 @@
   const REG = KH.settings;
 
   // Kept equal to APP_VERSION in app/main.py (tests/test_settings_ui.py).
-  const APP_VERSION = '0.17.0';
+  const APP_VERSION = '0.18.0';
 
   const A = {
     sessions: () => request('GET', '/api/me/sessions'),
@@ -552,7 +552,7 @@
     browser: 'This browser cannot open a .zip here. Open the .zip on your device and choose the export.json inside it.',
   };
   // Parts of an export the import never reads (AI activity, sign-in activity, the account itself): not even sent.
-  const IMPORT_NEVER_SENT = ['user', 'ai_audit', 'activity', 'ai_usage', 'ai_consents', 'ai_provider', 'activity_days', 'activity_workouts', 'activity_extra'];
+  const IMPORT_NEVER_SENT = ['user', 'ai_audit', 'activity', 'ai_usage', 'ai_consents', 'ai_provider', 'activity_days', 'activity_workouts', 'activity_extra', 'care_suggestions'];
   const IMPORT_KINDS = [
     ['log_entries', 'log entry', 'log entries'],
     ['custom_foods', 'food of yours', 'foods of yours'],
@@ -755,6 +755,9 @@
     'share.ended': 'Someone left your Care team', 'share.viewed': 'Someone on your Care team looked at what you share',
     'care.invited': 'Care team invite sent', 'care.invite_cancelled': 'Care team invite cancelled', 'care.invite_answered': 'Someone answered your Care team invite',
     'care.role_changed': 'Care team role changed', 'care.plan_changed': 'Your Care helper changed your plan',
+    'care.switches_changed': 'Care team switches changed', 'care.food_logged': 'Someone on your Care team logged food you ate',
+    'suggestion.sent': 'A meal suggestion from your Care team', 'suggestion.accepted': 'You added a suggestion to your plan',
+    'suggestion.declined': 'You said no thanks to a suggestion', 'suggestion.expired': 'A suggestion expired after 14 days',
     'oidc.linked': 'Sign-in provider linked', 'oidc.unlinked': 'Sign-in provider link removed',
     'device.connected': 'Device connected', 'device.disconnected': 'Device disconnected', 'device.sync_failed': 'Device sync stopped working',
     'activity.extra_on': 'Active-day calories turned on', 'activity.extra_off': 'Active-day calories turned off',
@@ -834,6 +837,10 @@
     if (ev.action === 'share.ended') return { owner: 'you removed them', grantee: 'they left', admin: 'an admin ended it', time: 'on the end date you chose' }[d.by] || '';
     if (ev.action === 'care.invite_answered') return d.answer === 'declined' ? 'declined' : `accepted, as a ${KH.sharing ? KH.sharing.roleText(d.role) : d.role}`;
     if (ev.action === 'care.role_changed' || ev.action === 'care.invited') return KH.sharing ? `as a ${KH.sharing.roleText(d.role)}` : '';
+    if (ev.action === 'care.switches_changed' && KH.sharing) {
+      return [d.role === 'custom' ? 'now a custom set of switches' : `now a ${KH.sharing.roleText(d.role)}`, d.food_added ? 'food log shared' : null].filter(Boolean).join(', ');
+    }
+    if (ev.action === 'suggestion.accepted' && d.skipped) return `${d.skipped} ${d.skipped === 1 ? 'food was' : 'foods were'} left out`;
     if (d.links_revoked) return d.links_revoked === 1 ? '1 open link revoked' : `${d.links_revoked} open links revoked`;
     return '';
   }

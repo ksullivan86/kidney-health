@@ -39,7 +39,7 @@ def test_every_route_belongs_to_one_of_the_four_areas(people):
     listed = {"/api/shared/{share_id}/" + path.split("?")[0] for path in ROUTES} | {"/api/shared/{share_id}/profile"}
     from test_care_team import HELPER_READS  # a Care helper's reads (design note 25): the food log plus the role, checked there
 
-    listed |= {p for _, p in HELPER_READS}
+    listed |= {p for _, p in HELPER_READS} | {"/api/shared/{share_id}/suggestions"}  # what you suggested (design note 29 §5)
     assert reads == listed
 
 
