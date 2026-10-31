@@ -69,6 +69,6 @@
 .activity-extra { margin-top: 10px; padding-top: 8px; border-top: 1px solid var(--border); }
 .activity-extra-lines { margin: 0; padding: 0; list-style: none; font-variant-numeric: tabular-nums; }
 .activity-extra-lines li { margin: 2px 0; }
-.activity-why summary { cursor: pointer; color: var(--accent-text); min-height: var(--tap); display: flex; align-items: center; }
+.activity-why summary { cursor: pointer; font-weight: 600; text-decoration: underline; min-height: var(--tap); display: flex; align-items: center; }
 .activity-extra-setting { margin-top: 10px; }
 .activity-extra-fields { display: grid; gap: 4px; max-width: 22rem; margin: 6px 0; }

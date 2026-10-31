@@ -31,8 +31,11 @@ def test_the_scripts_are_loaded_in_order_and_kept_offline() -> None:
 
 
 def test_settings_has_its_own_section_hidden_until_the_server_answers() -> None:
-    sec = '<section class="card settings-section" id="set-devices" data-title="Connected devices" aria-labelledby="set-devices-h" hidden>'
+    sec = '<section class="card settings-section" id="set-connected" data-title="Connected devices" aria-labelledby="set-connected-h" hidden>'
     assert INDEX.index('id="set-body"') < INDEX.index(sec) < INDEX.index('id="set-guidance"')
+    # Its own id: #set-devices is Account → Signed-in devices, which comes first, so $('#set-devices') never found this section.
+    assert "const sec = $('#set-connected');" in SETTINGS and "const sec = $('#set-connected');" in VIEW
+    assert INDEX.count('id="set-devices"') == 0 and "id: 'set-devices'" in SETTINGS
     assert "const show = await KH.devices.render($('#set-devices-body'));" in SETTINGS
     assert "['Connected devices', ['devices.enabled', 'devices.sync_hours']]," in SETTINGS
     assert "if (err && err.status === 404) { clear(body); return false; }" in VIEW

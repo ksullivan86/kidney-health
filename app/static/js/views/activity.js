@@ -25,6 +25,7 @@
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
   const fmtSleep = (min) => (min == null ? '–' : `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, '0')} min`);
   const dash = (v, unit = '') => (v == null ? '–' : `${v}${unit}`);
+  const tenth = (v, unit = '') => (v == null ? '–' : `${Number(v).toFixed(1)}${unit}`);
 
   // ---- Today --------------------------------------------------------------------------------------------------------------
   /** What Today says about the extra. `x` is GET /api/log's calorie_extra (never null here). */
@@ -141,8 +142,8 @@
     const rows = [...days].reverse().map((d) => h('tr', {},
       h('th', { scope: 'row' }, fmtDateShort(d.date)),
       h('td', { class: 'num' }, d.kcal == null ? '–' : `${fmtKcal(d.kcal)}${d.finished ? '' : ' so far'}`),
-      h('td', { class: 'num' }, dash(d.strain)), h('td', { class: 'num' }, dash(d.recovery_pct, '%')),
-      h('td', { class: 'num' }, dash(d.resting_hr, ' bpm')), h('td', { class: 'num' }, dash(d.hrv_ms, ' ms')),
+      h('td', { class: 'num' }, tenth(d.strain)), h('td', { class: 'num' }, dash(d.recovery_pct, '%')),
+      h('td', { class: 'num' }, dash(d.resting_hr, ' bpm')), h('td', { class: 'num' }, tenth(d.hrv_ms, ' ms')),
       h('td', { class: 'num' }, fmtSleep(d.sleep_minutes))));
     const table = h('table', { class: 'data-table body-table' },
       h('caption', { class: 'sr-only' }, 'Whoop days, newest first'),
@@ -155,7 +156,7 @@
     return h('div', {}, h('h4', { class: 'activity-sub' }, plural(workouts.length, 'workout', 'workouts')),
       h('ul', { class: 'activity-workouts' }, ...[...workouts].reverse().map((w) => h('li', {},
         [fmtDateShort(w.date), w.sport || 'workout', w.minutes != null ? `${w.minutes} min` : null,
-          w.kcal != null ? fmtKcal(w.kcal) : null, w.strain != null ? `strain ${w.strain}` : null].filter(Boolean).join(' · ')))));
+          w.kcal != null ? fmtKcal(w.kcal) : null, w.strain != null ? `strain ${Number(w.strain).toFixed(1)}` : null].filter(Boolean).join(' · ')))));
   }
 
   function summaryList(days) {

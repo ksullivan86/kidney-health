@@ -2308,7 +2308,7 @@
   // Settings → Connected devices (js/views/devices.js, design note 27): shown only while the server has it on.
   let devicesDraw = 0;
   async function renderConnected() {
-    const sec = $('#set-devices');
+    const sec = $('#set-connected'); // not #set-devices: that is Account → Signed-in devices
     if (!sec || !KH.devices) return;
     const ticket = ++devicesDraw;
     const show = await KH.devices.render($('#set-devices-body'));

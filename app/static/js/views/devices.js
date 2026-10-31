@@ -238,7 +238,7 @@
     const name = NAMES[provider] || 'Withings';
     KH.router.show('settings');
     toast(said(r.text, name), r.ok ? 'ok' : 'error');
-    const sec = $('#set-devices');
+    const sec = $('#set-connected');
     const body = $('#set-devices-body');
     if (!sec || !body) return;
     const reveal = (shown) => {

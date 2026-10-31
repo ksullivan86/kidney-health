@@ -28,7 +28,7 @@
       const sport = n % 3 === 1 ? SPORTS[(n / 3 | 0) % SPORTS.length] : null;
       const quiet = 2150 + ((n * 37) % 160);
       const kcal = n === 0 ? 2780 : quiet + (sport ? sport[2] : 0);
-      days.push({ date, kcal, strain: sport ? sport[3] + (n % 4) / 10 : 5.2 + (n % 5) / 10, recovery_pct: 48 + ((n * 13) % 45),
+      days.push({ date, kcal, strain: Math.round((sport ? sport[3] + (n % 4) / 10 : 5.2 + (n % 5) / 10) * 10) / 10, recovery_pct: 48 + ((n * 13) % 45),
         resting_hr: 58 + (n % 6), hrv_ms: 38 + ((n * 7) % 22) + 0.5, sleep_minutes: 380 + ((n * 11) % 90),
         sleep_performance_pct: 72 + ((n * 5) % 25), finished: n !== 0, source: 'whoop' });
       if (sport) {
