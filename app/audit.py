@@ -111,6 +111,7 @@ ACTIONS: set[str] = {
     "list_sync.set_up",  # your own list app (design note 30; app/list_sync/)
     "list_sync.removed",
     "list_sync.sent",
+    "instacart.sent",  # the shopping list opened at Instacart (design note 33; app/instacart.py)
 }
 USER_VISIBLE_ACTIONS = frozenset(
     {
@@ -168,6 +169,7 @@ USER_VISIBLE_ACTIONS = frozenset(
         "list_sync.set_up",
         "list_sync.removed",
         "list_sync.sent",
+        "instacart.sent",
     }
 )
 _ACTION = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")

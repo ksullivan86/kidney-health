@@ -134,6 +134,7 @@ const SHELL_URLS = [
   '/js/views/sharing.js',
   '/js/views/devices.js',
   '/js/views/list_sync.js',
+  '/js/views/instacart.js',
   '/js/views/recipe_import.js',
   '/js/views/feedback.js',
   '/js/views/ai.js',

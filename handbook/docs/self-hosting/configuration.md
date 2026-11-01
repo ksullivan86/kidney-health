@@ -7,9 +7,9 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-31
+last_checked: 2026-11-01
 fact_checked: 2026-10-05
-sources: [NOTE01, NOTE03, NOTE04, NOTE06, NOTE07, NOTE08, NOTE12, NOTE17, NOTE27, NOTE28, WHOOP-API, NOTE30, NOTE20, DEPLOY, SECDOC, NIST-63B4, FDC-API, OFF-API]
+sources: [NOTE01, NOTE03, NOTE04, NOTE06, NOTE07, NOTE08, NOTE12, NOTE17, NOTE27, NOTE28, WHOOP-API, NOTE30, NOTE33, NOTE20, DEPLOY, SECDOC, NIST-63B4, FDC-API, OFF-API]
 ---
 
 # Configuration
@@ -156,6 +156,8 @@ Agent profile, OpenAI, OpenRouter), the address rules and troubleshooting are in
 | `WHOOP_ENABLED`, `WHOOP_CLIENT_ID`, `WHOOP_CLIENT_SECRET_FILE` | off | Your Whoop developer app (up to 10 Whoop members without Whoop's approval). Its return address is `<PUBLIC_URL>/api/devices/whoop/callback`; the client secret only as a file. The server then talks to `api.prod.whoop.com`. Same [devices guide](https://github.com/ksullivan86/kidney-health/blob/main/docs/devices.md); Whoop's own [developer documentation][WHOOP-API]; [design note 28][NOTE28]. |
 | `LIST_SYNC_ENABLED` | `false` | Your own list app (also **Server administration → Server settings**): each person may add their own Grocy, KitchenOwl or Mealie in **Settings → Shopping list app** and send the Plan's shopping list to it. Only the foods' names and amounts are sent ([design note 30][NOTE30]; [Send it to your own list app](../app/planning-and-menus.md#send-it-to-your-own-list-app)). |
 | `LIST_SYNC_ALLOWED_HOSTS` | empty | The home addresses a list app may be on: host names, addresses or networks, comma-separated (`grocy.lan,192.168.1.0/24`). Every other private address is refused, cloud metadata addresses always; plain `http` only to these; redirects never followed. Env only. Behind an outbound proxy, put them in `NO_PROXY` too. Setup in the repository's [list app guide](https://github.com/ksullivan86/kidney-health/blob/main/docs/list-sync.md). |
+| `INSTACART_ENABLED` | `false` | Open the shopping list at Instacart (also **Server administration → Server settings**). Needs `INSTACART_API_KEY_FILE`. The person sees the exact lines and confirms each time; only each food's name and amount are sent ([design note 33][NOTE33]; [Open it at Instacart](../app/planning-and-menus.md#open-it-at-instacart)). |
+| `INSTACART_API_KEY_FILE`, `INSTACART_BASE_URL` | unset, `https://connect.instacart.com` | The server's own key from the Instacart Developer Dashboard, as a file only (`INSTACART_API_KEY` is refused), and the host. Use `https://connect.dev.instacart.tools` with a development key while Instacart reviews your production key. Env only. Setup in the repository's [Instacart guide](https://github.com/ksullivan86/kidney-health/blob/main/docs/instacart.md). |
 | `RECIPE_IMPORT_ENABLED` | `false` | Recipe pages (also **Server administration → Server settings**): a person may paste a recipe page's link in **Plan → Import a recipe**, and the server opens that page from the internet (never a private address; at most 2 MiB, 15 seconds, 3 redirects) and keeps only the link. Pasting the ingredients works without it ([Import a recipe](../app/planning-and-menus.md#import-a-recipe)). |
 | `OIDC_ENABLED`, `OIDC_PROVIDERS`, `OIDC_ONLY` | `false`, empty, `false` | Sign in with Authentik, Google or another provider, up to four at once, and optionally only with them. See [Accounts and keys](users-and-keys.md#sign-in-with-authentik-or-google) and the operator guide for every variable. |
 | `AUTH_REQUIRE_TWO_STEP_ADMINS` | `false` | Admins must use two-step sign-in (also **Server administration → Server settings**): an admin opens Server administration only after turning it on in **Settings → Account → Two-step sign-in**. You can switch it on there only once your own two-step sign-in is on. No effect with a sign-in proxy ([design note 17][NOTE17]). |

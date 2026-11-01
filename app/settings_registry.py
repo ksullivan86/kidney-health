@@ -1052,6 +1052,22 @@ register(
         "ingredients works either way, with no network.",
     ),
 )
+# Instacart (design note 33; read by app/instacart.py). The key and the host are env only (INSTACART_API_KEY_FILE,
+# INSTACART_BASE_URL in app/config.py): the key is a file, and what the server connects to is never changed at run time.
+register(
+    SettingDef(
+        key="lists.instacart_enabled",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="INSTACART_ENABLED",
+        label="Let people open the shopping list at Instacart",
+        help="Off by default. Needs this server's own Instacart key (INSTACART_API_KEY_FILE; see docs/instacart.md). When on, "
+        "Plan → Shopping list has Open in Instacart: the person sees the exact lines first and confirms each time, then this "
+        "server sends Instacart each food's name and amount, and nothing else, and opens the page Instacart makes. Instacart is "
+        "another company, and its own terms and privacy policy apply there.",
+    ),
+)
 # Tokens that never expire (design note 24 §13, the owner's question 7; read by app/auth/api_tokens.py). Both families.
 register(
     SettingDef(

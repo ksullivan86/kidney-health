@@ -565,6 +565,7 @@
         <button class="btn secondary" type="button" id="shopping-share" hidden>Share list</button>
         <button class="btn secondary" type="button" id="shopping-copy" hidden>Copy list</button>
         <button class="btn secondary" type="button" id="shopping-send" hidden>Send to list app</button>
+        <button class="btn secondary" type="button" id="shopping-instacart" hidden>Open in Instacart</button>
         <button class="link-btn" type="button" id="shopping-clear" hidden>Clear checks</button>
       </div>
       <textarea id="shopping-text" class="shopping-text" rows="6" readonly hidden aria-label="Shopping list as text"></textarea>
@@ -1820,6 +1821,27 @@
   </form>
 </dialog>
 
+<!-- ===================== OPEN THE SHOPPING LIST AT INSTACART (design note 33) ===================== -->
+<dialog id="sheet-instacart" class="sheet" aria-labelledby="sheet-instacart-title">
+  <form method="dialog" class="sheet-form" id="instacart-form" novalidate>
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-instacart-title" class="sheet-title">Open in Instacart</h2>
+        <div class="sheet-sub" id="sheet-instacart-sub">Check the list before it is sent.</div>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body" id="instacart-body"></div>
+    <div class="sheet-foot">
+      <span class="spacer"></span>
+      <button class="btn secondary" type="button" data-close id="instacart-cancel">Cancel</button>
+      <button class="btn primary" type="submit" id="instacart-go">Send to Instacart</button>
+    </div>
+  </form>
+</dialog>
+
 <!-- ===================== IMPORT A RECIPE (design note 30) ===================== -->
 <dialog id="sheet-recipe-import" class="sheet" aria-labelledby="sheet-recipe-import-title">
   <form method="dialog" class="sheet-form" id="recipe-import-form" novalidate>
@@ -2530,6 +2552,7 @@
 <script src="js/views/oidc.js"></script>
 <script src="js/views/devices.js"></script>
 <script src="js/views/list_sync.js"></script>
+<script src="js/views/instacart.js"></script>
 <script src="js/views/recipe_import.js"></script>
 <script src="js/views/ai.js"></script>
 <script src="js/views/ai_routing.js"></script>

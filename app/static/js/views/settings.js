@@ -762,6 +762,7 @@
     'device.connected': 'Device connected', 'device.disconnected': 'Device disconnected', 'device.sync_failed': 'Device sync stopped working',
     'activity.extra_on': 'Active-day calories turned on', 'activity.extra_off': 'Active-day calories turned off',
     'list_sync.set_up': 'Shopping list app set up', 'list_sync.removed': 'Shopping list app removed', 'list_sync.sent': 'Shopping list sent',
+    'instacart.sent': 'Shopping list sent to Instacart',
     'test_accounts.created': 'Test account made', 'test_accounts.enabled': 'Test account turned on', 'test_accounts.disabled': 'Test account turned off',
     'test_accounts.reset': 'Test accounts reset',
   };
@@ -828,6 +829,7 @@
     if (ev.action === 'login.failed' && d.via === 'oidc') return 'with the sign-in provider';
     if (ev.action === 'login.succeeded' && d.via === 'oidc') return 'with the sign-in provider';
     if (ev.action === 'device.connected') return DEVICE_NAME[d.provider] || d.provider || '';
+    if (ev.action === 'instacart.sent' && d.items != null) return `${d.items} ${d.items === 1 ? 'item' : 'items'}`;
     if (ev.action.startsWith('list_sync.')) {
       const app = { grocy: 'Grocy', kitchenowl: 'KitchenOwl', mealie: 'Mealie' }[d.app] || d.app || '';
       return ev.action === 'list_sync.sent' && d.items != null ? `${app}, ${d.items} ${d.items === 1 ? 'item' : 'items'}` : app;
@@ -1961,6 +1963,7 @@
     ['Care team', ['sharing.enabled']],
     ['Connected devices', ['devices.enabled', 'devices.sync_hours']],
     ['Shopping list app and recipe import', ['lists.sync_enabled', 'recipes.import_enabled']],
+    ['Instacart', ['lists.instacart_enabled']],
     // Design note 26: not in the demo (it has no accounts of its own to make).
     ['Test accounts', ['test_accounts.enabled', 'test_accounts.ai']],
     ['Activity log', ['audit.retention_days']],

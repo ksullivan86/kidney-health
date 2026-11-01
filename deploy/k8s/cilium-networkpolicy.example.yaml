@@ -37,6 +37,8 @@ spec:
         # - matchName: api.openai.com
         # - matchName: openrouter.ai
         # - matchName: inference-api.nousresearch.com
+        # Optional: open the shopping list at Instacart (INSTACART_ENABLED; docs/instacart.md):
+        # - matchName: connect.instacart.com
         # Optional breached-password check (PASSWORD_BREACH_CHECK=true):
         # - matchName: api.pwnedpasswords.com
       toPorts:
