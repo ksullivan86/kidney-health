@@ -30,8 +30,8 @@ Contents:
 | Fact | Value |
 |---|---|
 | Image | `ghcr.io/ksullivan86/kidney-health` (linux/amd64 + linux/arm64), based on Chainguard Python (no shell, no pip, no package manager). Pulls need no login once the GHCR package is public; if a pull asks for credentials (`401`, `denied`), the package is private: its owner sets it public under the package's *Package settings* (a repository's visibility does not carry over to its packages). |
-| Tags | `0.21` = the current 0.21.x release (**track this**); `0.21.1` = one release; `latest` = the newest release; `edge` and `sha-<short>` = every push to `main` (testing only) |
-| Verify | `scripts/verify-image.sh 0.21.1` checks the signature and attestations and prints the digest to pin ([`SECURITY.md`](../SECURITY.md)) |
+| Tags | `0.21` = the current 0.21.x release (**track this**); `0.22.0` = one release; `latest` = the newest release; `edge` and `sha-<short>` = every push to `main` (testing only) |
+| Verify | `scripts/verify-image.sh 0.22.0` checks the signature and attestations and prints the digest to pin ([`SECURITY.md`](../SECURITY.md)) |
 | Listens on | TCP **8000**, plain HTTP: put HTTPS on a reverse proxy ([`https.md`](https.md)) |
 | Runs as | UID **10001**, GID 10001 (works with any UID whose GID is 0, too); no capabilities |
 | Writes | only `/data` (`kidney.db`, its `-wal`/`-shm` files) and `/tmp`; the root filesystem can be read-only |
@@ -262,14 +262,14 @@ $EDITOR ~/.config/containers/systemd/kidney-health.container     # Image= (see b
 systemctl --user daemon-reload
 systemctl --user start kidney-health
 sudo loginctl enable-linger "$USER"
-systemctl --user enable --now podman-auto-update.timer               # daily pulls of the :0.21 tag
+systemctl --user enable --now podman-auto-update.timer               # daily pulls of the :0.22 tag
 ```
 
 **Which image to run.** Each GitHub release's notes carry the multi-arch index digest of that
-release. For a host managed from git (GitOps), pin it: `Image=ghcr.io/ksullivan86/kidney-health:0.21.1@sha256:<index digest>`
+release. For a host managed from git (GitOps), pin it: `Image=ghcr.io/ksullivan86/kidney-health:0.22.0@sha256:<index digest>`
 and drop `AutoUpdate=registry`; Renovate or Dependabot then open a change that bumps tag and digest
-together, which you review and apply, and `scripts/verify-image.sh 0.21.1` checks the signature and
-attestations of exactly that digest. The shipped unit instead tracks `:0.21` with `AutoUpdate=registry`
+together, which you review and apply, and `scripts/verify-image.sh 0.22.0` checks the signature and
+attestations of exactly that digest. The shipped unit instead tracks `:0.22` with `AutoUpdate=registry`
 (patch releases arrive on their own, breaking changes never do): simpler, with the pull happening
 outside your review.
 
@@ -400,7 +400,7 @@ the overlay's patches in your repository:
 ```yaml
 # kustomization.yaml in your GitOps repository
 resources:
-  - https://github.com/ksullivan86/kidney-health//deploy/k8s?ref=v0.21.1
+  - https://github.com/ksullivan86/kidney-health//deploy/k8s?ref=v0.22.0
   - httproute.yaml
 patches:
   - path: deployment-env.yaml
@@ -482,8 +482,8 @@ an `AI_PRIVATE_HOSTS` entry.
 
 ```bash
 kubectl label --dry-run=server --overwrite ns kidney-health pod-security.kubernetes.io/enforce=restricted   # no warnings
-scripts/verify-image.sh 0.21.1                 # prints the verified digest (also in the release notes)
-cd deploy/k8s-overlays/home && kustomize edit set image ghcr.io/ksullivan86/kidney-health=ghcr.io/ksullivan86/kidney-health:0.21.1@sha256:<digest>
+scripts/verify-image.sh 0.22.0                 # prints the verified digest (also in the release notes)
+cd deploy/k8s-overlays/home && kustomize edit set image ghcr.io/ksullivan86/kidney-health=ghcr.io/ksullivan86/kidney-health:0.22.0@sha256:<digest>
 ```
 
 `imagePullPolicy: IfNotPresent` plus a digest means a node never pulls something you did not verify.
@@ -662,18 +662,18 @@ podman run --rm --user 10001:10001 --entrypoint python \
   --secret kidney-secret-key,type=mount,target=secret_key,uid=10001,mode=0400 \
   -e SECRET_KEY_FILE=/run/secrets/secret_key \
   -v "$PWD/kidney-2026-10-01.db:/restore/kidney.db:ro,Z" \
-  ghcr.io/ksullivan86/kidney-health:0.21 -m app.admin restore-check /restore/kidney.db
+  ghcr.io/ksullivan86/kidney-health:0.22 -m app.admin restore-check /restore/kidney.db
 
 # 2. Stop the app, then copy the backup INTO the volume through SQLite (handles the WAL files).
 systemctl --user stop kidney-health          # compose: podman-compose -f deploy/compose.yaml stop
 podman run --rm --user 10001:10001 --entrypoint python \
   -v systemd-kidney-health:/data \
   -v "$PWD/kidney-2026-10-01.db:/restore/kidney.db:ro,Z" \
-  ghcr.io/ksullivan86/kidney-health:0.21 -c "import sqlite3; s=sqlite3.connect('file:/restore/kidney.db?mode=ro&immutable=1', uri=True); d=sqlite3.connect('/data/kidney.db'); s.backup(d); d.close(); s.close()"
+  ghcr.io/ksullivan86/kidney-health:0.22 -c "import sqlite3; s=sqlite3.connect('file:/restore/kidney.db?mode=ro&immutable=1', uri=True); d=sqlite3.connect('/data/kidney.db'); s.backup(d); d.close(); s.close()"
 
 # 3. Optional: sign everybody out of the restored copy (sessions in the backup become valid again).
 podman run --rm --user 10001:10001 --entrypoint python -v systemd-kidney-health:/data \
-  ghcr.io/ksullivan86/kidney-health:0.21 -m app.admin revoke-sessions --all
+  ghcr.io/ksullivan86/kidney-health:0.22 -m app.admin revoke-sessions --all
 systemctl --user start kidney-health
 ```
 
@@ -707,15 +707,27 @@ older one.
 
 ## Upgrades
 
-* **Pin the release digest** (`Image=...:0.21.1@sha256:<index digest>` from the release notes,
+* **Pin the release digest** (`Image=...:0.22.0@sha256:<index digest>` from the release notes,
   checked with `scripts/verify-image.sh`) and let Renovate or Dependabot propose the next one, or
-  **track `:0.21`** (patch releases, no breaking changes) with Quadlet `AutoUpdate=registry` and
+  **track `:0.22`** (patch releases, no breaking changes) with Quadlet `AutoUpdate=registry` and
   `podman-auto-update.timer`. Do not track `:latest` or `:edge` on a machine you care about: `:edge`
   follows every merge to `main`.
-* Before a minor upgrade (for example 0.20 → 0.21): take a backup, read the release notes, then change the tag. The minor
-  tag does not move to the next minor on its own: a host that tracks `:0.20` stays on 0.20.x until you change it to `:0.21`.
-  The steps are in [From v0.20 to v0.21](#from-v020-to-v021), [From v0.19 to v0.20](#from-v019-to-v020), [From v0.18 to v0.19](#from-v018-to-v019), [From v0.17 to v0.18](#from-v017-to-v018), [From v0.16 to v0.17](#from-v016-to-v017), [From v0.15 to v0.16](#from-v015-to-v016), [From v0.14 to v0.15](#from-v014-to-v015), [From v0.13 to v0.14](#from-v013-to-v014), [From v0.12 to v0.13](#from-v012-to-v013), [From v0.11 to v0.12](#from-v011-to-v012), [From v0.10 to v0.11](#from-v010-to-v011), [From v0.9 to v0.10](#from-v09-to-v010), [From v0.8 to v0.9](#from-v08-to-v09), [From v0.7 to v0.8](#from-v07-to-v08), [From v0.6 to v0.7](#from-v06-to-v07), [From v0.5 to v0.6](#from-v05-to-v06), [From v0.4 to v0.5](#from-v04-to-v05) and [From v0.3 to v0.4](#from-v03-to-v04).
+* Before a minor upgrade (for example 0.21 → 0.22): take a backup, read the release notes, then change the tag. The minor
+  tag does not move to the next minor on its own: a host that tracks `:0.21` stays on 0.21.x until you change it to `:0.22`.
+  The steps are in [From v0.21 to v0.22](#from-v021-to-v022), [From v0.20 to v0.21](#from-v020-to-v021), [From v0.19 to v0.20](#from-v019-to-v020), [From v0.18 to v0.19](#from-v018-to-v019), [From v0.17 to v0.18](#from-v017-to-v018), [From v0.16 to v0.17](#from-v016-to-v017), [From v0.15 to v0.16](#from-v015-to-v016), [From v0.14 to v0.15](#from-v014-to-v015), [From v0.13 to v0.14](#from-v013-to-v014), [From v0.12 to v0.13](#from-v012-to-v013), [From v0.11 to v0.12](#from-v011-to-v012), [From v0.10 to v0.11](#from-v010-to-v011), [From v0.9 to v0.10](#from-v09-to-v010), [From v0.8 to v0.9](#from-v08-to-v09), [From v0.7 to v0.8](#from-v07-to-v08), [From v0.6 to v0.7](#from-v06-to-v07), [From v0.5 to v0.6](#from-v05-to-v06), [From v0.4 to v0.5](#from-v04-to-v05) and [From v0.3 to v0.4](#from-v03-to-v04).
 * Never mount the Podman or Docker socket into an "updater" container ([`security.md` §7](security.md#7-never-mount-the-container-engines-socket)).
+
+### From v0.21 to v0.22
+
+Read **Upgrading from 0.21** in [CHANGELOG.md](../CHANGELOG.md#0220--2026-11-01) first.
+
+1. **Back up first** (`podman exec kidney-health python -m app.admin backup /data/before-0.22.0.db`, or your backup tool).
+   There is no schema step.
+2. **Change the tag** from `:0.21` to `:0.22` (or a digest from the 0.22.0 release notes, checked with
+   `scripts/verify-image.sh 0.22.0`). The shipped files already say `:0.22`.
+3. **Nothing new is switched on.** The Instacart button appears only after you set `INSTACART_ENABLED=true` and
+   `INSTACART_API_KEY_FILE` ([instacart.md](instacart.md)). A strict firewall must then allow `connect.instacart.com`.
+4. **Coming from 0.20 or older**, also follow [From v0.20 to v0.21](#from-v020-to-v021) and the sections after it.
 
 ### From v0.20 to v0.21
 

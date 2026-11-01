@@ -5,7 +5,14 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
-## Unreleased
+## 0.22.0 — 2026-11-01
+
+### Upgrading from 0.21 (read this first)
+
+* **Back up first.** There is no schema step this time.
+* Change the image tag to `:0.22`. The shipped deployment files already say `:0.22`.
+* Nothing new is switched on. The Instacart button appears only after you set `INSTACART_ENABLED=true` and give the server
+  its key in `INSTACART_API_KEY_FILE`.
 
 ### Open the shopping list at Instacart
 
