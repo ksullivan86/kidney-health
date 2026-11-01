@@ -209,6 +209,8 @@
 [NOTE30]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/30-list-sync-and-recipe-import.md "Design note 30"
 [NOTE31]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/31-privacy-filter.md "Design note 31"
 [NOTE32]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/32-choose-local-or-cloud-ai.md "Design note 32"
+[NOTE33]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/33-instacart.md "Design note 33"
+[INSTACART-IDP]: https://docs.instacart.com/developer_platform_api/api/products/create_shopping_list_page "Instacart Developer Platform"
 [SCHEMA-NUTRITION]: https://schema.org/NutritionInformation "schema.org NutritionInformation"
 [ODRISCOLL20]: https://bjsm.bmj.com/content/54/6/332 "O'Driscoll 2020: how well activity monitors estimate energy"
 [GERMINI22]: https://www.jmir.org/2022/1/e30791 "Germini 2022: accuracy of wrist trackers"

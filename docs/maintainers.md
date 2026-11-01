@@ -258,6 +258,8 @@ A repository variable (Settings → Secrets and variables → Actions → Variab
 * **v0.16.0: not held.** The release runs schema step 29 at start without an automatic copy (it only adds two tables), adds
   the `tzdata` dependency and moves the shipped files from `:0.15` to `:0.16`. A host that tracks `:0.15` stays on 0.15.x.
   CHANGELOG.md, "Upgrading from 0.15", says to take a backup first.
+* **v0.22.0: not held.** No schema step; the Instacart shopping-list link, off by default. The release moves the shipped files
+  from `:0.21` to `:0.22`. A host that tracks `:0.21` stays on 0.21.x.
 * **v0.21.1: not held.** A patch: the AI activity log keeps no request or reply text by default. `:0.21` and `:latest` move.
 * **v0.21.0: not held.** Schema step 33 adds `users.can_choose_ai`. The release moves the shipped files from `:0.20` to
   `:0.21`. A host that tracks `:0.20` stays on 0.20.x.

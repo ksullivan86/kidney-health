@@ -30,10 +30,10 @@ Wants=network-online.target
 # Preferred for a host managed from git: pin the release's multi-arch index digest (it is in the
 # GitHub release notes; scripts/verify-image.sh checks it), remove AutoUpdate= below, and let
 # Renovate or Dependabot bump tag and digest together:
-#   Image=ghcr.io/ksullivan86/kidney-health:0.21.1@sha256:<index digest>
+#   Image=ghcr.io/ksullivan86/kidney-health:0.22.0@sha256:<index digest>
 # Otherwise track the minor release: patch releases arrive through AutoUpdate, breaking changes
 # never do. Do not track :latest (or :edge, the main branch) on a machine you care about.
-Image=ghcr.io/ksullivan86/kidney-health:0.21
+Image=ghcr.io/ksullivan86/kidney-health:0.22
 ContainerName=kidney-health
 # `systemctl --user enable --now podman-auto-update.timer` pulls a newer image for this tag daily
 # and restarts the unit, rolling back if it fails. Never mount podman.sock into a container for
@@ -175,6 +175,12 @@ Environment=TRUSTED_PROXIES=127.0.0.1,::1
 # Environment=LIST_SYNC_ENABLED=true
 # Environment=LIST_SYNC_ALLOWED_HOSTS=grocy.lan,192.168.1.0/24
 # Environment=RECIPE_IMPORT_ENABLED=true
+# Open the shopping list at Instacart (docs/instacart.md): each food's name and amount go to Instacart, nothing else. The server's
+# own key is a Podman secret (podman secret create kidney-instacart-key FILE). Development host while the production key waits:
+# Environment=INSTACART_BASE_URL=https://connect.dev.instacart.tools
+# Environment=INSTACART_ENABLED=true
+# Secret=kidney-instacart-key,type=mount,target=instacart_api_key,uid=10001,gid=10001,mode=0400
+# Environment=INSTACART_API_KEY_FILE=/run/secrets/instacart_api_key
 # Names listed here are first values, not locks: written once, then changeable in the app (docs/deployment.md).
 # Environment=SETTINGS_INITIAL_ONLY=SHARING_ENABLED,PUSH_ENABLED
 # Admins must use two-step sign-in before they can open Server administration (docs/accounts.md). Off by default.

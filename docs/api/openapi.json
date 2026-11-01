@@ -5499,6 +5499,34 @@
         "title": "Line",
         "type": "object"
       },
+      "LineOut": {
+        "properties": {
+          "amount": {
+            "title": "Amount",
+            "type": "string"
+          },
+          "food_id": {
+            "title": "Food Id",
+            "type": "integer"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "food_id",
+          "name",
+          "amount",
+          "text"
+        ],
+        "title": "LineOut",
+        "type": "object"
+      },
       "LinkInfoBody": {
         "properties": {
           "token": {
@@ -8995,73 +9023,6 @@
         "title": "PreviewItem",
         "type": "object"
       },
-      "PreviewOut": {
-        "properties": {
-          "app": {
-            "title": "App",
-            "type": "string"
-          },
-          "app_name": {
-            "title": "App Name",
-            "type": "string"
-          },
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/PreviewItem"
-            },
-            "title": "Items",
-            "type": "array"
-          },
-          "last_sent_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Sent At"
-          },
-          "last_sent_count": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Sent Count"
-          },
-          "list_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "List Name"
-          },
-          "ready": {
-            "title": "Ready",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "app",
-          "app_name",
-          "list_name",
-          "ready",
-          "items",
-          "last_sent_at",
-          "last_sent_count"
-        ],
-        "title": "PreviewOut",
-        "type": "object"
-      },
       "Problem": {
         "additionalProperties": true,
         "description": "Every error answer. `detail` is a sentence for the person and is always there; a route may add keys next to it (the ones below are the common ones; read others from `additionalProperties`). Validation errors are the `ValidationProblem` form of this.",
@@ -10743,47 +10704,6 @@
         "title": "SendIn",
         "type": "object"
       },
-      "SendOut": {
-        "properties": {
-          "connection": {
-            "$ref": "#/components/schemas/app__list_sync__api__ConnectionOut"
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error"
-          },
-          "message": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Message"
-          },
-          "sent": {
-            "title": "Sent",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "sent",
-          "error",
-          "message",
-          "connection"
-        ],
-        "title": "SendOut",
-        "type": "object"
-      },
       "SentList": {
         "properties": {
           "suggestions": {
@@ -11203,6 +11123,24 @@
           "url"
         ],
         "title": "StartOut",
+        "type": "object"
+      },
+      "StatusOut": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "max_items": {
+            "title": "Max Items",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "enabled",
+          "max_items"
+        ],
+        "title": "StatusOut",
         "type": "object"
       },
       "SuggestedRange": {
@@ -13290,6 +13228,76 @@
         "title": "ConnectionOut",
         "type": "object"
       },
+      "app__instacart__PreviewOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LineOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "items"
+        ],
+        "title": "PreviewOut",
+        "type": "object"
+      },
+      "app__instacart__SendOut": {
+        "properties": {
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "items": {
+            "title": "Items",
+            "type": "integer"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "url",
+          "items",
+          "error",
+          "message"
+        ],
+        "title": "SendOut",
+        "type": "object"
+      },
       "app__list_sync__api__ConnectionOut": {
         "properties": {
           "app": {
@@ -13384,6 +13392,114 @@
         ],
         "title": "ConnectionOut",
         "type": "object"
+      },
+      "app__list_sync__api__PreviewOut": {
+        "properties": {
+          "app": {
+            "title": "App",
+            "type": "string"
+          },
+          "app_name": {
+            "title": "App Name",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PreviewItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "last_sent_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sent At"
+          },
+          "last_sent_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Sent Count"
+          },
+          "list_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "List Name"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "app",
+          "app_name",
+          "list_name",
+          "ready",
+          "items",
+          "last_sent_at",
+          "last_sent_count"
+        ],
+        "title": "PreviewOut",
+        "type": "object"
+      },
+      "app__list_sync__api__SendOut": {
+        "properties": {
+          "connection": {
+            "$ref": "#/components/schemas/app__list_sync__api__ConnectionOut"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "sent": {
+            "title": "Sent",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "sent",
+          "error",
+          "message",
+          "connection"
+        ],
+        "title": "SendOut",
+        "type": "object"
       }
     },
     "securitySchemes": {
@@ -13410,7 +13526,7 @@
   "info": {
     "description": "Self-hosted food log with renal-diet and type 1 diabetes nutrient warnings, meal planning and period summaries.\n\nThis document is checked in as `docs/api/openapi.json`. `info.version` is the app's version; `info.x-api-version` is the API version, an integer that is raised only for a breaking change. Every error answer is `{\"detail\": string, ...}`; request validation is **400** with `errors`, never 422. Sign in with `POST /api/auth/login` (a cookie, see the `session` scheme); `/mcp` and `/push/v1/body` take bearer tokens.",
     "title": "Kidney Health Food Log",
-    "version": "0.21.1",
+    "version": "0.22.0",
     "x-api-version": 1
   },
   "openapi": "3.1.0",
@@ -20155,6 +20271,143 @@
         ]
       }
     },
+    "/api/instacart": {
+      "get": {
+        "operationId": "instacart_get_instacart",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StatusOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Get Instacart",
+        "tags": [
+          "instacart"
+        ]
+      }
+    },
+    "/api/instacart/preview": {
+      "post": {
+        "operationId": "instacart_preview",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RangeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__instacart__PreviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Preview",
+        "tags": [
+          "instacart"
+        ]
+      }
+    },
+    "/api/instacart/send": {
+      "post": {
+        "operationId": "instacart_send",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/app__instacart__SendOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Send",
+        "tags": [
+          "instacart"
+        ]
+      }
+    },
     "/api/labs": {
       "get": {
         "operationId": "labs_list_labs",
@@ -20542,7 +20795,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PreviewOut"
+                  "$ref": "#/components/schemas/app__list_sync__api__PreviewOut"
                 }
               }
             },
@@ -20593,7 +20846,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/SendOut"
+                  "$ref": "#/components/schemas/app__list_sync__api__SendOut"
                 }
               }
             },

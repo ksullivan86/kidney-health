@@ -34,9 +34,9 @@ name: kidney-health
 services:
   kidney-health:
     # Track the minor release (security fixes, no breaking changes), never :latest on machines you
-    # care about; or pin a verified digest: ghcr.io/ksullivan86/kidney-health:0.21.1@sha256:...
+    # care about; or pin a verified digest: ghcr.io/ksullivan86/kidney-health:0.22.0@sha256:...
     # (scripts/verify-image.sh checks the signature and prints the digest).
-    image: ghcr.io/ksullivan86/kidney-health:0.21
+    image: ghcr.io/ksullivan86/kidney-health:0.22
     # Build locally instead (context is the repository root):
     # build:
     #   context: ..
@@ -149,6 +149,10 @@ services:
       LIST_SYNC_ENABLED: ${LIST_SYNC_ENABLED:-}
       LIST_SYNC_ALLOWED_HOSTS: ${LIST_SYNC_ALLOWED_HOSTS:-}
       RECIPE_IMPORT_ENABLED: ${RECIPE_IMPORT_ENABLED:-}
+      # Open the shopping list at Instacart (docs/instacart.md). The key is a file secret only (INSTACART_API_KEY is refused):
+      # INSTACART_API_KEY_FILE: /run/secrets/instacart_api_key   # and add instacart_api_key below
+      INSTACART_ENABLED: ${INSTACART_ENABLED:-}
+      INSTACART_BASE_URL: ${INSTACART_BASE_URL:-}
       HANDBOOK_PUBLIC_URL: ${HANDBOOK_PUBLIC_URL:-}
       PASSWORD_BREACH_CHECK: ${PASSWORD_BREACH_CHECK:-}
       # Sign in with Authentik, Google or another OpenID Connect provider (docs/accounts.md). Off unless OIDC_ENABLED=true;
@@ -196,6 +200,7 @@ services:
       # - test_account_password
       # - withings_client_secret
       # - whoop_client_secret
+      # - instacart_api_key
 
     volumes:
       # Named volume: starts empty and is populated from the image's /data (owner 10001, group 0,
@@ -246,6 +251,9 @@ secrets:
   #   x-podman.relabel: Z
   # whoop_client_secret:                # only for Whoop (WHOOP_ENABLED; docs/devices.md)
   #   file: ./secrets/whoop_client_secret
+  #   x-podman.relabel: Z
+  # instacart_api_key:                  # only for Instacart (INSTACART_ENABLED; docs/instacart.md)
+  #   file: ./secrets/instacart_api_key
   #   x-podman.relabel: Z
   # test_account_password:              # only for test accounts (TEST_ACCOUNT_ENABLED; docs/test-the-full-app.md)
   #   file: ./secrets/test_account_password

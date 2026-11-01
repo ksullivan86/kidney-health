@@ -41,6 +41,7 @@ from .list_sync import api as list_sync_api  # schema step 32: your own list app
 from .list_sync.apps import HostAllowlist, Net as ListSyncNet
 from .recipe_import import api as recipe_import_api  # design note 30: a recipe from a web page or pasted ingredients
 from .recipe_import.fetch import RecipeFetcher
+from . import instacart as instacart_api  # design note 33: open the shopping list at Instacart (/api/instacart)
 from . import openapi_doc  # design note 14 change 2: stable operation ids, honest errors and security schemes in the OpenAPI document
 from .auth import bootstrap as auth_bootstrap
 from .config import DEFAULT_STATIC_DIR, ConfigError, Settings, load_settings
@@ -49,7 +50,7 @@ from .settings_store import SettingsStore, default_store
 
 logger = logging.getLogger(brand.LOGGER_NAME)
 
-APP_VERSION = "0.21.1"
+APP_VERSION = "0.22.0"
 STATIC_DIR = DEFAULT_STATIC_DIR
 
 
@@ -141,6 +142,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     # Design note 30: how list sync and recipe pages reach out (tests swap in fakes behind the real checked transport).
     app.state.list_sync_net = ListSyncNet(HostAllowlist.parse(settings.list_sync_allowed_hosts))
     app.state.recipe_fetcher = RecipeFetcher()
+    app.state.instacart = instacart_api.InstacartClient(settings.instacart.base_url)
     app.add_exception_handler(RequestValidationError, security.validation_error_handler)
     auth_ctx = auth.install(app, settings, store)  # /api/auth, /api/me, /api/admin + error handler
 
@@ -180,6 +182,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(activity_api.router)
     app.include_router(list_sync_api.router)
     app.include_router(recipe_import_api.router)
+    app.include_router(instacart_api.router)
 
     @app.get("/healthz")
     def healthz(conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:

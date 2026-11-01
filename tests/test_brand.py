@@ -67,6 +67,7 @@ PINNED = {
     "USER_AGENT_DEVICES": "kidney-health",
     "USER_AGENT_RECIPES": "kidney-health (recipe import)",
     "USER_AGENT_LISTS": "kidney-health",
+    "USER_AGENT_INSTACART": "shopping-list",
     "HKDF_SECRETS_INFO": b"kidney-health/v1/secrets",
     "HKDF_LOGIN_FAILURES_INFO": "kidney-health/v1/login-failures",
     "HKDF_DEVICE_INFO": "kidney-health/v1/device",

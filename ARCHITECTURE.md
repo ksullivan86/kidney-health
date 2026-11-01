@@ -708,7 +708,8 @@ A food referenced by a template may be hidden later; keep the item, return `hidd
 ### Shopping list
 `GET /api/plan/shopping?start=&end=` → `{"items": [{"food_id", "food_name", "serving_desc", "servings", "grams", "days": 3}]}`
 aggregating **planned** entries in the range by food (servings summed; `grams = servings × serving_g`), ordered by name.
-The same list can be sent to the person's own list app (`/api/list-sync`, "Your own list app" below).
+The same list can be sent to the person's own list app (`/api/list-sync`, "Your own list app" below), or opened at Instacart
+(`/api/instacart`, "Open the shopping list at Instacart" below).
 
 
 ## Conventions
@@ -1092,7 +1093,9 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
 
-**Status (2026-11-01): v0.21.1 is prepared.** The AI activity log keeps no request or reply text by default
+**Status (2026-11-01): v0.22.0 is prepared.** Open the shopping list at Instacart (note 33): off by default, with
+`INSTACART_ENABLED` and the server's key in `INSTACART_API_KEY_FILE`; only the food names and amounts leave the server. See
+[docs/instacart.md](docs/instacart.md). **v0.21.1**: the AI activity log keeps no request or reply text by default
 (`ai.audit_retention_days` 0). **v0.21.0 (2026-11-01)**: Chosen people pick the server's local or cloud AI (note 32,
 schema step 33): with `AI_PERSON_ROUTE_CHOICE_ENABLED` on, a person an admin ticked in Server administration → Users chooses, per AI
 feature, the server's local AI, its cloud AI or the server default. An admin's `off`, the local-only lab report photos, consent and the
@@ -2340,7 +2343,7 @@ and pinning is its job. `read_capped` counts decoded bytes. Every outbound clien
 `app/foods.py`, Open Food Facts `app/off.py`, the breached-password check `app/auth/policy.py`, sign-in providers
 `app/auth/oidc.py`, Withings `app/devices/withings.py`, Whoop `app/devices/whoop.py`, a person's list app
 `app/list_sync/apps.py` (its `ListTransport` subclass allows the private hosts of `LIST_SYNC_ALLOWED_HOSTS` and keeps plain
-`http` on them), recipe pages `app/recipe_import/fetch.py`) or, for AI,
+`http` on them), recipe pages `app/recipe_import/fetch.py`, Instacart `app/instacart.py`) or, for AI,
 `app/ai/transport.py`'s `PinnedTransport`; `tests/test_egress.py` fails on any other client.
 
 ### Parity
@@ -4891,6 +4894,48 @@ every counted food is a low treatment), and the fixed estimate sentence. Lines l
 The demo answers any link with a sample page (`js/mock/lists.js`). Tests: `tests/test_recipe_import.py`,
 `tests/test_lists_recipes_ui.py`, `tools/e2e/lists_recipes.py`.
 
+## Open the shopping list at Instacart (design note 33; v0.22 work)
+
+v0.22 work, built 2026-11-01 for release 0.22 (the integrator bumps the version). A person opens the Plan's shopping list at
+Instacart, which makes a page where they pick a store, check the items and pay. Only the food list leaves the server. No schema
+change.
+
+* **Switch and config.** `lists.instacart_enabled` (`INSTACART_ENABLED`, instance, off) is a setting (Server administration group
+  "Instacart"). The server owner's key is env only and a file only: `INSTACART_API_KEY_FILE` (`INSTACART_API_KEY` is a
+  `ConfigError`), `Settings.instacart.api_key`, in `secret_values()` for the log redaction, out of `repr`. `INSTACART_BASE_URL`
+  (env only, default `https://connect.instacart.com`; `https://` and a host, a port allowed, no path, user info, query or
+  fragment; another host than the two Instacart hosts is a start-up warning). On means the switch **and** the key; while either is
+  missing, `GET /api/instacart` answers `{enabled: false}` and the other routes are 404.
+* **Module** `app/instacart.py`: `line_of` (a shopping list row as a `Line`: the name with control characters removed, ≤ 200, the
+  amount and line of `app.list_sync.api.list_item`, grams when ≥ 1), `request_body` (`{title: "Shopping list", link_type:
+  "shopping_list", expires_in: 7, line_items: [{name, display_text, line_item_measurements?: [{quantity: whole grams, unit:
+  "g"}]}]}`; nothing about the person, no linkback), `check_link` (`https://`, host `instacart.com`, `instacart.tools` or a
+  subdomain, no user info, ≤ 2,048 characters), `InstacartClient` (`app.state.instacart`; tests set `resolver`, `direct`,
+  `use_env_proxy`, `deadline_s`): `POST {base}/idp/v1/products/products_link` with `Authorization: Bearer <key>` and
+  `User-Agent: shopping-list` (`brand.USER_AGENT_INSTACART`), through `egress.CheckedTransport(allow_private=False)` (the env proxy
+  is used, like the other fixed public hosts), no redirects, 64 KiB, 15 s a request, 20 s in all
+  (`egress.run_with_deadline("instacart", …)`). `InstacartError` codes: `unreachable`, `blocked`, `auth` (401, 403), `rejected`
+  (400, 404, 409, 413, 422), `busy` (429, 5xx), `bad_answer` (a redirect, another status, not JSON, too large, a bad link),
+  `timeout`. Log lines name only the code and the status.
+* **Limit** `instacart_send` 10 an hour per person; 200 foods a send. **Audit** (person-visible) `instacart.sent` with `items` only,
+  for every send that may have reached Instacart (not `blocked`). The list and the link are never stored. Test accounts may use
+  it. Only the person's own Plan (the Care team's shopping list has no button).
+
+| Method and path | Auth | Body → response |
+|---|---|---|
+| `GET /api/instacart` | signed in | `{enabled, max_items}`. Always 200 |
+| `POST /api/instacart/preview` | signed in | `{start, end}` → `{title, items: [{food_id, name, amount, text}]}`. 404 while off |
+| `POST /api/instacart/send` | signed in | `{start, end, food_ids (1–200)}` → `{url, items, error, message}`: the link, or `url: null` with an error code and its sentence (200). Only foods of that range's list; 400 none of them; 404 while off; 429 |
+
+**Screens.** `js/views/instacart.js` (`KH.instacart`): Plan → Shopping list → **Open in Instacart** (`#shopping-instacart`, shown
+while `enabled` and the week has foods) and its sheet `#sheet-instacart`: the exact lines with a box each (ticked on this phone:
+unticked), what is sent, "Instacart is another company. Its own terms and privacy policy apply when you use its page.", and
+**Send N items to Instacart**. The answer's link (only `https://`) opens with `window.open(url, '_blank', 'noopener,noreferrer')`
+and is shown as a button (`#instacart-open`, `rel="noopener noreferrer"`, no referrer) in case the tab was blocked. The browser
+never calls Instacart's API. The demo (`js/mock/lists.js`) answers `#instacart-demo` and the sheet says nothing was sent.
+Activity label "Shopping list sent to Instacart" with the number of items. Tests: `tests/test_instacart.py` (a fake Instacart
+behind the real transport), `tests/test_instacart_ui.py`, `tests/js/instacart_demo.mjs`. Guide: `docs/instacart.md`.
+
 ## The API document and `GET /api/meta` (design note 14 changes 2 and 4)
 
 Design note 14 (§3, §4 changes 2 and 4, decided in §6) asks for what a second client needs first: a document of the API that is true, kept in
@@ -4948,7 +4993,7 @@ Signed in only (`current_user`; an anonymous caller gets the generic `401`, so a
 (`no-store` like every `/api` answer). The answer:
 
 ```json
-{"app_version": "0.21.1", "api_version": 1,
+{"app_version": "0.22.0", "api_version": 1,
  "capabilities": {"ai": false, "ai_next_meal": false, "ai_parse_meal": false, "ai_label": false, "ai_plate": false, "ai_lab_report": false,
                   "chat": false, "voice": false, "assistant": false, "push": false,
                   "barcode": false, "barcode_off": false, "barcode_usda": false, "handbook": false},
