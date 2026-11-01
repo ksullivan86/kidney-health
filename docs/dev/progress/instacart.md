@@ -1,4 +1,4 @@
-Status: in progress (full suite running)
+Status: complete
 
 # instacart (release 0.22): open the Plan's shopping list at Instacart
 
@@ -23,7 +23,7 @@ and writes the release heading. Do not push to `claude/adoring-sagan-th5swr` or 
   suites pass; handbook strict build passes.
 
 ## Next
-1. Full suite (running), then mark complete.
+Nothing. Full suite after the last code change: 7,331 passed, 2 skipped, exit 0.
 
 ## Left for the integrator
 - The release heading for 0.22 in CHANGELOG, the "Upgrading" lines in `docs/deployment.md` and `handbook/.../upgrades.md`
