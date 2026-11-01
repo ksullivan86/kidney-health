@@ -131,7 +131,7 @@ the variable locks it. Each person still decides whether their own scans go to O
 | `AI_ALLOW_USER_KEYS` / `AI_ALLOW_USER_BASE_URL` | `true` / `false` | Whether people may add their own key, or their own (public, HTTPS, port 443) address. |
 | `AI_SHARED_DAILY_LIMIT` | 30 | Shared AI calls per person per day (photos and connection tests count). |
 | `AI_MAX_CONCURRENCY` | 2 | AI calls at the same time on the whole server (one per person). |
-| `AI_AUDIT_RETENTION_DAYS` | 30 | How long request and response bodies are kept (0 = metadata only). |
+| `AI_AUDIT_RETENTION_DAYS` | 0 | How many days the text of AI requests and replies is kept. 0, the default, keeps no text: only the time, feature, AI and outcome. |
 | `AI_VISION_PLATE_ENABLED` / `AI_VISION_ALLOW_AGENT` | `false` / `false` | Plate photos; photos to a Hermes agent (which must also pass its tool check before every photo). |
 | `AI_CHAT_ENABLED` | `false` | The **Ask** chat (also **Server administration → Server settings**): needs AI on; people who opted in get an Ask tab where the AI looks up their own numbers and the app checks every answer. One question can use up to 7 AI calls, each counted in the daily limit. While off, the Ask tab is not shown. |
 | `AI_VOICE_ENABLED` | `false` | The Ask **microphone** (also **Server administration → Server settings**): needs Ask on and a transcription server (`STT_BASE_URL`). While off, there is no microphone. |

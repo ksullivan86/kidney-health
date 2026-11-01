@@ -398,7 +398,7 @@ Instance settings (Server administration → Server settings; each can be locked
 | `ai.allow_user_base_url` (`AI_ALLOW_USER_BASE_URL`) | `false` | People may enter their own server address (https, port 443, public addresses only; always off when `AI_HTTP_PROXY` is set) |
 | `ai.shared_daily_limit` (`AI_SHARED_DAILY_LIMIT`) | `30` | Shared AI calls per person per day (0 = unlimited); own keys are counted but never limited |
 | `ai.max_concurrency` (`AI_MAX_CONCURRENCY`) | `2` | AI calls in flight on the whole server; one per person |
-| `ai.audit_retention_days` (`AI_AUDIT_RETENTION_DAYS`) | `30` | Days request and response bodies are kept in the AI activity log (0 = metadata only) |
+| `ai.audit_retention_days` (`AI_AUDIT_RETENTION_DAYS`) | `0` | Days request and response bodies are kept in the AI activity log. 0, the default since 0.21.1, keeps no text: only the time, feature, provider and outcome |
 | `ai.vision_plate_enabled` (`AI_VISION_PLATE_ENABLED`) | `false` | Plate photos |
 | `ai.vision_allow_agent` (`AI_VISION_ALLOW_AGENT`) | `false` | Photos may go to a Hermes agent (the tool check still runs before every photo) |
 | `ai.voice_enabled` (`AI_VOICE_ENABLED`) | `false` | The Ask microphone. Needs `ai.chat_enabled` and a transcription server (`STT_BASE_URL`, below). While off, `POST /api/ai/transcribe` answers 404 and nobody sees the microphone. |
@@ -1184,8 +1184,8 @@ A provider's address is configurable, so it is treated as untrusted (`app/ai/net
 ### Retention and backups
 
 Ask calls keep **no** request or response at all: one row per model call with the step, the tool name and the outcome
-(the server stores no transcript). `ai_audit` keeps every other call's request and response for `ai.audit_retention_days` (30), then only the
-time, provider, host, outcome and the rules' verdict; rows and usage counts are removed after
+(the server stores no transcript). `ai_audit` keeps no request or response text either by default (`ai.audit_retention_days` 0, since 0.21.1): only the
+time, provider, host, outcome and the rules' verdict. An admin who sets a number of days keeps the text that long, then clears it; rows and usage counts are removed after
 `audit.retention_days`. The purge runs at start-up and daily. Photos are never stored (the log keeps
 their SHA-256, size and dimensions). **Backups keep these rows until the backups expire** — see
 [`privacy.md`](privacy.md). Deleting an account deletes its AI provider, key, consents, usage and

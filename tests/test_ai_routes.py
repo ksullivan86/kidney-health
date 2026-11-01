@@ -335,6 +335,7 @@ def ai_two(tmp_path, foods_json):
 
 def test_ai_activity_consent_and_providers_are_per_person(ai_two):
     admin, sam = ai_two
+    enable(admin, **{"ai.audit_retention_days": 30})  # keep the text so the row can be read (default 0 since 0.21.1)
     ready(admin)
     with attach(admin.app, FakeProvider([ideas_answer()])):
         admin.post("/api/ai/next-meal", json={"meal": "dinner", "date": DAY})
@@ -630,6 +631,7 @@ def test_export_includes_ai_data_without_keys_and_deletion_erases_it(ai_two):
 
 
 def test_retention_clears_bodies_then_rows(ai_client):
+    enable(ai_client, **{"ai.audit_retention_days": 30})
     ready(ai_client)
     with attach(ai_client.app, FakeProvider([ideas_answer()])):
         ai_client.post("/api/ai/next-meal", json={"meal": "dinner", "date": DAY})
@@ -654,7 +656,7 @@ def test_retention_runs_daily_even_with_ai_switched_off(tmp_path, foods_json, fa
 
     with TestClient(create_app(ai_settings(tmp_path, foods_json)), base_url=HTTPS_URL) as c:
         sign_in(c)
-        enable(c)
+        enable(c, **{"ai.audit_retention_days": 30})
         ready(c)
         with attach(c.app, FakeProvider([ideas_answer()])):
             assert c.post("/api/ai/next-meal", json={"meal": "dinner", "date": DAY}).status_code == 200
@@ -1114,3 +1116,15 @@ def test_the_answer_cache_is_bounded_and_expires():
     assert cache.get(keys[1]) is None and cache.get(keys[2]) is not None
     now[0] = 1000.0
     assert len(cache) == 0
+
+
+def test_by_default_no_prompt_or_reply_text_is_kept(ai_client):
+    """The owner, 2026-11-01: the AI activity log keeps no request or reply text unless an admin chooses a number of days."""
+    assert ai_client.get("/api/admin/settings").json()["settings"]["ai.audit_retention_days"]["value"] == 0
+    ready(ai_client)
+    with attach(ai_client.app, FakeProvider([ideas_answer()])):
+        ai_client.post("/api/ai/next-meal", json={"meal": "dinner", "date": DAY})
+    conn = sqlite3.connect(ai_client.app.state.settings.db_path)
+    rows = conn.execute("SELECT request_json, response_text, status FROM ai_audit").fetchall()
+    conn.close()
+    assert rows and all(r[0] is None and r[1] is None and r[2] for r in rows)

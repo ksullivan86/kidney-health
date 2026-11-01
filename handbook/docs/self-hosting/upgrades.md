@@ -23,7 +23,7 @@ at start-up, so the work is choosing **what to follow** and **keeping a backup**
 | Tag | Moves when | Use it for |
 |---|---|---|
 | `0.13` | every 0.13.x patch release | **most homes**: security fixes, no breaking changes |
-| `0.21.0` | never | a fixed release |
+| `0.21.1` | never | a fixed release |
 | `latest` | every release, including a new minor version | not on a machine you care about |
 | `edge`, `sha-<short>` | every merge to `main` | testing only |
 
@@ -35,7 +35,7 @@ Tags move only after the image passed a vulnerability scan; pushes to `main` pub
 - **Track `:0.21` with auto-update** (simplest). Quadlet's `AutoUpdate=registry` plus
   `podman-auto-update.timer` pulls new patch releases daily and restarts the service
   ([Podman: Quadlet][PODMAN-QUADLET]).
-- **Pin a digest** (`…:0.21.0@sha256:…`) that you verified with `scripts/verify-image.sh`, and change it on
+- **Pin a digest** (`…:0.21.1@sha256:…`) that you verified with `scripts/verify-image.sh`, and change it on
   purpose ([security policy][SECURITYMD]). This is the default on Kubernetes, with
   `imagePullPolicy: IfNotPresent`.
 

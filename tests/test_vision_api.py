@@ -164,6 +164,8 @@ def test_the_size_cap_applies_to_declared_and_streamed_bodies(tmp_path, foods_js
 
 def test_metadata_is_removed_before_the_photo_leaves_and_never_stored(vc, caplog):
     assert b"FixtureCam" in LABEL_JPG and b"secret comment" in LABEL_JPG
+    # keep the request text so the stored copy can be checked (the default, 0 since 0.21.1, keeps none)
+    assert vc.patch("/api/admin/settings", json={"ai.audit_retention_days": 30}).status_code == 200
     ready(vc)
     caplog.set_level(logging.DEBUG)
     provider = FakeProvider([chat(LABEL_ANSWER)])

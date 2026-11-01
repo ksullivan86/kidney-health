@@ -30,8 +30,8 @@ Contents:
 | Fact | Value |
 |---|---|
 | Image | `ghcr.io/ksullivan86/kidney-health` (linux/amd64 + linux/arm64), based on Chainguard Python (no shell, no pip, no package manager). Pulls need no login once the GHCR package is public; if a pull asks for credentials (`401`, `denied`), the package is private: its owner sets it public under the package's *Package settings* (a repository's visibility does not carry over to its packages). |
-| Tags | `0.21` = the current 0.21.x release (**track this**); `0.21.0` = one release; `latest` = the newest release; `edge` and `sha-<short>` = every push to `main` (testing only) |
-| Verify | `scripts/verify-image.sh 0.21.0` checks the signature and attestations and prints the digest to pin ([`SECURITY.md`](../SECURITY.md)) |
+| Tags | `0.21` = the current 0.21.x release (**track this**); `0.21.1` = one release; `latest` = the newest release; `edge` and `sha-<short>` = every push to `main` (testing only) |
+| Verify | `scripts/verify-image.sh 0.21.1` checks the signature and attestations and prints the digest to pin ([`SECURITY.md`](../SECURITY.md)) |
 | Listens on | TCP **8000**, plain HTTP: put HTTPS on a reverse proxy ([`https.md`](https.md)) |
 | Runs as | UID **10001**, GID 10001 (works with any UID whose GID is 0, too); no capabilities |
 | Writes | only `/data` (`kidney.db`, its `-wal`/`-shm` files) and `/tmp`; the root filesystem can be read-only |
@@ -265,9 +265,9 @@ systemctl --user enable --now podman-auto-update.timer               # daily pul
 ```
 
 **Which image to run.** Each GitHub release's notes carry the multi-arch index digest of that
-release. For a host managed from git (GitOps), pin it: `Image=ghcr.io/ksullivan86/kidney-health:0.21.0@sha256:<index digest>`
+release. For a host managed from git (GitOps), pin it: `Image=ghcr.io/ksullivan86/kidney-health:0.21.1@sha256:<index digest>`
 and drop `AutoUpdate=registry`; Renovate or Dependabot then open a change that bumps tag and digest
-together, which you review and apply, and `scripts/verify-image.sh 0.21.0` checks the signature and
+together, which you review and apply, and `scripts/verify-image.sh 0.21.1` checks the signature and
 attestations of exactly that digest. The shipped unit instead tracks `:0.21` with `AutoUpdate=registry`
 (patch releases arrive on their own, breaking changes never do): simpler, with the pull happening
 outside your review.
@@ -399,7 +399,7 @@ the overlay's patches in your repository:
 ```yaml
 # kustomization.yaml in your GitOps repository
 resources:
-  - https://github.com/ksullivan86/kidney-health//deploy/k8s?ref=v0.21.0
+  - https://github.com/ksullivan86/kidney-health//deploy/k8s?ref=v0.21.1
   - httproute.yaml
 patches:
   - path: deployment-env.yaml
@@ -481,8 +481,8 @@ an `AI_PRIVATE_HOSTS` entry.
 
 ```bash
 kubectl label --dry-run=server --overwrite ns kidney-health pod-security.kubernetes.io/enforce=restricted   # no warnings
-scripts/verify-image.sh 0.21.0                 # prints the verified digest (also in the release notes)
-cd deploy/k8s-overlays/home && kustomize edit set image ghcr.io/ksullivan86/kidney-health=ghcr.io/ksullivan86/kidney-health:0.21.0@sha256:<digest>
+scripts/verify-image.sh 0.21.1                 # prints the verified digest (also in the release notes)
+cd deploy/k8s-overlays/home && kustomize edit set image ghcr.io/ksullivan86/kidney-health=ghcr.io/ksullivan86/kidney-health:0.21.1@sha256:<digest>
 ```
 
 `imagePullPolicy: IfNotPresent` plus a digest means a node never pulls something you did not verify.
@@ -706,7 +706,7 @@ older one.
 
 ## Upgrades
 
-* **Pin the release digest** (`Image=...:0.21.0@sha256:<index digest>` from the release notes,
+* **Pin the release digest** (`Image=...:0.21.1@sha256:<index digest>` from the release notes,
   checked with `scripts/verify-image.sh`) and let Renovate or Dependabot propose the next one, or
   **track `:0.21`** (patch releases, no breaking changes) with Quadlet `AutoUpdate=registry` and
   `podman-auto-update.timer`. Do not track `:latest` or `:edge` on a machine you care about: `:edge`
@@ -969,7 +969,7 @@ Read **Upgrading from 0.3** in [CHANGELOG.md](../CHANGELOG.md#040--2026-10-22) f
    The first start runs schema steps 8 to 17 in one go, each in its own transaction; there is no automatic copy as there was for
    0.3, and a backup restores into the same or a newer version, never an older one.
 2. **Change the tag** from `:0.3` to the current one (`:0.21`, or a digest from the latest release notes, checked with
-   `scripts/verify-image.sh 0.21.0`) in your Quadlet unit, compose file or Kubernetes overlay. The shipped files say `:0.21`.
+   `scripts/verify-image.sh 0.21.1`) in your Quadlet unit, compose file or Kubernetes overlay. The shipped files say `:0.21`.
    The image now runs Python 3.15 on the same Chainguard base.
 3. **Nothing new is switched on.** Assistant access, Ask, voice input, trusted saves and the cloud fallback are off until an admin
    turns them on; an upgraded server that already had a shared AI provider keeps every AI feature on the old rule (`any`) until an

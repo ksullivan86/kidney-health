@@ -40,7 +40,7 @@
         + 'Off: Ask always shows a card and saves only when the person presses Save. Either way the app\'s numbers, the low and emergency rules and the dose checks stay on, and every save can be undone.' },
     { key: 'ai.allow_user_base_url', type: 'bool', default: false, scope: 'instance', env: 'AI_ALLOW_USER_BASE_URL',
       label: 'People may enter their own AI server address', help: 'Only https on port 443 to public addresses. Off by default; always off when AI_HTTP_PROXY is set.' },
-    { key: 'ai.audit_retention_days', type: 'int', min: 0, max: 365, default: 30, scope: 'instance', env: 'AI_AUDIT_RETENTION_DAYS',
+    { key: 'ai.audit_retention_days', type: 'int', min: 0, max: 365, default: 0, scope: 'instance', env: 'AI_AUDIT_RETENTION_DAYS',
       label: 'Keep what was sent to and received from AI for (days)', help: 'Each person sees their own AI activity in Settings. 0 keeps only the time, provider and outcome. Backups keep it until they expire.' },
     { key: 'ai.chat_enabled', type: 'bool', default: false, scope: 'instance', env: 'AI_CHAT_ENABLED',
       label: 'Ask (a chat with the AI inside the app)',
