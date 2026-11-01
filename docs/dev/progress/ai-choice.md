@@ -1,6 +1,6 @@
-# ai-choice: chosen people pick the server's local or cloud AI (0.21)
+Status: complete
 
-Status: in progress
+# ai-choice: chosen people pick the server's local or cloud AI (0.21)
 
 Branch: worktree-agent-a267dd5ea2389b2d3 (fast-forwarded to next-8 at 1936769). Design: docs/dev/research/32-choose-local-or-cloud-ai.md.
 
@@ -18,11 +18,15 @@ Branch: worktree-agent-a267dd5ea2389b2d3 (fast-forwarded to next-8 at 1936769). 
   settings, auth coverage, isolation, openapi, audit, ui, compose env, deploy) pass.
 * OpenAPI regenerated. Docs: ARCHITECTURE (v0.21 note, migration row, new section), docs/ai.md, env template/compose/quadlet,
   handbook (ai, settings-and-keys, configuration, users-and-keys, NOTE32 source); build_handbook --check ok; mkdocs strict ok.
+* CHANGELOG "Unreleased" section, docs/privacy.md, docs/test-the-full-app.md tester step.
+* Chromium walk tools/e2e/route_choice.py (new, listed in tools/e2e/README.md): 34 passed, 0 failed (375 light, 1280 dark).
+* ruff clean; node --check on changed JS; vectors, settings --check, OpenAPI --check, build_handbook --check all pass.
 
-## Next
-* CHANGELOG Unreleased; docs/test-the-full-app.md tester step; docs/privacy.md line.
-* e2e Chromium walk if a harness covers Settings → AI features / admin users.
-* ruff, node --check, full suite at the end.
+* Full suite after the last code change: 7,279 collected, 7,277 passed, 2 skipped, 0 failed (exit 0, no network). Two warnings,
+  both from before this work (settings-and-keys.md lists NOTE28 without citing it; 6 unused sources.yml ids).
+
+## Left for the integrator
+* Version bump and the CHANGELOG release heading (the "Unreleased" list has the 0.21 section above the 0.20 one).
 
 ## Commands
 PY=/tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/venv312/bin/python
