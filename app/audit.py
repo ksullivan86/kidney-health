@@ -77,6 +77,7 @@ ACTIONS: set[str] = {
     "assistant.recipe_saved",
     "assistant.preference_set",  # a token with assistant:prefs remembered a taste (app/mcp/preference_tool.py)
     "ai.trust_changed",  # a person changed how much the Ask chat may save without asking (app/ai/routes.py)
+    "ai.route_choice_changed",  # a person chose the server's local or cloud AI for a feature (design note 32; app/ai/route_choice.py)
     "totp.enabled",  # two-step sign-in (note 17; app/auth/totp_api.py, admin_api.py, app/admin.py)
     "totp.disabled",
     "totp.recovery_codes_renewed",
@@ -133,6 +134,7 @@ USER_VISIBLE_ACTIONS = frozenset(
         "assistant.recipe_saved",
         "assistant.preference_set",
         "ai.trust_changed",
+        "ai.route_choice_changed",
         "totp.enabled",
         "totp.disabled",
         "totp.recovery_codes_renewed",

@@ -49,6 +49,7 @@ from ..guidance import messages as gmessages
 from ..guidance import rules as guidance_rules
 from ..mcp import tools as T
 from ..models import MAX_SQLITE_INT, Meal
+from ..settings_registry import AiPersonRoute
 from ..settings_store import SettingsStore
 from . import chat as CH
 from . import chat_save as CS
@@ -60,6 +61,7 @@ from . import guard, prompts, schemas
 from . import stt
 from . import presets as P
 from . import quality as Q
+from . import route_choice as RC
 from . import routing as R
 from .netpolicy import BaseUrl, PolicyError, check_url, parse_base_url
 from .prompts import PROMPT_VERSION
@@ -1260,6 +1262,17 @@ class MeAiPatch(BaseModel):
     trust: Annotated[str, StringConstraints(pattern=r"^(ask|conversation|always)$")] | None = None
 
 
+class RouteChoiceBody(BaseModel):
+    """Design note 32: any subset of the features a person may choose for. No ``labs``: lab report photos stay on the local AI."""
+
+    model_config = ConfigDict(extra="forbid")
+    photos: AiPersonRoute | None = None
+    meal_ideas: AiPersonRoute | None = None
+    describe: AiPersonRoute | None = None
+    chat: AiPersonRoute | None = None
+    recipes: AiPersonRoute | None = None
+
+
 class OwnProviderBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
     preset: str
@@ -1310,11 +1323,30 @@ def me_view(request: Request, conn: sqlite3.Connection, user: User) -> dict[str,
         "routing": None if routes is None else {
             "mode": "as_before" if any(r.route == "any" for r in routes.values()) else "routed",
             "features": R.me_summary(routes, conn, user.id)},
+        "route_choice": _route_choice_view(conn, state, user) if enabled else None,
         "presets": K.presets_view(user=True, allow_custom=allow_custom),
         "consents": K.consents_of(conn, user.id),
         "daily_limit": int(state.store.get(conn, "ai.shared_daily_limit")) or None,
         "remaining_today": K.remaining_today(conn, state.store, user.id),
     }
+
+
+def _offered_roles(conn: sqlite3.Connection, state: AiState) -> dict[str, dict[str, Any] | None]:
+    """The server's local and cloud AI a person may choose (design note 32): ``{label, host}`` for a role whose provider exists and
+    is switched on (the local one also still on a private address), None otherwise. Only these are offered."""
+    out: dict[str, dict[str, Any] | None] = {}
+    for role in RC.ROLES:
+        row = R.role_row(conn, state.store, state.settings, role)
+        ok = row is not None and K.usable(row) and (role != "local" or R.is_private(row, state.policy))
+        out[role] = {"label": row["label"], "host": parse_base_url(row["base_url"]).display_host} if ok and row is not None else None
+    return out
+
+
+def _route_choice_view(conn: sqlite3.Connection, state: AiState, user: User) -> dict[str, Any] | None:
+    prefs = K.ai_prefs(conn, state.store, user.id)
+    admin_routes = {f: str(state.store.get(conn, R.route_key(f))) for f in RC.FEATURES}
+    return RC.view(conn, state.store, user.id, roles=_offered_roles(conn, state) if user.can_use_shared else {"local": None, "cloud": None},
+                   admin_routes=admin_routes, own=str(prefs.get("provider") or "auto") == "own")
 
 
 @me_router.get("")
@@ -1335,6 +1367,32 @@ def update_my_ai(body: MeAiPatch, request: Request, user: CurrentUser, conn: sql
     except InvalidSettingValue as exc:
         conn.rollback()
         raise ApiProblem(400, str(exc)) from None
+    conn.commit()
+    return me_view(request, conn, user)
+
+
+@me_router.put("/route-choice")
+def set_my_route_choice(body: RouteChoiceBody, request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Design note 32: the person picks, per feature, the server's local AI, its cloud AI or the admin's choice (``default``).
+    Only while the server switch is on and an admin ticked the person; only an AI that exists; never for a feature the admin
+    switched off; never for lab report photos (the body has no such field). Each change is in the person's activity list."""
+    state = ai_state(request)
+    if not ai_on_for(request, conn, user) or not RC.allowed(conn, state.store, user.id):
+        raise ApiProblem(403, RC.NOT_ALLOWED)
+    changes = body.model_dump(exclude_none=True)
+    if not changes:
+        raise ApiProblem(400, "Choose an AI for at least one feature.")
+    offered = _offered_roles(conn, state) if user.can_use_shared else {"local": None, "cloud": None}
+    for feature, choice in changes.items():
+        if choice == "default":
+            continue
+        if state.store.get(conn, R.route_key(feature)) == "off":
+            raise ApiProblem(409, f"{R.LABEL[feature]}: your admin has switched this off for everyone.", field=feature, reason="feature_off")
+        if offered.get(choice) is None:
+            where = "local AI" if choice == "local" else "cloud AI"
+            raise ApiProblem(400, f"{R.LABEL[feature]}: this server has no {where} you can use, so you cannot choose it.",
+                             field=feature, reason=f"no_{choice}_provider")
+    RC.write(conn, state.store, user.id, changes, ip=request_ip(request))
     conn.commit()
     return me_view(request, conn, user)
 

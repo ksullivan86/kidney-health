@@ -29,7 +29,7 @@ can be shared by your admin or added by you ([design note 07][NOTE07]).
 | **Preferences** | theme (match device, light, dark), the day your week starts on, **Units for lab results** (US or SI: the unit offered first) |
 | **Meal guidance** | on or off, carbohydrate tolerance, low-treatment amount, foods to leave out, your "Not for me" foods ([Meal guidance](guidance.md)) |
 | **Food data** | your own USDA key, the shared key's status and today's remaining lookups, **Send barcodes I scan to Open Food Facts** ([Barcodes and label photos](barcode-and-photo.md)) |
-| **AI ideas** | opt in, provider, your own AI provider and key, what you agreed to send, AI activity ([Optional AI](ai.md)) |
+| **AI ideas** | opt in, provider, where each feature runs, **Choose which AI each feature uses** (when your admin lets you: [Choosing the AI yourself](ai.md#choosing-the-ai-yourself)), your own AI provider and key, what you agreed to send, AI activity ([Optional AI](ai.md)) |
 | **Assistant access** (when your admin turns it on) | personal tokens for a chat assistant you connect: make one, copy it once, see when it was last used, revoke it ([below](#assistant-access)) |
 | **This device** | installed or not, "Offline ready", storage used, entries waiting to sync with **Sync now**, **Retry** and **Discard**, **Clear offline data on this device** ([Install the app](install.md)) |
 | **Admin** (admins only) | a button that opens **Server administration** (below) |

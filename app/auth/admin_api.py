@@ -52,7 +52,7 @@ def _no_accounts_in_none_mode(ctx: AuthContext) -> None:
 
 def _user_or_404(conn: sqlite3.Connection, user_id: int) -> sqlite3.Row:
     try:
-        row = conn.execute(f"SELECT {USER_COLUMNS} FROM users WHERE id = ?", (int(user_id),)).fetchone()
+        row = conn.execute(f"SELECT {USER_COLUMNS}, can_choose_ai FROM users WHERE id = ?", (int(user_id),)).fetchone()
     except OverflowError:
         row = None
     if row is None or (row["status"] == "pending_setup" and row["username_norm"].startswith("#")):
@@ -105,7 +105,7 @@ def _void_admin_links(conn: sqlite3.Connection, uid: int) -> dict[str, int]:
 @router.get("/users")
 def list_users(request: Request, admin: AdminUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     _no_accounts_in_none_mode(auth_context(request))
-    rows = conn.execute(f"SELECT {USER_COLUMNS} FROM users WHERE username_norm NOT LIKE '#%' ORDER BY id").fetchall()
+    rows = conn.execute(f"SELECT {USER_COLUMNS}, can_choose_ai FROM users WHERE username_norm NOT LIKE '#%' ORDER BY id").fetchall()
     links = tokens.open_reset_links(conn)
     assistant = api_tokens.active_counts(conn, api_tokens.ASSISTANT)
     device = api_tokens.active_counts(conn, api_tokens.DEVICE)
@@ -198,6 +198,12 @@ def update_account(user_id: int, body: UserPatch, request: Request, response: Re
     if data.get("can_use_shared") is not None and bool(data["can_use_shared"]) != bool(row["can_use_shared"]):
         conn.execute("UPDATE users SET can_use_shared = ?, updated_at = ? WHERE id = ?", (int(data["can_use_shared"]), utcnow(), uid))
         audit(conn, admin.id, "user.updated", "user", uid, ip=ip, can_use_shared=bool(data["can_use_shared"]))
+
+    # Design note 32: "May choose the server's local or cloud AI". Counts only while AI_PERSON_ROUTE_CHOICE_ENABLED is on; taking it
+    # away counts from the person's next request (app/ai/route_choice.py reads it every time). Test accounts may have it.
+    if data.get("can_choose_ai") is not None and bool(data["can_choose_ai"]) != bool(row["can_choose_ai"]):
+        conn.execute("UPDATE users SET can_choose_ai = ?, updated_at = ? WHERE id = ?", (int(data["can_choose_ai"]), utcnow(), uid))
+        audit(conn, admin.id, "user.updated", "user", uid, ip=ip, can_choose_ai=bool(data["can_choose_ai"]))
 
     if data.get("must_change_password") and not row["must_change_password"]:
         if row["auth_source"] != "local":

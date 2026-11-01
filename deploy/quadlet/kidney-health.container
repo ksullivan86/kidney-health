@@ -30,10 +30,10 @@ Wants=network-online.target
 # Preferred for a host managed from git: pin the release's multi-arch index digest (it is in the
 # GitHub release notes; scripts/verify-image.sh checks it), remove AutoUpdate= below, and let
 # Renovate or Dependabot bump tag and digest together:
-#   Image=ghcr.io/ksullivan86/kidney-health:0.20.0@sha256:<index digest>
+#   Image=ghcr.io/ksullivan86/kidney-health:0.21.0@sha256:<index digest>
 # Otherwise track the minor release: patch releases arrive through AutoUpdate, breaking changes
 # never do. Do not track :latest (or :edge, the main branch) on a machine you care about.
-Image=ghcr.io/ksullivan86/kidney-health:0.20
+Image=ghcr.io/ksullivan86/kidney-health:0.21
 ContainerName=kidney-health
 # `systemctl --user enable --now podman-auto-update.timer` pulls a newer image for this tag daily
 # and restarts the unit, rolling back if it fails. Never mount podman.sock into a container for
@@ -136,6 +136,8 @@ Environment=TRUSTED_PROXIES=127.0.0.1,::1
 # Environment=AI_ROUTE_DESCRIBE=cloud
 # Environment=AI_ROUTE_CHAT=cloud
 # Environment=AI_ROUTE_RECIPES=cloud
+# Let the people you tick in Server administration → Users pick the local or the cloud AI per feature (docs/ai.md):
+# Environment=AI_PERSON_ROUTE_CHOICE_ENABLED=true
 # What the live evaluation said about the model in use (docs/ai.md "How well each AI is doing"): the reports scripts/ai_eval.py
 # writes, in a folder mounted read-only:
 # Volume=%h/ai-eval:/ai-eval:ro,Z

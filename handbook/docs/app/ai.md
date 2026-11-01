@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-31
 fact_checked: 2026-10-05
-sources: [NOTE04, NOTE31, NOTE03, NOTE06, OPENAI-DATA, OPENROUTER-ROUTING, OLLAMA-OAI, HERMES-API, FRIDOLFSSON25, A26-6, ASSISTANT-DOC]
+sources: [NOTE04, NOTE31, NOTE32, NOTE03, NOTE06, OPENAI-DATA, OPENROUTER-ROUTING, OLLAMA-OAI, HERMES-API, FRIDOLFSSON25, A26-6, ASSISTANT-DOC]
 ---
 
 # Optional AI
@@ -62,6 +62,26 @@ consent sheet names both and has its own tick box for the company, so you can le
 ideas). When the company's AI answered,
 the answer says so: "The local AI's answer did not pass the app's checks, so the cloud AI (host) answered." Both calls show
 in your AI activity and count in your daily limit. Ask and lab report photos never work this way.
+
+### Choosing the AI yourself
+
+Your admin can let you choose, feature by feature, which of the server's two AIs you use. If they did, **Settings → AI features**
+has **Choose which AI each feature uses**. For photos, meal ideas, describing a meal, Ask and AI recipes you pick:
+
+- **Server default**: what your admin chose.
+- **The server's local AI**: the AI at home. What the feature sends stays on the home network.
+- **The server's cloud AI**: a company's AI over the internet.
+
+Only an AI the server has is offered. Some things never change:
+
+- A feature your admin switched off stays off.
+- **Lab report photos** always stay on the AI at home. They are not in the list.
+- The first time a feature sends something to the cloud AI, the app asks you first and names the company.
+- Names, places and dates are taken out before anything goes to the cloud AI ([The privacy filter](#the-privacy-filter)).
+- If you use your own key, that still wins.
+
+The line for the feature then ends "You chose this." If your admin takes the choice away, your features go back to the server
+default at once ([design note 32][NOTE32]).
 
 ## What AI can and cannot do here
 
@@ -353,6 +373,7 @@ How to set it up is in the [assistant guide][ASSISTANT-DOC] for whoever runs you
 
 - [Design note 04: optional AI][NOTE04] and its security review (guardrails, payload, consent, presets).
 - [Design note 31][NOTE31]: the privacy filter for cloud AI.
+- [Design note 32][NOTE32]: choosing the server's local or cloud AI yourself.
 - [Design note 03][NOTE03] (label and plate photos); [design note 06][NOTE06] (the rules AI must pass).
 - [OpenAI API: your data][OPENAI-DATA]; [OpenRouter: provider routing][OPENROUTER-ROUTING];
   [Ollama: OpenAI compatibility][OLLAMA-OAI]; [Hermes Agent: API server][HERMES-API].

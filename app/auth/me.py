@@ -212,8 +212,11 @@ def read_my_settings(request: Request, user: CurrentUser, conn: sqlite3.Connecti
 def update_my_settings(request: Request, user: CurrentUser, body: dict[str, Any] = Body(...),
                        conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     from ..ai import config as ai_config  # lazy: app.ai imports this package
+    from ..ai import route_choice
 
     store = auth_context(request).store
+    if route_choice.SETTING in body:  # design note 32: only PUT /api/me/ai/route-choice checks the switch and the admin's tick
+        raise ApiProblem(403, f"{route_choice.SETTING} is changed in Settings → AI features (PUT /api/me/ai/route-choice).")
     try:
         before = ai_config.trust_setting(conn, store, user.id) if "ai" in body else None
         view = store.update_user(conn, user.id, body)

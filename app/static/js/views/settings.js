@@ -26,7 +26,7 @@
   const REG = KH.settings;
 
   // Kept equal to APP_VERSION in app/main.py (tests/test_settings_ui.py).
-  const APP_VERSION = '0.20.0';
+  const APP_VERSION = '0.21.0';
 
   const A = {
     sessions: () => request('GET', '/api/me/sessions'),
@@ -747,7 +747,7 @@
     'account.deleted': 'Account deleted', 'secret_key.rotated': 'Secret key rotated', 'backup.created': 'Backup created',
     'api_token.created': 'Assistant token created', 'api_token.revoked': 'Assistant token revoked', 'body.token_rows_deleted': 'Phone shortcut data deleted',
     'assistant.food_logged': 'Assistant saved food', 'assistant.recipe_saved': 'Assistant saved a recipe', 'assistant.preference_set': 'Assistant remembered a taste',
-    'ai.trust_changed': 'Trust in the assistant changed',
+    'ai.trust_changed': 'Trust in the assistant changed', 'ai.route_choice_changed': 'Which AI a feature uses changed',
     'totp.enabled': 'Two-step sign-in turned on', 'totp.disabled': 'Two-step sign-in turned off', 'totp.recovery_codes_renewed': 'New recovery codes made',
     'totp.recovery_code_used': 'Signed in with a recovery code',
     'passkey.added': 'Passkey added', 'passkey.removed': 'Passkey removed', 'passkey.counter_went_back': 'Copied passkey refused',
@@ -782,6 +782,9 @@
   const TASTE_WORD = { none: 'nothing saved', like: 'more like this', less: 'less often', not_for_me: 'not for me', neutral: 'stop learning' };
   const tasteWord = (value, kind) => (kind === 'group' && value === 'not_for_me' ? 'never suggest' : TASTE_WORD[value] || value);
   const TRUST_NAME = { ask: 'Ask me before every save', conversation: 'Trust it for this conversation', always: 'Trust it always' };
+  // Design note 32: a person's choice of the server's local or cloud AI, per feature (app/ai/route_choice.py).
+  const AI_FEATURE_NAME = { photos: 'Photos', meal_ideas: 'Meal ideas', describe: 'Describe a meal', chat: 'Ask', recipes: 'Recipes' };
+  const AI_CHOICE_NAME = { default: 'Server default', local: 'the server\'s local AI', cloud: 'the server\'s cloud AI' };
   const TOKEN_REVOKED_WHY = { password_changed: 'password changed', password_reset: 'password reset', account_disabled: 'account disabled',
     account_deleted: 'account deleted', admin: 'revoked by an admin', auth_mode_changed: 'sign-in mode changed' };
   // Connected devices (design note 27): the provider's name and the short error code in words.
@@ -810,6 +813,8 @@
     if (ev.action === 'assistant.recipe_saved') return `“${d.name}” (${d.ingredients} ingredients), with “${d.via}”`;
     if (ev.action === 'assistant.preference_set') return `${d.name}: ${tasteWord(d.old, d.kind)} → ${tasteWord(d.new, d.kind)}, with “${d.via}”`;
     if (ev.action === 'ai.trust_changed') return `${TRUST_NAME[d.old] || d.old} → ${TRUST_NAME[d.new] || d.new}`;
+    if (ev.action === 'ai.route_choice_changed') return `${AI_FEATURE_NAME[d.feature] || d.feature}: ${AI_CHOICE_NAME[d.old] || d.old} → ${AI_CHOICE_NAME[d.new] || d.new}`;
+    if (ev.action === 'user.updated' && d.can_choose_ai != null) return d.can_choose_ai ? 'may now choose the server\'s local or cloud AI' : 'may no longer choose the server\'s local or cloud AI';
     if (ev.action === 'totp.disabled') return { self: 'by the person', admin: 'by an admin', cli: 'with the command line' }[d.via] || '';
     if (ev.action === 'totp.enabled' && d.signed_out) return d.signed_out === 1 ? '1 other device signed out' : `${d.signed_out} other devices signed out`;
     if (ev.action === 'totp.recovery_code_used' && d.left != null) return d.left === 1 ? '1 left' : `${d.left} left`;
@@ -1646,6 +1651,20 @@
       await patch({ can_use_shared: shared.checked }, shared.checked ? `${name} can use the shared keys` : `${name} no longer uses the shared keys`);
     });
     panel.append(h('label', { class: 'check', for: sharedId }, shared, h('span', { class: 'check-text' }, 'Can use the shared keys (USDA)')));
+    // Design note 32: the person may choose, per AI feature, the server's local AI or its cloud AI (Settings → AI features). Counts only
+    // while the server switch ai.person_route_choice (AI_PERSON_ROUTE_CHOICE_ENABLED) is on.
+    const chooseId = uid('choose-ai');
+    const chooseHint = `${chooseId}-hint`;
+    const chooseAi = h('input', { type: 'checkbox', id: chooseId, 'aria-describedby': chooseHint });
+    chooseAi.checked = !!u.can_choose_ai;
+    chooseAi.addEventListener('change', async () => {
+      chooseAi.disabled = true;
+      await patch({ can_choose_ai: chooseAi.checked }, chooseAi.checked ? `${name} may choose the server's local or cloud AI` : `${name} uses your AI routing again`);
+    });
+    panel.append(h('label', { class: 'check', for: chooseId }, chooseAi, h('span', { class: 'check-text' }, 'May choose the server\'s local or cloud AI')),
+      h('span', { class: 'hint', id: chooseHint }, adminSwitchOn('ai.person_route_choice')
+        ? 'They pick, for each AI feature, the server\'s local AI or its cloud AI in Settings → AI features. A feature you switched off stays off, and lab report photos always stay local.'
+        : 'This has no effect until "Let chosen people pick the server\'s local or cloud AI" is on in Server settings (AI_PERSON_ROUTE_CHOICE_ENABLED).'));
     // Actions
     const actions = h('div', { class: 'settings-actions wrap' });
     const authLocal = authMode() === 'local' && u.auth_source === 'local';
@@ -1931,7 +1950,8 @@
     ['Meal guidance', ['guidance.enabled', 'guidance.pool_per_role', 'guidance.beam_width', 'guidance.plan_days_max', 'guidance.plan_days_ai_max']],
     // The master switch first: Settings → AI features sends admins here to turn it on.
     ['Optional AI', ['ai.enabled', 'ai.user_keys_allowed', 'ai.allow_user_base_url', 'ai.shared_daily_limit', 'ai.max_concurrency',
-      'ai.vision_plate_enabled', 'ai.vision_allow_agent', 'ai.chat_enabled', 'ai.voice_enabled', 'ai.allow_trusted_saves', 'ai.recipe_steps', 'ai.audit_retention_days', 'assistant.enabled']],
+      'ai.vision_plate_enabled', 'ai.vision_allow_agent', 'ai.chat_enabled', 'ai.voice_enabled', 'ai.allow_trusted_saves', 'ai.recipe_steps', 'ai.audit_retention_days',
+      'ai.person_route_choice', 'assistant.enabled']],
     // Drawn by js/views/ai_routing.js in Server administration → AI providers (a provider must be private to be local, so these
     // are not edited one by one here): the list shows a pointer instead of rows.
     ['Which AI each feature uses', ['ai.route.photos', 'ai.route.meal_ideas', 'ai.route.describe', 'ai.route.chat', 'ai.route.labs',
@@ -2014,6 +2034,7 @@
           if (typeof KH.ai.renderAdmin === 'function') KH.ai.renderAdmin().catch((e2) => console.warn('AI providers:', e2));
           if (typeof KH.ai.renderAddSlot === 'function') KH.ai.renderAddSlot().catch((e2) => console.warn('AI buttons:', e2));
         }
+        if (key === 'ai.person_route_choice') loadPeople(); // the hint under "May choose the server's local or cloud AI"
         if (key === 'assistant.enabled') {
           renderAssistant().catch((e2) => console.warn('Assistant access:', e2));
           loadPeople(); // "Revoke tokens" shows only while a token switch is on

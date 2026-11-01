@@ -853,6 +853,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 30 | `m030_activity.py` | Whoop, activity and recovery (note 28 §5) | three new tables: `activity_days` (`user_id` `ON DELETE CASCADE`, `date`, `source`, `source_key` (`whoop:cycle:<id>`), `kcal`, `strain`, `recovery_pct`, `resting_hr`, `hrv_ms`, `sleep_minutes`, `sleep_performance_pct`, `finished`, `started_at`; `UNIQUE (user_id, date, source)` and `UNIQUE (user_id, source_key)`), `activity_workouts` (`date`, `start_time`, `end_time`, `minutes`, `sport`, `kcal`, `strain`, `source`, `source_key` `whoop:workout:<uuid>`; `UNIQUE (user_id, source_key)`) and `activity_extra` (`user_id` primary key, `enabled`, `share_pct` 10–100, `ceiling_kcal` 50–3000 or NULL). `shares` and `care_invites` are rebuilt from their stored definitions with `json_array_length(areas) BETWEEN 1 AND 5` (the area `activity`); every row stays and the invite → share links are restored after `DROP TABLE shares` set them NULL. `BACKUP_BEFORE`. |
 | 32 | `m032_list_sync.py` | your own list app (note 30 §4) | new table `list_sync` (`user_id` primary key `ON DELETE CASCADE`, `app`, `base_url`, `list_id`, `list_name`, `key_enc` (the person's key sealed, purpose `list-sync`), `key_id`, `last_test_at`, `last_test_error`, `last_sent_at`, `last_sent_count`, `created_at`, `updated_at`). No CHECK on `app`. Recipe import needs no table. |
 | 31 | `m031_care_team_full.py` | the full Care team (note 29 §6) | `shares` and `care_invites` each gain four switches, `INTEGER NOT NULL DEFAULT 0 CHECK (… IN (0, 1))`: `may_plan`, `may_log`, `may_use_saved_meals`, `may_suggest`. When the columns are first added, a `care_helper` row gets `may_plan = 1`, so every share keeps its meaning. The `role` column of step 27 stays with its `CHECK`; the app writes it `care_helper` exactly when `may_plan` is on. New table `care_suggestions` (`share_id` `ON DELETE CASCADE`, `owner_user_id` and `from_user_id` `ON DELETE CASCADE`, never the same; `date`, `meal`, `items_json` a JSON list of 1 to 30, `note` at most 280 characters, `created_at`, `expires_at`, `answered_at`, `answer` (`accepted`, `declined`, `expired`, `ended`)). |
+| 33 | `m033_ai_route_choice.py` | a person may choose the server's local or cloud AI (note 32) | `users.can_choose_ai` (`INTEGER NOT NULL DEFAULT 0 CHECK (… IN (0, 1))`): an admin's tick in Server administration → Users. Every existing account starts without it. The person's choices are the personal setting `ai.route_choice`, not a column. |
 | 23 | `m023_passkeys.py` | passkeys (note 18) | `passkeys` (one row per passkey: `credential_id` BLOB, unique, 1 to 1,023 bytes; `public_key`, the COSE key as sent; `alg`; `user_handle`, 32 random bytes shared by one person's passkeys; `sign_count`; `name`; `backed_up`; `created_at`; `last_used_at`). `ON DELETE CASCADE`. Nothing is sealed: a public key is not a secret. Nobody has a passkey after the upgrade. |
 
 ## Backend file ownership
@@ -1091,7 +1092,12 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
 
-**Status (2026-10-31): v0.20.0 is prepared.** The privacy filter (note 31, ROADMAP "Privacy tiers", tier 2):
+**Status (2026-11-01): v0.21.0 is prepared.** Chosen people pick the server's local or cloud AI (note 32,
+schema step 33): with `AI_PERSON_ROUTE_CHOICE_ENABLED` on, a person an admin ticked in Server administration → Users chooses, per AI
+feature, the server's local AI, its cloud AI or the server default. An admin's `off`, the local-only lab report photos, consent and the
+privacy filter are unchanged. See "A person's own choice of the server's local or cloud AI" below.
+
+**v0.20.0 (2026-10-31)** adds the privacy filter (note 31, ROADMAP "Privacy tiers", tier 2):
 names, places, dates and other identifiers are taken out of every request to a cloud AI and put back into its reply; requests
 to the local AI and the local-only rule for lab reports are unchanged. See "Privacy tiers, tier 2: the privacy filter" below.
 
@@ -2643,7 +2649,8 @@ operators: `docs/ai.md` "Which AI does each feature use?"; what goes where: `doc
   the shared provider that holds the role (`no_local_provider` / `no_cloud_provider` when none, `provider_disabled` when
   switched off or its key is unreadable). The result is a `config.Resolved` with `feature`, `route` and `role`; consent,
   quota (`ai_usage.provider_id`), the answer cache key, `ai_audit`, the dry run and "What will be sent?" all use its
-  `cfg`.
+  `cfg`. A person an admin ticked may pick `local` or `cloud` per feature themselves; that step comes after `off`, `labs` and a
+  person's own provider ("A person's own choice of the server's local or cloud AI" below).
 * **Why "local" stays local.** `netpolicy.is_private_host`: an IP literal that is private and listed in
   `AI_PRIVATE_HOSTS`, or a name listed there by name and port (no DNS; a name resolving into a listed network does not
   count). A role `local` is refused by `PUT /api/admin/ai-routing` and by editing the provider's address when that
@@ -2664,6 +2671,41 @@ operators: `docs/ai.md` "Which AI does each feature use?"; what goes where: `doc
   transcribe route resolves the `chat` feature, and the `voice` consent row (`ai_consents`, purpose `voice`, host = the
   transcription host) is keyed to the provider the chat route resolves to; `POST /api/ai/consent` with purpose `voice`
   therefore checks `provider_id` against the chat route, and moving Ask to another provider asks about voice again.
+
+### A person's own choice of the server's local or cloud AI (note 32)
+
+Code: `app/ai/route_choice.py`, the step in `routing._resolve_feature`, `Resolved.chosen` (`app/ai/config.py`),
+`routes.set_my_route_choice` / `_route_choice_view` / `_offered_roles`, `admin_api.update_account` (`can_choose_ai`), schema step 33;
+screens `js/views/ai.js` (`routeChoicePart`) and `js/views/settings.js` (the tick box). People and operators: `docs/ai.md`
+"Choosing the server's local or cloud AI yourself".
+
+* **Three conditions, read on every resolution.** The instance setting `ai.person_route_choice` (env `AI_PERSON_ROUTE_CHOICE_ENABLED`,
+  default off, in `NO_SIGNIN_ENV_ONLY`), the column `users.can_choose_ai` (read from the database by `route_choice.has_privilege`, never
+  from the session's `User`), and the personal setting `ai.route_choice` (object `AiRouteChoice`: `photos`, `meal_ideas`, `describe`,
+  `chat`, `recipes`, each `default` \| `local` \| `cloud`; no `labs` field, `extra="forbid"`). `route_choice.choice_for` returns
+  `local` or `cloud` only when all three hold.
+* **Resolution order** (`_resolve_feature`): AI off / test account / not opted in as before → route `off` is `feature_off` for
+  everyone → `labs` local or off as before, the choice never read → a person's own provider (`provider = own`) as before, the choice
+  never read → **the person's choice**: the shared provider holding that role, with the usual checks (`can_use_shared`, `usable`, the
+  key, a local one still private and pinned to scope `local`), never a `local_then_cloud` fallback; a chosen role with no provider is
+  `chosen_role_missing` (off for that person, never moved to the other role) → otherwise the admin's route exactly as before (`any`
+  included). The result carries `chosen`; `route_view` adds it and `runs_on_text` ends "You chose this."
+* **Consent, quota, cache, activity, filter.** Unchanged: they follow the `cfg` the feature resolves to, so a feature a person moves to
+  the cloud AI asks for consent for that provider first (`409 consent_required`), and the privacy filter runs because that provider is
+  not `local_only`.
+* **API.** `GET /api/me/ai` adds `route_choice` (null unless AI is on, the switch is on and the person has the tick; else `choices`,
+  `features` (`feature`, `label`, `choice`, `admin_off`), `local` and `cloud` (`{label, host}` of a role whose provider exists, is switched
+  on and, for local, is private; null otherwise; both null without `can_use_shared`) and `own_wins`). `PUT /api/me/ai/route-choice`
+  (`current_user`; any subset of the five features) answers `403` without AI, the switch or the tick, `409 feature_off` for a feature
+  the admin switched off, `400 no_local_provider` / `no_cloud_provider` for a role it does not offer, and the `GET /api/me/ai` view
+  otherwise; `default` is always allowed. `PATCH /api/me/settings` refuses the key `ai.route_choice` with `403`; the import never
+  carries it (`IMPORTED_SETTINGS`). `GET /api/admin/users` adds `can_choose_ai`; `PATCH /api/admin/users/{id}` (admins, recent
+  password) takes it and writes `user.updated` with `can_choose_ai`.
+* **Audit.** `ai.route_choice_changed` (person-visible: `feature`, `old`, `new`), one row per feature that changed.
+* **When the tick or the switch goes**, the stored choices are kept and ignored from the next request; with the tick back they apply
+  again. A test account may have the tick; a reset of the test accounts makes new accounts without it.
+* **Demo.** AI is off in the demo: `GET /api/me/ai` has `route_choice: null` and `PUT /api/me/ai/route-choice` is `403`;
+  `js/mock/auth.js` keeps and audits `can_choose_ai` like `can_use_shared`. The settings twin and vectors carry both new keys.
 
 ### Privacy tiers, tier 3: local first, cloud only when the local answer fails (route `local_then_cloud`)
 
@@ -4905,7 +4947,7 @@ Signed in only (`current_user`; an anonymous caller gets the generic `401`, so a
 (`no-store` like every `/api` answer). The answer:
 
 ```json
-{"app_version": "0.20.0", "api_version": 1,
+{"app_version": "0.21.0", "api_version": 1,
  "capabilities": {"ai": false, "ai_next_meal": false, "ai_parse_meal": false, "ai_label": false, "ai_plate": false, "ai_lab_report": false,
                   "chat": false, "voice": false, "assistant": false, "push": false,
                   "barcode": false, "barcode_off": false, "barcode_usda": false, "handbook": false},

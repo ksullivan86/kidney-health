@@ -109,6 +109,7 @@ V03_ROUTES = {
     ("post", "/api/ai/read-lab-report"),  # a photo of a lab report, local AI only (ROADMAP "Lab results ... photo version")
     ("get", "/api/me/ai"), ("patch", "/api/me/ai"), ("put", "/api/me/ai/provider"), ("delete", "/api/me/ai/provider"),
     ("post", "/api/me/ai/probe"),
+    ("put", "/api/me/ai/route-choice"),  # design note 32: a person's choice of the server's local or cloud AI
     ("get", "/api/admin/ai-providers"), ("post", "/api/admin/ai-providers"), ("put", "/api/admin/ai-providers/{provider_id}"),
     ("delete", "/api/admin/ai-providers/{provider_id}"), ("post", "/api/admin/ai-providers/{provider_id}/probe"),
     ("get", "/api/admin/ai-usage"),

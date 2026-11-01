@@ -8,7 +8,8 @@
      the cloud AI, and a warning for every feature that sends something to the cloud. Saved with PUT /api/admin/ai-routing
      (through KH.ai.api), which refuses a local AI that is not on a private address and "Local, then cloud" for Ask and lab
      report photos. When the environment defines the cloud AI (AI_CLOUD_PROVIDER, `env_cloud`), that choice is fixed and says so.
-   * Settings → AI (a person): one line per feature saying where it runs ("Runs on your local AI (host)").
+   * Settings → AI (a person): one line per feature saying where it runs ("Runs on your local AI (host)"), ending "You chose this."
+     where the person chose the server's local or cloud AI themselves (design note 32; the choice itself is drawn by js/views/ai.js).
 
    Rules: everything the server sends is drawn with textContent (the h() helper); no inline scripts or handlers;
    nothing here sends health data anywhere, it only edits the admin's routing and reads the person's status. */
@@ -69,7 +70,9 @@
     return h('div', { class: 'ai-routing-person' },
       h('h3', { class: 'settings-subtitle' }, 'Where each AI feature runs'),
       list,
-      routing.mode === 'routed'
+      routing.features.some((f) => f.chosen) // design note 32: the person chose the server's local or cloud AI for a feature
+        ? h('p', { class: 'hint' }, 'Your admin decides this, except for the features where you chose an AI below. A feature your admin switched off is off for everyone.')
+        : routing.mode === 'routed'
         ? h('p', { class: 'hint' }, 'Your admin decides this. A feature that is switched off here is off for everyone, whatever provider they use.')
         : h('p', { class: 'hint' }, 'Your admin has not set up local and cloud routing, so the server uses the provider chosen above, as before.'));
   }

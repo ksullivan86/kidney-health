@@ -1688,6 +1688,13 @@ NOTE31:
   licence: "PolyForm Noncommercial 1.0.0 (project)"
   checked: 2026-10-31
   kind: project
+NOTE32:
+  cite: "kidney-health design note 32: chosen people pick the server's local or cloud AI, per feature."
+  short: "Design note 32"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/32-choose-local-or-cloud-ai.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-10-31
+  kind: project
 SCHEMA-NUTRITION:
   cite: "schema.org. NutritionInformation (the nutrition data a recipe page can carry)."
   short: "schema.org NutritionInformation"
