@@ -234,6 +234,11 @@
       help: 'Lower it (for example to 120) if planning a day is slow on a small server such as a Raspberry Pi 4.' },
     { key: 'instance.name', type: 'str', minLength: 1, maxLength: 80, default: 'Kidney Health', scope: 'instance', env: 'INSTANCE_NAME',
       label: 'Server name', help: 'Shown on the sign-in, invite and password pages, and in Settings under About & privacy.' },
+    // Instacart (design note 33; app/instacart.py). INSTACART_API_KEY_FILE and INSTACART_BASE_URL are env only.
+    { key: 'lists.instacart_enabled', type: 'bool', default: false, scope: 'instance', env: 'INSTACART_ENABLED',
+      label: 'Let people open the shopping list at Instacart',
+      help: 'Off by default. Needs this server\'s own Instacart key (INSTACART_API_KEY_FILE; see docs/instacart.md). When on, Plan → Shopping list has Open in Instacart: the person sees the exact lines first and confirms each time, then this server sends Instacart each food\'s name and amount, and nothing else, and opens the page Instacart makes. '
+        + 'Instacart is another company, and its own terms and privacy policy apply there.' },
     // Your own list app and recipe import (design note 30; app/list_sync/, app/recipe_import/). LIST_SYNC_ALLOWED_HOSTS is env only.
     { key: 'lists.sync_enabled', type: 'bool', default: false, scope: 'instance', env: 'LIST_SYNC_ENABLED',
       label: 'Let people send the shopping list to their own Grocy, KitchenOwl or Mealie',

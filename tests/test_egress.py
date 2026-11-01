@@ -177,7 +177,7 @@ def test_every_outbound_client_in_the_app_uses_a_checked_transport() -> None:
             if re.search(pattern, text, re.M):
                 other.append(rel)
     assert sorted(set(clients)) == ["ai/transport.py", "auth/oidc.py", "auth/policy.py", "devices/whoop.py", "devices/withings.py", "foods.py",
-                                    "list_sync/apps.py", "off.py", "recipe_import/fetch.py"], clients
+                                    "instacart.py", "list_sync/apps.py", "off.py", "recipe_import/fetch.py"], clients
     assert sorted(set(other)) == ["egress.py", "healthcheck.py"], other  # proxy settings lookup; loopback probe
 
 

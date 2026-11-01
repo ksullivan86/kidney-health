@@ -42,6 +42,10 @@ Keys (defaults in brackets):
 * Your own list app (design note 30): ``LIST_SYNC_ALLOWED_HOSTS`` [empty]: the private host names, addresses and networks (CIDR)
   a person's Grocy, KitchenOwl or Mealie may be on (``Settings.list_sync_allowed_hosts``). Env only, like every outbound allowlist.
   The switches ``LIST_SYNC_ENABLED`` and ``RECIPE_IMPORT_ENABLED`` are settings (``lists.sync_enabled``, ``recipes.import_enabled``).
+* Instacart (design note 33; :class:`InstacartEnv`, ``Settings.instacart``): ``INSTACART_API_KEY_FILE`` (only as a file:
+  ``INSTACART_API_KEY`` is refused), the server owner's own key, and ``INSTACART_BASE_URL`` [``https://connect.instacart.com``;
+  the development host is ``https://connect.dev.instacart.tools``]. Env only. The switch ``INSTACART_ENABLED`` is a setting
+  (``lists.instacart_enabled``); it does nothing without the key.
 * Test accounts (design note 26): ``TEST_ACCOUNT_PASSWORD_FILE`` (only as a file: ``TEST_ACCOUNT_PASSWORD`` is refused). The file
   is read when the accounts are made or reset. The switches ``TEST_ACCOUNT_ENABLED`` and ``TEST_ACCOUNT_AI`` are settings
   (``test_accounts.*``).
@@ -448,6 +452,54 @@ def _validate_whoop(s: "Settings") -> list[str]:
     return []
 
 
+INSTACART_PRODUCTION = "https://connect.instacart.com"
+INSTACART_DEVELOPMENT = "https://connect.dev.instacart.tools"
+
+
+@dataclass(frozen=True)
+class InstacartEnv:
+    """The server owner's Instacart Developer Platform key and host (design note 33). The key is never returned by any API."""
+
+    api_key: str | None = field(default=None, repr=False)
+    base_url: str = INSTACART_PRODUCTION
+
+    @property
+    def key_set(self) -> bool:
+        return bool(self.api_key)
+
+
+def check_instacart_base_url(raw: str) -> str:
+    """``INSTACART_BASE_URL``: ``https://`` and a host (a port allowed); no path, user name, query or fragment."""
+    text = (raw or "").strip().rstrip("/")
+    try:
+        parts = urlsplit(text)
+        _ = parts.port
+    except ValueError:
+        raise ConfigError("INSTACART_BASE_URL is not a valid address. Use https://connect.instacart.com, or "
+                          "https://connect.dev.instacart.tools with a development key.") from None
+    if parts.scheme.lower() != "https" or not parts.hostname:
+        raise ConfigError("INSTACART_BASE_URL must start with https:// and name a host, such as https://connect.instacart.com.")
+    if parts.username is not None or parts.password is not None or parts.path or parts.query or parts.fragment:
+        raise ConfigError("INSTACART_BASE_URL takes only the host, such as https://connect.instacart.com: no path, user name, "
+                          "?query or #fragment.")
+    return f"https://{parts.netloc.lower()}"
+
+
+def load_instacart_env(env: Mapping[str, str]) -> InstacartEnv:
+    if env.get("INSTACART_API_KEY"):
+        raise ConfigError("Give the Instacart API key as a file: put it in a file and set INSTACART_API_KEY_FILE to its path. "
+                          "Remove INSTACART_API_KEY.")
+    value, _, _ = read_secret({k: v for k, v in env.items() if k == "INSTACART_API_KEY_FILE"}, "INSTACART_API_KEY")
+    return InstacartEnv(api_key=(value or "").strip() or None, base_url=_raw(env, "INSTACART_BASE_URL") or INSTACART_PRODUCTION)
+
+
+def _validate_instacart(s: "Settings") -> list[str]:
+    base = check_instacart_base_url(s.instacart.base_url)
+    if base not in (INSTACART_PRODUCTION, INSTACART_DEVELOPMENT):
+        return [f"INSTACART_BASE_URL is {base}, not one of Instacart's hosts ({INSTACART_PRODUCTION} or {INSTACART_DEVELOPMENT})."]
+    return []
+
+
 def check_oidc_issuer(raw: str, var: str = "OIDC_ISSUER") -> str:
     """``OIDC_ISSUER``: ``https://`` with a host (plain ``http://`` only for a loopback host, for tests), no query, no fragment."""
     try:
@@ -619,6 +671,8 @@ class Settings:
     whoop: WhoopEnv = field(default_factory=WhoopEnv, repr=False)
     # Your own list app (design note 30): private hosts, addresses and networks a list app may be on (LIST_SYNC_ALLOWED_HOSTS).
     list_sync_allowed_hosts: tuple[str, ...] = ()
+    # Instacart (design note 33): the server owner's key and host; no key for Settings built in code.
+    instacart: InstacartEnv = field(default_factory=InstacartEnv, repr=False)
 
     # Secrets at rest (note 07 §4.12). ``secret_key`` holds the raw SECRET_KEY text (one key per
     # line); None means "use or create $DATA_DIR/secret.key" (see app.crypto.load_keyring).
@@ -683,7 +737,8 @@ class Settings:
         """Every secret value loaded from the environment, for the log-redaction filter."""
         values = [self.usda_api_key, self.app_password, self.admin_password, self.trusted_proxy_secret, self.ai.api_key,
                   self.ai.cloud.api_key, self.ai.stt_api_key, self.oidc.client_secret,
-                  *(p.client_secret for p in self.oidc.providers), self.withings.client_secret, self.whoop.client_secret]
+                  *(p.client_secret for p in self.oidc.providers), self.withings.client_secret, self.whoop.client_secret,
+                  self.instacart.api_key]
         return [v for v in values if v] + self.secret_key_lines()
 
     def validate(self) -> tuple[str, ...]:
@@ -1005,6 +1060,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         withings=load_withings_env(env),
         whoop=load_whoop_env(env),
         list_sync_allowed_hosts=tuple(h.lower() for h in _split_list(env.get("LIST_SYNC_ALLOWED_HOSTS"))),
+        instacart=load_instacart_env(env),
     )
     extra: list[str] = []
     if env.get("FORWARDED_ALLOW_IPS"):
@@ -1022,8 +1078,9 @@ def normalize(settings: Settings) -> Settings:
     public = _check_public_url(settings.public_url) if settings.public_url else None
     handbook = _check_handbook_public_url(settings.handbook_public_url) if settings.handbook_public_url else None
     off_base = _check_off_base_url(settings.off_base_url)
+    instacart = replace(settings.instacart, base_url=check_instacart_base_url(settings.instacart.base_url))
     return replace(settings, allowed_hosts=allowed, trusted_proxies=proxies, public_url=public, handbook_public_url=handbook,
-                   off_base_url=off_base)
+                   off_base_url=off_base, instacart=instacart)
 
 
 def _validate(s: Settings) -> list[str]:
@@ -1102,6 +1159,7 @@ def _validate(s: Settings) -> list[str]:
     warnings += _validate_oidc(s)
     warnings += _validate_withings(s)
     warnings += _validate_whoop(s)
+    warnings += _validate_instacart(s)
     if "*" in s.allowed_hosts:
         warnings.append("ALLOWED_HOSTS contains '*': the Host check (DNS-rebinding defence) is switched off.")
     if s.docs_enabled:

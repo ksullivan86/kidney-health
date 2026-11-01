@@ -134,6 +134,9 @@ USER_AGENT_OIDC = "kidney-health"  # discovery, keys and the token request of si
 USER_AGENT_DEVICES = "kidney-health"  # connected devices: Withings token and measure requests (``app/devices/withings.py``)
 USER_AGENT_RECIPES = "kidney-health (recipe import)"  # reading a recipe page a person asked for (``app/recipe_import/fetch.py``)
 USER_AGENT_LISTS = "kidney-health"  # a person's own list app: Grocy, KitchenOwl, Mealie (``app/list_sync/apps.py``)
+# Instacart (``app/instacart.py``, design note 33): plain on purpose, like the list's title. The product's name would tell Instacart
+# something about the health of the person who opens the page.
+USER_AGENT_INSTACART = "shopping-list"
 
 # --------------------------------------------------------------------------- #
 # Key derivation labels (the HKDF ``info`` of ``app.crypto.Keyring``)
