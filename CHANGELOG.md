@@ -5,13 +5,13 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
-## 0.20.0 — 2026-10-31
+## 0.21.0 — 2026-11-01
 
-### Upgrading from 0.19 (read this first)
+### Upgrading from 0.20 (read this first)
 
-* Back up first. There is no database change.
-* Change the image tag to `:0.20`. The shipped deployment files already say `:0.20`.
-* The privacy filter is on by itself for every request to a cloud AI. Requests to a local AI are unchanged.
+* **Back up first.** Schema step 33 runs at the first start and adds one column, `users.can_choose_ai`, off for everyone.
+* Change the image tag to `:0.21`. The shipped deployment files already say `:0.21`.
+* Nothing new is switched on until you set `AI_PERSON_ROUTE_CHOICE_ENABLED` and tick people in Server administration → Users.
 
 ### Chosen people pick the server's local or cloud AI
 
@@ -28,7 +28,14 @@ the API. Security fixes are released as patch versions of the newest minor versi
   Their choices are kept, so ticking them again brings the choices back. If a chosen AI goes away, that feature is off for them
   until they choose again; it never moves to the other AI on its own.
 * Each change of the tick is in the activity log, and each change of a person's choice is in their own activity list.
-* **Upgrading.** Schema step 33 adds one column, `users.can_choose_ai`, off for everyone. Back up first as usual.
+
+## 0.20.0 — 2026-10-31
+
+### Upgrading from 0.19 (read this first)
+
+* Back up first. There is no database change.
+* Change the image tag to `:0.20`. The shipped deployment files already say `:0.20`.
+* The privacy filter is on by itself for every request to a cloud AI. Requests to a local AI are unchanged.
 
 ### The privacy filter for cloud AI
 
