@@ -7,9 +7,9 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-21
+last_checked: 2026-10-31
 fact_checked: 2026-10-05
-sources: [NOTE04, NOTE03, NOTE06, OPENAI-DATA, OPENROUTER-ROUTING, OLLAMA-OAI, HERMES-API, FRIDOLFSSON25, A26-6, ASSISTANT-DOC]
+sources: [NOTE04, NOTE31, NOTE03, NOTE06, OPENAI-DATA, OPENROUTER-ROUTING, OLLAMA-OAI, HERMES-API, FRIDOLFSSON25, A26-6, ASSISTANT-DOC]
 ---
 
 # Optional AI
@@ -123,6 +123,21 @@ Before anything is sent the first time, a consent sheet shows the **provider**, 
 it goes to, a line about how that provider handles data, and the **exact text** that will be sent. Every
 AI button also has **What will be sent?**, which shows the same thing without sending
 ([design note 04][NOTE04]).
+
+### The privacy filter
+
+The app never puts your name or dates into what it builds, but you might type them. So before anything goes to a **cloud
+AI**, a privacy filter takes them out ([design note 31][NOTE31]). It is always on, and it adds to the rules above.
+
+- **It takes out** your name, user name and email, the names of your Care team, other names after words like "Dr" or
+  "my wife", places, addresses and postcodes, dates, phone numbers, email addresses and record numbers.
+- **It keeps** your health details and amounts, such as "potassium 5.8" or "2 cups", and words like "today".
+- Each one becomes a label such as `[PERSON_1]`. Your own words are put back in the answer before you see it. The app keeps
+  the link between labels and words only while that one request runs.
+- **What will be sent?** shows the request after the filter and how many details it replaced.
+- It does not run for the AI at home, and lab report photos still go only there. It reads text, not photos or recordings.
+- It is not perfect. A name typed in small letters with no word like "my wife" before it can get through. It hides who is
+  asking, not that someone with kidney disease asked.
 
 ## Who the providers are
 
@@ -337,6 +352,7 @@ How to set it up is in the [assistant guide][ASSISTANT-DOC] for whoever runs you
 ## Sources
 
 - [Design note 04: optional AI][NOTE04] and its security review (guardrails, payload, consent, presets).
+- [Design note 31][NOTE31]: the privacy filter for cloud AI.
 - [Design note 03][NOTE03] (label and plate photos); [design note 06][NOTE06] (the rules AI must pass).
 - [OpenAI API: your data][OPENAI-DATA]; [OpenRouter: provider routing][OPENROUTER-ROUTING];
   [Ollama: OpenAI compatibility][OLLAMA-OAI]; [Hermes Agent: API server][HERMES-API].

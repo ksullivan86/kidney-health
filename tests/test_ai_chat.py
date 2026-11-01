@@ -283,7 +283,9 @@ def test_the_model_calls_get_today_and_the_answer_is_checked_and_shown(ask_clien
         assert [m["role"] for m in first["messages"]] == ["system", "user"]
         # the second request carries the model's own call and the app's result for this person
         assert [m["role"] for m in second["messages"]] == ["system", "user", "assistant", "user"]
-        assert json.loads(second["messages"][2]["content"]) == {"call": {"tool": "get_today", "arguments": {"date": DAY}}}
+        # The provider is a cloud AI, so the privacy filter (note 31) sent the date as a label; the tool ran on the real date.
+        assert json.loads(second["messages"][2]["content"]) == {"call": {"tool": "get_today", "arguments": {"date": "[DATE_1]"}}}
+        assert DAY not in json.dumps(second)
         assert "RESULT of get_today" in second["messages"][3]["content"] and f'"value":{total}' in second["messages"][3]["content"].replace(".0,", ",")
     [group] = [g for g in body["numbers"] if g["title"].startswith("The day")]
     potassium = next(row for row in group["rows"] if row["label"] == "Potassium")

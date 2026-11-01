@@ -53,7 +53,7 @@ ideas asks the same three in a person's words at the top ("How AI help is set up
 * [What AI does and does not do](#what-ai-does-and-does-not-do)
 * [Guardrails](#guardrails)
 * [The instructions follow your profile](#the-instructions-follow-your-profile)
-* [What is sent, and what never is](#what-is-sent-and-what-never-is)
+* [What is sent, and what never is](#what-is-sent-and-what-never-is), and [the privacy filter](#the-privacy-filter)
 * [For people using the app](#for-people-using-the-app)
 * [For the person running the server](#for-the-person-running-the-server): switches, providers,
   [which AI each feature uses](#which-ai-does-each-feature-use), [how well each AI is doing](#how-well-each-ai-is-doing),
@@ -176,6 +176,40 @@ Where the data goes depends on the provider your admin chose (the consent sheet 
 | A server your admin runs that forwards to a company: the cloud AI from `AI_CLOUD_PROVIDER` with one of those presets, and `AI_CLOUD_UPSTREAM` (for example `Anthropic`) | "Goes through your admin's LiteLLM proxy to Anthropic. Anthropic receives what is sent, under its own terms; your admin can read it too." (Another preset says "your admin's proxy".) The company's name is required, and a new name asks everyone again |
 | Hermes Agent | "Your admin's Hermes agent keeps a transcript and forwards the request to the model provider it is set up with; your admin can read what is sent." |
 | Another OpenAI-compatible server | "Goes to a server your admin chose (or you entered); whoever runs that server can read what is sent." |
+
+### The privacy filter
+
+The app never puts your name or dates into what it builds. But you can type them: in Ask, in Describe a meal, in your
+preferences or in a food's name. So before anything goes to a **cloud AI**, a privacy filter on your server takes them out.
+It adds to the rules above and never replaces them.
+
+* **What it takes out.** Your user name, display name and e-mail, and the names of the people in your Care team. Names after
+  words like "Dr", "Nurse", "my wife" or "my son". Places after words like "I live in" or "near", and named hospitals and
+  clinics. Street addresses and postcodes. Dates such as "12 March 2026" or "31/10/2026". Phone numbers, e-mail addresses, web
+  addresses with a query, and record numbers (MRN, NHS number, insurance numbers, any long number).
+* **What it keeps.** Your health details and amounts ("potassium 5.8", "2 cups", "150 mg"), times of day, and words like
+  "today" or "yesterday". The question needs them.
+* **How.** Each detail becomes a label such as `[PERSON_1]` or `[DATE_1]`. The same word gets the same label everywhere in one
+  request. When the answer comes back, the app puts your words back before you see it. The list that links labels to words
+  is kept in memory for that one request and then dropped. It is never stored, logged or sent.
+* **Where you see it.** "What will be sent?" shows the request after the filter, exactly as it leaves, and says how many
+  details were replaced. Your AI activity list keeps the filtered request, the cloud's reply with its labels, and the count.
+  It never keeps which words were replaced.
+* **When it runs.** Always, for every AI that is not your admin's local AI: the shared cloud AI, your own provider, and a
+  shared provider without the local role. There is no switch. It never runs for the local AI, whose requests stay exactly as
+  built.
+* **What it does not change.** Lab report photos still go only to the local AI. The filter reads text only, so it cannot take
+  anything out of a photo or a voice recording: the photo rules stay as they are (location and camera data removed, your
+  consent first, lab reports local only).
+* **Its limits.** It finds the patterns above. A name typed in lower case with no cue word ("tell jenny"), or a shop or town
+  named with no cue word, can get through unless it is a known name. On the app's test set it removes about 96 % of the
+  details. It hides who is asking, not that someone with kidney disease asked. A false match costs a little meaning: the AI may
+  see "a soup called [PERSON_1]". In Ask, the AI sees a label instead of a date, so say "today" or "yesterday" when the day
+  matters.
+
+For contributors: `app/ai/privacy_filter.py`, design note 31 (`docs/dev/research/31-privacy-filter.md`), and the offline test
+set `tests/data/redaction_cases.json`. A named-entity model (Presidio, GLiNER) would find more names without cue words; it is a
+new dependency and waits for the owner's decision (note 31 §5).
 
 ## For people using the app
 

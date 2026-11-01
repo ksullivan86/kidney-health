@@ -12,6 +12,11 @@
 * :func:`probe` is "Test connection": models list, structured-output mode, vision, and for ``hermes``
   the tool check of :func:`hermes_tools_check` (refuse when any **enabled** toolset lists tools, when
   the answer does not parse, or when the call fails).
+* **The privacy filter** (:mod:`app.ai.privacy_filter`, note 31): for every provider that is not pinned to the private
+  network, :meth:`ChatClient.complete_json` replaces names, places, dates and other identifiers in every text part of the
+  body right before it is sent (the repair turn too), and puts the words back into the parsed reply before it is checked.
+  The labels live in memory for that one call. :meth:`ChatClient.request` refuses a body for such a provider that did not
+  come through the filter, so no feature can skip it. Requests to the local AI are never changed.
 
 Nothing here logs prompts, responses or keys (R6 "Logging").
 """
@@ -30,6 +35,7 @@ from typing import Any, Awaitable, Callable, Literal, Mapping, Sequence
 import anyio
 
 from .. import brand
+from . import privacy_filter
 from .netpolicy import BaseUrl, NetPolicy, Scope
 from .presets import Preset, StructuredMode, get as get_preset
 from .transport import AiTransportError, HttpResult, TransportFactory, send_json
@@ -75,6 +81,9 @@ class ProviderConfig:
     safety_identifier: str | None = field(default=None, repr=False)
     local_only: bool = False  # the shared provider holding the role "local": the transport refuses any public address
     upstream: str | None = None  # the company a shared proxy forwards to (AI_CLOUD_UPSTREAM); the consent line names it
+    # The account's own names and its Care team's (app.ai.privacy_filter.known_terms), set by app.ai.routing.resolve_feature for a
+    # provider that is not local: the privacy filter replaces them in every request to it. Never shown, logged or sent.
+    privacy_terms: tuple[str, ...] = field(default=(), repr=False, compare=False)
 
     @property
     def net_scope(self) -> Scope:
@@ -287,6 +296,7 @@ class CallResult:
     bodies: list[dict[str, Any]] = field(default_factory=list)  # every body sent, in order
     repaired: bool = False
     retried: bool = False
+    privacy_replaced: int | None = None  # details the privacy filter replaced in the last body sent (None: a local AI, no filter)
 
 
 def summarize_error(exc: Exception) -> str:
@@ -322,7 +332,12 @@ class ChatClient:
         self._sleep = sleep or anyio.sleep
 
     async def request(self, cfg: ProviderConfig, method: str, path: str, body: Any | None = None, *,
-                      timeout_s: float | None = None, error_snippet: Callable[[bytes], None] | None = None) -> HttpResult:
+                      timeout_s: float | None = None, error_snippet: Callable[[bytes], None] | None = None,
+                      filtered: bool = False) -> HttpResult:
+        """One request. A body for a provider that is not local must have come through the privacy filter
+        (:meth:`complete_json` does that and says so with ``filtered``); anything else is refused before it is sent."""
+        if body is not None and privacy_filter.applies(cfg) and not filtered:
+            raise AiTransportError("privacy_filter", "a request body for a cloud AI must go through the privacy filter")
         return await send_json(
             cfg.base, cfg.net_scope, self.policy, method=method, path=path, headers=headers_for(cfg, self.app_version),
             body=body, read_timeout_s=timeout_s or cfg.timeout_s, max_bytes=cfg.max_response_bytes,
@@ -330,16 +345,30 @@ class ChatClient:
         )
 
     async def complete_json(self, cfg: ProviderConfig, body: dict[str, Any], validate: Validator, *, vision: bool = False) -> CallResult:
-        """Send ``body`` (from :func:`build_body`) and validate the reply; at most one extra request."""
+        """Send ``body`` (from :func:`build_body`) and validate the reply; at most one extra request.
+
+        For a provider that is not local the privacy filter runs on each body right before it is sent and the labels are put
+        back into the parsed reply before ``validate`` sees it. ``result.bodies`` holds the bodies as sent; ``result.text`` is the
+        reply as it came back (with its labels)."""
         result = CallResult(status="error")
         timeout = cfg.vision_timeout_s if vision else cfg.timeout_s
         current = body
         extra_used = False
         started = time.monotonic()
+        shield = privacy_filter.shield_for(cfg)  # one request's labels, in memory only; None for the local AI
         while True:
-            result.bodies.append(current)
+            if shield is not None:
+                try:  # plain CPU work, kept off the event loop (a long Ask conversation is tens of kilobytes)
+                    sent = await anyio.to_thread.run_sync(shield.filter_body, current)
+                except privacy_filter.FilterLimit:
+                    result.status, result.error = "error", "privacy_filter"
+                    break
+                result.privacy_replaced = shield.replaced
+            else:
+                sent = current
+            result.bodies.append(sent)
             try:
-                http = await self.request(cfg, "POST", "chat/completions", current, timeout_s=timeout)
+                http = await self.request(cfg, "POST", "chat/completions", sent, timeout_s=timeout, filtered=True)
             except AiTransportError as exc:
                 result.http_status = exc.status
                 if not extra_used and exc.category in RETRYABLE:
@@ -369,6 +398,8 @@ class ChatClient:
                 break
             try:
                 data = extract_json(reply.content)
+                if shield is not None:
+                    data = shield.restore(data)
                 result.parsed = validate(data)
             except JsonNotFound as exc:
                 problem, summary = ("empty" if not (reply.content or "").strip() else "no_json"), str(exc)

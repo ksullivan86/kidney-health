@@ -50,6 +50,11 @@ Rules that keep "local" local:
 
 Consent, quota, the AI activity log and "What will be sent?" all use the provider the feature resolves to, so a
 feature that moves to another provider asks for consent again for that provider.
+
+**Tier 2, the privacy filter** (:mod:`app.ai.privacy_filter`, note 31) adds to these rules and never replaces them: every
+provider this resolves that is not pinned to the private network gets the account's known names
+(``ProviderConfig.privacy_terms``), and the client filters every request to it. Nothing here changes because of the filter:
+a local-only feature stays local-only, and a feature that is off stays off.
 """
 from __future__ import annotations
 
@@ -64,6 +69,7 @@ from ..crypto import InvalidToken, Keyring
 from ..db import get_meta, set_meta, table_exists
 from ..settings_store import SettingLocked, SettingsStore
 from . import config as K
+from . import privacy_filter
 from .netpolicy import NetPolicy, PolicyError, is_private_host, parse_base_url
 
 log = logging.getLogger(f"{brand.LOGGER_NAME}.ai")
@@ -175,7 +181,27 @@ def is_private(row: Mapping[str, Any], policy: NetPolicy) -> bool:
 
 def resolve_feature(conn: sqlite3.Connection, store: SettingsStore, keyring: Keyring, settings: Settings, policy: NetPolicy, *,
                     user_id: int, can_use_shared: bool, feature: str, require_opt_in: bool = True) -> K.Resolved:
-    """Which provider serves ``feature`` for ``user_id`` now (no quota is taken, nothing is sent)."""
+    """Which provider serves ``feature`` for ``user_id`` now (no quota is taken, nothing is sent). A provider that is not local
+    (and a cloud fallback) carries the account's known names for the privacy filter."""
+    resolved = _resolve_feature(conn, store, keyring, settings, policy, user_id=user_id, can_use_shared=can_use_shared,
+                                feature=feature, require_opt_in=require_opt_in)
+    return with_privacy_terms(conn, user_id, resolved)
+
+
+def with_privacy_terms(conn: sqlite3.Connection, user_id: int, resolved: K.Resolved) -> K.Resolved:
+    """Attach :func:`app.ai.privacy_filter.known_terms` to every provider of ``resolved`` the filter runs for. The provider
+    choice itself is never changed."""
+    targets = [r for r in (resolved, resolved.fallback) if r is not None and r.cfg is not None and privacy_filter.applies(r.cfg)]
+    if not targets:
+        return resolved
+    terms = privacy_filter.known_terms(conn, user_id)
+    for item in targets:
+        item.cfg = dataclasses.replace(item.cfg, privacy_terms=terms)
+    return resolved
+
+
+def _resolve_feature(conn: sqlite3.Connection, store: SettingsStore, keyring: Keyring, settings: Settings, policy: NetPolicy, *,
+                     user_id: int, can_use_shared: bool, feature: str, require_opt_in: bool = True) -> K.Resolved:
     if not store.get(conn, "ai.enabled") or not test_accounts.ai_allowed(conn, store, user_id):
         return K.Resolved(None, None, "disabled", feature=feature)
     prefs = K.ai_prefs(conn, store, user_id)

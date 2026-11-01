@@ -328,7 +328,9 @@ def test_a_food_that_is_not_the_persons_is_not_found(taste_client):
         with attach(c.app, FakeProvider([taste(food_id=bad, preference="like"), step_answer("I could not find it.")])) as provider:
             body = say(c).json()
             assert body["pending_save"] is None
-            assert f"food_id {bad} is not one of the person's foods" in last_error(provider)
+            # The provider is a cloud AI: the privacy filter (note 31) sends a run of 7 or more digits as a label.
+            shown = "[ID_1]" if len(str(bad)) >= 7 else str(bad)
+            assert f"food_id {shown} is not one of the person's foods" in last_error(provider)
             assert "Sam's secret stew" not in last_error(provider)
     assert stored(c) == [] and db_rows(c, "food_preferences") == []
 

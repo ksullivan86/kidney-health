@@ -1091,7 +1091,11 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
 
-**Status (2026-10-31): v0.19.0 is prepared.** Your own list app and recipe import (note 30, schema
+**Status (2026-10-31): v0.20.0 is prepared.** The privacy filter (note 31, ROADMAP "Privacy tiers", tier 2):
+names, places, dates and other identifiers are taken out of every request to a cloud AI and put back into its reply; requests
+to the local AI and the local-only rule for lab reports are unchanged. See "Privacy tiers, tier 2: the privacy filter" below.
+
+**v0.19.0 (2026-10-31)** adds your own list app and recipe import (note 30, schema
 step 32): send the Plan's shopping list to a person's own Grocy, KitchenOwl or Mealie (`/api/list-sync`, off until
 `LIST_SYNC_ENABLED`; home addresses only through `LIST_SYNC_ALLOWED_HOSTS`), and import a recipe from pasted ingredients (always)
 or a web page the server reads (`/api/recipe-import`, pages off until `RECIPE_IMPORT_ENABLED`); see "Your own list app" and
@@ -2717,6 +2721,40 @@ Code: `routing.FALLBACK_ROUTE` / `FALLBACK_FEATURES` / `allowed_routes`, `Resolv
 * **Unchanged.** SSRF policy, scopes, auth, user scoping (consent and cache keys carry the person), what is sent (the cloud
   request is the one route `cloud` would send), `PROMPT_VERSION`.
 
+### Privacy tiers, tier 2: the privacy filter (`app/ai/privacy_filter.py`; note 31)
+
+Code: `privacy_filter.Shield` / `find_spans` / `known_terms` / `expand_terms` / `preview` / `shield_for`, `ChatClient.complete_json`
+and `ChatClient.request(filtered=...)` (`app/ai/client.py`), `ProviderConfig.privacy_terms`, `routing.resolve_feature` /
+`with_privacy_terms`, `Prepared.sent_body` / `dry_run` / `audit_copy`, `routes._filter_count`. People and operators: `docs/ai.md`
+"The privacy filter"; what goes where: `docs/privacy.md`.
+
+* **When it runs.** For every provider that is not pinned to the private network (`not cfg.local_only`): the shared cloud AI, a
+  person's own provider, and a shared provider without the local role (it may forward to a cloud model). Never for the local AI:
+  its bodies are sent byte for byte as built. No setting and no environment variable: it cannot be turned off.
+* **The one place.** `complete_json` makes a `Shield` per call, filters each body right before it is sent (the first one and the
+  repair turn, with the same labels), records the bodies as sent in `CallResult.bodies` and the count in
+  `CallResult.privacy_replaced`, and restores the labels in the parsed JSON (strings only) before the validator runs, so the
+  judges, the chat checks (dose words, numbers) and the tools see the person's own words. `CallResult.text` stays the reply as it
+  came back, with its labels. `request` refuses a body for such a provider unless `filtered=True` (`AiTransportError
+  "privacy_filter"`), so no feature can skip the filter. A text part over `MAX_TEXT_CHARS` (200,000) is refused with the error
+  `privacy_filter`; nothing is sent.
+* **What it replaces** (labels `[PERSON_n]`, `[PLACE_n]`, `[ADDRESS_n]`, `[DATE_n]`, `[PHONE_n]`, `[EMAIL_n]`, `[URL_n]`, `[ID_n]`;
+  the same words get the same label in a request, and labels already in the text are never reused): the account's known names
+  (`known_terms`: user name, display name and its words, e-mail and its local part from `oidc_links`, the user and display names
+  of the active Care team in both directions and open invites; a one-word name that is a word of the app's prompts or a common
+  word is skipped), names and places after cue words, named hospitals and clinics, street addresses, US, UK and Canadian postal
+  codes, written dates, phone numbers, e-mail addresses, URLs with a query, fragment, user name or long number, labelled record
+  numbers and runs of 7 or more digits. It keeps amounts with units, times, weekdays, relative words, a bare month or year, and
+  numbers in the app's compact JSON (right after `:`, `,` or `[`), so data blocks stay valid JSON. Overlapping finds are joined.
+  Every pattern is linear (bounded repeats, no nested open-ended quantifiers; e-mails are found by plain string code).
+* **"What will be sent?"** `Prepared.dry_run` shows `sent_body()`, the filtered body (the same labels the call uses), and
+  `privacy_filter: {on, replaced, text}` (None for the local AI), also under `cloud_fallback` for tier 3. The consent sheet adds one
+  line for a provider that is not local. `audit_copy` keeps the filtered body; the activity row's `verdict_json.privacy_filter`
+  is the count, never what was replaced (`_finish`, `_finish_chat`).
+* **Unchanged.** Routing (`labs` is still `local` or `off` and never has a fallback), consent, quota, the prompts and
+  `PROMPT_VERSION` (models are not told what the labels mean), images and voice clips (the filter reads text only).
+* **Tests.** `tests/test_ai_privacy_filter.py` with the offline set `tests/data/redaction_cases.json` (recall printed; floor 0.9).
+
 ### How well each AI is doing (`app/ai/quality.py`, `app/ai/eval_reports.py`)
 
 Server administration → AI providers shows two signals per routed feature, from `GET /api/admin/ai-quality`; no table or schema step is added. **In use:** the
@@ -2748,8 +2786,9 @@ repair turn) → the judge (V3–V9; a judge error shows nothing) → an `ai_aud
 metadata only. Shared providers whose last test is missing or a day old are tested again in a
 background task after the response (at most once an hour per provider; nobody's quota). With the route `local_then_cloud` the
 steps from the tool check to the audit row run a second time for the cloud provider, in the same slot, only if the first answer
-failed the schema or the judge and the person agreed to that host ("Privacy tiers, tier 3" above). AI routes are
-`async`; their database work runs in the thread pool.
+failed the schema or the judge and the person agreed to that host ("Privacy tiers, tier 3" above). For a provider that is not
+local the client runs the privacy filter on every body it sends and restores the reply before the judge ("Privacy tiers, tier 2"
+above). AI routes are `async`; their database work runs in the thread pool.
 
 ### Outbound HTTP (`app/ai/netpolicy.py`, `app/ai/transport.py`; note 04 R5, §9 A5)
 
@@ -4866,7 +4905,7 @@ Signed in only (`current_user`; an anonymous caller gets the generic `401`, so a
 (`no-store` like every `/api` answer). The answer:
 
 ```json
-{"app_version": "0.19.0", "api_version": 1,
+{"app_version": "0.20.0", "api_version": 1,
  "capabilities": {"ai": false, "ai_next_meal": false, "ai_parse_meal": false, "ai_label": false, "ai_plate": false, "ai_lab_report": false,
                   "chat": false, "voice": false, "assistant": false, "push": false,
                   "barcode": false, "barcode_off": false, "barcode_usda": false, "handbook": false},
