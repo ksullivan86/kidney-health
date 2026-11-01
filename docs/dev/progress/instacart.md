@@ -9,16 +9,32 @@ and writes the release heading. Do not push to `claude/adoring-sagan-th5swr` or 
 - Read CLAUDE.md, ARCHITECTURE (egress, list sync, shopping list), note 22 §4, 0.14-plan (owner approved: only the food list).
 - Fetched the Instacart docs (2026-11-01, reachable): create shopping list page, shopping list concept, units of measurement,
   API keys, approval process. Facts are in design note 33 §1.
+- Design note `docs/dev/research/33-instacart.md` (decisions in §2, owner-changeable ones in §4).
+- Server (commit a529189): `app/config.py` `InstacartEnv` (`INSTACART_API_KEY_FILE` only, `INSTACART_BASE_URL` https host only,
+  warning for a non-Instacart host), setting `lists.instacart_enabled` (`INSTACART_ENABLED`) in the registry and the JS twin
+  (`js/engine/settings.js`), settings vectors regenerated; `app/instacart.py` (routes, client through `egress.CheckedTransport`,
+  `run_with_deadline`); audit `instacart.sent` (person-visible, label in settings.js); `brand.USER_AGENT_INSTACART`
+  ("shopping-list"); egress list in `tests/test_egress.py`; OpenAPI regenerated. `tests/test_instacart.py` 43 pass.
+- Frontend (commit 91d6e3d): `#shopping-instacart` button, `#sheet-instacart`, `js/views/instacart.js` (`KH.instacart`), plan.js
+  wiring, sw.js list, demo routes in `js/mock/lists.js` (placeholder `#instacart-demo`), `tests/js/instacart_demo.mjs`,
+  `tests/test_instacart_ui.py`. UI tests + frontend shell + settings UI pass.
 
-## In progress / next
-1. Design note `docs/dev/research/33-instacart.md`.
-2. Config (`INSTACART_API_KEY_FILE`, `INSTACART_BASE_URL`), setting `lists.instacart_enabled` (`INSTACART_ENABLED`).
-3. `app/instacart.py`: client through `egress.CheckedTransport`, routes `/api/instacart` (+ `/preview`, `/send`).
-4. Tests `tests/test_instacart.py`; egress list in `tests/test_egress.py`.
-5. Frontend: Plan → Shopping list → Open in Instacart (sheet), demo mock.
-6. OpenAPI, settings vectors, docs, handbook, CHANGELOG Unreleased.
+## Next
+1. Docs: `docs/instacart.md`, deployment.md env table, `deploy/.env.example`, compose/k8s if they list env, network allowlist
+   (docs + handbook), privacy.md, ARCHITECTURE (route, setting, egress list, "v0.22 work"), handbook planning page + configuration
+   + settings page + sources.yml NOTE33, `docs/test-the-full-app.md`, ROADMAP, CHANGELOG "## Unreleased".
+2. Chromium check if a `tools/e2e/` harness fits.
+3. ruff, handbook build --check and strict build, openapi --check, settings vectors --check, run_vectors, full suite.
+
+## Decisions (see note 33 §2)
+- Title "Shopping list" and User-Agent "shopping-list": the brand name would hint at a health condition.
+- Grams as the only measurement; no measurement without weight. `expires_in` 7. No linkback, instructions, image.
+- Audit on every send that may have reached Instacart (not `blocked`), details `{items}` only.
+- Test accounts may use it. Own Plan only (no Care team button).
+- Demo preview reuses list-sync `listItem` (no control-character cleaning: demo food names are clean).
 
 ## Commands
-- Tests: `$PY -m pytest -p no:cacheprovider --basetemp=$SCR/bt tests/test_instacart.py` with
-  `PY=/tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/venv312/bin/python`,
-  `SCR=/tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/instacart`.
+- `PY=/tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/venv312/bin/python`
+- `SCR=/tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/instacart`
+- `$PY -m pytest -p no:cacheprovider --basetemp=$SCR/bt tests/test_instacart.py tests/test_instacart_ui.py`
+- `$PY tests/data/gen_settings_vectors.py --check`, `$PY scripts/gen_openapi.py --check`, `node tests/js/run_vectors.mjs`
