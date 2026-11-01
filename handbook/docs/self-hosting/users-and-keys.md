@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-31
 fact_checked: 2026-10-05
-sources: [NOTE07, NOTE04, DEPLOY, SECDOC, NIST-63B4, FDC-API, NOTE24, NOTE26]
+sources: [NOTE07, NOTE04, DEPLOY, SECDOC, NIST-63B4, FDC-API, NOTE24, NOTE26, NOTE32]
 ---
 
 # Users and keys
@@ -112,6 +112,9 @@ from other machines ([HTTPS for phones](https.md)).
 - A USDA key is free and allows 1,000 requests an hour; the server stays under that
   ([USDA API guide][FDC-API]).
 - Per person you can switch shared use off ("can use shared keys").
+- Per person you can also tick **May choose the server's local or cloud AI**. With `AI_PERSON_ROUTE_CHOICE_ENABLED` on, that
+  person picks, for each AI feature, your local AI or your cloud AI. A feature you switched off stays off, and lab report photos
+  stay local. Untick it and their next request uses your routing again ([design note 32][NOTE32]).
 - People may add **their own** keys (on by default). Their own key is always used first, has no app
   quota, and is never swapped for the shared one when it fails.
 - Keys are **write-only**: the app shows "set, ends in 9xQz", never the key. A key set by environment
@@ -229,3 +232,4 @@ Give testers the walk-through
 - [NIST SP 800-63B-4][NIST-63B4]; [USDA FoodData Central API guide][FDC-API].
 - [Design note 24: sign in with another account][NOTE24].
 - [Design note 26: test accounts][NOTE26].
+- [Design note 32: choosing the server's local or cloud AI][NOTE32].

@@ -584,6 +584,8 @@ Pages cite these by id, for example `[KDIGO 2024 CKD guideline][K24]`. The list 
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-31.
 - **NOTE31**: kidney-health design note 31: the privacy filter: names, places and dates out before a cloud AI. <https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/31-privacy-filter.md>  
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-31.
+- **NOTE32**: kidney-health design note 32: chosen people pick the server's local or cloud AI, per feature. <https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/32-choose-local-or-cloud-ai.md>  
+  Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-31.
 - **DEPLOY**: kidney-health project. docs/deployment.md: Podman, Quadlet and Kubernetes. <https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md>  
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-05.
 - **ASSISTANT-DOC**: kidney-health project. docs/assistant.md: the assistant (access tokens, the MCP server, connecting Open WebUI or a Hermes Agent profile, the system prompt, honest limits). <https://github.com/ksullivan86/kidney-health/blob/main/docs/assistant.md>  

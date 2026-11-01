@@ -118,7 +118,7 @@
     _adminUser(u) {
       const link = u.reset_link && u.reset_link.expires_at > this._stamp() ? u.reset_link : null;
       return { id: u.id, username: u.username, display_name: u.display_name || '', role: u.role, status: u.status, auth_source: u.auth_source,
-        can_use_shared: !!u.can_use_shared, must_change_password: !!u.must_change_password, has_password: !!u.has_password,
+        can_use_shared: !!u.can_use_shared, can_choose_ai: !!u.can_choose_ai, must_change_password: !!u.must_change_password, has_password: !!u.has_password,
         created_at: u.created_at, last_login_at: u.last_login_at, reset_link: link ? { ...link } : null,
         assistant_tokens: 0, device_tokens: 0, // the demo makes no tokens of either family (app/auth/admin_api.py counts the active ones)
         two_step: false, // nor two-step sign-in (design note 17)
@@ -437,6 +437,8 @@
     c.choice('status', ['active', 'disabled'], { nullable: true });
     if (c.has('can_use_shared') && c.body.can_use_shared != null && typeof c.body.can_use_shared !== 'boolean') c.err('can_use_shared', 'Input should be a valid boolean');
     else if (c.has('can_use_shared')) c.out.can_use_shared = c.body.can_use_shared;
+    if (c.has('can_choose_ai') && c.body.can_choose_ai != null && typeof c.body.can_choose_ai !== 'boolean') c.err('can_choose_ai', 'Input should be a valid boolean');
+    else if (c.has('can_choose_ai')) c.out.can_choose_ai = c.body.can_choose_ai;
     if (c.has('must_change_password') && c.body.must_change_password != null && typeof c.body.must_change_password !== 'boolean') c.err('must_change_password', 'Input should be a valid boolean');
     else if (c.has('must_change_password')) c.out.must_change_password = c.body.must_change_password;
     c.str('display_name', { max: 200 });
@@ -465,6 +467,11 @@
     if (data.can_use_shared != null && !!data.can_use_shared !== !!u.can_use_shared) {
       u.can_use_shared = !!data.can_use_shared;
       this._audit(admin.id, 'user.updated', 'user', u.id, { can_use_shared: u.can_use_shared });
+    }
+    // Design note 32: the demo has AI off, so the tick changes nothing else (app/auth/admin_api.py).
+    if (data.can_choose_ai != null && !!data.can_choose_ai !== !!u.can_choose_ai) {
+      u.can_choose_ai = !!data.can_choose_ai;
+      this._audit(admin.id, 'user.updated', 'user', u.id, { can_choose_ai: u.can_choose_ai });
     }
     if (data.must_change_password && !u.must_change_password) {
       u.must_change_password = true;

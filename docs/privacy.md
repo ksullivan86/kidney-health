@@ -156,6 +156,12 @@ first fails the checks; every answer says which AI gave it, and the AI activity 
 cloud is exactly what a feature pinned to the cloud would send, no more, and never to a person's own provider. Ask is not
 offered this way (it is several calls in a row) and **lab report photos never are**: they stay on the local AI only.
 
+**A person who may choose** ([ai.md](ai.md#choosing-the-servers-local-or-cloud-ai-yourself)). An admin can turn on
+`AI_PERSON_ROUTE_CHOICE_ENABLED` and tick chosen people in Server administration → Users. Those people pick, per feature, the
+server's local AI or its cloud AI instead of the admin's choice. Picking the cloud AI sends that feature's data to the cloud
+company, after the consent sheet and through the privacy filter below. A feature the admin switched off stays off, lab report
+photos stay on the local AI, and nobody else's routing changes. The server checks the switch and the tick on every request.
+
 **The privacy filter** ([ai.md](ai.md#the-privacy-filter)). Before any request goes to a cloud AI (the shared cloud AI, a
 person's own provider, or a shared provider without the local role), the server replaces names, places, dates, addresses,
 phone numbers, e-mail addresses, web addresses with a query and record numbers in its text with labels such as `[PERSON_1]`,

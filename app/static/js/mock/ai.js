@@ -22,11 +22,14 @@
       own: null,
       shared: [],
       routing: null,
+      route_choice: null, // design note 32: null while AI is off, as on the server
       presets: [],
       consents: [],
       daily_limit: 30,
       remaining_today: 30,
     };
   });
+  // Choosing the server's local or cloud AI (design note 32): with AI off the server refuses it.
+  route('PUT', '/api/me/ai/route-choice', function () { fail(403, 'Your admin has not let you choose which of the server\'s AIs you use.'); });
   route('*', /^\/api\/(?:ai|vision)\//, function () { fail(404, 'Not Found'); });
 })();

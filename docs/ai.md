@@ -56,7 +56,8 @@ ideas asks the same three in a person's words at the top ("How AI help is set up
 * [What is sent, and what never is](#what-is-sent-and-what-never-is), and [the privacy filter](#the-privacy-filter)
 * [For people using the app](#for-people-using-the-app)
 * [For the person running the server](#for-the-person-running-the-server): switches, providers,
-  [which AI each feature uses](#which-ai-does-each-feature-use), [how well each AI is doing](#how-well-each-ai-is-doing),
+  [which AI each feature uses](#which-ai-does-each-feature-use), [letting people choose it](#choosing-the-servers-local-or-cloud-ai-yourself),
+  [how well each AI is doing](#how-well-each-ai-is-doing),
   [a model server on another machine](#a-model-server-on-another-machine),
   [recipes](#recipes) (Ollama, Kubernetes, Hermes Agent, OpenAI, OpenRouter, others, [a local AI and a cloud AI from the environment](#a-local-ai-and-a-cloud-ai-both-from-the-environment), [limiting each LiteLLM key](#limit-each-litellm-key-to-what-it-is-for)),
   [voice input](#voice-input-speech-to-text), [addresses and SSRF](#addresses-the-ssrf-policy), [limits](#limits-and-quotas),
@@ -241,6 +242,13 @@ new dependency and waits for the owner's decision (note 31 §5).
   to that, and only when the local AI's answer did not pass the app's checks; the answer says which AI gave it, and when
   the cloud AI was asked it adds: *The local AI's answer did not pass the app's checks, so the cloud AI (api.openai.com)
   answered.*
+* **Choosing the server's local or cloud AI.** If your admin allows it for you, Settings → AI features has **Choose which AI
+  each feature uses**: for photos, meal ideas, describing a meal, Ask and recipes you pick **Server default** (your admin's
+  choice), **The server's local AI** or **The server's cloud AI**. Only an AI the server has is offered. A feature your admin
+  switched off stays off, and lab report photos always stay on the local AI. The first time a feature sends something to the
+  cloud AI, the consent sheet asks you first, and names, places and dates are taken out before it goes. If you use your own
+  provider, that still wins. The line for the feature then ends *You chose this.*
+  ([Choosing the server's local or cloud AI yourself](#choosing-the-servers-local-or-cloud-ai-yourself)).
 * **Consent.** The first time a feature sends something to a provider, a sheet names the provider, the
   **destination host**, its policy line and shows the **exact request**; nothing is sent until you
   agree. Meal data, photos and Ask conversations are agreed separately. You are asked again when the provider's host or
@@ -400,6 +408,7 @@ Instance settings (Server administration → Server settings; each can be locked
 | `ai.route.recipes` (`AI_ROUTE_RECIPES`) | `local` | AI recipes: `local`, `cloud`, `off`, `any` or `local_then_cloud`, like meal ideas |
 | `ai.recipe_steps` (`AI_RECIPE_STEPS`) | `false` | Cooking steps written by AI in AI recipes. Turn it on only after a live run of `scripts/ai_eval.py` on your model with `steps_unsafe_shown` 0 ([Recipes that fit](#recipes-that-fit)) |
 | `ai.route.labs` (`AI_ROUTE_LABS`) | `local` | Reading a photo of a lab report: `local` or `off` **only**. `cloud` and `any` are refused by the setting, the admin screen, the API and the environment (a report shows a name and a date of birth), and a person's own provider is never used for it. With no local AI the feature is off |
+| `ai.person_route_choice` (`AI_PERSON_ROUTE_CHOICE_ENABLED`) | `false` | Lets the people you tick in Server administration → Users choose, per feature, the server's local AI or its cloud AI ([below](#choosing-the-servers-local-or-cloud-ai-yourself)). Off: everyone uses your routing, and stored choices are ignored |
 | `ai.route.local_provider`, `ai.route.cloud_provider` | `0` | The id of the shared provider that is the local AI and the one that is the cloud AI (0: none). Set through the same table, never by hand: a local AI must be on a private host |
 
 **Sign-in off (`AUTH_MODE=none`)**: everyone on the network is an admin, so AI providers and the
@@ -646,6 +655,46 @@ and `request`, the sheet Settings shows to agree later). A `409 consent_required
 cloud provider's request, with `given` and the rule); `?dry_run=true` adds `cloud_fallback` (the second request, its `message`, and
 whether the person agreed); an answer adds `cloud_fallback` only after a fallback or when it was needed but not possible
 (`used`, `answered`, `reason` such as `no_consent` or `quota_exhausted`, `message`, `local`, `cloud` and the two audit ids).
+
+#### Choosing the server's local or cloud AI yourself
+
+*Design note 32.* You can let chosen people decide, feature by feature, whether their requests go to the server's local AI or
+to its cloud AI. Everyone else keeps your routing.
+
+1. Turn on **Let chosen people pick the server's local or cloud AI** in Server settings, or set
+   `AI_PERSON_ROUTE_CHOICE_ENABLED=true`. It is off by default. While it is off nothing changes for anyone.
+2. In Server administration → Users, open a person and tick **May choose the server's local or cloud AI**. It is off for
+   everyone at first. Only admins can change it, and each change is in the activity log. Test accounts may have it, which is a
+   good way to try it.
+3. That person now sees **Choose which AI each feature uses** in Settings → AI features: for photos, meal ideas, describing a
+   meal, Ask and recipes, **Server default**, **The server's local AI (host)** or **The server's cloud AI (host)**.
+
+What stays the same:
+
+* A feature you set to `off` stays off for everyone. The person cannot choose for it (`409 feature_off`).
+* **Lab report photos are never offered.** They stay on the local AI or off, as always.
+* Only an AI the server has is offered: a role with no provider, a provider that is switched off, or a local AI that is not on a
+  private address any more. The screen says so plainly.
+* Consent works as before. The first time a person's feature goes to the cloud AI, the consent sheet names the company and host,
+  and nothing is sent until they agree.
+* The [privacy filter](#the-privacy-filter) runs on every request to the cloud AI.
+* "Server default" is your route, `local_then_cloud` included. A person who picks one AI gets only that AI: there is no fallback
+  to the other.
+* A person who chose **My own provider** keeps it. Their per-feature choice counts again when they switch back to the server's AI.
+* The AI activity list names the provider that answered, as before.
+
+The server checks the switch and the tick on every request. If you untick a person or turn the switch off, their next request
+uses your routing again. Their choices are kept, not deleted: if you tick them again, the old choices apply again. If the AI a
+person chose goes away (for example you delete the local provider), that feature is off for them with the message *You chose an
+AI that is not set up on this server any more* until they choose again; it never moves to the other AI on its own.
+
+**API.** `GET /api/me/ai` adds `route_choice` (null unless the person may choose now: `choices`, `features` with `admin_off`,
+`local` and `cloud` as `{label, host}` or null, `own_wins`). `PUT /api/me/ai/route-choice` takes any of `photos`, `meal_ideas`,
+`describe`, `chat` and `recipes` (`default`, `local` or `cloud`); it answers `403` while the person may not choose, `409
+feature_off`, or `400 no_local_provider` / `no_cloud_provider`. `labs` is refused. `PATCH /api/me/settings` refuses the setting
+`ai.route_choice`. Each change is in the person's activity list as "Which AI a feature uses changed". `GET /api/ai/status` and
+`GET /api/me/ai` add `chosen` (`local`, `cloud` or null) to each feature's line. Admins: `GET /api/admin/users` adds
+`can_choose_ai`, and `PATCH /api/admin/users/{id}` takes it.
 
 ### A proxy that falls back from one company to another
 

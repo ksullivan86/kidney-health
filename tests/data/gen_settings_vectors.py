@@ -105,6 +105,12 @@ BODY_GOAL_VALUES = [
     {"systolic": 100, "diastolic": 110}, {"systolic": 121, "diastolic": 120}, {"systolic": "130"}, {"systolic": 130.5}, {"systolic": 130.0}, {"systolic": True},
     {"systolic": []}, {"unknown_field": 1}, {"systolic": 79, "diastolic": 131, "x": 1},
 ]
+# A person's choice of the server's local or cloud AI (design note 32): three choices per feature, no lab report photos.
+ROUTE_CHOICE_VALUES = [
+    {}, {"photos": "cloud"}, {"meal_ideas": "local", "describe": "cloud", "chat": "default", "recipes": "local"},
+    {"labs": "local"}, {"labs": "cloud"}, {"photos": "any"}, {"photos": "off"}, {"chat": "local_then_cloud"}, {"photos": "CLOUD"},
+    {"photos": None}, {"photos": 1}, {"unknown_field": "cloud"}, "cloud", [], None,
+]
 # Extra strings for a key with a pattern: the JS twin checks it after the length (as pydantic does).
 PATTERN_VALUES = ["admin@example.org", "Mum's server, mum@example.org", "a(b)c", "back\\slash", "x\r\nX-Evil: 1",
                   "tab\there", "café@example.org", "  ab(  ", "ok@example.org\n"]
@@ -127,6 +133,8 @@ def validation_vectors() -> list[dict]:
             values += BODY_ALARM_VALUES
         if item["key"] == "body.bp_goal":
             values += BODY_GOAL_VALUES
+        if item["key"] == "ai.route_choice":
+            values += ROUTE_CHOICE_VALUES
         for value in values:
             try:
                 out.append({"key": d.key, "input": value, "value": d.to_python_json(d.validate(value))})

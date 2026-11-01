@@ -21,6 +21,10 @@ It takes about an hour. You can stop at any point and still send what you have.
    accounts back to the start and signs them out. The feedback stays.
 6. When testing is over, turn the switch off. The accounts are turned off and signed out, not deleted.
 
+To let a tester choose between your local AI and your cloud AI, set `AI_PERSON_ROUTE_CHOICE_ENABLED=true` (with
+`TEST_ACCOUNT_AI=true` and both AIs set up) and tick **May choose the server's local or cloud AI** for `tester` in Server
+administration → Users. A reset of the test accounts takes the tick away, so tick it again after each reset.
+
 To let testers import recipes from web pages too, set `RECIPE_IMPORT_ENABLED=true` (pasting ingredients works without it). Sending
 the list to a list app (`LIST_SYNC_ENABLED`, [list-sync.md](list-sync.md)) is for real accounts only: try it yourself with your
 own Grocy, KitchenOwl or Mealie.
@@ -120,6 +124,13 @@ If you see an **Ask AI** tab, try it: ask what Sam could have for dinner.
 * It is an AI. It can be wrong, so check what it says.
 * It must **never** give an insulin dose or a medicine dose. If it ever does, use **Send feedback**, tick **This looked wrong or
   unsafe**, and copy what it said.
+
+**Choosing the AI** (only if Settings → AI features shows **Choose which AI each feature uses**; 3 minutes).
+
+* Set **Describe a meal** to **The server's cloud AI**, then describe a meal in Add. The first time, a sheet asks before
+  anything is sent and names the company. Say yes, and check the answer and Settings → AI features → AI activity name the cloud AI.
+* Set it back to **Server default**. The line for it in Settings no longer ends "You chose this."
+* **Lab report photos** should not be in the list at all. If they are, use **Send feedback**.
 
 ### 10. Plan Sam's meals as a family member (10 minutes)
 

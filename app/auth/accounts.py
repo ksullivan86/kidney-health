@@ -223,6 +223,7 @@ def user_admin_dict(row: sqlite3.Row) -> dict[str, Any]:
         "status": row["status"],
         "auth_source": row["auth_source"],
         "can_use_shared": bool(row["can_use_shared"]),
+        "can_choose_ai": bool(row["can_choose_ai"]) if "can_choose_ai" in row.keys() else False,  # design note 32
         "must_change_password": bool(row["must_change_password"]),
         "has_password": row["password_hash"] is not None,
         "created_at": row["created_at"],

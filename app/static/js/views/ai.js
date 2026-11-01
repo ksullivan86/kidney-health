@@ -98,6 +98,7 @@
     setOwn: (b) => request('PUT', '/api/me/ai/provider', b),
     deleteOwn: () => request('DELETE', '/api/me/ai/provider'),
     probeOwn: () => request('POST', '/api/me/ai/probe'),
+    routeChoice: (b) => request('PUT', '/api/me/ai/route-choice', b),
     consent: (b) => request('POST', '/api/ai/consent', b),
     withdraw: (id, purpose) => request('DELETE', `/api/ai/consent/${id}?` + util.qs({ purpose })),
     audit: (before) => request('GET', '/api/ai/audit?' + util.qs({ before, limit: 20 })),
@@ -1234,9 +1235,57 @@
     wrap.append(msg, err);
     const lines = KH.aiRouting ? KH.aiRouting.personLines(me.routing) : null;
     if (lines) wrap.append(lines);
+    const chooser = routeChoicePart(me);
+    if (chooser) wrap.append(chooser);
     if (me.user_keys_allowed || me.own) wrap.append(ownProviderPart(me));
     wrap.append(consentsPart(me), activityPart());
     return wrap;
+  }
+
+  // Design note 32: a person the admin ticked picks, per feature, the server's local AI or its cloud AI. GET /api/me/ai sends
+  // `route_choice` only while the server switch is on and the person has the tick; the server checks both again on every request
+  // and on PUT /api/me/ai/route-choice, so this only shows what the server says. Lab report photos are never listed.
+  const ROUTE_CHOICE_TEXT = { default: 'Server default', local: 'The server\'s local AI', cloud: 'The server\'s cloud AI' };
+  function routeChoicePart(me) {
+    const rc = me.route_choice;
+    if (!rc) return null;
+    const box = h('div', { class: 'ai-route-choice', id: 'set-ai-route-choice' });
+    box.append(h('h3', { class: 'settings-subtitle' }, 'Choose which AI each feature uses'),
+      h('p', { class: 'hint' }, 'Your admin lets you choose. The local AI runs on your server\'s own network. The cloud AI is a company\'s '
+        + 'service outside it: the first time a feature sends something there, the app asks you first, and names, places and dates are '
+        + 'taken out before it goes. Server default is what your admin chose. Lab report photos always stay on the local AI.'));
+    if (rc.own_wins) box.append(note('caution', h('p', {}, 'You use your own AI provider, so these choices count only after you switch back to the server\'s AI above.')));
+    if (!rc.local) box.append(h('p', { class: 'hint' }, 'This server has no local AI you can use, so you cannot choose it.'));
+    if (!rc.cloud) box.append(h('p', { class: 'hint' }, 'This server has no cloud AI you can use, so you cannot choose it.'));
+    const err = formError();
+    for (const f of rc.features) {
+      if (f.admin_off) { box.append(h('p', {}, h('b', {}, `${f.label}: `), 'Switched off by your admin.')); continue; }
+      const id = uid('ai-choice');
+      const options = [['default', ROUTE_CHOICE_TEXT.default, true]];
+      for (const role of ['local', 'cloud']) {
+        const ai = rc[role];
+        if (ai || f.choice === role) options.push([role, ai ? `${ROUTE_CHOICE_TEXT[role]} (${ai.host})` : `${ROUTE_CHOICE_TEXT[role]} (not set up now)`, !!ai]);
+      }
+      const sel = h('select', { id }, options.map(([value, text, usable]) => h('option', { value, selected: value === f.choice, disabled: !usable }, text)));
+      sel.addEventListener('change', async () => {
+        clear(err);
+        sel.disabled = true;
+        try {
+          await api.routeChoice({ [f.feature]: sel.value });
+          forget();
+          toast(`${f.label}: ${ROUTE_CHOICE_TEXT[sel.value]}.`, 'ok');
+          renderAddSlot();
+          await renderSettings(); // the "Where each AI feature runs" lines change too
+        } catch (e) {
+          sel.value = f.choice;
+          sel.disabled = false;
+          if (!e.handled) showError(err, e);
+        }
+      });
+      box.append(h('div', { class: 'field' }, h('label', { for: id }, f.label), sel));
+    }
+    box.append(err);
+    return box;
   }
 
   // "Food preferences for AI ideas" (setting ai.preferences, up to 200 characters): the field shown in Settings → Meal guidance → Your

@@ -10393,6 +10393,94 @@
         "title": "RoleChange",
         "type": "object"
       },
+      "RouteChoiceBody": {
+        "additionalProperties": false,
+        "description": "Design note 32: any subset of the features a person may choose for. No ``labs``: lab report photos stay on the local AI.",
+        "properties": {
+          "chat": {
+            "anyOf": [
+              {
+                "enum": [
+                  "default",
+                  "local",
+                  "cloud"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chat"
+          },
+          "describe": {
+            "anyOf": [
+              {
+                "enum": [
+                  "default",
+                  "local",
+                  "cloud"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Describe"
+          },
+          "meal_ideas": {
+            "anyOf": [
+              {
+                "enum": [
+                  "default",
+                  "local",
+                  "cloud"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meal Ideas"
+          },
+          "photos": {
+            "anyOf": [
+              {
+                "enum": [
+                  "default",
+                  "local",
+                  "cloud"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Photos"
+          },
+          "recipes": {
+            "anyOf": [
+              {
+                "enum": [
+                  "default",
+                  "local",
+                  "cloud"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipes"
+          }
+        },
+        "title": "RouteChoiceBody",
+        "type": "object"
+      },
       "RoutingBody": {
         "additionalProperties": false,
         "description": "Any subset: a route per feature, and the shared provider holding each role (0 clears it).",
@@ -12532,6 +12620,17 @@
       },
       "UserPatch": {
         "properties": {
+          "can_choose_ai": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Can Choose Ai"
+          },
           "can_use_shared": {
             "anyOf": [
               {
@@ -21757,6 +21856,60 @@
           }
         ],
         "summary": "Set My Provider",
+        "tags": [
+          "ai"
+        ]
+      }
+    },
+    "/api/me/ai/route-choice": {
+      "put": {
+        "description": "Design note 32: the person picks, per feature, the server's local AI, its cloud AI or the admin's choice (``default``).\nOnly while the server switch is on and an admin ticked the person; only an AI that exists; never for a feature the admin\nswitched off; never for lab report photos (the body has no such field). Each change is in the person's activity list.",
+        "operationId": "ai_set_my_route_choice",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RouteChoiceBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Ai Set My Route Choice",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Set My Route Choice",
         "tags": [
           "ai"
         ]

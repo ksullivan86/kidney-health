@@ -13,6 +13,23 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * Change the image tag to `:0.20`. The shipped deployment files already say `:0.20`.
 * The privacy filter is on by itself for every request to a cloud AI. Requests to a local AI are unchanged.
 
+### Chosen people pick the server's local or cloud AI
+
+* **A new tick box for chosen people.** In Server administration → Users, an admin can tick **May choose the server's local or
+  cloud AI** for a person. It works only while `AI_PERSON_ROUTE_CHOICE_ENABLED` is on, and both are off by default. While the
+  switch is off nothing changes for anyone. See [docs/ai.md](docs/ai.md#choosing-the-servers-local-or-cloud-ai-yourself).
+* **One choice per feature.** That person sees **Choose which AI each feature uses** in Settings → AI features. For photos, meal
+  ideas, describing a meal, Ask and recipes they pick **Server default**, **The server's local AI** or **The server's cloud
+  AI**. Only an AI the server has is offered.
+* **What stays the same.** A feature the admin switched off stays off. Lab report photos are never offered and stay on the local
+  AI. The first time a feature goes to the cloud AI, the consent sheet asks first. The privacy filter runs on every cloud
+  request. A person's own provider still wins. "Server default" keeps local first, then cloud, exactly as before.
+* **Checked on every request.** Untick a person or turn the switch off, and their next request uses the admin's routing again.
+  Their choices are kept, so ticking them again brings the choices back. If a chosen AI goes away, that feature is off for them
+  until they choose again; it never moves to the other AI on its own.
+* Each change of the tick is in the activity log, and each change of a person's choice is in their own activity list.
+* **Upgrading.** Schema step 33 adds one column, `users.can_choose_ai`, off for everyone. Back up first as usual.
+
 ### The privacy filter for cloud AI
 
 * **Names, places and dates come out before a cloud AI sees your words.** Before any request goes to a cloud AI, the server
