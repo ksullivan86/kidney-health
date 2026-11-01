@@ -633,7 +633,7 @@ register(
     SettingDef(
         key="ai.audit_retention_days",
         model=Annotated[int, Field(ge=0, le=365)],
-        default=30,
+        default=0,  # the owner, 2026-11-01: no prompt or reply text is kept unless an admin chooses to
         scope="instance",
         env="AI_AUDIT_RETENTION_DAYS",
         label="Keep what was sent to and received from AI for (days)",

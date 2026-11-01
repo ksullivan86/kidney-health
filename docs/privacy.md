@@ -332,8 +332,8 @@ Export your data first if you want to keep it.
   `SECRET_KEY` outside the data volume and its backups (see [accounts.md](accounts.md)).
 * Tell the people you invite what this page says, especially the two points under "Admins".
 * If you turn the optional AI on, what people send goes to the provider you chose; a model you run
-  yourself (Ollama) keeps it in the house, and you can read it. Keep `ai.audit_retention_days` short if
-  your backups are kept long. Mark that model as the local AI (`AI_PROVIDER_ROLE=local`, or Server administration →
+  yourself (Ollama) keeps it in the house, and you can read it. The AI activity log keeps no request or reply text
+  by default (`ai.audit_retention_days` 0); if you raise it, keep it short when your backups are kept long. Mark that model as the local AI (`AI_PROVIDER_ROLE=local`, or Server administration →
   AI providers → Which AI does each feature use?; a cloud AI from the environment is `AI_CLOUD_PROVIDER`) so photos, meal ideas, describing a meal and Ask use it by default, and
   pin a feature to a cloud provider only on purpose ([ai.md](ai.md#which-ai-does-each-feature-use)); *Local, then cloud* is the
   middle way (the cloud company sees a request only when the local answer fails the app's checks and the person agreed).

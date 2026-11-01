@@ -619,6 +619,8 @@ def test_the_read_route_writes_no_lab_result_and_no_food_or_log_entry(lab):
 
 
 def test_the_activity_row_has_no_content_and_the_photo_is_not_kept(lab, caplog):
+    # even with the text kept for an admin's chosen days (default 0 since 0.21.1), a lab report row has none
+    assert lab.client.patch("/api/admin/settings", json={"ai.audit_retention_days": 30}).status_code == 200
     agreed(lab)
     caplog.set_level(logging.DEBUG)
     r, local, _ = run(lab, GOOD)

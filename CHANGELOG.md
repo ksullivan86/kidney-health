@@ -5,6 +5,13 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## 0.21.1 — 2026-11-01
+
+* **The AI activity log keeps no text by default.** `AI_AUDIT_RETENTION_DAYS` (`ai.audit_retention_days`) now defaults to 0:
+  each AI call keeps only its time, feature, AI and outcome, never what was sent or what came back. The first daily clean-up after
+  the upgrade clears the text already kept. An admin who wants the text for checking can still set a number of days.
+* If you set a number in Server administration before, that number stays. Set it to 0 there to keep no text.
+
 ## 0.21.0 — 2026-11-01
 
 ### Upgrading from 0.20 (read this first)

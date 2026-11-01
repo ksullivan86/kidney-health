@@ -3,7 +3,7 @@
 One line per item, with the specification that defers it (the design notes are in
 [`docs/dev/research/`](dev/research/)). Items leave this list when they ship (move them to
 [CHANGELOG.md](../CHANGELOG.md)) or when the owner drops them. Each feature owner appends to its own
-section. Last reviewed for the v0.21.0 release (2026-10-31).
+section. Last reviewed for the v0.21.1 release (2026-10-31).
 
 ## First: daily logging you can trust (the owner, 2026-10-29)
 

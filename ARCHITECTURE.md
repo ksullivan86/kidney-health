@@ -1092,7 +1092,8 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
 
-**Status (2026-11-01): v0.21.0 is prepared.** Chosen people pick the server's local or cloud AI (note 32,
+**Status (2026-11-01): v0.21.1 is prepared.** The AI activity log keeps no request or reply text by default
+(`ai.audit_retention_days` 0). **v0.21.0 (2026-11-01)**: Chosen people pick the server's local or cloud AI (note 32,
 schema step 33): with `AI_PERSON_ROUTE_CHOICE_ENABLED` on, a person an admin ticked in Server administration → Users chooses, per AI
 feature, the server's local AI, its cloud AI or the server default. An admin's `off`, the local-only lab report photos, consent and the
 privacy filter are unchanged. See "A person's own choice of the server's local or cloud AI" below.
@@ -4947,7 +4948,7 @@ Signed in only (`current_user`; an anonymous caller gets the generic `401`, so a
 (`no-store` like every `/api` answer). The answer:
 
 ```json
-{"app_version": "0.21.0", "api_version": 1,
+{"app_version": "0.21.1", "api_version": 1,
  "capabilities": {"ai": false, "ai_next_meal": false, "ai_parse_meal": false, "ai_label": false, "ai_plate": false, "ai_lab_report": false,
                   "chat": false, "voice": false, "assistant": false, "push": false,
                   "barcode": false, "barcode_off": false, "barcode_usda": false, "handbook": false},
