@@ -1,15 +1,15 @@
 ---
 title: Planning meals and using the menus
-description: "Plan meals ahead, plan several days at once, reuse saved meals, import a recipe, copy a day, make a shopping list and send it to your list app, and put the handbook's sample menus into the app."
+description: "Plan meals ahead, plan several days at once, reuse saved meals, import a recipe, copy a day, make a shopping list, send it to your list app or open it at Instacart, and put the handbook's sample menus into the app."
 slug: planning-and-menus
 audience: [app-user, patient, caregiver]
 applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-31
+last_checked: 2026-11-01
 fact_checked: 2026-10-05
-sources: [ARCH, NOTE06, NOTE08, NOTE25, NOTE29, NOTE30, SCHEMA-NUTRITION, FDC, Q20, A26-5, K24, DG23, JBDS22]
+sources: [ARCH, NOTE06, NOTE08, NOTE25, NOTE29, NOTE30, NOTE33, INSTACART-IDP, SCHEMA-NUTRITION, FDC, Q20, A26-5, K24, DG23, JBDS22]
 ---
 
 # Planning meals and using the menus
@@ -236,6 +236,25 @@ about you ([design note 30][NOTE30]). Sending again adds the lines again.
 
 A list app on your home network works only if the person who runs your server allowed its address.
 
+### Open it at Instacart
+
+If the person who runs your server turned it on, **Plan** → **Shopping list** has **Open in Instacart**. Instacart is a grocery
+delivery service in North America; Costco's same-day delivery runs through it too.
+
+1. Press **Open in Instacart**. The app shows the exact lines it will send, one per food. Foods you already ticked start
+   unticked. Untick what you have.
+2. Read the note: Instacart is another company, and its own terms and privacy policy apply on its page.
+3. Press **Send to Instacart**. The app sends Instacart only each food's name and amount, nothing else about you
+   ([design note 33][NOTE33]).
+4. Instacart's page opens in a new tab ([Instacart Developer Platform][INSTACART-IDP]). If it does not, press **Open the list
+   at Instacart** in the sheet. Pick a store, check each item, and pay there. Nothing is bought in this app.
+
+Instacart searches its stores by the food's name, so check what it picked. For a kidney diet, look at the label of the product it
+chose: the same food can come with added salt or phosphate ([Reading labels](../eat/label-reading.md),
+[Phosphate additives](../eat/phosphate-additives.md)).
+
+The link works for 7 days. The app does not keep it. Press the button again to make a new one.
+
 ## Planning for someone on your Care team
 
 If someone on your Care team lets you plan, log food or suggest meals for them, the Plan tab shows **Planning for** at the top.
@@ -300,6 +319,8 @@ Your sessions are Monday, Wednesday and Friday. On Sunday evening:
 - **The shopping list is empty.** It lists **planned** entries only, for the week on screen.
 - **Send to my list app is missing.** The person who runs your server has not turned it on, or you have not set it up in
   **Settings** → **Shopping list app**. **Test** says what is wrong: the address, the key, or an address the server may not reach.
+- **Open in Instacart is missing.** The person who runs your server has not turned it on. If it says Instacart did not accept
+  the key, tell them: the key is theirs, not yours.
 - **An imported recipe matched the wrong food.** Pick another suggestion or search for the right one before you save. After
   saving, change it like any saved meal.
 - **I added a plan by mistake.** Tap **Undo** in the sheet, or use **Plan several days… → Clear planned days…**
@@ -318,7 +339,8 @@ Your sessions are Monday, Wednesday and Friday. On Sunday evening:
 - [Project architecture contract][ARCH], v0.2: planned entries, saved meals, copy day, shopping list; planning several days.
 - [Design note 08][NOTE08]: the sample menus; [design note 06][NOTE06]: the plan builder (v0.3); [design note 25][NOTE25]: the
   Care team; [design note 29][NOTE29]: the Caregiver, saved meals and suggestions; [design note 30][NOTE30]: importing a recipe
-  and sending the list to your own list app.
+  and sending the list to your own list app; [design note 33][NOTE33] and the [Instacart Developer Platform][INSTACART-IDP]:
+  opening the list at Instacart.
 - [schema.org NutritionInformation][SCHEMA-NUTRITION]: recipe pages have no standard place for potassium or phosphorus.
 - [USDA FoodData Central][FDC]: the food list behind the app and the menus.
 - [KDOQI 2020 nutrition guideline][Q20]; [ADA Standards of Care 2026, section 5][A26-5], Rec 5.28.

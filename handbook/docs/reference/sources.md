@@ -475,6 +475,8 @@ Pages cite these by id, for example `[KDIGO 2024 CKD guideline][K24]`. The list 
   Licence: Public domain (US government work). Checked 2026-10-05. *Returns 403 to automated checkers; works in a browser.*
 - **CCI**: Centers for Disease Control and Prevention. The CDC Clear Communication Index. <https://www.cdc.gov/ccindex/index.html>  
   Licence: Public domain (US government work). Checked 2026-10-05.
+- **INSTACART-IDP**: Instacart Developer Platform. Create shopping list page (POST /idp/v1/products/products_link). <https://docs.instacart.com/developer_platform_api/api/products/create_shopping_list_page> Also: <https://docs.instacart.com/developer_platform_api/guide/concepts/shopping_list>, <https://docs.instacart.com/developer_platform_api/get_started/api-keys>.  
+  Licence: Copyrighted: link and paraphrase. Checked 2026-11-01.
 - **SCHEMA-NUTRITION**: schema.org. NutritionInformation (the nutrition data a recipe page can carry). <https://schema.org/NutritionInformation>  
   Licence: CC BY-SA 3.0: cite and paraphrase. Checked 2026-10-31. *Its properties are calories, carbohydrate, cholesterol, fat, fiber, protein, saturated fat, serving size, sodium, sugar, trans fat and unsaturated fat: there is none for potassium or phosphorus.*
 - **WHOOP-API**: WHOOP. Developer platform: OAuth 2.0, API reference (v2), rate limiting, webhooks and app approval. <https://developer.whoop.com/api> Also: <https://developer.whoop.com/docs/developing/oauth>, <https://developer.whoop.com/docs/developing/app-approval>.  
@@ -586,6 +588,8 @@ Pages cite these by id, for example `[KDIGO 2024 CKD guideline][K24]`. The list 
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-31.
 - **NOTE32**: kidney-health design note 32: chosen people pick the server's local or cloud AI, per feature. <https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/32-choose-local-or-cloud-ai.md>  
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-31.
+- **NOTE33**: kidney-health design note 33: open the Plan's shopping list at Instacart. <https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/33-instacart.md>  
+  Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-11-01.
 - **DEPLOY**: kidney-health project. docs/deployment.md: Podman, Quadlet and Kubernetes. <https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md>  
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-05.
 - **ASSISTANT-DOC**: kidney-health project. docs/assistant.md: the assistant (access tokens, the MCP server, connecting Open WebUI or a Hermes Agent profile, the system prompt, honest limits). <https://github.com/ksullivan86/kidney-health/blob/main/docs/assistant.md>  

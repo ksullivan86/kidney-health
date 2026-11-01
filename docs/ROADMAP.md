@@ -161,8 +161,10 @@ the owner's choice since it adds packages and a model to the image (note 31 §5 
 * **The shopping list outside the app (the owner, 2026-10-29; [note 22](dev/research/22-shopping-lists-and-ordering.md)).**
   Share or copy the list to any app is built (Plan → Shopping list). Sending it to the person's own Grocy, KitchenOwl or Mealie is
   built for 0.19 ([note 30](dev/research/30-list-sync-and-recipe-import.md), [`list-sync.md`](list-sync.md); off until
-  `LIST_SYNC_ENABLED`). Left: a try against real Grocy, KitchenOwl and Mealie servers (the tests use fakes of each), and, only if the
-  owner chooses a service, opening the list at a grocery delivery company (another company, off by default).
+  `LIST_SYNC_ENABLED`). Opening the list at Instacart is built for 0.22 ([note 33](dev/research/33-instacart.md),
+  [`instacart.md`](instacart.md); off until `INSTACART_ENABLED` and the server's own key). Left: a try against real Grocy,
+  KitchenOwl and Mealie servers and against Instacart's development host (the tests use fakes), Instacart's review of the
+  production key (the owner), and Kroger (Ralphs, Food 4 Less), only if practical.
 * **Clinician accounts with notes (large).** Builds on "Read-only sharing with a caregiver or dietitian" above: a `clinician` role that a person invites (and can revoke) to see their log, labs, symptoms and visit summaries read-only, and to add notes the person can read. Every view by a clinician goes to the person's activity log. The read-only sharing it builds on is built (note 19); it still needs a notes table, and wording about what the app is not: a self-hosted personal tool, not part of a clinic's medical record.
 * **Direct patient-portal connection (SMART on FHIR, large; probably not).** Each EHR vendor (Epic, Oracle Health) requires registering the app and an OAuth flow per health system; for a self-hosted app each operator would have to register their own instance. The file imports above cover most of the value. This route covers MyChart (Epic's patient portal) and other EHR portals; the lab companies Quest and Labcorp are not EHRs and, as far as we know, offer no open patient API (check before designing), but their portals download PDF reports (the PDF item above) and results usually reach the doctor's EHR too. Paid aggregators (for example 1upHealth or Health Gorilla) would route health data through a third party, against the self-hosted design.
 

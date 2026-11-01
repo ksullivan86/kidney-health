@@ -27,7 +27,8 @@ administration → Users. A reset of the test accounts takes the tick away, so t
 
 To let testers import recipes from web pages too, set `RECIPE_IMPORT_ENABLED=true` (pasting ingredients works without it). Sending
 the list to a list app (`LIST_SYNC_ENABLED`, [list-sync.md](list-sync.md)) is for real accounts only: try it yourself with your
-own Grocy, KitchenOwl or Mealie.
+own Grocy, KitchenOwl or Mealie. Testers can try **Open in Instacart** when it is on (`INSTACART_ENABLED` and the server's key,
+[instacart.md](instacart.md)): a development key with `INSTACART_BASE_URL=https://connect.dev.instacart.tools` makes test pages.
 
 More detail: [accounts.md](accounts.md#test-accounts).
 
@@ -101,6 +102,10 @@ servings it makes, and press **Read ingredients**. If the server can read recipe
 **Your own list app.** Test accounts cannot send the list to a list app (a real key must not end up in a shared account), so
 **Settings → Shopping list app** says so. If you use Grocy, KitchenOwl or Mealie, try it on the demo page or with your own
 account on a server where it is turned on: **Test**, then Plan → Shopping list → **Send**. Is it clear what is sent?
+
+**Open in Instacart.** If Plan → Shopping list has **Open in Instacart**, press it. Read the lines and the sentence about
+Instacart's own terms. Untick one food, then press **Send to Instacart**. Does Instacart's page open in a new tab with the foods
+you left ticked? If no tab opened, does the button in the sheet open it? You do not need to sign in to Instacart or buy anything.
 
 ### 7. Lab results and suggested targets (7 minutes)
 

@@ -239,6 +239,12 @@ key. When the person presses Send, the server sends that app the lines they tick
 no dates, targets, readings or name. The key is never shown again, logged or exported; the address and key are deleted with the
 account or with Remove. The activity list records each send with the app's name and the number of items.
 
+If the admin turns on Instacart with the server's own key ([instacart.md](instacart.md)) and a person presses **Send to
+Instacart**, the server sends Instacart the title "Shopping list" and the lines the person ticked: each food's name, amount and
+weight in grams. Nothing else: no name, account, dates, targets or readings. Instacart answers with a link, which the person's
+browser opens on Instacart's own site, where Instacart's terms and privacy policy apply. The server keeps neither the list nor the
+link. The activity list records each send with the number of items.
+
 If the admin turns on recipe pages and a person imports a recipe from a link ([recipe-import.md](recipe-import.md)), the
 server opens that one page, reads its recipe data and forgets the page; only the link is kept, with the recipe. The site sees a
 request from the server, not from the person's phone, with no cookie and nothing about the person. Pasted ingredients never

@@ -7,9 +7,9 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-31
+last_checked: 2026-11-01
 fact_checked: 2026-10-05
-sources: [ALLOWLIST, NOTE01, NOTE03, NOTE04, NOTE08, NOTE30, SECDOC, K8S-NETPOL, OFF-API, FDC-API]
+sources: [ALLOWLIST, NOTE01, NOTE03, NOTE04, NOTE08, NOTE30, NOTE33, SECDOC, K8S-NETPOL, OFF-API, FDC-API]
 ---
 
 # Network allowlist
@@ -36,6 +36,7 @@ built offline and loads nothing from the internet either, no fonts, no scripts, 
 | your speech-to-text host (`STT_BASE_URL`), e.g. `stt:8000` | its port | the Ask microphone is on and a person agreed; one recording goes there to become text. Same address rules as an AI host; a local container needs no internet at all | off |
 | `api.pwnedpasswords.com` | 443 | `PASSWORD_BREACH_CHECK=true` | off |
 | each person's own Grocy, KitchenOwl or Mealie | its port | `LIST_SYNC_ENABLED` and a person set one up; only food names and amounts are sent. A home address only when listed in `LIST_SYNC_ALLOWED_HOSTS` ([design note 30][NOTE30]) | off |
+| `connect.instacart.com` (`connect.dev.instacart.tools` for a development key) | 443 | `INSTACART_ENABLED`, the server's own key, and a person sends the shopping list; only each food's name and amount are sent ([design note 33][NOTE33]) | off |
 | any public recipe site a person pastes a link for | 80, 443 | `RECIPE_IMPORT_ENABLED` and a person imports a recipe page; private addresses are always refused. A strict firewall blocks this: leave it off, and pasting ingredients still works | off |
 
 Not needed: `images.openfoodfacts.org` (the app shows no product images), telemetry, update checks or

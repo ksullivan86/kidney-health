@@ -1695,6 +1695,23 @@ NOTE32:
   licence: "PolyForm Noncommercial 1.0.0 (project)"
   checked: 2026-10-31
   kind: project
+NOTE33:
+  cite: "kidney-health design note 33: open the Plan's shopping list at Instacart."
+  short: "Design note 33"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/33-instacart.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-11-01
+  kind: project
+INSTACART-IDP:
+  cite: "Instacart Developer Platform. Create shopping list page (POST /idp/v1/products/products_link)."
+  short: "Instacart Developer Platform"
+  url: https://docs.instacart.com/developer_platform_api/api/products/create_shopping_list_page
+  also:
+    - https://docs.instacart.com/developer_platform_api/guide/concepts/shopping_list
+    - https://docs.instacart.com/developer_platform_api/get_started/api-keys
+  licence: "Copyrighted: link and paraphrase"
+  checked: 2026-11-01
+  kind: tool
 SCHEMA-NUTRITION:
   cite: "schema.org. NutritionInformation (the nutrition data a recipe page can carry)."
   short: "schema.org NutritionInformation"

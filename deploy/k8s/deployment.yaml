@@ -153,6 +153,12 @@ spec:
             #   value: grocy.home.svc.cluster.local,10.0.0.0/8
             # - name: RECIPE_IMPORT_ENABLED       # read a recipe page a person pastes (docs/recipe-import.md)
             #   value: "true"
+            # - name: INSTACART_ENABLED           # open the shopping list at Instacart (docs/instacart.md)
+            #   value: "true"
+            # - name: INSTACART_API_KEY_FILE      # from the Secret (add instacart_api_key there)
+            #   value: /run/secrets/kidney-health/instacart_api_key
+            # - name: INSTACART_BASE_URL          # the development host while the production key waits for approval
+            #   value: https://connect.dev.instacart.tools
             # - name: TEST_ACCOUNT_ENABLED        # tester and tester-helper for people who test the app
             #   value: "true"                     # (docs/test-the-full-app.md); never admins
             # - name: TEST_ACCOUNT_PASSWORD_FILE  # their one password, from the Secret (add test_account_password there)

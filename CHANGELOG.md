@@ -5,6 +5,22 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## Unreleased
+
+### Open the shopping list at Instacart
+
+* **A new button, off by default.** Plan → Shopping list → **Open in Instacart** sends the list to Instacart, which makes a page
+  where the person picks a store, checks the items and pays. Costco's same-day delivery runs through Instacart too.
+* **The person sees the exact lines first** and presses **Send to Instacart** each time. The sheet says that Instacart is another
+  company and its own terms and privacy policy apply there.
+* **Only the food list leaves the server**: the title "Shopping list" and each ticked food's name, amount and weight in grams.
+  No name, account, dates or targets. The server keeps neither the list nor the link; the activity list shows each send with
+  the number of items.
+* **To turn it on**, get a key in the Instacart Developer Dashboard, put it in a file and set `INSTACART_API_KEY_FILE` and
+  `INSTACART_ENABLED=true`. Use `INSTACART_BASE_URL=https://connect.dev.instacart.tools` with a development key while Instacart
+  reviews your production key. Allow `connect.instacart.com` in a strict firewall. No schema change. See
+  [docs/instacart.md](docs/instacart.md).
+
 ## 0.21.1 — 2026-11-01
 
 * **The AI activity log keeps no text by default.** `AI_AUDIT_RETENTION_DAYS` (`ai.audit_retention_days`) now defaults to 0:
