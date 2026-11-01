@@ -253,6 +253,9 @@
   $('#shopping-send').addEventListener('click', (e) => {
     if (state.shopping && KH.listSync) KH.listSync.openSend({ start: state.shopping.start, end: state.shopping.end, checks: loadChecks(state.shopping.start), trigger: e.currentTarget });
   });
+  $('#shopping-instacart').addEventListener('click', (e) => {
+    if (state.shopping && KH.instacart) KH.instacart.open({ start: state.shopping.start, end: state.shopping.end, checks: loadChecks(state.shopping.start), trigger: e.currentTarget });
+  });
   function renderShopping() {
     const sh = state.shopping;
     if (!sh) return;
@@ -265,6 +268,7 @@
     $('#shopping-share').hidden = !items.length || typeof navigator.share !== 'function';
     $('#shopping-text').hidden = true;
     if (KH.listSync) KH.listSync.planButton($('#shopping-send'), items.length > 0); // design note 30: "Send to <app>" when one is set up
+    if (KH.instacart) KH.instacart.planButton($('#shopping-instacart'), items.length > 0); // design note 33: while the server has it on
     if (!items.length) {
       shoppingEl.append(h('li', { class: 'empty-state' }, 'Nothing planned this week yet. Plan foods on a day, or add a saved meal, to build the list.'));
       return;

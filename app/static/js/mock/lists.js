@@ -8,6 +8,8 @@
    * Recipe import answers like a server with web pages on: any link gives the built-in sample recipe page below (its schema.org
      Recipe data), read with the same parser and matched with the demo's own food search, as the server does. Pasted ingredients
      work as on a server.
+   * Instacart (app/instacart.py, design note 33) answers like a server with it on. Preview shows the same lines as list sync;
+     Send answers a placeholder link (#instacart-demo) that does not leave the page, and nothing is sent.
    The words of each list line and the parser are pinned to the server by tests/data/lists_recipes_vectors.json. */
 (() => {
   'use strict';
@@ -154,6 +156,28 @@
     conn.last_sent_at = new Date().toISOString();
     conn.last_sent_count = items.length;
     return { sent: items.length, error: null, message: null, connection: { ...conn } };
+  });
+
+  // ---- Instacart (twin of app/instacart.py, design note 33) ----
+  // The demo answers like a server with Instacart on. Send gives a placeholder link that stays in the page: nothing is sent.
+  const INSTACART_TITLE = 'Shopping list';
+  const INSTACART_DEMO_LINK = '#instacart-demo';
+  route('GET', '/api/instacart', function () {
+    this._currentUser();
+    return { enabled: true, max_items: MAX_ITEMS };
+  });
+  route('POST', '/api/instacart/preview', function ({ body }) {
+    this._currentUser();
+    return { title: INSTACART_TITLE, items: this._listItems(body) };
+  });
+  route('POST', '/api/instacart/send', function ({ body }) {
+    this._currentUser();
+    const ids = body && Array.isArray(body.food_ids) ? body.food_ids : null;
+    if (!ids || !ids.length || ids.length > MAX_ITEMS || ids.some((x) => !Number.isInteger(x))) fail(400, 'food_ids: Choose between 1 and 200 foods.');
+    const wanted = new Set(ids);
+    const items = this._listItems(body).filter((i) => wanted.has(i.food_id));
+    if (!items.length) fail(400, 'None of those foods are on this list. Open the list again and choose what to send.');
+    return { url: INSTACART_DEMO_LINK, items: items.length, error: null, message: null };
   });
 
   // ---- recipe import ----
