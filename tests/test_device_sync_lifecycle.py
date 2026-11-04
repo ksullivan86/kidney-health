@@ -31,9 +31,9 @@ def device(request, tmp_path: Path, foods_json: Path, monkeypatch):
         with connect(settings.db_path) as conn:
             store.connect(conn, app.state.keyring, user_id, kind, tokens)
         day = date.today().isoformat()
-        result = FetchResult([Reading("weight", "weight:one", day, "07:00", kg=72)], "old-cursor",
-                             days=[ActivityDay("cycle:one", day, day + "T00:00:00Z", False, kcal=1800)],
-                             workouts=[Workout("workout:one", day, "08:00", "08:30", 30, "Walking", kcal=100)])
+        result = FetchResult([Reading("weight", "weight:one", day, "07:00", kg=72)] if kind == "withings" else [], "old-cursor",
+                             days=[ActivityDay("cycle:one", day, day + "T00:00:00Z", False, kcal=1800)] if kind == "whoop" else [],
+                             workouts=[Workout("workout:one", day, "08:00", "08:30", 30, "Walking", kcal=100)] if kind == "whoop" else [])
         monkeypatch.setattr(provider, "fetch", lambda *_a, **_kw: result)
         monkeypatch.setattr(provider, "refresh", lambda *_a: TokenSet("rotated-access", "rotated-refresh", 3600, "old-account", "test"))
         monkeypatch.setattr(provider, "revoke", lambda *_a, **_kw: True)
@@ -138,14 +138,14 @@ def test_account_or_server_change_during_fetch_stops_import(device, monkeypatch,
     assert not any(tables(client).values())
 
 
-def test_a_failed_activity_import_rolls_back_readings_and_ledger_too(device, monkeypatch):
+def test_a_failed_sync_marker_rolls_back_imports_and_ledger_too(device, monkeypatch):
     client, provider, _, _ = device
 
     def fail(*_a, **_kw):
-        raise RuntimeError("activity insert failed")
+        raise RuntimeError("cursor update failed")
 
-    monkeypatch.setattr(store, "add_activity", fail)
-    with pytest.raises(RuntimeError, match="activity insert failed"):
+    monkeypatch.setattr(store, "mark", fail)
+    with pytest.raises(RuntimeError, match="cursor update failed"):
         client.post(f"/api/devices/{provider.id}/sync")
     assert not any(tables(client).values()), "one fetched result must commit or roll back together"
 
@@ -204,7 +204,9 @@ def test_ordinary_sync_commits_all_rows_ledger_and_cursor_together(device):
     client, provider, _, user_id = device
     response = client.post(f"/api/devices/{provider.id}/sync")
     assert response.status_code == 200 and response.json()["error"] is None
-    assert response.json()["result"]["added"] == {"weights": 1, "readings": 0, "days": 1, "workouts": 1}
+    expected = {"weights": 1, "readings": 0, "days": 0, "workouts": 0} if provider.id == "withings" else {
+        "weights": 0, "readings": 0, "days": 1, "workouts": 1}
+    assert response.json()["result"]["added"] == expected
     with connect(client.app.state.settings.db_path) as conn:
         assert store.connection(conn, user_id, provider.id)["sync_cursor"] == "old-cursor"
-        assert conn.execute("SELECT COUNT(*) FROM device_imports WHERE user_id = ?", (user_id,)).fetchone()[0] == 3
+        assert conn.execute("SELECT COUNT(*) FROM device_imports WHERE user_id = ?", (user_id,)).fetchone()[0] == sum(expected.values())
