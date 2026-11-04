@@ -18230,6 +18230,7 @@
     },
     "/api/devices/{provider_id}/sync": {
       "post": {
+        "description": "Fetch current data. A connection changed while waiting cancels the old sync; disconnected meanwhile is 404.",
         "operationId": "devices_sync_now",
         "parameters": [
           {

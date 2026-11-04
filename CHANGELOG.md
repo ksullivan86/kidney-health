@@ -5,6 +5,15 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## Unreleased
+
+### Fixed
+
+* Disconnecting Withings or Whoop while it syncs now stops its late reply from adding readings or activity back. Connecting
+  again also stops an old sync from importing the previous account's data or replacing or clearing the new sign-in.
+* Turning devices off or disabling an account now stops imports that were already waiting for a reply. A fetched batch's
+  readings, activity, import record and sync cursor are saved together, so a failed save leaves no partial batch.
+
 ## 0.22.0 — 2026-11-01
 
 ### Upgrading from 0.21 (read this first)

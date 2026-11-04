@@ -39,6 +39,7 @@
   };
   const TEST_ACCOUNT = 'Test accounts cannot connect a device. Sign in with your own account to connect yours.';
   const ERRORS = {
+    connection_changed: 'The {name} connection or its permissions changed while syncing. The old sync was stopped.',
     auth: '{name} no longer lets this server read your data. Connect again to carry on.',
     rate_limited: '{name} asked this server to slow down. It tries again in an hour.',
     unreachable: '{name} could not be reached at the last try. The server tries again later.',

@@ -13,7 +13,7 @@ from typing import Protocol
 # "auth": the company refused the tokens (the person must connect again); "rate_limited": too many requests, wait;
 # "unreachable": no answer (network, DNS, a refused address); "provider_error": any other refusal or an answer we could not read;
 # "scope": the person did not allow what we need; "account_taken": that company account is connected to someone else here.
-ERROR_CODES = ("auth", "rate_limited", "unreachable", "provider_error", "scope", "account_taken")
+ERROR_CODES = ("auth", "rate_limited", "unreachable", "provider_error", "scope", "account_taken", "connection_changed")
 
 
 class ProviderError(Exception):

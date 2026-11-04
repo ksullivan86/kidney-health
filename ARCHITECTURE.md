@@ -4722,7 +4722,7 @@ Nothing about the person is sent out. 0.16 has Withings (weight, blood pressure,
   `WITHINGS_CLIENT_SECRET_FILE` (`WITHINGS_CLIENT_SECRET` is a `ConfigError`); on needs `PUBLIC_URL`. While `devices.enabled` is
   off `GET /api/devices` answers `enabled: false`, every other `/api/devices` route is 404 and nothing syncs; a provider that is not set up is 404 for its routes.
 * **Modules.** `app/devices/base.py` (`Provider`, `TokenSet`, `Reading`, `ProviderError` with the codes `auth`, `rate_limited`,
-  `unreachable`, `provider_error`, `scope`, `account_taken`), `withings.py` (the client, through `egress.CheckedTransport`, no
+  `unreachable`, `provider_error`, `scope`, `account_taken`, `connection_changed`), `withings.py` (the client, through `egress.CheckedTransport`, no
   redirects, 2 MiB, 15 s), `store.py` (connections, sealed tokens, the ledger, adding rows), `sync.py` (one sync, the loop,
   `app.state.devices`), `api.py` (the routes, the in-memory flow store, `about_view`).
 * **Withings.** Authorize at `account.withings.com/oauth2_user/authorize2` with `scope=user.metrics` (the browser only); tokens at
@@ -4741,6 +4741,11 @@ Nothing about the person is sent out. 0.16 has Withings (weight, blood pressure,
   there, a value the request models refuse (a pulse out of range drops the pulse), and a full day; every measure seen goes into
   `device_imports`, so a deleted reading never comes back. Rows: `source = 'withings'`, `source_key = 'withings:<grpid>:weight|bp'`,
   context by `body.context_for`.
+  Every refresh, error update and import checks the connection's id, sealed credentials, provider account and active status,
+  the person's active/non-test status and the current server switch. A disconnect, reconnect or account change while the
+  provider is answering cancels the old sync (`connection_changed`), without changing the new connection or importing the old
+  account's data. The fetched readings, activity, ledger and cursor commit in one write transaction; provider calls hold no
+  write transaction. A disconnect after that transaction can delete the whole committed batch.
 * **The loop** (`sync.loop`, started in the lifespan): every 10 minutes, in a worker thread, while `devices.enabled` is on, each
   active connection of an account that is not disabled and not a test account whose last try is older than
   `devices.sync_hours`, one after another (0.6 s apart). A connection being synced is claimed (`Devices.claim`), so Sync now and
@@ -4753,7 +4758,7 @@ Nothing about the person is sent out. 0.16 has Withings (weight, blood pressure,
 | `GET /api/devices` | signed in | `{enabled, can_connect, sync_hours, providers: [{id, name, what, available, connection: null \| {status, connected_at, last_sync_at, last_success_at, last_error, imported: {weights, readings}}}]}` |
 | `POST /api/devices/{provider}/start` | signed in | `{url}`: the state (32 random bytes, 10 minutes, single use, tied to the person and the SHA-256 of the session id; at most 5 waiting a person). 403 test account, 409 already connected, 429 too many waiting |
 | `GET /api/devices/{provider}/callback?code=&state=&error=` | signed in | 303 to `/#/devices/<word>/<provider>`: `connected`, `cancelled`, `expired`, `wrong_account`, `scope`, `taken`, `test_account`, `unavailable`, `failed`. The code is used only after the state, person and session matched |
-| `POST /api/devices/{provider}/sync` | signed in | `{connection, result: {added: {weights, readings}, already_there, skipped, left_out} \| null, error}`. 404 not connected, 409 needs reconnect or already running, 429 within 10 minutes or while paused |
+| `POST /api/devices/{provider}/sync` | signed in | `{connection, result: {added: {weights, readings}, already_there, skipped, left_out} \| null, error}`. `connection_changed` means the old sync was cancelled. 404 not connected (including disconnect while waiting), 409 needs reconnect or already running, 429 within 10 minutes or while paused |
 | `DELETE /api/devices/{provider}?delete_readings=` | signed in | `{removed: {weights, readings}, revoked}`. Deletes the connection (and with `delete_readings` the rows still `source = 'withings'` and the ledger), then asks Withings to revoke |
 
 `GET /api/admin/about` has `devices: {enabled, providers: [{id, name, enabled, client_id, secret: "set"|"not set", hosts,

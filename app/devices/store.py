@@ -96,12 +96,13 @@ def set_external(conn: sqlite3.Connection, row: sqlite3.Row, external_user_id: s
                  (external_user_id, row["id"], row["user_id"]))
 
 
-def save_refreshed(conn: sqlite3.Connection, keyring: Keyring, row: sqlite3.Row, tokens: TokenSet) -> None:
-    """Keep a refreshed pair at once and commit: Withings' old refresh token stops working 8 hours after the new one is made."""
+def save_refreshed(conn: sqlite3.Connection, keyring: Keyring, row: sqlite3.Row, tokens: TokenSet, *, commit: bool = True) -> None:
+    """Keep a refreshed pair at once. With ``commit=False``, the caller owns the transaction and commits immediately afterward."""
     sealed, key_id = _sealed(keyring, int(row["user_id"]), row["provider"], tokens)
     conn.execute("UPDATE device_connections SET tokens_enc = ?, key_id = ?, access_expires_at = ?, updated_at = ? "
                  "WHERE id = ? AND user_id = ?", (sealed, key_id, _iso_after(tokens.expires_in), utcnow(), row["id"], row["user_id"]))
-    conn.commit()
+    if commit:
+        conn.commit()
 
 
 def load_tokens(keyring: Keyring, row: sqlite3.Row) -> tuple[str, str] | None:
@@ -117,8 +118,8 @@ def load_tokens(keyring: Keyring, row: sqlite3.Row) -> tuple[str, str] | None:
 
 
 def mark(conn: sqlite3.Connection, row: sqlite3.Row, *, error: str | None, cursor: str | None = None,
-         needs_reconnect: bool = False, pause_s: int | None = None) -> None:
-    """Record a sync try (and commit): the error code or none, the new cursor, a pause, or "needs reconnect" (tokens deleted)."""
+         needs_reconnect: bool = False, pause_s: int | None = None, commit: bool = True) -> None:
+    """Record a sync try. With ``commit=False``, commit with the caller's import transaction instead."""
     now = utcnow()
     sets = ["last_sync_at = ?", "last_error = ?", "updated_at = ?"]
     params: list[Any] = [now, error, now]
@@ -136,7 +137,8 @@ def mark(conn: sqlite3.Connection, row: sqlite3.Row, *, error: str | None, curso
         sets += ["status = ?", "tokens_enc = NULL", "key_id = NULL", "access_expires_at = NULL"]
         params.append(STATUS_NEEDS_RECONNECT)
     conn.execute(f"UPDATE device_connections SET {', '.join(sets)} WHERE id = ? AND user_id = ?", (*params, row["id"], row["user_id"]))
-    conn.commit()
+    if commit:
+        conn.commit()
 
 
 def imported_counts(conn: sqlite3.Connection, user_id: int, provider: str) -> dict[str, int]:
@@ -210,9 +212,9 @@ def _keys(conn: sqlite3.Connection, table: str, user_id: int, keys: list[str]) -
     return out
 
 
-def add_readings(conn: sqlite3.Connection, user_id: int, provider: str, readings: list[Reading]) -> dict[str, Any]:
+def add_readings(conn: sqlite3.Connection, user_id: int, provider: str, readings: list[Reading], *, commit: bool = True) -> dict[str, Any]:
     """Add what the person does not have yet and record every measure in the ledger, in one transaction (committed here).
-    Returns ``{added: {weights, readings}, already_there, skipped}``."""
+    Returns ``{added: {weights, readings}, already_there, skipped}``. With ``commit=False``, join the caller's write transaction."""
     from ..auth.accounts import begin_immediate
 
     added = {"weights": 0, "readings": 0}
@@ -220,7 +222,8 @@ def add_readings(conn: sqlite3.Connection, user_id: int, provider: str, readings
     unique: dict[str, Reading] = {}
     for r in readings:
         unique.setdefault(r.external_id, r)  # one fetch may list a group twice across pages
-    begin_immediate(conn)
+    if commit:
+        begin_immediate(conn)
     try:
         seen = _seen(conn, user_id, provider, list(unique))
         fresh = [r for r in unique.values() if r.external_id not in seen]
@@ -291,7 +294,8 @@ def add_readings(conn: sqlite3.Connection, user_id: int, provider: str, readings
                 skipped += 1
             conn.execute("INSERT OR IGNORE INTO device_imports (user_id, provider, external_id, kind, row_id, imported_at) "
                          "VALUES (?, ?, ?, ?, ?, ?)", (user_id, provider, r.external_id, r.kind, row_id, now))
-        conn.commit()
+        if commit:
+            conn.commit()
     except BaseException:
         conn.rollback()
         raise
@@ -371,9 +375,9 @@ def _add_workout(conn: sqlite3.Connection, user_id: int, provider: str, w: Worko
 
 
 def add_activity(conn: sqlite3.Connection, user_id: int, provider: str, days: list[ActivityDay], workouts: list[Workout],
-                 *, today: str) -> dict[str, int]:
+                 *, today: str, commit: bool = True) -> dict[str, int]:
     """Add or replace the person's activity days and workouts from ``provider`` in one transaction (committed here).
-    Returns ``{days, workouts, updated, skipped}``: rows added, rows whose values were replaced, and records not taken."""
+    Returns ``{days, workouts, updated, skipped}``. With ``commit=False``, join the caller's write transaction."""
     from datetime import date, timedelta
 
     from ..auth.accounts import begin_immediate
@@ -382,7 +386,8 @@ def add_activity(conn: sqlite3.Connection, user_id: int, provider: str, days: li
     if not days and not workouts:
         return counts
     latest = (date.fromisoformat(today) + timedelta(days=LATEST_DAYS_AHEAD)).isoformat()
-    begin_immediate(conn)
+    if commit:
+        begin_immediate(conn)
     try:
         now = utcnow()
         known = _ledger(conn, user_id, provider, [d.external_id for d in days] + [w.external_id for w in workouts])
@@ -396,7 +401,8 @@ def add_activity(conn: sqlite3.Connection, user_id: int, provider: str, days: li
                 counts["skipped"] += 1
             else:
                 _add_workout(conn, user_id, provider, w, known, now, counts)
-        conn.commit()
+        if commit:
+            conn.commit()
     except BaseException:
         conn.rollback()
         raise
