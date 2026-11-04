@@ -14,6 +14,11 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * Send stays disabled until the previous send finishes, including after closing and reopening the sheet or changing a
   checkbox. A delayed status check no longer shows a shopping button on an empty week.
 
+### Security
+
+* New Chainguard base images (Python 3.15.2 and libexpat 2.10.0). They fix high-severity issues the image scan found in
+  Python 3.15.1 and libexpat 2.9.0.
+
 ## 0.22.0 — 2026-11-01
 
 ### Upgrading from 0.21 (read this first)
