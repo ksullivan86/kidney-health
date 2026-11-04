@@ -5,6 +5,15 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## Unreleased
+
+### Fixed
+
+* Shopping list: opening another week while a preview loads keeps that week's foods and dates together. An older send to
+  Instacart or your list app no longer replaces or closes the new sheet, shows an old error there, or opens an unexpected tab.
+* Send stays disabled until the previous send finishes, including after closing and reopening the sheet or changing a
+  checkbox. A delayed status check no longer shows a shopping button on an empty week.
+
 ## 0.22.0 — 2026-11-01
 
 ### Upgrading from 0.21 (read this first)

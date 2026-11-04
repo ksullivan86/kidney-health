@@ -44,15 +44,25 @@
   const items = (n) => `${n} ${n === 1 ? 'item' : 'items'}`;
 
   /** Show "Open in Instacart" while the server has it on and the week has foods. */
+  const buttonTurns = new WeakMap();
   async function planButton(btn, hasItems) {
     if (!btn) return;
+    const ticket = {};
+    buttonTurns.set(btn, ticket);
     if (!hasItems) { btn.hidden = true; return; }
-    try { const res = await status(); btn.hidden = !(res && res.enabled); } catch (e) { btn.hidden = true; }
+    try {
+      const res = await status();
+      if (buttonTurns.get(btn) !== ticket) return;
+      btn.hidden = !(res && res.enabled);
+    } catch (e) { if (buttonTurns.get(btn) === ticket) btn.hidden = true; }
   }
 
   const dlg = $('#sheet-instacart');
   if (dlg) sheets.setup(dlg);
   const st = { start: null, end: null, boxes: [], busy: false, done: false };
+  let sheetTurn = 0;
+  const currentSheet = (ticket) => ticket === sheetTurn && dlg.open;
+  if (dlg) dlg.addEventListener('close', () => { if (!dlg.open) sheetTurn += 1; });
 
   function goButton() { return $('#instacart-go'); }
   function countSelected() {
@@ -66,8 +76,9 @@
 
   /** Open the sheet for a week of the Plan; `checks` are the foods ticked on this phone (they start unticked). */
   async function open({ start, end, checks, trigger }) {
+    const ticket = ++sheetTurn;
     const body = clear($('#instacart-body'));
-    st.start = start; st.end = end; st.boxes = []; st.done = false; st.busy = false;
+    st.start = start; st.end = end; st.boxes = []; st.done = false;
     const go = goButton();
     go.hidden = false; go.disabled = true; go.textContent = 'Send to Instacart';
     $('#instacart-cancel').textContent = 'Cancel';
@@ -75,9 +86,11 @@
     sheets.open(dlg, trigger, $('[data-close]', dlg));
     let p;
     try { p = await A.preview(start, end); } catch (err) {
+      if (!currentSheet(ticket)) return;
       clear(body).append(h('p', { class: 'form-error' }, (err && (err.detail || err.message)) || 'Could not load the list.'));
       return;
     }
+    if (!currentSheet(ticket)) return;
     clear(body);
     if (!p.items.length) { body.append(h('p', { class: 'empty-state' }, 'Nothing is planned in this week, so there is nothing to send.')); return; }
     body.append(h('p', { id: 'instacart-what' }, WHAT), h('p', { class: 'hint', id: 'instacart-terms' }, TERMS));
@@ -114,20 +127,22 @@
   if (dlg) {
     sheets.onSubmit($('#instacart-form'), async (e) => {
       e.preventDefault();
-      if (st.busy || st.done) return;
+      if (!dlg.open || st.busy || st.done) return;
+      const ticket = sheetTurn;
       const ids = st.boxes.filter((b) => b.cb.checked).map((b) => b.food_id);
       if (!ids.length) return;
       st.busy = true; countSelected();
       const result = $('#instacart-result');
       try {
         const out = await A.send(st.start, st.end, ids);
+        if (!currentSheet(ticket)) return;
         if (out.error || !out.url) {
           if (result) clear(result).append(h('p', { class: 'form-error', id: 'instacart-error' }, out.message || ERRORS[out.error] || 'Sending did not work.'));
         } else {
           st.busy = false;
           showReady(out.url, out.items);
         }
-      } catch (err) { if (!err.handled) toastError(err); } finally { st.busy = false; countSelected(); }
+      } catch (err) { if (currentSheet(ticket) && !err.handled) toastError(err); } finally { st.busy = false; countSelected(); }
     });
   }
 

@@ -4852,7 +4852,9 @@ A person sends the Plan's shopping list to their own Grocy, KitchenOwl or Mealie
 **Screens.** `js/views/list_sync.js` (`KH.listSync`): Settings → Shopping list app (`#set-lists`, hidden while off), the key box
 (password type, empty, "Saved"), Test with a list picker, Remove; Plan → Shopping list → **Send to <app>** (`#shopping-send`) and
 its sheet `#sheet-list-send` (the exact lines, ticked foods on this phone start unticked). The demo (`js/mock/lists.js`) has a
-sample Grocy and a fake list app in the page. Tests: `tests/test_list_sync.py` (fakes of the three apps behind the real transport,
+sample Grocy and a fake list app in the page. Preview and send replies belong to the opening that requested them: closing or
+opening another week drops their UI updates. A send already issued may finish after closing; its lock lasts until it settles,
+so reopening or changing a checkbox cannot start another send in the meantime. Tests: `tests/test_list_sync.py` (fakes of the three apps behind the real transport,
 `tests/lists_support.py`), `tests/test_lists_recipes_ui.py`, `tests/js/lists_recipes_demo.mjs`.
 
 ## Recipe import (design note 30)
@@ -4932,7 +4934,11 @@ while `enabled` and the week has foods) and its sheet `#sheet-instacart`: the ex
 unticked), what is sent, "Instacart is another company. Its own terms and privacy policy apply when you use its page.", and
 **Send N items to Instacart**. The answer's link (only `https://`) opens with `window.open(url, '_blank', 'noopener,noreferrer')`
 and is shown as a button (`#instacart-open`, `rel="noopener noreferrer"`, no referrer) in case the tab was blocked. The browser
-never calls Instacart's API. The demo (`js/mock/lists.js`) answers `#instacart-demo` and the sheet says nothing was sent.
+never calls Instacart's API. Preview and send replies update only the opening that requested them. Closing or opening another
+week drops old replies and prevents an old send from opening a tab. An issued send may still finish after closing, and Send
+stays disabled across reopening until it settles. Shopping button status replies apply only to the latest render, for both
+integrations, so an old reply cannot show a button on an empty week.
+The demo (`js/mock/lists.js`) answers `#instacart-demo` and the sheet says nothing was sent.
 Activity label "Shopping list sent to Instacart" with the number of items. Tests: `tests/test_instacart.py` (a fake Instacart
 behind the real transport), `tests/test_instacart_ui.py`, `tests/js/instacart_demo.mjs`. Guide: `docs/instacart.md`.
 

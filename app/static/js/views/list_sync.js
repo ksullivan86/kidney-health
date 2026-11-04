@@ -194,22 +194,30 @@
   // Plan → Shopping list → Send
   // ---------------------------------------------------------------------------
   /** Show the Send button when a list app is set up (it says the app's name). */
+  const buttonTurns = new WeakMap();
   async function planButton(btn, hasItems) {
     if (!btn) return;
+    const ticket = {};
+    buttonTurns.set(btn, ticket);
     if (!hasItems) { btn.hidden = true; return; }
     try {
       const res = await status();
+      if (buttonTurns.get(btn) !== ticket) return;
       const c = res && res.enabled && res.can_use ? res.connection : null;
       btn.hidden = !c;
       if (c) btn.textContent = `Send to ${appOf(res, c.app).name}`;
-    } catch (e) { btn.hidden = true; }
+    } catch (e) { if (buttonTurns.get(btn) === ticket) btn.hidden = true; }
   }
 
   const dlg = $('#sheet-list-send');
   if (dlg) sheets.setup(dlg);
   const send = { start: null, end: null, boxes: [], busy: false };
+  let sheetTurn = 0;
+  const currentSheet = (ticket) => ticket === sheetTurn && dlg.open;
+  if (dlg) dlg.addEventListener('close', () => { if (!dlg.open) sheetTurn += 1; });
   /** Open the sheet: the exact lines, each with a box; `checks` are the foods ticked on this phone (they start unticked). */
   async function openSend({ start, end, checks, trigger }) {
+    const ticket = ++sheetTurn;
     const bodyEl = clear($('#list-send-body'));
     const go = $('#list-send-go');
     go.disabled = true;
@@ -220,9 +228,11 @@
     sheets.open(dlg, trigger, $('[data-close]', dlg));
     let p;
     try { p = await A.preview(start, end); } catch (err) {
+      if (!currentSheet(ticket)) return;
       clear(bodyEl).append(h('p', { class: 'form-error' }, (err && (err.detail || err.message)) || 'Could not load the list.'));
       return;
     }
+    if (!currentSheet(ticket)) return;
     $('#sheet-list-send-title').textContent = `Send to ${p.app_name}`;
     $('#sheet-list-send-sub').textContent = p.list_name ? `List: ${p.list_name}` : '';
     clear(bodyEl);
@@ -245,22 +255,24 @@
   function countSelected() {
     const n = send.boxes.filter((b) => b.cb.checked).length;
     const go = $('#list-send-go');
-    go.disabled = !n;
+    go.disabled = !n || send.busy;
     go.textContent = n ? `Send ${items(n)}` : 'Send';
   }
   if (dlg) {
     sheets.onSubmit($('#list-send-form'), async (e) => {
       e.preventDefault();
-      if (send.busy) return;
+      if (!dlg.open || send.busy) return;
+      const ticket = sheetTurn;
       const ids = send.boxes.filter((b) => b.cb.checked).map((b) => b.food_id);
       if (!ids.length) return;
       send.busy = true; $('#list-send-go').disabled = true;
       try {
         const out = await A.send(send.start, send.end, ids);
         cached = null;
+        if (!currentSheet(ticket)) return;
         if (out.error) toast(`${out.sent ? `Sent ${items(out.sent)}, then it stopped. ` : ''}${out.message || ERRORS[out.error] || 'Sending did not work.'}`, 'error');
         else { dlg.close(); toast(`Sent ${items(out.sent)} to your list.`, 'ok'); }
-      } catch (err) { if (!err.handled) toastError(err); } finally { send.busy = false; countSelected(); }
+      } catch (err) { if (currentSheet(ticket) && !err.handled) toastError(err); } finally { send.busy = false; countSelected(); }
     });
   }
 
