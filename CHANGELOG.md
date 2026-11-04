@@ -5,6 +5,14 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## Unreleased
+
+### Fixed
+
+* Care team: Clear planned days now clears exactly the dates shown in its confirmation, even if the date fields change.
+* A Care team plan preview cannot be resent after an interrupted batch. Review the current plan before making another, so
+  food already added is not duplicated by retrying the same preview.
+
 ## 0.22.0 — 2026-11-01
 
 ### Upgrading from 0.21 (read this first)

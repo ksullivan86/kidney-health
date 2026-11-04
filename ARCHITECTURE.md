@@ -4484,6 +4484,11 @@ time. Any switch on adds `food`. Links and invites carry a role; the switches ar
 |---|---|---|
 | `GET /api/shared/{id}/foods` | plan, log or suggest | as before |
 | `GET /api/shared/{id}/plan/shopping`, `POST …/log/clear-planned`, `POST …/guidance/plan-days` | plan | as before; plan-days uses saved meals only when asked and `may_use_saved_meals` is on |
+
+The Care team's Clear planned days question captures its date range when shown; later field edits cannot change what that
+confirmation clears. A generated plan preview can be submitted only once. Helper batches do not use `client_id`, so after
+any failed response the same preview remains disabled and offers **Review the plan**. Some food may already have arrived;
+the helper checks the current plan before generating another preview. No automatic retry or rollback removes food.
 | `POST /api/shared/{id}/log`, `/log/batch` | plan (`planned`) / log (`eaten`) | each entry records the helper (`added_by`); a low treatment may be added, also as eaten |
 | `PUT /api/shared/{id}/log/{entry}` | see below | `{status?: "eaten", date?, meal?, servings?, grams?, note?}` |
 | `DELETE /api/shared/{id}/log/{entry}` | see below | → 204 |

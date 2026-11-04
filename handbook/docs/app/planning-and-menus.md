@@ -264,6 +264,10 @@ ate and mark planned food eaten (a **Caregiver**); add their saved meals; or sen
 as it is. **Back to my own plan** takes you back. Food you add shows "Added by" and your name on their day
 ([Care team](settings-and-keys.md#sharing), [design notes 25][NOTE25] and [29][NOTE29]).
 
+**Clear planned days** clears the dates shown in its question. Changing the date fields while the question is open does not
+change those dates. If adding several days stops part way through, choose **Review the plan** before making another plan.
+Some food may already have arrived even if its reply was lost. The same preview cannot be sent again.
+
 **Suggestions for you.** When someone on your Care team suggests a meal, it waits at the top of your own Plan tab with what it
 adds to that day. **Add to my plan** adds it as planned food of your own; **No thanks** says no. Nothing changes until you choose.
 
