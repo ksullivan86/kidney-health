@@ -114,9 +114,10 @@
     let [id, name] = [listId, listId ? (b.list_name || null) : null];
     if (listId == null && same && !('list_id' in (body || {}))) [id, name] = [row.list_id, row.list_name];
     const keepTest = same && b.key == null;
+    const keepSend = keepTest && id === row.list_id;
     st.connection = { app: b.app, base_url: baseUrl, list_id: id, list_name: name, key_set: true,
       last_test_at: keepTest ? row.last_test_at : null, last_test_error: keepTest ? row.last_test_error : null,
-      last_sent_at: row ? row.last_sent_at : null, last_sent_count: row ? row.last_sent_count : null };
+      last_sent_at: keepSend ? row.last_sent_at : null, last_sent_count: keepSend ? row.last_sent_count : null };
     return { ...st.connection };
   });
   route('DELETE', '/api/list-sync', function () {

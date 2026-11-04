@@ -5,6 +5,15 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## Unreleased
+
+### Fixed
+
+* List apps: a late connection test no longer overwrites a newer list choice. Test and Send no longer crash if the connection
+  was removed while they waited. The app explains that the previous send may have finished and asks you to check before retrying.
+* A send to the previous connection no longer marks a new list as sent. Changing the list, address or key clears the old
+  destination's last-send notice, on the server and in the demo.
+
 ## 0.22.0 — 2026-11-01
 
 ### Upgrading from 0.21 (read this first)

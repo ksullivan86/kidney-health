@@ -27,6 +27,11 @@ handbook: **Planning, menus and shopping**.
 * Settings → Account → Activity lists setting it up, removing it and each send (the app and how many items).
 * Test accounts cannot set one up: they are shared by testers. The demo shows a sample Grocy and a fake list app inside the page.
 
+A connection test that finishes after you change or remove the connection cannot change your new list. Test the current
+connection again if the app says it changed. An already issued send may still finish at the previous list. Its confirmed
+count is reported and recorded in your activity, but never shown as a send to the new list. Check the previous list before
+sending again. Choosing a different list, address or key clears the previous list's last-send notice.
+
 ## Turn it on (server owner)
 
 1. Set `LIST_SYNC_ENABLED=true` (or turn on **Server administration → Server settings → Shopping list app and recipe import**).

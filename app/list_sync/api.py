@@ -25,6 +25,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from .. import egress
 from ..audit import audit
+from ..auth.accounts import begin_immediate
 from ..auth.context import auth_context, request_ip
 from ..auth.deps import CurrentUser
 from ..auth.errors import ApiProblem
@@ -230,6 +231,24 @@ def _require_row(conn: sqlite3.Connection, user_id: int) -> sqlite3.Row:
     return row
 
 
+def _current(request: Request, conn: sqlite3.Connection, row: sqlite3.Row) -> bool:
+    """Inside a write transaction, check that a network result still belongs to this configuration."""
+    now = row_of(conn, int(row["user_id"]))
+    return (now is not None and enabled(request, conn)
+            and all(now[key] == row[key] for key in ("app", "base_url", "key_enc", "list_id", "list_name", "updated_at")))
+
+
+def _changed(*, sent: int | None = None, uncertain: bool = False) -> ApiProblem:
+    if sent is None:
+        return ApiProblem(409, "Your list app changed while the test was running. Test the current connection again.",
+                          reason="connection_changed")
+    noun = "item was" if sent == 1 else "items were"
+    extra = "More may have arrived without a reply. " if uncertain else ""
+    return ApiProblem(409, f"Your list app changed while sending. {sent} {noun} confirmed sent to the previous list. "
+                      + extra + "Check the previous list before sending again.",
+                      reason="connection_changed", sent=sent)
+
+
 def _items(conn: sqlite3.Connection, user_id: int, body: RangeIn) -> list[Item]:
     start_s, end_s = parse_range(body.start, body.end)
     return [list_item(row) for row in shopping_items(conn, user_id, start_s, end_s)]
@@ -284,10 +303,12 @@ def put_list_sync(body: ListSyncIn, request: Request, user: CurrentUser, conn: s
                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", (user.id, body.app, base_url, list_id, list_name, sealed, key_id, now, now))
     else:
         keep_test = same_place and body.key is None
+        keep_send = keep_test and list_id == row["list_id"]
         conn.execute("UPDATE list_sync SET app = ?, base_url = ?, list_id = ?, list_name = ?, key_enc = ?, key_id = ?, "
-                     "last_test_at = ?, last_test_error = ?, updated_at = ? WHERE user_id = ?",
+                     "last_test_at = ?, last_test_error = ?, last_sent_at = ?, last_sent_count = ?, updated_at = ? WHERE user_id = ?",
                      (body.app, base_url, list_id, list_name, sealed, key_id, row["last_test_at"] if keep_test else None,
-                      row["last_test_error"] if keep_test else None, now, user.id))
+                      row["last_test_error"] if keep_test else None, row["last_sent_at"] if keep_send else None,
+                      row["last_sent_count"] if keep_send else None, now, user.id))
     if row is None or not same_place or body.key is not None:
         audit(conn, user.id, "list_sync.set_up", "list_sync", body.app, ip=request_ip(request), app=body.app)
     conn.commit()
@@ -331,11 +352,19 @@ def test_list_sync(request: Request, user: CurrentUser, conn: sqlite3.Connection
             list_name = chosen["name"]
         elif len(lists) == 1:
             list_id, list_name = lists[0]["id"], lists[0]["name"]
-    conn.execute("UPDATE list_sync SET last_test_at = ?, last_test_error = ?, list_id = ?, list_name = ? WHERE user_id = ?",
-                 (utcnow(), code, list_id, list_name, user.id))
-    conn.commit()
+    begin_immediate(conn)
+    try:
+        if not _current(request, conn, row):
+            raise _changed()
+        conn.execute("UPDATE list_sync SET last_test_at = ?, last_test_error = ?, list_id = ?, list_name = ? WHERE user_id = ?",
+                     (utcnow(), code, list_id, list_name, user.id))
+        connection = view(row_of(conn, user.id))
+        conn.commit()
+    except BaseException:
+        conn.rollback()
+        raise
     return {"ok": code is None, "error": code, "message": ERROR_TEXT.get(code) if code else None, "lists": lists,
-            "connection": view(row_of(conn, user.id))}
+            "connection": connection}
 
 
 @router.post("/preview", response_model=PreviewOut)
@@ -375,8 +404,19 @@ def send(body: SendIn, request: Request, user: CurrentUser, conn: sqlite3.Connec
             code, sent = exc.code, exc.sent
         except egress.DeadlineExceeded:
             code = "timeout"
-    if sent:
-        conn.execute("UPDATE list_sync SET last_sent_at = ?, last_sent_count = ? WHERE user_id = ?", (utcnow(), sent, user.id))
-        audit(conn, user.id, "list_sync.sent", "list_sync", row["app"], ip=request_ip(request), app=row["app"], items=sent)
-    conn.commit()
-    return {"sent": sent, "error": code, "message": ERROR_TEXT.get(code) if code else None, "connection": view(row_of(conn, user.id))}
+    begin_immediate(conn)
+    try:
+        current = _current(request, conn, row)
+        if sent:
+            if current:
+                conn.execute("UPDATE list_sync SET last_sent_at = ?, last_sent_count = ? WHERE user_id = ?", (utcnow(), sent, user.id))
+            if conn.execute("SELECT 1 FROM users WHERE id = ?", (user.id,)).fetchone() is not None:
+                audit(conn, user.id, "list_sync.sent", "list_sync", row["app"], ip=request_ip(request), app=row["app"], items=sent)
+        connection = view(row_of(conn, user.id))
+        conn.commit()
+    except BaseException:
+        conn.rollback()
+        raise
+    if not current:
+        raise _changed(sent=sent, uncertain=code is not None)
+    return {"sent": sent, "error": code, "message": ERROR_TEXT.get(code) if code else None, "connection": connection}

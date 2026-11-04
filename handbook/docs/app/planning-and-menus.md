@@ -236,6 +236,10 @@ about you ([design note 30][NOTE30]). Sending again adds the lines again.
 
 A list app on your home network works only if the person who runs your server allowed its address.
 
+If you change or remove the connection while a send waits, that send may still finish at the previous list. The app tells you
+what was confirmed sent and asks you to check there before sending again. It will not call that a send to your new list.
+Changing the list, address or key clears the previous list's last-send notice.
+
 ### Open it at Instacart
 
 If the person who runs your server turned it on, **Plan** → **Shopping list** has **Open in Instacart**. Instacart is a grocery
