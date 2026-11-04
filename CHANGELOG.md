@@ -5,6 +5,15 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## Unreleased
+
+### Fixed
+
+* Recipe import keeps late loading replies and save results with the draft that requested them. Reopening no longer loses
+  new typing or closes the new sheet when an earlier save finishes. Failed saves keep the checked draft for another try.
+* Food searches in different ingredient lines now work independently. A reply or error for a line you have left no longer
+  interrupts the current choice. Review fields stay disabled while saving.
+
 ## 0.22.0 — 2026-11-01
 
 ### Upgrading from 0.21 (read this first)

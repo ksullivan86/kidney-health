@@ -60,7 +60,7 @@ def test_plan_has_the_send_and_import_buttons() -> None:
 
 def test_every_line_must_be_checked_and_the_estimate_is_always_shown() -> None:
     assert "const allChecked = st.rows.every((r) => r.checked);" in IMPORT
-    assert "goButton(ready ? 'Save recipe' : `Check every line" in IMPORT
+    assert "ready ? 'Save recipe' : `Check every line" in IMPORT
     assert "h('p', { class: 'hint ri-estimate', id: 'ri-estimate' }, draft.estimate)" in IMPORT
     assert "'Leave this out'" in IMPORT and "'Search for another food…'" in IMPORT
     assert "The app cannot tell the amount from this line: enter it." in IMPORT
