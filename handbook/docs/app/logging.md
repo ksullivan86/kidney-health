@@ -100,6 +100,8 @@ database, including branded foods. Tap **Import** to copy one into your list. Im
 "USDA search is not set up on this server" means nobody has added a key yet: add your own, or ask
 your admin to share one. USDA can take a few seconds to answer. If you search again before it does,
 you see only the newest results.
+Importing the same USDA record at the same time from two devices still reuses one food. Only people who imported it see
+it in their lists.
 
 ## Your own foods
 
