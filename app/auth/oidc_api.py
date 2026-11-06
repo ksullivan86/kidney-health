@@ -491,7 +491,8 @@ def _finish_signed_in(request: Request, conn: sqlite3.Connection, ctx: AuthConte
     """Linking from Settings, or confirming with the provider: only in the session that started it."""
     user = identify(request, conn)
     info = getattr(request.state, "auth_session", None)
-    if user is None or not user.is_active or info is None or info.id != flow.session_id or user.id != flow.user_id:
+    if (user is None or not user.is_active or user.must_change_password
+            or info is None or info.id != flow.session_id or user.id != flow.user_id):
         raise oidc.OidcError("expired", "other_session")
     link = find_link(conn, issuer, subject)
     if flow.purpose == "reauth":
