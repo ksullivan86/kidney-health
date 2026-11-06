@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 Audit on main `cea3c94` (0.22.2). Branch `audit/assistant-write-authorization`. Leave the PR unmerged.
 
@@ -11,12 +11,15 @@ the taste tool and phone submissions. It checks current owner, token ownership, 
 scope and family switch. It neither commits nor touches last use. Ask chat keeps its own session authorization.
 All request work rolls back on refusal and returns the existing generic family 401.
 
-Verification in progress:
+Verified:
 
-* `tests/test_token_write_lifecycle.py`: 45 cases across log food, recipe, food/group tastes and phone submissions;
-  revocation, expiry, scope, switch, required password change, disabled/wrong-kind/deleted owner and deleted token.
-  Real routes and USDA mock; no external network. The same 45 cases fail on clean main; the fixed branch passes all 45.
-* Focused existing bearer/MCP/phone/Ask tests running. Full pytest started; Node and vectors, generated pages and changed-file Ruff passed. Next: full pytest, JS parity, Ruff, generated pages,
-  strict handbook, review the diff, commit/push own paths and create an unmerged PR.
+* Full pytest: 7,431 passed, 2 skipped; 2 existing handbook citation warnings.
+* All 45 new lifecycle cases fail on clean main and pass with the fix. Existing token/MCP/phone/Ask save tests pass.
+* Node regression files and parity vectors, Ruff, OpenAPI snapshot, generated pages and strict handbook pass.
+* PR https://github.com/ksullivan86/kidney-health/pull/153 remains unmerged. No schema or clinical-number changes.
+
+The recovery link flow claims a single-use token before password/session changes; the backend export importer
+uses one write transaction and invalidates settings caches on dry-run/failure rollback. No additional finding
+was confirmed in those paths during this pass. Import UI and native phone findings have separate PRs.
 
 Commands/logs: `/workspace/work/assistant-audit/`; Python `/workspace/kidney-health/.venv/bin/python`.

@@ -497,8 +497,8 @@ def _count_by_day(conn: sqlite3.Connection, table: str, user_id: int, days: set[
 
 def store(conn: sqlite3.Connection, user: User, token_id: int, weights: list[PlannedWeight],
           readings: list[PlannedReading], request: Request) -> dict[str, Any]:
-    """Add the rows the person does not have yet, in one transaction (all or nothing), and count them. The only error is the
-    per-day limit, a ``400`` naming the row, after which nothing has been written."""
+    """Recheck access, then add missing rows and count them in one transaction. Ended access gives the generic
+    ``401``; the per-day limit gives a ``400`` naming the row. Either refusal leaves nothing written."""
     added = {"weights": 0, "readings": 0}
     there = {"weights": 0, "readings": 0}
     watch = 0
