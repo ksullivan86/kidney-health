@@ -18,7 +18,8 @@ this request. Completed request keys report their earlier result even in ask mod
 keeps its earlier saved cards and uses text that says they completed. Public shapes, clinical rules and
 consent flows are unchanged.
 
-Full pytest running. Earlier focused run: 193 passed and 2 test-script failures (replays need a final model
-answer, as existing replay tests do); scripts corrected and all 14 lifecycle cases pass. Next: rerun focused
-chat/MCP suite, Ruff/OpenAPI/Node vectors, generated pages/strict handbook, check compatibility with PR #153,
-checkpoint/push own files and create PR. Logs: `/workspace/work/ask-audit/`.
+Full pytest running. Focused chat/MCP/UI suite: 210 passed. All 14 lifecycle cases pass; clean main fails 13 and passes 1.
+Ruff, OpenAPI, Node vectors, generated pages and strict handbook pass. The browser walk found stale assertions
+for the AI transparency wording already on main; aligned those expected strings and rerunning.
+A merge-tree check with PR #153 auto-merges app/mcp/tools.py; only their separate Unreleased changelog
+entries conflict. No branch or PR was merged. Next: finish browser/full pytest, finalize PR unmerged. Logs: `/workspace/work/ask-audit/`.
