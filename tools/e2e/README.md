@@ -125,6 +125,7 @@ python3 tools/e2e/lists_recipes.py            # list sync and recipe import: a p
 python3 tools/e2e/instacart.py                # open the shopping list at Instacart: a fake Instacart, the new tab, the demo; port 8112
 python3 tools/e2e/shopping_late_replies.py    # both shopping sheets: delayed previews and sends, reopen, lock and retry; port 8113
 python3 tools/e2e/recipe_import_late_replies.py  # recipe import: delayed parses/searches/saves and reopening; port 8114
+python3 tools/e2e/care_plan_actions.py        # Care team: confirmed Clear dates and interrupted plan batches; port 8115
 python tools/e2e/a11y.py                      # keyboard, names, 200 % text and contrast on every main screen and sheet; port 8099; --only 375-light --parts keyboard
 python tools/e2e/boot_fail.py                 # "The app did not start" with a script blocked, stalled or throwing; port 8191; --repo DIR for another checkout
 python tools/e2e/device.py                     # add --only outbox,live for some sections

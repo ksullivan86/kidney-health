@@ -21,6 +21,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
   new typing or closes the new sheet when an earlier save finishes. Failed saves keep the checked draft for another try.
 * Food searches in different ingredient lines now work independently. A reply or error for a line you have left no longer
   interrupts the current choice. Review fields stay disabled while saving.
+* Care team: Clear planned days now clears exactly the dates shown in its confirmation, even if the date fields change.
+* A Care team plan preview cannot be resent after an interrupted batch. Review the current plan before making another, so
+  food already added is not duplicated by retrying the same preview.
 
 ### Security
 

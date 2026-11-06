@@ -542,11 +542,12 @@
     const clearRow = h('div', { class: 'settings-actions' }, clearBtn);
     clearBtn.addEventListener('click', () => {
       if (!from.value || !to.value || to.value < from.value) { toast('Choose the first and last day.'); return; }
+      const first = from.value, last = to.value;
       confirm.inline(clearRow, clearBtn, {
-        message: `Take the planned food off ${nameOf(p)}'s days from ${fmtMonthDay(from.value)} to ${fmtMonthDay(to.value)}? Eaten food and planned low treatments stay.`,
+        message: `Take the planned food off ${nameOf(p)}'s days from ${fmtMonthDay(first)} to ${fmtMonthDay(last)}? Eaten food and planned low treatments stay.`,
         confirmText: 'Clear',
         onConfirm: async () => {
-          try { const r = await rt.clearPlanned(from.value, to.value); toast(`${r.deleted} planned ${r.deleted === 1 ? 'food' : 'foods'} taken off`, 'ok'); draw(); } catch (err) { saveFailed(p)(err); }
+          try { const r = await rt.clearPlanned(first, last); toast(`${r.deleted} planned ${r.deleted === 1 ? 'food' : 'foods'} taken off`, 'ok'); draw(); } catch (err) { saveFailed(p)(err); }
           return true;
         },
       });
@@ -578,7 +579,10 @@
     const entries = (res.apply && res.apply.entries) || [];
     if (!entries.length) return;
     const apply = h('button', { class: 'btn primary', type: 'button', id: 'care-plan-apply' }, `Add to ${nameOf(p)}'s plan`);
+    let submitted = false;
     apply.addEventListener('click', async () => {
+      if (submitted) return;
+      submitted = true;
       apply.disabled = true;
       let added = 0;
       try {
@@ -587,7 +591,16 @@
         draw();
       } catch (err) {
         gone(err, () => toast(added ? `${added} of ${entries.length} were added. ${failText(err, p)}` : failText(err, p), 'error'));
-      } finally { apply.disabled = false; }
+        const review = h('button', { class: 'btn secondary', type: 'button' }, 'Review the plan');
+        review.addEventListener('click', () => {
+          if (!current || current.person.id !== p.id) return;
+          current.date = entries[0].date;
+          current.start = weekStartOf(current.date, KH.views.plan ? KH.views.plan.weekStartPref() : 'monday');
+          draw();
+        });
+        preview.append(h('p', { class: 'notice', role: 'status' }, 'Some food may already have been added, even if its reply was lost. '
+          + 'Review the plan before making another. This preview will not be sent again.'), h('div', { class: 'settings-actions' }, review));
+      }
     });
     preview.append(h('div', { class: 'settings-actions' }, apply));
   }
