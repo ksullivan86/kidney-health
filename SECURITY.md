@@ -33,8 +33,8 @@ If you find a way to make it do either, report it as a security issue.
 
 | Version | Supported |
 |---|---|
-| 0.10.x (latest minor) | Yes: security fixes are released as 0.10.x patch versions |
-| 0.9.x and older | No: upgrade to 0.10 ([`docs/deployment.md`](docs/deployment.md#from-v09-to-v010), [`CHANGELOG.md`](CHANGELOG.md#0100--2026-10-29)) |
+| [Latest released minor version](https://github.com/ksullivan86/kidney-health/releases/latest) | Yes: security fixes are released as patch versions of that minor |
+| Earlier minor versions | No: [upgrade to the latest minor](docs/deployment.md#upgrades), taking a backup and reading its release notes first |
 | `:edge` (builds from `main`) | Best effort; for testing only |
 
 Track the minor tag (`ghcr.io/ksullivan86/kidney-health:0.22`) or a digest you verified, not
