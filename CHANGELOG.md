@@ -11,6 +11,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 * Assistant saves and phone submissions now check access again before saving. A request that was waiting when
   its token ended or access was turned off is refused without saving anything.
+* Saved-meal searches and saves stay with the draft that requested them. A late reply cannot fill another
+  editor, close a newer sheet or take you to an earlier submitted day. Saving holds the fields and prevents
+  another submission until the first finishes; a failed save keeps the open draft.
 
 ## 0.22.2 — 2026-11-06
 

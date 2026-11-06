@@ -649,6 +649,12 @@ Interdialytic interval: `since` is the most recent dialysis weekday on or before
 Only eaten entries count. Include only nutrients that have a numeric target.
 
 ### Saved meals (templates), prefix `/api/meals`
+
+The New/Edit, Add to a day, Save as meal and Copy day sheets keep replies attached to their opening. A late food
+search cannot populate another draft; a completed save or deletion cannot close a newer sheet or navigate
+to its earlier day. Submitted fields are disabled until the write answers, with Close and Cancel still available.
+Reopening allows another draft, but the save button waits for the earlier write to finish, preventing a second
+submission while its outcome is unknown. A failed write restores the submitted draft when it is still open.
 * `GET /api/meals` → `{"meals": [MealTemplate]}` (alphabetical)
 * `POST /api/meals` body `{"name", "note"?, "items": [{"food_id", "servings"}]}` → MealTemplate (201); 404 if a food id is unknown; 400 if items empty.
 * `GET /api/meals/{id}` → MealTemplate; `PUT /api/meals/{id}` (same body) → MealTemplate; `DELETE /api/meals/{id}` → 204.
