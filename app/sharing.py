@@ -415,8 +415,14 @@ def counts(conn: sqlite3.Connection) -> dict[int, int]:
 def end_all(conn: sqlite3.Connection, user_id: int, by: str = "admin") -> int:
     """End every share and link where ``user_id`` is either side (no commit)."""
     now = clock.now_iso()
+    others = conn.execute("SELECT id, owner_user_id, grantee_user_id FROM shares WHERE ended_at IS NULL AND accepted_at IS NOT NULL "
+                          "AND (owner_user_id = ? OR grantee_user_id = ?)", (user_id, user_id)).fetchall()
     cur = conn.execute("UPDATE shares SET ended_at = ?, ended_by = ? WHERE ended_at IS NULL AND (owner_user_id = ? OR grantee_user_id = ?)",
                        (now, by, user_id, user_id))
+    for s in others:  # the other side of each share sees it end in their own activity
+        other = int(s["grantee_user_id"]) if int(s["owner_user_id"]) == user_id else int(s["owner_user_id"])
+        if other != user_id:
+            audit(conn, None, "share.ended", "user", other, share=int(s["id"]), by=by)
     conn.execute("UPDATE care_invites SET answered_at = ?, answer = 'cancelled' WHERE answer IS NULL "
                  "AND (owner_user_id = ? OR invitee_user_id = ?)", (now, user_id, user_id))
     return int(cur.rowcount)
@@ -735,7 +741,7 @@ def accept_share_link(body: ShareCode, request: Request, user: CurrentUser, conn
             conn.execute("UPDATE shares SET ended_at = ?, ended_by = 'replaced' WHERE id = ?", (now, int(old["id"])))
         conn.execute("UPDATE shares SET grantee_user_id = ?, accepted_at = ?, ends_at = ?, code_id = NULL, verifier_hash = NULL, "
                      "expires_at = NULL WHERE id = ?", (user.id, now, ends, int(row["id"])))
-        audit(conn, user.id, "share.accepted", "user", owner_id, ip=request_ip(request), share=int(row["id"]), areas=_areas(row["areas"]),
+        audit(conn, user.id, "share.accepted", "user", owner_id, share=int(row["id"]), areas=_areas(row["areas"]),
               replaced=old is not None, until=ends, role=_role(row))
         conn.commit()
     except BaseException:
@@ -753,7 +759,7 @@ def stop_seeing(share_id: ShareId, request: Request, user: CurrentUser, conn: sq
     if row is None:
         raise HTTPException(status_code=404, detail="share not found")
     conn.execute("UPDATE shares SET ended_at = ?, ended_by = 'grantee' WHERE id = ?", (clock.now_iso(), share_id))
-    audit(conn, user.id, "share.ended", "user", int(row["owner_user_id"]), ip=request_ip(request), share=share_id, by="grantee")
+    audit(conn, user.id, "share.ended", "user", int(row["owner_user_id"]), share=share_id, by="grantee")
     conn.commit()
     return Response(status_code=204)
 
@@ -790,7 +796,7 @@ def _check_share(share_id: int, request: Request, user: User, conn: sqlite3.Conn
         raise ApiProblem(404, NOT_SHARED)
     if (row["last_viewed_at"] or "")[:10] != _today():
         conn.execute("UPDATE shares SET last_viewed_at = ? WHERE id = ?", (clock.now_iso(), share_id))
-        audit(conn, user.id, "share.viewed", "user", owner.id, ip=request_ip(request), share=share_id)
+        audit(conn, user.id, "share.viewed", "user", owner.id, share=share_id)
         conn.commit()
     return owner, row
 

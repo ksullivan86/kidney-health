@@ -5,6 +5,16 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## Unreleased
+
+### Security
+
+* A reset link now removes every passkey on the account, so a passkey someone else added cannot outlive the reset. Add your
+  own again after you sign in.
+* Your activity no longer shows the network a Care team member reads from when they accept, look at or stop a share.
+* When an admin ends someone's sharing, each person on the other side sees it in their own activity too.
+* The share form says that a shared food log includes the note on each entry.
+
 ## 0.22.1 — 2026-11-06
 
 ### Upgrading from 0.22.0

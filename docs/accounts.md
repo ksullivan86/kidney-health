@@ -113,6 +113,8 @@ phished or reused from a leak.
   passkey works only there. Opened by an IP address, Settings says why it cannot add one.
 * A failed passkey sign-in counts against the address like a wrong password. A passkey whose counter goes backwards, a sign of a
   copied key, is refused and shown in the person's activity.
+* **A reset link removes every passkey on the account** (since 0.22.2). If someone else got in and added a passkey, the reset
+  ends it. The person adds their own passkeys again after signing in.
 * Lost or stolen device: the person removes that passkey in Settings, or you remove all of theirs in **Server administration →
   People → Remove passkeys**, or with `python -m app.admin remove-passkeys USERNAME`.
 * When an action asks for the password again (adding a passkey, changing a key, exporting), **Use a passkey instead** answers
@@ -290,6 +292,9 @@ time under **What they may see and do** in their Care team list. Each change is 
   Viewer may have the suggestions switch too, for a coach or dietitian.
 * When the switches match no role, the role shows as **Custom**.
 * Planning, logging, saved meals and suggestions all need the food log. Turning one on asks first, then shares the food log.
+* A shared food log includes the note on each entry. The form says so.
+* The person's activity lists when a Care team member accepted, looked or stopped, without that member's network address (since
+  0.22.2). When an admin ends someone's sharing, each person on the other side of those shares sees it in their own activity too.
 
 Nobody on a Care team ever changes the person's targets, labs, profile, medicines, preferences, AI settings or keys, and nobody
 changes, removes or moves a low treatment, whoever logged it. A Caregiver may log a low treatment as eaten: recording what

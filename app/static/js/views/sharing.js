@@ -437,7 +437,8 @@
       return h('label', { class: 'check', for: id }, box, ` My ${AREA_LABEL[a]}`);
     });
     const lasts = h('select', { id: `${prefix}-days` }, ...DAY_CHOICES.map(([v, label]) => h('option', { value: v }, label)));
-    const nodes = [h('fieldset', {}, h('legend', {}, 'Role'), roles), h('fieldset', {}, h('legend', {}, 'What they can see'), boxes),
+    const nodes = [h('fieldset', {}, h('legend', {}, 'Role'), roles), h('fieldset', {}, h('legend', {}, 'What they can see'), boxes,
+        h('p', { class: 'hint', id: `${prefix}-notes-hint` }, 'Your food log includes the note on each entry.')),
       h('label', { class: 'label', for: `${prefix}-days` }, 'For how long'), lasts];
     const read = (form) => {
       const role = (ROLES.find((r) => $(`#${prefix}-role-${r}`, form).checked)) || 'viewer';

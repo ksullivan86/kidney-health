@@ -19,7 +19,7 @@ from starlette.concurrency import run_in_threadpool
 from .. import brand, settings_registry
 from ..audit import audit
 from ..db import get_db
-from . import api_tokens, clock, passwords, sessions, tokens, totp
+from . import api_tokens, clock, passkeys, passwords, sessions, tokens, totp
 from .accounts import (
     PasswordRejected,
     check_local_username,
@@ -522,6 +522,10 @@ def reset(body: ResetBody, request: Request, response: Response, conn: sqlite3.C
     else:
         via = "reset_link"
     audit(conn, user_id, "user.password_changed", "user", user_id, ip=ip, via=via, issued_by=token["created_by"])
+    # A reset link is how an account comes back after someone else got in: a passkey they added must not outlive it.
+    removed = passkeys.remove_all(conn, user_id)
+    if removed:
+        audit(conn, user_id, "passkey.removed", "user", user_id, ip=ip, via=via, count=removed)
     if totp.is_enabled(conn, user_id):
         # A link must not skip the second step (note 17 §5): the person signs in with the new password and a code.
         conn.commit()

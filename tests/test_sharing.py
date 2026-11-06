@@ -392,3 +392,25 @@ def test_the_audit_rows_hold_no_link_or_code(people):
         text = " ".join(str(tuple(r)) for r in conn.execute("SELECT * FROM audit_log WHERE action LIKE 'share.%'"))
     assert code_of(made).split(".")[1] not in text and code_of(made).split(".")[0] not in text
 
+
+
+def test_an_admins_end_sharing_shows_on_both_sides(people):
+    # The owner's choice (2026-11-06): the other side of each ended share sees it in their own activity too.
+    ana, sam, kim = people
+    share(kim, sam)
+    sam_id = sam.get("/api/me").json()["id"]
+    assert ana.delete(f"/api/admin/users/{sam_id}/shares").json() == {"ended": 1}
+    kim_events = [e for e in kim.get("/api/me/activity").json()["events"] if e["action"] == "share.ended"]
+    sam_events = [e for e in sam.get("/api/me/activity").json()["events"] if e["action"] == "share.ended"]
+    assert len(kim_events) == 1 and len(sam_events) == 1
+
+
+def test_the_owners_activity_does_not_show_where_the_grantee_reads_from(people):
+    # The owner's choice (2026-11-06): rows a grantee writes land in the owner's activity, so they keep no network.
+    ana, sam, _ = people
+    sid = share(ana, sam)
+    assert sam.get(f"/api/shared/{sid}/log", params={"date": date.today().isoformat()}).status_code == 200
+    assert sam.delete(f"/api/shared/{sid}").status_code in (200, 204)
+    rows = [r for a in ("share.accepted", "share.viewed", "share.ended") for r in audit_rows(ana, a)]
+    assert {r["action"] for r in rows} == {"share.accepted", "share.viewed", "share.ended"}
+    assert all(r["ip_prefix"] is None for r in rows)

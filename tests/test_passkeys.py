@@ -427,3 +427,18 @@ def test_a_reentry_challenge_is_not_a_sign_in_challenge(client: TestClient) -> N
     r = TestClient(client.app).post("/api/auth/passkey", json={"challenge_id": opts["challenge_id"], "credential": assertion_json(pk, raw)})
     assert r.status_code == 401
     assert TestClient(client.app).post("/api/auth/reauth/passkey/options").status_code == 401  # signed in only
+
+
+def test_a_reset_link_removes_the_passkeys(pair: tuple[TestClient, TestClient]) -> None:
+    # The owner's choice (2026-11-06): someone who got in may have added a passkey; a reset link must end it.
+    admin, sam = pair
+    pk, _ = add_passkey(sam)
+    sid = sam_id(admin)
+    url = admin.post(f"/api/admin/users/{sid}/reset-link").json()["url"]
+    person = TestClient(admin.app, base_url=base(admin))
+    r = person.post("/api/auth/reset", json={"token": url.split("/#/reset/")[1], "password": "a new pass phrase for sam 2026"})
+    assert r.status_code == 200, r.text
+    assert sign_in_with(admin.app, pk, base(admin)).status_code == 401
+    assert person.get("/api/me/passkeys").json()["passkeys"] == []
+    details = [d for a, d in audit_rows(admin.app) if a == "passkey.removed"]
+    assert len(details) == 1 and '"via":"admin_reset_link"' in details[0] and '"count":1' in details[0]
