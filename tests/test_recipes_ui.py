@@ -22,7 +22,7 @@ def test_the_editor_has_labelled_fields_for_makes_link_and_steps():
     for field in ("meal-makes", "meal-source", "meal-steps"):
         assert f'id="{field}"' in INDEX and f'for="{field}"' in INDEX, field
     assert 'id="meal-source" type="url"' in INDEX and "never opens it" in INDEX
-    body = PLAN[PLAN.index("const makes = $('#meal-makes')"):PLAN.index("mealEd.busy = true")]
+    body = PLAN[PLAN.index("sheets.onSubmit($('#meal-form')"):PLAN.index("$('#meal-delete').addEventListener")]
     assert "servings_made" in body and "steps" in body and "source_url" in body
 
 
