@@ -30,22 +30,29 @@
   const dlg = $('#sheet-recipe-import');
   if (!dlg) return;
   sheets.setup(dlg);
-  const st = { step: 'source', info: null, draft: null, rows: [], onSaved: null, busy: false, search: 0 };
+  let st = null; // each opening owns its in-flight reads and save callback
+  const current = (session, turn = session.turn) => st === session && dlg.open && session.turn === turn;
 
   function goButton(text, disabled = false) { const b = $('#recipe-import-go'); b.textContent = text; b.disabled = disabled; }
 
   async function open({ trigger, onSaved } = {}) {
-    st.onSaved = onSaved || null;
-    st.draft = null; st.rows = [];
-    try { st.info = await A.info(); } catch (e) { st.info = { web: false, estimate: '' }; }
+    const session = st = { step: 'source', info: null, draft: null, rows: [], onSaved: onSaved || null, busy: false, turn: 0 };
+    clear($('#recipe-import-body')).append(h('p', { class: 'muted' }, 'Loading…'));
+    $('#recipe-import-back').hidden = true;
+    $('#recipe-import-back').disabled = false;
+    goButton('Read ingredients', true);
+    sheets.open(dlg, trigger, $('[data-close]', dlg));
+    try { session.info = await A.info(); } catch (e) { session.info = { web: false, estimate: '' }; }
+    if (!current(session)) return;
     showSource();
-    sheets.open(dlg, trigger, st.info.web ? $('#ri-url') : $('#ri-text'));
+    (st.info.web ? $('#ri-url') : $('#ri-text')).focus();
   }
 
   // ---------------------------------------------------------------------------
   // Step 1: where the recipe comes from
   // ---------------------------------------------------------------------------
   function showSource() {
+    st.turn += 1;
     st.step = 'source';
     $('#recipe-import-back').hidden = true;
     $('#sheet-recipe-import-sub').textContent = 'From a recipe page, or from ingredients you paste.';
@@ -76,10 +83,18 @@
   async function readPage(url, btn) {
     if (!url) { toast('Paste the link of a recipe page', 'error'); $('#ri-url').focus(); return; }
     if (st.busy) return;
+    const session = st, turn = st.turn;
     st.busy = true; btn.disabled = true; btn.textContent = 'Reading…';
-    try { showReview(await A.page(url)); } catch (err) { if (!err.handled) toastError(err); } finally { st.busy = false; btn.disabled = false; btn.textContent = 'Read the page'; }
+    try {
+      const draft = await A.page(url);
+      if (current(session, turn)) showReview(draft);
+    } catch (err) { if (current(session, turn) && !err.handled) toastError(err); } finally {
+      session.busy = false; btn.disabled = false; btn.textContent = 'Read the page';
+      if (current(session) && st.step === 'review') update();
+    }
   }
   async function readText() {
+    const session = st, turn = st.turn;
     const text = $('#ri-text').value.trim();
     if (!text) { toast('Paste the ingredients, one on each line', 'error'); $('#ri-text').focus(); return; }
     const makes = Number($('#ri-makes').value);
@@ -89,13 +104,22 @@
       body.servings = makes;
     }
     st.busy = true; goButton('Reading…', true);
-    try { showReview(await A.text(body)); } catch (err) { if (!err.handled) toastError(err); goButton('Read ingredients'); } finally { st.busy = false; }
+    try {
+      const draft = await A.text(body);
+      if (current(session, turn)) showReview(draft);
+    } catch (err) {
+      if (current(session, turn)) { if (!err.handled) toastError(err); goButton('Read ingredients'); }
+    } finally {
+      session.busy = false;
+      if (current(session) && st.step === 'review') update();
+    }
   }
 
   // ---------------------------------------------------------------------------
   // Step 2: check every line
   // ---------------------------------------------------------------------------
   function showReview(draft) {
+    st.turn += 1;
     st.step = 'review';
     st.draft = draft;
     st.rows = draft.lines.map((line) => {
@@ -173,16 +197,19 @@
   }
 
   function searchBox(row, i, redraw) {
+    const session = st, turn = st.turn;
+    let search = 0; // each ingredient row has its own requests
     const input = h('input', { id: `ri-search-${i}`, class: 'search-input', type: 'search', placeholder: 'Search foods', autocomplete: 'off',
       'aria-label': `Search for “${row.line.text}”` });
     const ul = h('ul', { class: 'list compact-list', 'aria-label': 'Search results' });
     const run = async () => {
+      if (!current(session, turn) || !input.isConnected) return;
       const q = input.value.trim();
-      const req = ++st.search;
+      const req = ++search;
       if (!q) { clear(ul); return; }
       try {
         const res = await api.foods({ q, limit: 6 });
-        if (req !== st.search) return;
+        if (req !== search || !current(session, turn) || !input.isConnected) return;
         clear(ul);
         const foods = res.foods || [];
         if (!foods.length) ul.append(h('li', { class: 'empty-state' }, 'No foods match.'));
@@ -190,6 +217,7 @@
           const b = h('button', { class: 'row-btn compact', type: 'button' }, ratingIcon(f.kidney_rating, { decorative: true }),
             h('div', { class: 'row-main' }, h('div', { class: 'row-title' }, f.name), h('div', { class: 'row-sub' }, f.serving_desc)));
           b.addEventListener('click', () => {
+            if (!current(session, turn) || !input.isConnected || st.busy) return;
             let k = row.options.findIndex((o) => o.id === f.id);
             if (k < 0) { row.options.push(f); k = row.options.length - 1; }
             row.choice = k;
@@ -200,11 +228,11 @@
           });
           ul.append(h('li', {}, b));
         }
-      } catch (err) { if (req === st.search) toastError(err); }
+      } catch (err) { if (req === search && current(session, turn) && input.isConnected) toastError(err); }
     };
     input.addEventListener('input', debounce(run, 200));
     input.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); run(); } });
-    setTimeout(() => input.focus(), 0);
+    setTimeout(() => { if (current(session, turn) && input.isConnected) input.focus(); }, 0);
     return h('div', { class: 'field ri-search' }, input, ul);
   }
 
@@ -247,10 +275,11 @@
     const allChecked = st.rows.every((r) => r.checked);
     const bad = included().some((x) => x.row.servings == null || !(x.row.servings > 0));
     const ready = allChecked && !bad && inc.length > 0 && $('#ri-review-name').value.trim();
-    goButton(ready ? 'Save recipe' : `Check every line (${st.rows.filter((r) => r.checked).length} of ${st.rows.length})`, !ready);
+    goButton(st.busy ? 'Saving…' : ready ? 'Save recipe' : `Check every line (${st.rows.filter((r) => r.checked).length} of ${st.rows.length})`, !ready || st.busy);
   }
 
   async function save() {
+    const session = st, turn = st.turn, onSaved = st.onSaved;
     const name = $('#ri-review-name').value.trim();
     const inc = included();
     const left = st.rows.filter((r) => typeof r.choice !== 'number');
@@ -259,18 +288,28 @@
     const body = { name, note, items: inc.map(({ row, food }) => ({ food_id: food.id, servings: row.servings })), servings_made: makes(),
       steps: st.draft.steps.length ? st.draft.steps : null, source_url: st.draft.source_url || null };
     st.busy = true; goButton('Saving…', true);
+    const controls = [...$('#recipe-import-body').querySelectorAll('input, select, textarea, button')];
+    controls.forEach((el) => { el.disabled = true; });
+    $('#recipe-import-back').disabled = true;
     try {
       const t = await api.createMeal(body);
-      dlg.close();
+      if (current(session, turn)) dlg.close();
       toast(`Saved “${t.name}”`, 'ok');
-      if (st.onSaved) await st.onSaved(t);
-    } catch (err) { if (!err.handled) toastError(err); update(); } finally { st.busy = false; }
+      if (onSaved) await onSaved(t);
+    } catch (err) { if (current(session, turn) && !err.handled) toastError(err); } finally {
+      session.busy = false;
+      if (current(session, turn)) {
+        controls.forEach((el) => { el.disabled = false; });
+        $('#recipe-import-back').disabled = false;
+        update();
+      }
+    }
   }
 
-  $('#recipe-import-back').addEventListener('click', () => { showSource(); const f = st.info.web ? $('#ri-url') : $('#ri-text'); if (f) f.focus(); });
+  $('#recipe-import-back').addEventListener('click', () => { if (!st || st.busy) return; showSource(); const f = st.info.web ? $('#ri-url') : $('#ri-text'); if (f) f.focus(); });
   sheets.onSubmit($('#recipe-import-form'), (e) => {
     e.preventDefault();
-    if (st.busy) return;
+    if (!st || !dlg.open || !st.info || st.busy) return;
     if (st.step === 'source') readText(); else save();
   });
 

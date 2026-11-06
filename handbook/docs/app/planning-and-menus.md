@@ -134,6 +134,10 @@ See [Optional AI](ai.md) for what is sent and where.
 **Plan** → **Saved meals** → **Import a recipe** turns a recipe you found into a saved recipe the app can count
 ([design note 30][NOTE30]).
 
+You can close the sheet while it loads. An older reply will not replace a new import you start. During Save, the fields stay
+disabled until saving finishes. If it fails, your checked choices stay for another try. If you close and start another import,
+the first save can still finish, but it will not close the new sheet.
+
 1. **Paste the ingredients**, one on each line, with how many servings the recipe makes. This always works, and nothing leaves
    your server. If your server can read recipe pages, you can paste the **link of a recipe page** instead: your server opens
    the page (your phone does not), reads its ingredients and steps, and keeps only the link.

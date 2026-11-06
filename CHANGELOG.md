@@ -17,6 +17,10 @@ the API. Security fixes are released as patch versions of the newest minor versi
   again also stops an old sync from importing the previous account's data or replacing or clearing the new sign-in.
 * Turning devices off or disabling an account now stops imports that were already waiting for a reply. A fetched batch's
   readings, activity, import record and sync cursor are saved together, so a failed save leaves no partial batch.
+* Recipe import keeps late loading replies and save results with the draft that requested them. Reopening no longer loses
+  new typing or closes the new sheet when an earlier save finishes. Failed saves keep the checked draft for another try.
+* Food searches in different ingredient lines now work independently. A reply or error for a line you have left no longer
+  interrupts the current choice. Review fields stay disabled while saving.
 
 ### Security
 

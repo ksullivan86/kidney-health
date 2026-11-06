@@ -124,6 +124,7 @@ python3 tools/e2e/test_accounts.py            # test accounts: Send feedback, th
 python3 tools/e2e/lists_recipes.py            # list sync and recipe import: a page, pasted lines, a fake Grocy, the demo; port 8110
 python3 tools/e2e/instacart.py                # open the shopping list at Instacart: a fake Instacart, the new tab, the demo; port 8112
 python3 tools/e2e/shopping_late_replies.py    # both shopping sheets: delayed previews and sends, reopen, lock and retry; port 8113
+python3 tools/e2e/recipe_import_late_replies.py  # recipe import: delayed parses/searches/saves and reopening; port 8114
 python tools/e2e/a11y.py                      # keyboard, names, 200 % text and contrast on every main screen and sheet; port 8099; --only 375-light --parts keyboard
 python tools/e2e/boot_fail.py                 # "The app did not start" with a script blocked, stalled or throwing; port 8191; --repo DIR for another checkout
 python tools/e2e/device.py                     # add --only outbox,live for some sections

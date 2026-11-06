@@ -4898,6 +4898,10 @@ for another food…", "Leave this out"), servings (empty when unknown) and **Che
 One serving's key numbers ("≥", "not listed"; a missing value is never 0), the warnings for one serving
 (`KH.rules.evaluateWarnings` over the chosen foods, additive flags, each food's `avoid_ckd` note; carbohydrate left out only when
 every counted food is a low treatment), and the fixed estimate sentence. Lines left out go into the note ("Not counted: …").
+Each opening owns its capability read, draft requests and save callback. Closing or reopening drops old read replies and
+errors; an issued save still completes and refreshes its original caller, but cannot close or alter the newer sheet. Controls
+stay disabled while saving; failure restores the same checked draft. Searches are ordered per ingredient row, so independent
+rows do not discard each other's results; an abandoned search cannot report an error over another choice.
 The demo answers any link with a sample page (`js/mock/lists.js`). Tests: `tests/test_recipe_import.py`,
 `tests/test_lists_recipes_ui.py`, `tools/e2e/lists_recipes.py`.
 
