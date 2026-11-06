@@ -42,6 +42,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
   their save is waiting; Close and Cancel still work.
 * Simultaneous USDA imports reuse the same shared food instead of creating separate copies. Assistant saves still roll back
   their food additions and links if any part fails.
+* Food-entry and Quick add replies keep newer drafts intact. Reopening no longer permits a duplicate entry write while an
+  earlier save or deletion waits. Old serving-size replies and offline conflicts cannot replace the next draft or take you
+  away from it. Submitted entry controls stay fixed while Close remains available.
 
 ## 0.22.2 — 2026-11-06
 

@@ -106,6 +106,10 @@ The product is stored once on the server, read-only, and appears in your food se
 To change it, make an editable copy of it; the copy keeps the barcode (and the attribution) and is what
 you get next time.
 
+Closing the food-entry or Quick add sheet does not cancel a save you already sent. If you reopen it, the new draft keeps its
+own values and errors; an old reply cannot close it or take you to another view. Save waits for the earlier request to finish.
+Submitted entry controls stay fixed during a save or deletion, while Close remains available.
+
 ### What you see, and how far to trust it
 
 * **"Potassium: not listed"** and **"Phosphorus: not listed"** instead of 0. Most packaged foods do not
