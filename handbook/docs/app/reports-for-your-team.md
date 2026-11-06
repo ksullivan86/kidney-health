@@ -81,6 +81,8 @@ choose **Mild**, **Moderate** or **Severe**, and add a note if you like, for exa
 Symptoms** lists what you recorded in the days on screen: for each symptom the number of days, the worst
 severity and the dates, so you can show your care team how it went. The export has them too (`symptoms.csv` and
 `export.json`), and they need your connection to the server: they are not saved while you are offline.
+While a symptom saves, its fields stay fixed. Close or Cancel still closes the sheet; a save you already submitted may finish
+afterward. Its late reply cannot close your next draft. You can type that draft while Save waits for the earlier save.
 
 The app records and shows them. **It does not say what a symptom means, what causes it or what to do about
 it**; that is for your care team. Two symptoms are different, because the [Get help now](../get-help-now.md)

@@ -5,6 +5,13 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## Unreleased
+
+### Fixed
+
+* A late symptom save or refusal leaves your next draft open and keeps its values and errors intact. Fields stay fixed while
+  their save is waiting; Close and Cancel still work.
+
 ## 0.22.2 — 2026-11-06
 
 ### Upgrading from 0.22.1
