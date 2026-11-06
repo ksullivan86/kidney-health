@@ -25,5 +25,7 @@ Focused new browser walk: all 36 checks pass at 375 light / 1280 dark, including
 commits. It ignores only the deliberately injected 422 console responses at their exact API paths. Full
 browser rerun started before this harness-only adjustment; rerun it after completion if needed. Ruff,
 parity/OpenAPI/generated checks pass; strict handbook running.
-Next: finish checks/browser, commit/push own files, draft PR, complete full-suite validation and mark ready.
+Full body.py browser walk now passes all 414 checks, including the held cases in three real-account
+contexts, all original demo/dialysis flows, CSP and layout checks. Strict handbook passes. PR #162 is
+draft/unmerged while full pytest runs. Next: finish full-suite validation, update PR and mark ready.
 Logs: `/workspace/work/body-editor-audit/`.
