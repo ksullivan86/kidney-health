@@ -377,7 +377,9 @@ Every target may be a number, `{"min","max"}`, or `null` (= not tracked).
 * `POST /api/foods/usda/import` body `{"fdc_id": 173944}` → Food (source `usda`, serving 100 g unless
   the USDA record supplies a household portion; nutrients mapped by USDA nutrient numbers:
   208/1008 kcal, 203/1003 protein, 204/1004 fat, 606/1258 sat fat, 205/1005 carbs, 291/1079 fiber,
-  269/2000 sugar, 307/1093 sodium, 306/1092 potassium, 305/1091 phosphorus, 301/1087 calcium, 255/1051 water)
+  269/2000 sugar, 307/1093 sodium, 306/1092 potassium, 305/1091 phosphorus, 301/1087 calcium, 255/1051 water).
+  Shared USDA upserts reserve a write lock before looking up the FDC id, so simultaneous imports reuse one row. The helper
+  starts a write transaction only when the caller has none and never commits a surrounding assistant save.
 
 ```json
 Food = {

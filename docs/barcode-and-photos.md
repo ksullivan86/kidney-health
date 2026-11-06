@@ -178,6 +178,10 @@ barcode reader and no camera: type the digits.
 
 ### Privacy
 
+Simultaneous USDA imports reuse one shared food row for that FoodData Central record, including imports through Search USDA,
+barcodes or an assistant save. Each person's link to it remains separate. The shared-food helper does not commit an
+assistant's wider save; if that save fails, its food additions and links roll back with it.
+
 * The server stores the product data it fetched in a shared cache (`barcode_cache`) and the product
   itself as a shared food row. **Which products you scanned** is stored only as your link to that row; it
   is deleted with your account and is in your export.

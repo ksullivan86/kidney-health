@@ -40,6 +40,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
   returns a clear response instead of a server error.
 * A late symptom save or refusal leaves your next draft open and keeps its values and errors intact. Fields stay fixed while
   their save is waiting; Close and Cancel still work.
+* Simultaneous USDA imports reuse the same shared food instead of creating separate copies. Assistant saves still roll back
+  their food additions and links if any part fails.
 
 ## 0.22.2 — 2026-11-06
 
