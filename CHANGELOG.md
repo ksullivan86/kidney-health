@@ -24,6 +24,10 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * Care team: Clear planned days now clears exactly the dates shown in its confirmation, even if the date fields change.
 * A Care team plan preview cannot be resent after an interrupted batch. Review the current plan before making another, so
   food already added is not duplicated by retrying the same preview.
+* List apps: a late connection test no longer overwrites a newer list choice. Test and Send no longer crash if the connection
+  was removed while they waited. The app explains that the previous send may have finished and asks you to check before retrying.
+* A send to the previous connection no longer marks a new list as sent. Changing the list, address or key clears the old
+  destination's last-send notice, on the server and in the demo.
 
 ### Security
 

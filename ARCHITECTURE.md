@@ -4867,6 +4867,12 @@ opening another week drops their UI updates. A send already issued may finish af
 so reopening or changing a checkbox cannot start another send in the meantime. Tests: `tests/test_list_sync.py` (fakes of the three apps behind the real transport,
 `tests/lists_support.py`), `tests/test_lists_recipes_ui.py`, `tests/js/lists_recipes_demo.mjs`.
 
+List-app Test and Send use a connection snapshot during the network call, then check the configuration again under a write
+transaction. A changed/removed connection or switched-off feature answers 409 with `reason: connection_changed`; old Test
+results cannot change the new list. An issued Send may still finish at the previous list. Its confirmed count is returned as
+`sent` with the conflict and audited, but is never written as the new list's receipt. The person checks the previous list
+before sending again. Changing app, address, key or chosen list clears the previous destination's last-send receipt.
+
 ## Recipe import (design note 30)
 
 A recipe from pasted ingredients (always) or from a web page the server reads (`recipes.import_enabled`,

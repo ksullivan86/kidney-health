@@ -74,6 +74,7 @@ CONFLICT: frozenset[str] = frozenset({
     "me_passkey_creation_options", "me_add_passkey", "auth_passkey_reauth_options",
     "me_create_share_link", "shared_accept_share_link", "me_invite_by_username", "shared_accept_invite",
     "shared_send_suggestion", "me_accept_suggestion",
+    "list_sync_test_list_sync", "list_sync_send",
 })
 UNSUPPORTED_MEDIA: frozenset[str] = frozenset({
     "vision_read_label", "vision_plate", "vision_read_lab_report", "ai_transcribe", "me_import_my_data", "push_body",
