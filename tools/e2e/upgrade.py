@@ -120,8 +120,13 @@ def compare(area: str, before: dict[str, Any], api: Api, custom: str) -> None:
           json.dumps({k: after["profile"].get(k) for k in keys})[:300])
     check(area, "the new profile fields start empty", after["profile"].get("birth_month") is None and after["profile"].get("sex") == "unspecified"
           and after["profile"].get("activity") is None)
-    strip = lambda m: {k: v for k, v in m.items() if k not in ("updated_at", "meal_hint")}  # noqa: E731
-    check(area, "saved meals unchanged", [strip(m) for m in after["meals"]] == [strip(m) for m in before["meals"]])
+    # Compare what the old version answered; fields added to the answer later (meal_hint, per_serving from recipes in 0.7,
+    # unknown counts from 0.11) are derived, not stored data that an upgrade could change.
+    old_keys = set().union(*(m.keys() for m in before["meals"])) - {"updated_at"} if before["meals"] else set()
+    strip = lambda m: {k: v for k, v in m.items() if k in old_keys}  # noqa: E731
+    changed = sorted({k for a, b in zip(after["meals"], before["meals"]) for k in set(strip(a)) | set(strip(b)) if strip(a).get(k) != strip(b).get(k)})
+    check(area, "saved meals unchanged", [strip(m) for m in after["meals"]] == [strip(m) for m in before["meals"]],
+          f"changed keys: {changed}; before {json.dumps(before['meals'])[:300]}; after {json.dumps(after['meals'])[:300]}")
     check(area, "saved meals have no meal_hint yet", all(m.get("meal_hint") is None for m in after["meals"]))
     old_rows, new_rows = before["csv"].splitlines(), after["csv"].splitlines()
     check(area, "CSV: the same rows, with the v0.3 columns added at the end", len(old_rows) == len(new_rows)

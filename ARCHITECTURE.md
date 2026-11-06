@@ -1093,7 +1093,9 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
 
-**Status (2026-11-06): v0.22.1 is prepared.** Fixes for answers that arrive late: the shopping sheets, connected devices, recipe
+**Status (2026-11-06): v0.22.2 is prepared.** The owner's four choices from the sharing and passkey review (a reset link removes
+passkeys; no Care team member's network in the owner's activity; an admin's End sharing on both sides; the note line on the share
+form), checkbox rows that wrap at 200 % text, and `tools/e2e/everything.py`, every recent feature on at once. **v0.22.1**: fixes for answers that arrive late: the shopping sheets, connected devices, recipe
 import, Care team plans and list-app settings each keep a late reply with the request that made it, and new base images.
 **v0.22.0**: open the shopping list at Instacart (note 33): off by default, with
 `INSTACART_ENABLED` and the server's key in `INSTACART_API_KEY_FILE`; only the food names and amounts leave the server. See
@@ -1240,7 +1242,7 @@ most 10 flows wait per address (per person for link and re-entry) across provide
 | `POST /api/auth/login` | public | `{username, password, code?}` → `{user: Me, notice}` + cookies; with two-step sign-in on (note 17 §5), the right password and no `code` is a 401 `{detail, totp_required: true, field: "code"}` that is not counted, a wrong code the same 401 counted as a failed sign-in (audit `login.failed` with `via: "code"`), and a recovery code signs in once with a `notice` saying how many are left; 401 `{"detail": "Username or password is incorrect"}`, 429, 400 HTTPS required. 404 in proxy/none mode. With `OIDC_ONLY`, 403 `{detail, oidc_only: true}` before any work for every name but a test account's (the same answer for an unknown name; note 24 §13.2). `notice` (N12): "Your password was reset with a link from an admin on …" once, at the first password sign-in after an admin's reset link changed the password (compared with the newest `login.succeeded` audit event, not `last_login_at`, which the reset's own sign-in updates) |
 | `POST /api/auth/logout` | user | → `{ok: true, redirect?}` (proxy: `PROXY_LOGOUT_URL`); deletes the session, expires both cookie names, `Clear-Site-Data: "cache", "storage"` |
 | `POST /api/auth/register` | public + invite token (or open mode) | `{token?, username, display_name?, password}` → 201 `{user: Me}`, signed in. 403 closed/no invite, 400 bad token, 409 username taken; 403 `{oidc_only: true}` with `OIDC_ONLY` (an invite is redeemed with a provider) |
-| `POST /api/auth/reset` | public + reset token | `{token, password}` → `{user: Me}`; claims the single-use link first (two racing requests: one 200, one 400), signs out every other session, voids the account's other open links, clears `locked`, activates a new account. With two-step sign-in on it sets the password but does not sign in: `{user: null, totp_required: true}` |
+| `POST /api/auth/reset` | public + reset token | `{token, password}` → `{user: Me}`; claims the single-use link first (two racing requests: one 200, one 400), signs out every other session, voids the account's other open links, removes every passkey (audit `passkey.removed`, the owner's choice of 2026-11-06), clears `locked`, activates a new account. With two-step sign-in on it sets the password but does not sign in: `{user: null, totp_required: true}` |
 | `POST /api/auth/reset/info` | public + reset token | `{token}` → `{username, display_name, new_account, expires_at}` for the page the link opens (the owner of an admin-created account never saw its username); 400 (counts as a per-IP failure) when the link is not valid. 404 in proxy/none mode |
 | `POST /api/auth/passkey/options` | public | → `{challenge_id, publicKey: {challenge, rpId, timeout, userVerification: "required", allowCredentials: []}}` for `navigator.credentials.get`; a single-use challenge for 5 minutes, kept in memory. 30 a minute per address (`passkey_options`); the per-address sign-in block and HTTPS rule apply. 404 in proxy/none mode (note 18 §5) |
 | `POST /api/auth/passkey` | public | `{challenge_id, credential}` (the `PublicKeyCredential.toJSON()` of the answer) → `{user: Me, notice}` + cookies, as a password sign-in but without the two-step code. Every failed check is the same 401 `"That passkey did not work. Try again, or sign in with your password."`, counted against the address (audit `login.failed` with `via: "passkey"` when the passkey is known); a signature counter that did not go up is refused and audited `passkey.counter_went_back`. Success: audit `login.succeeded` with `via: "passkey"`. 404 in proxy/none mode |
@@ -4409,6 +4411,8 @@ it, then reads the areas the owner ticked. Every route needs a session and answe
   stored (`hmac.compare_digest`). Accepting clears the link's fields, so it works once.
 * **Activity.** The first read of a share each UTC day sets `last_viewed_at` and writes `share.viewed`. Rows that concern the owner
   target the owner (`target_type: user`), so they land in the owner's activity; the owner's own actions target the share.
+  Rows a grantee writes there (`share.accepted`, `share.viewed`, `share.ended` by the grantee) keep no `ip_prefix`. An admin's
+  End sharing also writes `share.ended` (`by: admin`) for the other side of each accepted share (the owner's choices, 2026-11-06).
 * **Shared day loading.** The shared food-day read starts when the Visit page opens, independently of other summary reads.
   A per-box request guard discards older success and failure replies when changing date or person. Failure offers Retry for
   that person and date. Separate day boxes can load independently.
@@ -5021,7 +5025,7 @@ Signed in only (`current_user`; an anonymous caller gets the generic `401`, so a
 (`no-store` like every `/api` answer). The answer:
 
 ```json
-{"app_version": "0.22.1", "api_version": 1,
+{"app_version": "0.22.2", "api_version": 1,
  "capabilities": {"ai": false, "ai_next_meal": false, "ai_parse_meal": false, "ai_label": false, "ai_plate": false, "ai_lab_report": false,
                   "chat": false, "voice": false, "assistant": false, "push": false,
                   "barcode": false, "barcode_off": false, "barcode_usda": false, "handbook": false},

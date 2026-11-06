@@ -165,9 +165,10 @@ def walk_sharing(page: Any) -> None:
     open_settings(page, "#set-sharing-list")
     held: list[Any] = []
     page.route("**/api/me/shares", lambda route: held.append(route) if route.request.method == "GET" else route.continue_())
-    page.get_by_role("button", name="Stop sharing with bob").click()
-    page.locator("#set-sharing-list").get_by_role("button", name="Stop sharing", exact=True).click()
+    page.get_by_role("button", name="Remove bob from your Care team").click()  # "Stop sharing" until the Care team (0.14)
+    page.locator("#set-sharing-list").get_by_role("button", name="Remove", exact=True).click()
     wait_for(page, held, 1)
+    page.locator("#set-share-form summary").click()  # Make a link sits under "Make a link instead"
     page.click("#set-sharing-make")
     wait_for(page, held, 2)
     held[1].continue_()  # the load after Make a link answers first

@@ -146,7 +146,8 @@ assistant tokens keep working.
 
 A passkey lets you sign in with your fingerprint, your face or your phone's PIN, with no password and no code to type. The
 passkey stays on your phone or computer, and it only works on your own server's address, so nobody can guess it or trick you
-into typing it on a fake page ([design note 18][NOTE18]). Your password keeps working too.
+into typing it on a fake page ([design note 18][NOTE18]). Your password keeps working too. If you set a new password with a reset
+link, your passkeys are removed, in case someone else added one. Add yours again after you sign in.
 
 To add one:
 
@@ -195,7 +196,8 @@ To add someone:
    Send it only to them: whoever opens it first can accept it.
 
 They never see your recipes, your food preferences, your AI settings, your keys or your sign-in activity, and they see your saved
-meals only if you turn that on. They see the weight in your profile only if you shared weight and blood pressure.
+meals only if you turn that on. They see the weight in your profile only if you shared weight and blood pressure. If you share your
+food log, they also see the note you wrote on each entry.
 
 - **Your Care team** lists each person, their role and what they may do, until when, when they last looked, and what they changed
   in your plan or logged that day. Change the role in the list, or open **What they may see and do** and change one switch.
