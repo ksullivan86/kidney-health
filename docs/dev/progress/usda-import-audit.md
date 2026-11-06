@@ -1,18 +1,21 @@
-Status: in progress
+Status: complete
 
-Branch `audit/usda-import-concurrency`, main `cea3c94`. Keep PR unmerged.
+Branch audit/usda-import-concurrency, main cea3c94. PR #166 ready for review; keep unmerged.
 
-USDA's shared-row helper SELECTs an existing record then inserts if absent without reserving a write lock.
-Unlike builtin and OFF keys there is no unique USDA FDC index. Confirmed duplicate food copies with held
-real route inserts, across same/different people and API versus an existing assistant-style transaction.
-Also require rollback of the shared food/link and earlier caller work: a helper fix must never commit a
-caller's surrounding transaction. Six cases use the existing mock USDA fixture, no network.
-After correcting the multi-account fixture to use HTTPS, clean main fails all4 concurrent cases on
-different returned food ids and passes2 rollback cases. All6 pass with the fix: reserve BEGIN IMMEDIATE
-only when there is no active transaction, before looking up the FDC id; never commit caller work. Initial
-plain-HTTP failures were harness setup errors, not product evidence. Docs/handbook/changelog updated.
-Broader API/isolation/MCP/Ask suite: 200 passed. Separate transactional MCP-write suite: 77 passed.
-Ruff, OpenAPI, generated handbook and Node parity pass; strict handbook passes. Full pytest is running (session59179); next create a draft PR, finish
-full-suite verification, then mark ready without merging. New tests use TMPDIR under /workspace/work/
-pytest-scratch because concurrent earlier full runs exhausted the separate /tmp disk. Next: finish checks,
-checkpoint/push and draft PR; complete validation and mark ready unmerged. Logs: `/workspace/work/usda-import-audit/`.
+Confirmed: simultaneous imports could create different shared food ids for the same USDA record. Six
+real-route/transaction cases cover same/different people and an API import overlapping an assistant-style
+write, plus rollback of shared food/link and earlier caller work. Corrected HTTPS baseline: four concurrent
+cases fail on different returned ids, two rollback cases pass; fixed six pass. Earlier plain-HTTP setup
+failures were not product evidence and were explicitly corrected before the valid reproduction.
+
+The shared-row helper reserves BEGIN IMMEDIATE before looking up the FDC id only when the caller has no
+transaction. Existing write transactions retain ownership; no caller work is committed by the helper.
+Upstream requests and mapping stay outside the new lock. No schema, matching/mapping values, clinical
+rules or API fields changed. Architecture, food/barcode guide, handbook and changelog updated.
+
+Broader API/isolation/MCP/Ask suite: 200 passed. Separate transactional MCP-write suite: 77 passed. Ruff,
+OpenAPI, generated pages, Node parity and strict handbook pass. Full local pytest: 7392 passed, 2 skipped,
+with the two existing handbook citation warnings, in 1875.71s. This clean run used workspace scratch files.
+Complete CI run 42279711531 at functional commit 768e86c also passes, including its Python matrix, native
+iOS/Swift, handbook and image checks. No branch or PR was merged.
+Logs: /workspace/work/usda-import-audit/, especially baseline-final.log and lifecycle-verified.log.
