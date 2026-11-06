@@ -187,6 +187,8 @@ Good to know:
 * **No password.** Someone who signed up through the provider has no password here. When an action asks for the password again,
   **Confirm with Authentik** answers it. They can add a passkey, or you can send a reset link to set a password.
 * Signing out of the app does not sign out at the provider.
+* Requiring a password change also cancels a pending **Link** or **Confirm with** return. Change the password first, then
+  start the action again.
 * The activity log records sign-ins through the provider and every link and unlink. Tokens are never stored or logged, and the
   server's access log shows the one-time code and state as `[redacted]`.
 

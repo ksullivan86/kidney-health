@@ -28,6 +28,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
   and retrying them after trust ends reports the original save instead of offering a duplicate confirmation.
 * A late Withings or Whoop sign-in can no longer undo Disconnect or replace a newer connection. Pending sign-ins also stop
   if your session ends, your account loses access, or the admin turns connected devices off before the company answers.
+* A pending linked sign-in or provider confirmation now stops if an admin requires a password change before it completes.
+  Change the password before starting the action again.
 
 ## 0.22.2 — 2026-11-06
 

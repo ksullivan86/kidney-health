@@ -113,6 +113,8 @@ So if a switch is grayed out with "Set by the server", only the person who runs 
 - Sensitive actions (changing a password or key, turning two-step sign-in on or off, adding or removing a passkey, making an assistant token,
   exporting, deleting your account) ask for your password again if you entered it more than 10 minutes ago. If you have a
   passkey, **Use a passkey instead** answers with your fingerprint, face or PIN.
+- If your admin requires a password change while a linked sign-in or **Confirm with** action is waiting, change your password
+  first, then start that action again. Its old reply cannot finish the action.
 
 ## Two-step sign-in
 
