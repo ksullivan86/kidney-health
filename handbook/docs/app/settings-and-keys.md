@@ -260,6 +260,7 @@ change is listed in your activity, and a food it set shows in **Settings → Mea
   account (your activity says so). That ends your phone shortcut tokens too. If your admin changes how the
   server signs people in, every token ends and you make new ones.
 - If an assistant retries a save, it is not saved twice: the app answers the repeat with what was saved the first time.
+- If its access ends while a save is waiting, nothing from that save is kept. Food, recipes and tastes already saved stay in the app.
 - Treat a token like a password: never send it by text message or email.
 
 ## What to do

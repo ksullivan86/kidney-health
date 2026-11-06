@@ -894,6 +894,8 @@ def write_once(call: Call, placed: list[Placed], body: Callable[[list[dict[str, 
     conn = call.conn
     try:
         begin_immediate(conn)
+        if call.asker is None:
+            api_tokens.require_current_write(call.request, conn, api_tokens.LOG)
         food_ids: dict[int, int] = {}
         added: list[dict[str, Any]] = []
         for one in placed:

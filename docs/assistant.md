@@ -109,6 +109,9 @@ taste": the food or kind of food, what it was and what it is now, and the token'
 * While the admin has assistant access **turned off**, no token works and no new one can be made. You can still
   see and revoke yours. When it is turned on again, tokens that have not expired or been revoked work again.
 
+Before saving food, a recipe or a taste, the server checks that the token still works. If access ended while
+the request was waiting, it refuses the save and keeps nothing from it. A save already completed stays in your log.
+
 ### What the server keeps
 
 For each token: its name, its first 12 characters, the dates (made, last used, expires, revoked) and a one-way

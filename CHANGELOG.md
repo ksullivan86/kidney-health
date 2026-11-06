@@ -5,6 +5,13 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## Unreleased
+
+### Fixed
+
+* Assistant saves and phone submissions now check access again before saving. A request that was waiting when
+  its token ended or access was turned off is refused without saving anything.
+
 ## 0.22.2 — 2026-11-06
 
 ### Upgrading from 0.22.1

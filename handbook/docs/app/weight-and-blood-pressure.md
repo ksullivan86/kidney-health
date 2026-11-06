@@ -147,6 +147,7 @@ Treat it like a password: never post it or send it by email.
   without a cuff is not a good source for this log, see
   [Which device](#which-device)). A weight from a watch is saved.
 - Only weights and blood pressure are accepted. Nothing else from the Health app is sent or kept.
+- If the token's access ends while the phone is sending, none of that request's readings are saved. Earlier readings stay in your log.
 - Sending the same reading twice, or importing your Health export after the Shortcut has sent it, adds nothing.
   A reading you typed yourself is never counted as the same.
 - The app marks each row it received this way, for example "from a shortcut (Morning weight)", on Today and in the

@@ -149,6 +149,9 @@ delete a row, make or see tokens, or reach any other route (every other route ig
 marked as sent by that token, so the person can see them and delete all of them in one step. Nothing is acted on automatically. Revoke the
 token (and delete what it sent) if a phone is lost or a Shortcut was shared.
 
+The server checks the token again before saving the readings. If access ended while the phone was sending,
+the request gets 401 and none of its readings are saved. Readings already saved stay in your log until you delete them.
+
 Tokens are not in the export (a credential, like sessions); the rows are, as `source: shortcut`, without the token. Rows a token sent
 are never sent to an AI provider or the assistant, like the rest of the weight and blood pressure log ([`privacy.md`](privacy.md)).
 

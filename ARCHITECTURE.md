@@ -4063,6 +4063,10 @@ TokenItem = {"id": 3, "name": "Open WebUI", "prefix": "kha_AbCd1234", "scopes": 
   `Retry-After`. No bearer header, or the switch off: `401`, not counted (nothing was guessed or looked up).
 * On success `last_used_at` is written at most once a minute, and the route gets `request.state.user` and
   `request.state.api_token` (`TokenInfo`: id, user_id, name, scopes) for its own limits and logs.
+* Bearer writes recheck the token, required scope, family switch and current owner under the same
+  `BEGIN IMMEDIATE` lock as the save (`require_current_write`). A request waiting on a food lookup or body
+  upload cannot save after its access ends. Rejection is the family's generic 401; the transaction rolls back,
+  including imported foods and retry keys. This check does not touch last use or commit the caller's transaction.
 
 ### Revocation and the activity log
 
