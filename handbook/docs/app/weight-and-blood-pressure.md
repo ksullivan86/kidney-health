@@ -229,6 +229,10 @@ iPhone app, which sends new weights and readings from Health by itself. The app 
 does not need the code. Point the iPhone Camera at it and tap the link: the app asks "Pair with" and your server's name
 before it saves anything. Keep the code private, like the token, and do not photograph it.
 
+In the iPhone app, changing the server or token starts a fresh sync position; saving the same settings keeps
+it. Removing or replacing them stops further requests with the old settings. A request already sent may
+finish, but its reply cannot bring back the old status or position.
+
 ### If the phone is lost or the shortcut was shared
 
 Open **Settings → Account → Your data → Phone shortcuts** on another device and **Revoke** the token. The shortcut stops

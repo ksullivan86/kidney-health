@@ -4600,6 +4600,13 @@ the server makes and 50 it refuses (another scheme or fixed part, a fragment, a 
 with a path, user, query or IPv6 literal, a token of the wrong shape, spaces or controls). Tests: `tests/test_pairing.py`, the pairing
 checks of `tests/test_push_ui.py` and `tests/test_ios_app.py`, `PairingVectorTests.swift`.
 
+The native app's `SyncModel` ties connection checks and sync work to the saved settings generation. Removing
+or saving settings invalidates earlier work: an issued request may finish, but no later request uses those old
+settings and its reply cannot restore anchors, status or a rate-limit wait. Changing server or token resets
+the Health position and last-send summary; saving identical credentials keeps the position. A refused token
+pauses automatic sending until settings are saved or Test connection succeeds. `HealthReading` is the
+HealthKit boundary used by the simulator tests; `SettingsTransport` checks the generation before each batch request.
+
 ### `POST /push/v1/body` (`app/push.py`, router outside `/api`, like `/mcp`)
 
 `Authorization: Bearer khd_…`, `Content-Type: application/json`:

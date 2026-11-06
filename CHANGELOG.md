@@ -17,6 +17,10 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * Account imports stay tied to the checked file and choices. Changing an option waits for a new preview.
   While the import runs, file selection, options and Cancel wait for its answer, so Cancel cannot report
   that nothing was imported after a write was sent. A failed answer keeps the reviewed file and choices.
+* The iPhone app keeps connection checks and sync replies with their original settings. Removed or replaced
+  credentials stop further requests; old replies cannot restore a sync position or pause the new server.
+  Replacing a token at the same server now starts a fresh sync position too. A refused token pauses sending
+  until settings are saved or Test connection succeeds.
 
 ## 0.22.2 — 2026-11-06
 
