@@ -4773,6 +4773,10 @@ Nothing about the person is sent out. 0.16 has Withings (weight, blood pressure,
 * **Tokens** are sealed with `Keyring.seal(purpose="device:<provider>", owner=user_id)`; `device_connections.tokens_enc` is in
   `ENCRYPTED_COLUMNS`. They are never logged, never in an audit row and never in a response. A refresh is saved at once (Withings
   ends the old refresh token 8 hours after a new one).
+* **Sign-in completion** remembers the connection present at the start. Disconnecting or completing another sign-in cancels
+  an older flow, including one already exchanging its code. After the provider answers, a write transaction rechecks that
+  connection, the server switch, the person and (in local mode) the original session's validity before storing credentials
+  and the connect audit row. Sync receipt timestamps alone do not cancel a sign-in. Provider calls hold no write transaction.
 * **Sync** (`sync_connection`): refresh when the access token has under 5 minutes left; fetch since `sync_cursor` (the first time,
   365 days back); on `auth` one refresh and one retry, then `needs_reconnect` (tokens deleted); `rate_limited` pauses the
   connection for an hour (`next_sync_after`); other errors are kept as `last_error`. One `device.sync_failed` audit row when the

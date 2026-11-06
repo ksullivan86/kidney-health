@@ -26,6 +26,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * Ask rechecks the saved trust choice and admin switch before saving. If trust ends while the AI or a food lookup
   is pending, it asks for confirmation and saves nothing from that action. Earlier completed saves stay saved,
   and retrying them after trust ends reports the original save instead of offering a duplicate confirmation.
+* A late Withings or Whoop sign-in can no longer undo Disconnect or replace a newer connection. Pending sign-ins also stop
+  if your session ends, your account loses access, or the admin turns connected devices off before the company answers.
 
 ## 0.22.2 — 2026-11-06
 

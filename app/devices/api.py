@@ -28,6 +28,7 @@ import secrets
 import sqlite3
 import threading
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
@@ -37,9 +38,12 @@ from pydantic import BaseModel
 from .. import brand
 from ..audit import audit
 from ..auth import clock
+from ..auth import sessions
+from ..auth.accounts import begin_immediate
 from ..auth.context import auth_context, request_ip
 from ..auth.deps import CurrentUser
 from ..auth.errors import ApiProblem, too_many
+from ..auth.models import User, load_user
 from ..db import get_db
 from . import store
 from .base import ProviderError
@@ -70,6 +74,7 @@ class Flow:
     session_hash: bytes
     provider: str
     started: float
+    connection_stamp: bytes | None = None
 
 
 class FlowStore:
@@ -85,7 +90,8 @@ class FlowStore:
         for key in [k for k, f in self._flows.items() if now - f.started > FLOW_TTL_S]:
             del self._flows[key]
 
-    def start(self, user_id: int, session_hash: bytes, provider: str) -> str | None:
+    def start(self, user_id: int, session_hash: bytes, provider: str, *,
+              connection_stamp: bytes | None = None) -> str | None:
         """A new state, or None when this person (or everyone) has too many waiting."""
         now = clock.seconds()
         with self._lock:
@@ -94,7 +100,7 @@ class FlowStore:
             if len(mine) >= FLOWS_PER_PERSON or len(self._flows) >= MAX_FLOWS:
                 return None
             state = secrets.token_urlsafe(32)
-            self._flows[self._key(state)] = Flow(user_id, session_hash, provider, now)
+            self._flows[self._key(state)] = Flow(user_id, session_hash, provider, now, connection_stamp)
             return state
 
     def take(self, state: str) -> Flow | None:
@@ -196,6 +202,37 @@ def _session_hash(request: Request) -> bytes:
     return hashlib.sha256(info.id.encode("utf-8")).digest() if info is not None else b""
 
 
+def _connection_stamp(row: sqlite3.Row | None) -> bytes | None:
+    if row is None:
+        return None
+    # Sync receipts and their timestamps may change without replacing the connection.
+    fields = ("id", "tokens_enc", "key_id", "external_user_id", "status")
+    return hashlib.sha256(repr(tuple(row[field] for field in fields)).encode()).digest()
+
+
+def _person_still_current(request: Request, conn: sqlite3.Connection, user: User, flow: Flow) -> bool:
+    """Read-only revalidation under the connection's write lock; session validation must not touch/commit it."""
+    current = load_user(conn, user.id)
+    if current is None:
+        return False
+    settings = auth_context(request).settings
+    if settings.auth_mode == "none":
+        return user.id == 1
+    if not current.is_active or current.is_test_account or current.must_change_password:
+        return False
+    if settings.auth_mode == "proxy":
+        return current.auth_source == "proxy"
+    if current.auth_source != "local":
+        return False
+    info = sessions.lookup(conn, sessions.read_token(request))
+    if info is None or info.user_id != user.id or hashlib.sha256(info.id.encode()).digest() != flow.session_hash:
+        return False
+    now = clock.now()
+    expires, seen = clock.parse(info.expires_at), clock.parse(info.last_seen_at)
+    return (expires is not None and seen is not None and now < expires
+            and now < seen + timedelta(days=settings.session_idle_days))
+
+
 def _flows(request: Request) -> FlowStore:
     flows = getattr(request.app.state, "device_flows", None)
     if flows is None:
@@ -244,7 +281,8 @@ def start(request: Request, user: CurrentUser, provider_id: ProviderId = Path(),
     row = store.connection(conn, user.id, provider_id)
     if row is not None and row["status"] == store.STATUS_ACTIVE:
         raise ApiProblem(409, f"{provider.name} is already connected. Disconnect it first to connect another account.")
-    state = _flows(request).start(user.id, _session_hash(request), provider_id)
+    state = _flows(request).start(user.id, _session_hash(request), provider_id,
+                                 connection_stamp=_connection_stamp(row))
     if state is None:
         raise too_many(FLOW_TTL_S, "Too many connections were started. Wait a few minutes, then try again.")
     return {"url": provider.authorize_url(state=state, redirect_uri=redirect_uri(request, provider_id))}
@@ -267,19 +305,29 @@ def callback(request: Request, user: CurrentUser, provider_id: ProviderId = Path
         return _back("test_account", provider.id)
     if error or not code:
         return _back("cancelled", provider.id)
+    if _connection_stamp(store.connection(conn, user.id, provider_id)) != flow.connection_stamp:
+        return _back("cancelled", provider.id)
     try:
         tokens = provider.exchange(code=code, redirect_uri=redirect_uri(request, provider.id))
     except ProviderError as exc:
         return _back({"scope": "scope", "unreachable": "unavailable", "rate_limited": "unavailable"}.get(exc.code, "failed"),
                      provider.id)
-    keyring = auth_context(request).require_keyring()
     try:
+        begin_immediate(conn)
+        if (not enabled(request, conn) or not _person_still_current(request, conn, user, flow)
+                or _connection_stamp(store.connection(conn, user.id, provider_id)) != flow.connection_stamp):
+            conn.rollback()
+            return _back("cancelled", provider.id)
+        keyring = auth_context(request).require_keyring()
         store.connect(conn, keyring, user.id, provider_id, tokens)
+        audit(conn, user.id, "device.connected", "device", provider_id, ip=request_ip(request), provider=provider_id)
+        conn.commit()
     except ProviderError:
         conn.rollback()
         return _back("taken", provider.id)
-    audit(conn, user.id, "device.connected", "device", provider_id, ip=request_ip(request), provider=provider_id)
-    conn.commit()
+    except BaseException:
+        conn.rollback()
+        raise
     return _back("connected", provider.id)
 
 
