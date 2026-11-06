@@ -93,7 +93,9 @@ The handbook (**Learn**) loads nothing from the internet either.
    and left out, and any items it cannot match (each listed with the reason). A food that is not in the
    file and is not one of the app's built-in foods is listed, never guessed. A saved meal that loses a
    food this way says so in its note, so its totals do not look complete.
-4. Press **Import**. Everything is added, or nothing is.
+4. Press **Import**. Everything is added, or nothing is. While it runs, the file, choices and **Cancel**
+   wait for the answer. A write already sent cannot be cancelled. If the answer fails, your file and
+   choices stay here; check your data before trying again.
 
 What comes across: your log entries, the foods you made, saved meals, lab results, symptoms and food preferences,
 and the USDA and Open Food Facts foods you used (kept as your own copies if the new server does not have

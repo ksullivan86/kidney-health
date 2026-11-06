@@ -14,6 +14,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * Saved-meal searches and saves stay with the draft that requested them. A late reply cannot fill another
   editor, close a newer sheet or take you to an earlier submitted day. Saving holds the fields and prevents
   another submission until the first finishes; a failed save keeps the open draft.
+* Account imports stay tied to the checked file and choices. Changing an option waits for a new preview.
+  While the import runs, file selection, options and Cancel wait for its answer, so Cancel cannot report
+  that nothing was imported after a write was sent. A failed answer keeps the reviewed file and choices.
 
 ## 0.22.2 — 2026-11-06
 

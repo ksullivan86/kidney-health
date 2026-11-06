@@ -271,6 +271,10 @@ your account on the server you are signed in to. Your browser reads the file and
 server over the same connection as everything else; nothing is sent anywhere else. Before anything changes
 the server checks the file and shows what would be added and what would be left out.
 
+Changing an import choice checks the preview again before you can press **Import**. During the import,
+the file, choices and **Cancel** wait for the answer: a write already sent cannot be cancelled. If the
+answer fails, the reviewed file and choices stay here. Check your data before trying again.
+
 * **Carried over:** your log entries, foods you made, saved meals, lab results, symptoms, weights and blood pressure readings and
   food preferences (More like this, Less often, Not for me); the
   shared USDA and Open Food Facts foods you used (linked if the new server has them, otherwise kept as your

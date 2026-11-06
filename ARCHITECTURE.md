@@ -1341,6 +1341,11 @@ leaves out the sections the import never reads (`user`, `ai_audit`,
 with a second call. Both calls need the password entered recently, the app header (CSRF) and the signed-in
 person; they act on that person only (`user.id`), never on a name or id in the file.
 
+The Import button belongs to the checked file and options. Changing a choice disables the previous button
+until the new check returns. During the actual import, file selection, options and Cancel are disabled; a
+write already sent cannot be cancelled. On failure the reviewed file and choices remain available. Cancel
+still forgets a preview and invalidates an outstanding dry run.
+
 * **Reading the file** (`parse_export`, nothing is written until all of it is good). `json.loads` refuses NaN,
   Infinity and numbers beyond a float. `format` must be `kidney-health-export` and `version` `1` (others: 400 with
   the version named). Then pydantic models with `extra="forbid"`, strict types and bounded lists and strings, built
