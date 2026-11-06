@@ -1617,7 +1617,7 @@ when `targets.lab_rules_enabled` is off.
 |---|---|
 | `POST /api/labs` | `{analyte, value, unit, taken_on, note?}` → 201 `LabResult + {"alerts": [SafetyAlert]}`; 400 for an unknown analyte or unit, a value outside the plausible range (message names the entered unit and the converted value), a negative or non-finite value, a date after tomorrow or before 1900, a note over 500 characters, or an unknown field |
 | `GET /api/labs?analyte=&limit=` | → `{"labs": [LabResult], "alerts": [SafetyAlert]}` newest first (`taken_on`, then entry order); `limit` 1–1000, default 200. `alerts`: the newest potassium's safety alert while fresh under `targets.lab_fresh_days.potassium` (whatever the filters), the window the suggestions use |
-| `POST /api/labs/import` | v0.3.1. `{"results": [{analyte, value, unit, taken_on, note?}, …]}` (1–1,000 items) → 200 `{"saved": int, "duplicates": int, "refused": [{"index", "reason"}], "alerts": [SafetyAlert]}`. Each item is checked like `POST /api/labs`: a refused one is listed with the same message (`flatten_validation_errors`, as the 400 handler words it) and the others are saved in one transaction. An item that repeats a saved result of the same person (same test, date and value as shown) or an earlier item is skipped and counted in `duplicates`. `alerts` is what `GET /api/labs` returns. 400 only for the request's shape (no `results`, an empty or over-long list, an item that is not an object, an unknown field) |
+| `POST /api/labs/import` | v0.3.1. `{"results": [{analyte, value, unit, taken_on, note?}, …]}` (1–1,000 items) → 200 `{"saved": int, "duplicates": int, "refused": [{"index", "reason"}], "alerts": [SafetyAlert]}`. Each item is checked like `POST /api/labs`: a refused one is listed with the same message (`flatten_validation_errors`, as the 400 handler words it) and the others are saved in one transaction. An item that repeats a saved result of the same person (same test, date and value as shown) or an earlier item is skipped and counted in `duplicates`. The saved-result check and inserts hold one write lock so simultaneous imports skip each other's committed rows. `alerts` is what `GET /api/labs` returns. 400 only for the request's shape (no `results`, an empty or over-long list, an item that is not an object, an unknown field) |
 | `DELETE /api/labs/{id}` | → 204; 404 when it is not yours or does not exist |
 | `GET /api/labs/kidney-function` | → `KidneyFunction` (below); never changes the saved stage |
 
@@ -3622,7 +3622,8 @@ later: `validate_past_date`), `symptom` (`swelling`, `itching`, `tiredness`, `cr
 **required for `other`, refused for every other symptom**) and `note` (≤ 300 characters, plain text: control characters
 refused, tab, newline and carriage return allowed). A `null` label or note is empty. One person holds at most 30
 symptoms per date (`MAX_SYMPTOMS_PER_DAY`, a bound on storage, not a clinical number; a 31st, or a move into a full day,
-is a 400). `SymptomOut`: `{id, date, symptom, label, name, severity, severity_label, note, created_at, red_flag}`; `name` is
+is a 400). Creates and moves hold a write lock while checking that date's capacity and saving, including overlapping requests.
+`SymptomOut`: `{id, date, symptom, label, name, severity, severity_label, note, created_at, red_flag}`; `name` is
 "Swelling" or, for `other`, the label; `severity_label` is `Mild`, `Moderate` or `Severe`.
 
 ### Red flags (what the app says, and where it comes from)
@@ -3721,7 +3722,9 @@ newline and carriage return allowed; null is empty). `BloodPressureCreate`: the 
 300), `diastolic` (20 to 200), **`systolic > diastolic`** (a model rule: `400 "systolic must be greater than diastolic"`) and an optional `pulse` (20 to
 250). **The ranges are the project's own plausibility choice** (they keep a typing error out of the log), not clinical numbers (note 10 §3); `kg` is the
 profile's `weight_6_months_ago_kg` range. One person holds at most 20 weights and 30 readings per date (`MAX_WEIGHTS_PER_DAY`, `MAX_READINGS_PER_DAY`:
-bounds on storage; a 21st / 31st, or a move into a full day, is a 400). `kg` is stored rounded half up to 0.01. `WeightOut`: `{id, date, time, kg, context,
+bounds on storage; a 21st / 31st, or a move into a full day, is a 400). Creates, moves and batch imports take a write lock before
+checking capacity or existing import keys/measurement marks, so overlapping requests see each other's committed rows.
+`kg` is stored rounded half up to 0.01. `WeightOut`: `{id, date, time, kg, context,
 note, source, via, created_at, updated_at}` (`via` is the name of the device token that sent a `shortcut` row, else `null`; read with a `LEFT JOIN` on the row's token and owner);
 `BloodPressureOut` adds `systolic`, `diastolic`, `pulse` and **`flag`**. `source_key` is internal (it is in the export).
 The two batch routes share one limit, `body_batch`: **60 requests an hour per person** (`app/auth/ratelimit.py`; 60,000 rows an hour, room for years of daily

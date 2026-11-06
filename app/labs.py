@@ -35,6 +35,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
 from pydantic import ValidationError
 
 from . import units
+from .auth.accounts import begin_immediate
 from .auth.deps import CurrentUser, current_user
 from .db import get_db, utcnow
 from .kidney_function import KIDNEY_ANALYTES, assess
@@ -151,6 +152,7 @@ def import_labs(body: LabImport, user: CurrentUser, request: Request, conn: sqli
             refused.append({"index": index, "reason": flatten_validation_errors(exc.errors())[0]})
             continue
         checked.append((lab, units.convert(lab.analyte, lab.value, lab.unit)))
+    begin_immediate(conn)
     seen = {
         _same_result_key(r["analyte"], r["taken_on"], r["value"])
         for r in _rows(conn, "SELECT analyte, taken_on, value FROM lab_results WHERE user_id = ?", (user.id,))

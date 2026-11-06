@@ -33,6 +33,7 @@ from typing import Any, Sequence, get_args
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 
+from .auth.accounts import begin_immediate
 from .auth.deps import CurrentUser, current_user
 from .db import get_db, utcnow
 from .log import parse_range
@@ -167,6 +168,7 @@ def list_symptoms(user: CurrentUser, conn: sqlite3.Connection = Depends(get_db),
 
 @router.post("", status_code=201, response_model=SymptomOut)
 def create_symptom(body: SymptomCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    begin_immediate(conn)
     _check_day_not_full(conn, user.id, body.date)
     cur = conn.execute(
         "INSERT INTO symptoms (user_id, date, symptom, label, severity, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -178,6 +180,7 @@ def create_symptom(body: SymptomCreate, user: CurrentUser, conn: sqlite3.Connect
 
 @router.put("/{symptom_id}", response_model=SymptomOut)
 def update_symptom(symptom_id: int, body: SymptomCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    begin_immediate(conn)
     _fetch(conn, user.id, symptom_id)
     _check_day_not_full(conn, user.id, body.date, except_id=symptom_id)
     conn.execute(

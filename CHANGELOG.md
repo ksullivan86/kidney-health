@@ -32,6 +32,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
   Change the password before starting the action again.
 * Late weight and blood-pressure saves keep a newer draft open and leave its values and errors alone. Submitted fields stay
   fixed while saving, and a weight draft keeps the unit shown when it opened if settings refresh in the meantime.
+* Imports arriving together now skip repeated lab results and weight/blood-pressure measurements reliably. They cannot
+  fail on a repeated import key or add the same measurement twice. Adding or moving measurements and symptoms from two
+  devices at once also keeps the existing per-day limits.
 
 ## 0.22.2 — 2026-11-06
 
