@@ -207,6 +207,7 @@ food log, they also see the note you wrote on each entry.
   of your food.
 - Your activity shows invites, answers, role and switch changes, once a day that someone changed your plan or logged food, and
   each suggestion.
+  Changes sent at the same time are all counted, with one daily entry per helper for planning and one for logging food.
 - A share with an end date stops by itself on that day.
 
 **Suggestions from your Care team.** If you turned on **Suggest meals for me to add** for someone, their suggestions wait at the

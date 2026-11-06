@@ -21,6 +21,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
   credentials stop further requests; old replies cannot restore a sync position or pause the new server.
   Replacing a token at the same server now starts a fresh sync position too. A refused token pauses sending
   until settings are saved or Test connection succeeds.
+* Care team counts keep every change when a helper sends requests at the same time. Concurrent requests
+  no longer overwrite a count or create duplicate daily activity entries.
 
 ## 0.22.2 — 2026-11-06
 
