@@ -405,10 +405,10 @@ input[type="number"] { font-variant-numeric: tabular-nums; }
 .range-inputs { display: flex; align-items: center; gap: 8px; }
 .range-inputs input { flex: 1; }
 .req { color: var(--over-text); }
-.checks { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+.checks { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px 12px; }
 .check { display: flex; align-items: flex-start; gap: 8px; min-height: 36px; font-size: 0.9rem; font-weight: 500; color: var(--text); }
 .check input { width: 20px; height: 20px; margin: 8px 0 0; flex: none; accent-color: var(--accent); }
-.check .check-text { display: flex; flex-direction: column; padding-top: 7px; }
+.check .check-text { display: flex; flex-direction: column; padding-top: 7px; min-width: 0; overflow-wrap: anywhere; }
 .check .hint { margin-top: 0; }
 .stepper { display: flex; align-items: center; gap: 6px; }
 .stepper input { flex: 1; text-align: center; min-width: 0; padding-inline: 6px; -moz-appearance: textfield; appearance: textfield; }

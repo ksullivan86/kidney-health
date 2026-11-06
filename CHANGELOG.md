@@ -5,7 +5,17 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
-## Unreleased
+## 0.22.2 — 2026-11-06
+
+### Upgrading from 0.22.1
+
+* No schema step and no new settings. A host that tracks `:0.22` gets this release on its next pull. After it, a reset link
+  also removes the account's passkeys.
+
+### Fixed
+
+* At 200 % text on a narrow phone, the meal checkboxes in Settings → Meal guidance no longer push the page sideways. Rows of
+  checkboxes now let long words wrap.
 
 ### Security
 

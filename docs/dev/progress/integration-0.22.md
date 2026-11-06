@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # 0.22.2: security choices and the integrated run
 
@@ -20,7 +20,13 @@ Base main 970ba9b (0.22.1). Branch `next`, pushed to `claude/adoring-sagan-th5sw
   profile_reliability 8: all pass. late_replies failed on button names from before the Care team (0.14); harness updated,
   8 passed. No app bug found.
 
-## Next
+* a11y found Settings at 320 px and 200 % text 2 px too wide (meal checkboxes): `.checks` columns are now
+  `minmax(0, 1fr)` and `.check-text` wraps long words; 320-large passes (56).
+* upgrade.py: this checkout lacked 9ef9151 (fetched by SHA) and the v0.2 tree needs `httpx` in the venv; its saved-meals
+  check compared fields added to the answer later (`per_serving`, `unknown`), now it compares the old answer's fields. 71 passed.
+* Version 0.22.2; release PR after the full suite.
+
+## Next (done)
 
 * Integrated Chromium run on one server with everything on (Care team, devices, list sync, Instacart, AI choice) at 375 and
   1280, light and dark, with fake outside services; upgrade from 0.21.1.
