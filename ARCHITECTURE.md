@@ -3659,6 +3659,9 @@ that `handbook/REVIEW.md` tracks for the page itself.
   Changing the date clears the Symptoms card before waiting. The loading message cannot retain
   another day's entries or handbook blocks; failures offer **Try again**, including handled
   sign-in failures. Late replies and errors cannot replace the newest day's card.
+  Each sheet opening owns its pending save/error. Submitted fields freeze while Close/Cancel remain usable; a submitted
+  write may finish after closing. Reopening gives an editable draft whose Save waits for that earlier write. A late reply
+  cannot close or overwrite the newer draft; successful writes refresh the current day's actual entries.
   The Symptoms read starts at the beginning of Today loading, independently of the food request;
   rendering food or its error does not restart that read.
 * **Trends** (`KH.symptoms.trends(start, end)`): one row per symptom (an `other` per label) with the number of days, the

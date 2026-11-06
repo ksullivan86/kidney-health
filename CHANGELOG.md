@@ -38,6 +38,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * An old AI connection test can no longer mark edited settings as tested. Manual tests ask you to test again after a change,
   and automatic daily tests discard replies for old keys or vision models too. Removing a shared provider during a test
   returns a clear response instead of a server error.
+* A late symptom save or refusal leaves your next draft open and keeps its values and errors intact. Fields stay fixed while
+  their save is waiting; Close and Cancel still work.
 
 ## 0.22.2 — 2026-11-06
 

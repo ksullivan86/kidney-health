@@ -10,6 +10,10 @@ entries or handbook blocks. Symptoms loads independently, even if the food log i
 A failed save keeps the entries in the form so the person can retry.
 Adding or moving entries from two devices at once still keeps the same daily storage limit.
 
+Submitted fields stay fixed while saving; Close and Cancel remain available. A submitted save can finish after closing,
+but its late reply cannot close a newer draft or put an old error into it. You can type that draft while Save waits for the
+earlier write.
+
 **Trends → Symptoms** groups entries by symptom, with the number of days, worst severity and dates.
 Symptoms also appear in the person's data export and Visit prep. They are not sent to an AI provider.
 The app records what the person entered; it does not interpret symptoms. Any warning-sign text comes

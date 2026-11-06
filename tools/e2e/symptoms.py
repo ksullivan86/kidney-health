@@ -143,6 +143,57 @@ def date_loading(page: Any, tag: str) -> None:
         page.evaluate("() => { KH.api.symptoms = window.originalSymptoms; KH.api.day = window.originalFoodDay; }")
 
 
+def editor_lifecycle(page: Any, admin: Any, tag: str) -> None:
+    """A held committed reply must preserve the next draft and save the first once."""
+    held: list[Any] = []
+    pattern = "**/api/symptoms"
+
+    def hold(route: Any) -> None:
+        if route.request.method == "POST":
+            held.append((route, route.fetch()))
+        else:
+            route.continue_()
+
+    page.route(pattern, hold)
+    try:
+        page.click("#symptoms-add")
+        page.select_option("#symptom-kind", "tiredness")
+        page.click("label[for=symptom-sev-1]")
+        note = f"Earlier save {tag}"
+        page.fill("#symptom-note", note)
+        page.click("#symptom-save")
+        for _ in range(100):
+            if held:
+                break
+            page.wait_for_timeout(50)
+        assert held, "symptom write was not sent"
+        check(f"[{tag}] submitted symptom fields stay fixed", page.is_disabled("#symptom-kind") and page.is_disabled("#symptom-note")
+              and page.is_disabled("#symptom-date") and page.is_disabled("#symptom-sev-1"))
+        page.locator("#sheet-symptom [data-close]").first.click()
+        page.click("#symptoms-add")
+        page.select_option("#symptom-kind", "other")
+        page.fill("#symptom-label", "Keep this draft")
+        page.fill("#symptom-note", "Next note")
+        check(f"[{tag}] the next symptom draft is editable while Save waits", page.is_disabled("#symptom-save") and not page.is_disabled("#symptom-note"))
+        route, response = held.pop()
+        route.fulfill(response=response)
+        page.wait_for_function("() => !document.querySelector('#symptom-save').disabled")
+        check(f"[{tag}] a late symptom save keeps the next draft open", page.locator("#sheet-symptom[open]").count() == 1
+              and page.input_value("#symptom-kind") == "other" and page.input_value("#symptom-label") == "Keep this draft"
+              and page.input_value("#symptom-note") == "Next note" and page.is_hidden("#symptom-error"))
+        page.locator("#sheet-symptom [data-close]").first.click()
+        today = date.today().isoformat()
+        saved = [r for r in admin.json("GET", "/api/symptoms", params={"start": today, "end": today})["symptoms"] if r["note"] == note]
+        check(f"[{tag}] the earlier symptom save completed once", len(saved) == 1)
+        for row in saved:
+            admin.json("DELETE", f"/api/symptoms/{row['id']}")
+        page.evaluate("() => KH.symptoms.today(KH.state.date)")
+    finally:
+        page.unroute(pattern, hold)
+        for route, _ in held:
+            route.abort()
+
+
 def today_pass(browser: Any, admin: Any, base: str, out: Path, width: int, height: int, scheme: str, mock: bool = False) -> None:
     tag = f"{'demo-' if mock else ''}{width}-{scheme}"
     ctx = browser.new_context(viewport={"width": width, "height": height}, color_scheme=scheme, base_url=base)
@@ -226,6 +277,8 @@ def today_pass(browser: Any, admin: Any, base: str, out: Path, width: int, heigh
     page.click("#tab-today")
     page.wait_for_selector("#symptoms-today-body .sym-item", timeout=10000)
     date_loading(page, tag)
+    if not mock:
+        editor_lifecycle(page, admin, tag)
     check(f"[{tag}] no sideways scroll on Today, no console error, no dialog", not overflow(page) and not watch.errors and not watch.dialogs, "; ".join(watch.errors))
     if not mock:
         others = sorted(h for h in watch.hosts if h not in (urlsplit(base).netloc,))

@@ -81,6 +81,7 @@ stays intact, and refreshes units while a pounds draft is open to verify that th
 
 `symptoms.py` also delays a previous day's reply, changes back to today, and exercises a failed
 date read followed by **Try again**. It checks that old symptoms and handbook blocks clear first.
+It also holds a committed symptom-save reply while the sheet closes and reopens, checking the new draft and the once-only save.
 
 For a failed weight or blood pressure save, `reliability.py` asks the server too: nothing is stored, the next try sends
 the same reading, and it is stored once.
