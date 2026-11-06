@@ -292,7 +292,7 @@ def export_as_alice(browser: Any, base: str, files: Path) -> Path:
         with zipfile.ZipFile(files / "no-export.zip", "w", zipfile.ZIP_DEFLATED) as other:
             other.writestr("log.csv", "date,meal\n")
             other.writestr("README.txt", "this zip is not an export of this app")
-        check("[export] the zip holds export.json and the CSV files", names == ["README.txt", "blood_pressure.csv", "export.json", "foods.csv", "labs.csv", "log.csv", "meals.csv", "symptoms.csv", "weights.csv"], str(names))
+        check("[export] the zip holds export.json and the CSV files", names == ["README.txt", "activity.csv", "blood_pressure.csv", "export.json", "foods.csv", "labs.csv", "log.csv", "meals.csv", "symptoms.csv", "weights.csv", "workouts.csv"], str(names))
         doc = json.loads(raw)
         check("[export] export.json holds A's records", (doc["format"], doc["version"]) == ("kidney-health-export", 1)
               and (len(doc["log_entries"]), len(doc["custom_foods"]), len(doc["meal_templates"]), len(doc["lab_results"]), len(doc["symptoms"]),
@@ -417,11 +417,34 @@ def walk(browser: Any, server: Server, admin: Api, base: str, zipped: Path, file
         check(f"{tag} Import is enabled and the server has not been changed", page.is_enabled("#set-import-go") and data_of(bea) == empty)
 
         # ---- Import without "Add to my existing data" (the password asked for again after another wait)
+        held: list[tuple[Any, Any]] = []
+
+        def hold_import(route: Any) -> None:
+            response = route.fetch()
+            if "dry_run=1" not in route.request.url and response.status == 200:
+                held.append((route, response))
+            else:
+                route.fulfill(response=response)
+
+        page.route("**/api/me/import?*", hold_import)
         make_password_old(server, name)
         page.click("#set-import-go")
         check(f"{tag} pressing Import after another wait asks for the password again", sheet_open(page))
         page.fill("#reauth-password", DEFAULT_PASSWORD)
         page.click("#reauth-submit")
+        for _ in range(100):
+            if held:
+                break
+            page.wait_for_timeout(50)
+        assert len(held) == 1, "the completed import response was not held"
+        check(f"{tag} the file, options and Cancel are disabled during the import",
+              all(page.is_disabled(f"#set-import-{field}") for field in ("file", "merge", "profile", "cancel")))
+        page.eval_on_selector("#set-import-cancel", "button => button.click()")
+        check(f"{tag} Cancel cannot claim that a completed but unanswered import was cancelled",
+              "Importing the checked file" in text_of(page, "#set-import-msg") and data_of(bea) == alice["data"])
+        route, response = held.pop()
+        route.fulfill(response=response)
+        page.unroute("**/api/me/import?*", hold_import)
         wait_text(page, "#set-import-msg", "Imported")
         said = text_of(page, "#set-import-msg")
         check(f"{tag} Import: 'Imported {ADDED}.'", said == f"Imported {ADDED}.", said)
