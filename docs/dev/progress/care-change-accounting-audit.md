@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 Branch `audit/care-change-accounting`, based on main `cea3c94` (0.22.2). Create an unmerged PR.
 
@@ -12,6 +12,7 @@ Fix: `note_change` obtains a write lock before reading its count and commits the
 together. Failed accounting rolls back its transaction. The food-writing APIs, permissions, low-treatment
 rules, response shapes and clinical numbers are unchanged. The demo processes its count updates synchronously.
 
-Focused concurrency, Care team, sharing and isolation tests: 139 passed. Full pytest is running. Ruff passed. Next: full pytest/CI, Node/parity,
-Ruff, generated pages/strict handbook, review, checkpoint/push own files and create PR. Logs:
+Verified: 139 focused tests; full pytest 7,392 passed, 2 skipped, 2 existing handbook citation warnings.
+Ruff, parity vectors, OpenAPI, generated pages and strict handbook pass. All changes are committed.
+PR https://github.com/ksullivan86/kidney-health/pull/157 is ready for review and remains unmerged. Logs:
 `/workspace/work/care-count-audit/`.
