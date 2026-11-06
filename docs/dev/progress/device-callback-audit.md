@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 Branch `audit/device-callback-lifecycle`, main `cea3c94`. Create an unmerged PR.
 
@@ -19,9 +19,9 @@ is read-only (session validation would commit). Ignore sync timestamps/receipts 
 identity. Keep current single-use state/session binding and existing cancellation redirect. Do not revoke
 discarded credentials at the provider, since a provider-wide revoke could end the newer valid connection.
 
-Architecture, device guide, handbook and changelog describe the cancellation behavior. Ruff passes.
-Full pytest is running (session 5820), started after the 24 lifecycle cases passed; the four extra mode cases
-were added afterward and are checked separately. OpenAPI/parity/generated pages and strict handbook running.
-Next: inspect mode/full/check logs, commit and push own files, create draft PR, finalize after verification.
-Logs: `/workspace/work/device-callback-audit/`. Other PRs remain unmerged. Ask #159 is ready after 7400 tests
-and 144 browser checks passed; do not merge it.
+Architecture, device guide, handbook and changelog describe the cancellation behavior. Ruff, OpenAPI,
+parity, generated pages and strict handbook pass. CI run 42220785538 for functional commit c812c4f is green,
+including Python 3.12/3.14/3.15, native iOS/Swift, handbook, lint and image checks. Python 3.12 job
+127901998103 reports 7414 passed, 2 skipped and the two existing handbook citation warnings. This includes
+all 28 new lifecycle/auth-mode cases. The separate local full run is redundant and may still be finishing.
+PR #160 is ready for review. No branch or PR was merged. Logs: `/workspace/work/device-callback-audit/`.
