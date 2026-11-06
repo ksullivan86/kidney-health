@@ -40,7 +40,7 @@
 
   const NEEDS_CONNECTION = 'Weights and blood pressure readings need a connection to your server, and there is none right now.';
   // What the person last saw: their weight unit (user.units.weight, "lb" until the server says otherwise).
-  const S = { units: 'lb', shownDate: null, req: 0, busy: false, summary: null };
+  const S = { units: 'lb', shownDate: null, req: 0, summary: null };
 
   const live = (text) => { const el = $('#body-live'); if (el) el.textContent = text; };
   const message = (text) => h('p', { class: 'body-empty' }, text);
@@ -201,6 +201,9 @@
   const chosen = (box) => { const r = $('input:checked', box); return r ? r.value : ''; };
   const showError = (box, text) => { box.textContent = text || ''; box.hidden = !text; };
   function dayToSave() { return S.shownDate && S.shownDate <= todayStr() ? S.shownDate : todayStr(); }
+  function lockMeasurementFields(form, locked) {
+    for (const field of form.querySelectorAll('input, select, textarea')) field.disabled = locked;
+  }
   // A refused save keeps the sheet open with what was typed: a lost connection says so, a refusal says why.
   function saveFailed(box, err) {
     if (err && err.handled) return;
@@ -219,15 +222,18 @@
   const wEcho = $('#weight-echo');
   const wError = $('#weight-error');
   const wSave = $('#weight-save');
-  const W = { editing: null, initialText: '' };
+  const W = { editing: null, initialText: '', units: 'lb', generation: 0, writing: false };
+  weightDlg.addEventListener('close', () => { W.generation++; });
 
   function syncWeightEcho() {
-    const res = U.weightFromInput(wValue.value, S.units);
-    wEcho.textContent = res.kg != null ? U.echoWeight(res.kg, S.units) : '';
+    const res = U.weightFromInput(wValue.value, W.units);
+    wEcho.textContent = res.kg != null ? U.echoWeight(res.kg, W.units) : '';
   }
   wValue.addEventListener('input', syncWeightEcho);
 
   function openWeight({ weight = null, trigger = null } = {}) {
+    W.generation++;
+    W.units = S.units;
     W.editing = weight;
     $('#sheet-weight-title').textContent = weight ? 'Edit weight' : 'Add a weight';
     $('#weight-label').textContent = `Weight (${S.units})`;
@@ -240,6 +246,8 @@
     wTime.value = weight && weight.time ? weight.time : '';
     wNote.value = weight ? weight.note : '';
     showError(wError, '');
+    lockMeasurementFields(wForm, false);
+    wSave.disabled = W.writing;
     syncWeightEcho();
     sheets.open(weightDlg, trigger, wValue);
   }
@@ -247,8 +255,8 @@
 
   sheets.onSubmit(wForm, async (e) => {
     e.preventDefault();
-    if (S.busy) return;
-    const res = U.weightFromInput(wValue.value, S.units);
+    if (W.writing || !weightDlg.open) return;
+    const res = U.weightFromInput(wValue.value, W.units);
     if (res.error) { showError(wError, res.error); wValue.focus(); return; }
     const context = chosen(wCtx);
     if (!context) { showError(wError, 'Choose when it was taken.'); const first = $('input', wCtx); if (first) first.focus(); return; }
@@ -257,19 +265,24 @@
     const kg = W.editing && wValue.value.trim() === W.initialText ? W.editing.kg : res.kg;
     const body = { date: wDate.value, time: timeOf(wTime), kg, context, note: wNote.value };
     const editing = W.editing;
-    S.busy = true;
+    const generation = W.generation, units = W.units;
+    const current = () => weightDlg.open && W.generation === generation;
+    W.writing = true;
+    lockMeasurementFields(wForm, true);
     wSave.disabled = true;
     showError(wError, '');
     try {
       const saved = editing ? await api.updateWeight(editing.id, body) : await api.addWeight(body);
+      if (!current()) { await loadToday(S.shownDate || todayStr()); return; }
       weightDlg.close();
       toast(editing ? 'Weight updated' : 'Weight saved', 'ok');
-      live(`${editing ? 'Updated' : 'Saved'} weight ${R.formatWeight(saved.kg, S.units)}, ${fmtDateShort(saved.date)}.`);
+      live(`${editing ? 'Updated' : 'Saved'} weight ${R.formatWeight(saved.kg, units)}, ${fmtDateShort(saved.date)}.`);
       await loadToday(S.shownDate || todayStr());
     } catch (err) {
-      saveFailed(wError, err);
+      if (current()) saveFailed(wError, err);
     } finally {
-      S.busy = false;
+      W.writing = false;
+      if (current()) lockMeasurementFields(wForm, false);
       wSave.disabled = false;
     }
   });
@@ -287,7 +300,8 @@
   const bFlag = $('#bp-flag');
   const bError = $('#bp-error');
   const bSave = $('#bp-save');
-  const B = { editing: null };
+  const B = { editing: null, generation: 0, writing: false };
+  bpDlg.addEventListener('close', () => { B.generation++; });
 
   // The reading as typed, before Save, and (for a valid reading) the handbook's words if it is very high: the same twin of the
   // server's rule the demo uses (KH.bodyRules.bpFlag).
@@ -303,6 +317,7 @@
   for (const el of [bTop, bBottom, bPulse]) el.addEventListener('input', syncBp);
 
   function openBp({ reading = null, trigger = null } = {}) {
+    B.generation++;
     B.editing = reading;
     $('#sheet-bp-title').textContent = reading ? 'Edit blood pressure reading' : 'Add a blood pressure reading';
     const hint = $('#bp-hint');
@@ -318,6 +333,8 @@
     bTime.value = reading && reading.time ? reading.time : '';
     bNote.value = reading ? reading.note : '';
     showError(bError, '');
+    lockMeasurementFields(bForm, false);
+    bSave.disabled = B.writing;
     syncBp();
     sheets.open(bpDlg, trigger, bTop);
   }
@@ -325,7 +342,7 @@
 
   sheets.onSubmit(bForm, async (e) => {
     e.preventDefault();
-    if (S.busy) return;
+    if (B.writing || !bpDlg.open) return;
     const res = U.readingFromInput({ systolic: bTop.value, diastolic: bBottom.value, pulse: bPulse.value });
     const fields = [['systolic', bTop], ['diastolic', bBottom], ['pulse', bPulse]];
     const bad = fields.find(([k]) => res.errors[k]);
@@ -335,20 +352,25 @@
     if (!/^\d{4}-\d{2}-\d{2}$/.test(bDate.value)) { showError(bError, 'Choose the date.'); bDate.focus(); return; }
     const body = { date: bDate.value, time: timeOf(bTime), systolic: res.systolic, diastolic: res.diastolic, pulse: res.pulse, context, note: bNote.value };
     const editing = B.editing;
-    S.busy = true;
+    const generation = B.generation;
+    const current = () => bpDlg.open && B.generation === generation;
+    B.writing = true;
+    lockMeasurementFields(bForm, true);
     bSave.disabled = true;
     showError(bError, '');
     try {
       const saved = editing ? await api.updateBloodPressure(editing.id, body) : await api.addBloodPressure(body);
+      if (!current()) { await loadToday(S.shownDate || todayStr()); return; }
       bpDlg.close();
       toast(editing ? 'Reading updated' : 'Reading saved', 'ok');
       live(`${editing ? 'Updated' : 'Saved'} blood pressure ${readingText(saved)}, ${fmtDateShort(saved.date)}.${saved.flag ? ' The handbook note for a very high reading is at the top of the card.' : ''}`);
       await loadToday(S.shownDate || todayStr());
-      if (saved.flag) { const block = $('.body-flag', todayBody); if (block) { block.setAttribute('tabindex', '-1'); block.focus(); } }
+      if (saved.flag && !weightDlg.open && !bpDlg.open) { const block = $('.body-flag', todayBody); if (block) { block.setAttribute('tabindex', '-1'); block.focus(); } }
     } catch (err) {
-      saveFailed(bError, err);
+      if (current()) saveFailed(bError, err);
     } finally {
-      S.busy = false;
+      B.writing = false;
+      if (current()) lockMeasurementFields(bForm, false);
       bSave.disabled = false;
     }
   });

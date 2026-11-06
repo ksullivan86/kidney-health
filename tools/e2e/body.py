@@ -84,6 +84,7 @@ class Watch:
         self.errors: list[str] = []
         self.dialogs: list[str] = []
         self.offline = False  # while the harness has cut the connection, the browser's own "failed to load" lines are expected
+        self.expected_http_errors: set[tuple[str, int]] = set()
         page.on("request", self._request)
         page.on("console", self._console)
         page.on("pageerror", lambda e: self.errors.append(str(e)))
@@ -91,6 +92,9 @@ class Watch:
         page.add_init_script("window.__csp = []; document.addEventListener('securitypolicyviolation', (e) => window.__csp.push(e.violatedDirective + ' ' + e.blockedURI));")
 
     def _console(self, m: Any) -> None:
+        if any(urlsplit(m.location.get("url", "")).path == path and f"status of {status} " in m.text
+               for path, status in self.expected_http_errors):
+            return
         if m.type == "error" and not (self.offline and "Failed to load resource" in m.text):
             self.errors.append(m.text)
 
@@ -639,6 +643,98 @@ def settings_import_button(p: Pass) -> None:
     check(f"[{tag}] with KH.bodyImport Settings → Your data has Import from Apple Health, and it calls open()", page.evaluate("window.__opened") == 1)
 
 
+def walk_editor_lifecycle(p: Pass, person: Any) -> None:
+    """Held committed writes and refusals must leave the next draft intact."""
+    page, tag = p.page, p.tag
+    go_today(page)
+    page.evaluate("""() => {
+      window.measurementFinished = {};
+      for (const name of ['addWeight', 'addBloodPressure']) {
+        const original = KH.api[name];
+        KH.api[name] = async (...args) => {
+          try { return await original(...args); }
+          finally { window.measurementFinished[name] = (window.measurementFinished[name] || 0) + 1; }
+        };
+      }
+    }""")
+    for kind, endpoint, method in (("weight", "weights", "addWeight"), ("bp", "blood-pressure", "addBloodPressure")):
+        for refusal in (False, True):
+            pattern = f"**/api/body/{endpoint}"
+            held: list[Any] = []
+
+            def hold(route: Any) -> None:
+                if route.request.method != "POST":
+                    route.continue_()
+                    return
+                held.append((route, None if refusal else route.fetch()))
+
+            page.route(pattern, hold)
+            expected_error = (f"/api/body/{endpoint}", 422)
+            try:
+                page.click(f"#body-add-{'weight' if kind == 'weight' else 'bp'}")
+                if kind == "weight":
+                    page.fill("#weight-value", "154.3")
+                else:
+                    page.fill("#bp-systolic", "120")
+                    page.fill("#bp-diastolic", "80")
+                page.click(f"label[for={kind}-context-morning]")
+                note = f"Earlier {kind} save {tag}"
+                page.fill(f"#{kind}-note", note)
+                before = page.evaluate("name => window.measurementFinished[name] || 0", method)
+                page.click(f"#{kind}-save")
+                for _ in range(100):
+                    if held:
+                        break
+                    page.wait_for_timeout(50)
+                assert held, "measurement write was not sent"
+                check(f"[{tag}] {kind} submitted fields stay fixed", page.is_disabled(f"#{kind}-note") and page.is_disabled(f"#{kind}-date"))
+                page.locator(f"#sheet-{kind} [data-close]").first.click()
+                page.click(f"#body-add-{'weight' if kind == 'weight' else 'bp'}")
+                page.fill(f"#{kind}-note", "Keep the next draft")
+                check(f"[{tag}] {kind} new draft is editable while Save waits", page.is_disabled(f"#{kind}-save") and not page.is_disabled(f"#{kind}-note"))
+                route, response = held.pop()
+                if refusal:
+                    p.watch.expected_http_errors.add(expected_error)
+                    route.fulfill(status=422, content_type="application/json", body=json.dumps({"detail": "Earlier draft refused"}))
+                else:
+                    route.fulfill(response=response)
+                page.wait_for_function("([name, before]) => (window.measurementFinished[name] || 0) > before", arg=[method, before])
+                page.wait_for_function("kind => !document.querySelector('#' + kind + '-save').disabled", arg=kind)
+                check(f"[{tag}] late {kind} {'refusal' if refusal else 'save'} preserves the next draft",
+                      page.locator(f"#sheet-{kind}[open]").count() == 1 and page.input_value(f"#{kind}-note") == "Keep the next draft"
+                      and page.is_hidden(f"#{kind}-error"))
+                page.locator(f"#sheet-{kind} [data-close]").first.click()
+                if not refusal:
+                    rows = person.json("GET", f"/api/body/{endpoint}", params={"start": iso(0), "end": iso(0)})
+                    values = rows["weights" if kind == "weight" else "readings"]
+                    saved = [r for r in values if r["note"] == note]
+                    check(f"[{tag}] the earlier {kind} save completed once", len(saved) == 1)
+                    for row in saved:
+                        person.json("DELETE", f"/api/body/{endpoint}/{row['id']}")
+            finally:
+                p.watch.expected_http_errors.discard(expected_error)
+                page.unroute(pattern, hold)
+                for route, _ in held:
+                    route.abort()
+    set_settings(person, {"user.units.weight": "lb"})
+    page.evaluate("() => KH.body.today(KH.state.date)")
+    page.click("#body-add-weight")
+    page.fill("#weight-value", "154.3")
+    page.click("label[for=weight-context-morning]")
+    page.fill("#weight-note", f"Unit held {tag}")
+    set_settings(person, {"user.units.weight": "kg"})
+    page.evaluate("() => KH.body.today(KH.state.date)")
+    check(f"[{tag}] the open weight draft keeps its printed pounds", "lb" in page.inner_text("#weight-label"))
+    page.click("#weight-save")
+    page.wait_for_selector("#sheet-weight", state="hidden")
+    rows = person.json("GET", "/api/body/weights", params={"start": iso(0), "end": iso(0)})["weights"]
+    saved = next(r for r in rows if r["note"] == f"Unit held {tag}")
+    check(f"[{tag}] printed pounds save as the same kilograms after settings refresh", saved["kg"] == 69.99, str(saved["kg"]))
+    person.json("DELETE", f"/api/body/weights/{saved['id']}")
+    set_settings(person, {"user.units.weight": "lb"})
+    p.shot("editor-lifecycle")
+
+
 def pass_full(browser: Any, server: Server | None, admin: Any | None, base: str, out: Path, width: int, height: int, scheme: str, *, n: int, hd: bool = False,
               mock: bool = False, mock_url: str = "/?mock=1") -> None:
     tag = f"{'demo-' if mock else ''}{'hd-' if hd else ''}{width}-{scheme}"
@@ -675,6 +771,7 @@ def pass_full(browser: Any, server: Server | None, admin: Any | None, base: str,
         walk_visit(p, person, mock, hd, flagged=not mock)
         if not mock:
             settings_import_button(p)
+            walk_editor_lifecycle(p, person)
         p.finish(not mock, base)
     except Exception:
         p.shot("failure")

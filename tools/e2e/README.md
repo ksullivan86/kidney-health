@@ -76,6 +76,8 @@ potassium and verify the qualifiers on the nutrient row itself.
 
 `body.py` also delays a previous day's weight read while the date changes back. It checks that
 the card clears even while food is held too, and late replies cannot restore old measurements.
+It holds committed weight/BP saves and validation refusals while the sheet closes and reopens, checks that the next draft
+stays intact, and refreshes units while a pounds draft is open to verify that the stored kilograms stay correct.
 
 `symptoms.py` also delays a previous day's reply, changes back to today, and exercises a failed
 date read followed by **Try again**. It checks that old symptoms and handbook blocks clear first.

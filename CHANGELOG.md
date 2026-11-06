@@ -30,6 +30,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
   if your session ends, your account loses access, or the admin turns connected devices off before the company answers.
 * A pending linked sign-in or provider confirmation now stops if an admin requires a password change before it completes.
   Change the password before starting the action again.
+* Late weight and blood-pressure saves keep a newer draft open and leave its values and errors alone. Submitted fields stay
+  fixed while saving, and a weight draft keeps the unit shown when it opened if settings refresh in the meantime.
 
 ## 0.22.2 — 2026-11-06
 
