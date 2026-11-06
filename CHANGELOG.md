@@ -5,6 +5,14 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## Unreleased
+
+### Fixed
+
+* An old AI connection test can no longer mark edited settings as tested. Manual tests ask you to test again after a change,
+  and automatic daily tests discard replies for old keys or vision models too. Removing a shared provider during a test
+  returns a clear response instead of a server error.
+
 ## 0.22.2 — 2026-11-06
 
 ### Upgrading from 0.22.1

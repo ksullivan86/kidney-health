@@ -31,6 +31,7 @@ from pydantic import BaseModel, ConfigDict, Field, SecretStr, StringConstraints,
 from starlette.concurrency import run_in_threadpool
 
 from .. import brand, test_accounts
+from ..auth.accounts import begin_immediate
 from ..auth import housekeeping as auth_housekeeping
 from ..auth.context import auth_context, request_ip
 from ..auth.deps import AdminUser, CurrentUser, RecentAdmin, RecentUser, current_user, require_admin
@@ -392,14 +393,18 @@ async def maintenance_probe(app: FastAPI, provider_id: int, server_port: int | N
         if row["locked"]:
             result["key_fp"] = K.key_fingerprint(keyring, K.env_key(state.settings, row))
 
-        def store() -> None:
+        def store() -> bool:
+            begin_immediate(conn)
             current = K.provider_row(conn, provider_id)
-            if current is not None and (current["base_url"], current["model"]) == (row["base_url"], row["model"]):
-                K.save_probe(conn, provider_id, result)
-                conn.commit()
+            if not K.same_probe_settings(current, row):
+                conn.rollback()
+                return False
+            K.save_probe(conn, provider_id, result)
+            conn.commit()
+            return True
 
-        await run_in_threadpool(store)
-        log.info("AI provider %s: daily connection test ok=%s structured=%s", provider_id, result.get("ok"), result.get("structured"))
+        if await run_in_threadpool(store):
+            log.info("AI provider %s: daily connection test ok=%s structured=%s", provider_id, result.get("ok"), result.get("structured"))
     except Exception:  # a background job must never take the server down
         log.exception("AI provider %s: daily connection test failed", provider_id)
     finally:
@@ -1494,16 +1499,21 @@ async def _probe_row(request: Request, conn: sqlite3.Connection, user: User, row
     if row["locked"]:
         result["key_fp"] = K.key_fingerprint(_keyring(request), K.env_key(state.settings, row))
 
-    def store() -> None:
+    def store() -> bool:
+        begin_immediate(conn)
         current = K.provider_row(conn, int(row["id"]))
-        if current is not None:
+        unchanged = K.same_probe_settings(current, row)
+        if unchanged:
             K.save_probe(conn, int(row["id"]), result)
+        if current is not None:
             extra = max(0, int(result.get("requests", 1)) - 1)
             if extra:
                 K.take_quota(conn, user.id, cfg, 0, requests=extra)  # counted, never refused afterwards
         conn.commit()
+        return unchanged
 
-    await run_in_threadpool(store)
+    if not await run_in_threadpool(store):
+        raise ApiProblem(409, "The AI settings changed while testing. Test the current settings again.")
     out = {k: result.get(k) for k in ("ok", "structured", "vision", "tools", "models", "warnings", "errors")}
     if snippets:
         out["error_body"] = snippets[0]  # shared providers, admins only (R5 step 6)
@@ -1687,7 +1697,7 @@ async def probe_ai_provider(provider_id: Annotated[int, Path(ge=1, le=MAX_SQLITE
     row = await run_in_threadpool(_shared_row_or_404, conn, provider_id)
     auth_context(request).limits.take(PROBE_LIMIT_ADMIN, f"user:{admin.id}")
     probe = await _probe_row(request, conn, admin, row, admin=True)
-    view = await run_in_threadpool(lambda: K.provider_view(K.provider_row(conn, provider_id), _keyring(request), ai_state(request).settings))
+    view = await run_in_threadpool(lambda: K.provider_view(_shared_row_or_404(conn, provider_id), _keyring(request), ai_state(request).settings))
     return {"probe": probe, "provider": view}
 
 

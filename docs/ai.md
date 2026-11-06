@@ -479,6 +479,8 @@ models, finds the JSON mode that works (`json_schema`, then `json_object`, then 
 vision with a red square when a vision model is set, and for `hermes` runs the tool check first. Shared
 providers are tested again automatically after a person's call when the last test is a day old, and
 after a change of address, model or key.
+If settings change or the provider is removed while a test is waiting, its old result is discarded. A manual test asks you
+to test the current settings again. This includes a changed key or vision model; an older result cannot mark them as tested.
 
 #### A model server on another machine
 

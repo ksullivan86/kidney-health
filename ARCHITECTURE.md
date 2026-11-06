@@ -2504,6 +2504,9 @@ routes), `app/imagecheck.py` (JPEG check and rewrite, pure); schema step 6
   with `Keyring.seal(purpose="ai_provider:<id>", owner=<owner id or None>)` and shown only as
   `{set, last4}` (last 4 for keys of ≥ 20 characters), `{set, source: "env", locked: true}` or
   `{set, status: "unreadable"}`.
+  Manual and daily connection tests recheck the tested provider settings under a write lock before storing a result.
+  Changed or deleted settings discard the old result; a manual test answers 409 asking to test the current settings again.
+  Earlier probe receipts alone do not invalidate another test of unchanged settings. No provider call holds that lock.
 * **Resolution** (`config.resolve`, the rule before routing; every feature now calls `routing.resolve_feature`, which
   uses it for `any` and for a person's own provider): the person's own provider when they chose `own` and it is usable and
   allowed; else the shared provider they chose (`shared:<id>`) or the first usable shared one (if
