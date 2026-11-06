@@ -264,7 +264,8 @@ After that the server fetches new readings every few hours. **Sync now** fetches
 - **Disconnect** stops the fetching. Your readings stay, unless you tick **Also delete the readings that came from
   Withings** (readings you edited stay either way).
   A reply still on its way cannot add readings back after you disconnect. If you connect again, the old sync cannot change
-  your new connection.
+  your new connection. Disconnect also cancels a sign-in or reconnect still waiting for Withings. An old sign-in reply
+  cannot replace a newer connection.
 - If the section says **Withings needs you to connect again**, press **Connect again**. This happens when Withings stops
   accepting the server's sign-in, for example after you removed the app in your Withings account.
 - Like a shortcut, nothing here sends you an alert. A reading past a limit shows its warning when you open the app.

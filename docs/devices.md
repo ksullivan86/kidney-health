@@ -41,6 +41,10 @@ devices**; the handbook's Weight and blood pressure page and its Targets page ex
 * **Test accounts cannot connect a device**: they are shared by testers. The demo shows a sample Withings connection with
   sample readings, and never contacts Withings.
 
+Disconnect also cancels a pending sign-in or reconnect: its late reply cannot restore the connection. A newer completed
+sign-in keeps its connection when an older reply arrives. If the server switch or your sign-in ends while the company is
+answering, that pending connection is cancelled too.
+
 Disconnect also stops a sync that is still waiting for the company: its late reply cannot add readings back. Connecting
 again cancels the previous connection's sync, so its readings and errors cannot change the new connection. Turning devices
 off or disabling an account has the same effect. Each fetched batch is saved together, including its activity and import
