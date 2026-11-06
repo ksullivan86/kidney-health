@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 Branch `audit/ios-settings-lifecycle`, main `cea3c94`. Keep PR unmerged.
 
@@ -21,4 +21,9 @@ simulator tests without HealthKit permissions; no new Health types or dependenci
 Added tests for removal/replacement during a held sync, removal during a held Health read, stopping between
 two batch requests, and refused-token pause/resume. Bounded test waits fail rather than hanging a simulator.
 17 Python iOS policy checks pass. Native tests run in the existing CI simulator job because this workspace
-has no Swift/Xcode. Next: push fix, verify native and Swift/CI tests, handbook/docs checks, finalize PR unmerged.
+has no Swift/Xcode. The fix at `ddb467e` passed the simulator build/tests, Swift package, Python 3.12/3.14/3.15,
+Node parity, lint, handbook, CodeQL and image checks in CI run 42179418391. Local iOS policy tests (17),
+generated pages and strict handbook also pass. No compiler warning beyond the simulator destination note.
+
+PR https://github.com/ksullivan86/kidney-health/pull/156 is ready for review and remains unmerged.
+No new Health types, dependencies, workflow changes or clinical rules.
