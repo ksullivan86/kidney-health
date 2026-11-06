@@ -5,7 +5,11 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
-## Unreleased
+## 0.22.1 — 2026-11-06
+
+### Upgrading from 0.22.0
+
+* No schema step and no new settings. A host that tracks `:0.22` gets this release on its next pull.
 
 ### Fixed
 

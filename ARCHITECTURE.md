@@ -1093,7 +1093,9 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
 
-**Status (2026-11-01): v0.22.0 is prepared.** Open the shopping list at Instacart (note 33): off by default, with
+**Status (2026-11-06): v0.22.1 is prepared.** Fixes for answers that arrive late: the shopping sheets, connected devices, recipe
+import, Care team plans and list-app settings each keep a late reply with the request that made it, and new base images.
+**v0.22.0**: open the shopping list at Instacart (note 33): off by default, with
 `INSTACART_ENABLED` and the server's key in `INSTACART_API_KEY_FILE`; only the food names and amounts leave the server. See
 [docs/instacart.md](docs/instacart.md). **v0.21.1**: the AI activity log keeps no request or reply text by default
 (`ai.audit_retention_days` 0). **v0.21.0 (2026-11-01)**: Chosen people pick the server's local or cloud AI (note 32,
@@ -5019,7 +5021,7 @@ Signed in only (`current_user`; an anonymous caller gets the generic `401`, so a
 (`no-store` like every `/api` answer). The answer:
 
 ```json
-{"app_version": "0.22.0", "api_version": 1,
+{"app_version": "0.22.1", "api_version": 1,
  "capabilities": {"ai": false, "ai_next_meal": false, "ai_parse_meal": false, "ai_label": false, "ai_plate": false, "ai_lab_report": false,
                   "chat": false, "voice": false, "assistant": false, "push": false,
                   "barcode": false, "barcode_off": false, "barcode_usda": false, "handbook": false},
