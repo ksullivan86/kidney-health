@@ -1,69 +1,69 @@
 # Kidney Health audit handoff
 
-Status: audit ongoing; current work committed and published for another session to resume.
+Status: this audit batch is verified and published; open follow-ups are recorded for continued auditing.
 
-Snapshot: 2026-11-06. The user asked to continue auditing bugs and improvements, create PRs, and **leave every PR unmerged** for another session. They also asked to continue useful work through 2026-11-07 at 15:00 America/Los_Angeles. No scheduled or unattended runner was installed.
+Snapshot: 2026-11-06. The user asked to continue auditing bugs and improvements, create PRs, and **leave every PR unmerged** for another session. An earlier message asked to keep auditing until "tomorrow at 3pm PST"; its original message timestamp is not recorded here, so do not infer a new absolute deadline from this snapshot date. No scheduled or unattended runner was installed.
 
 This is the durable index. Per-fix progress notes are linked to saved commits so they remain readable if branches are updated or progress files are pruned during a release. Refresh the PR status before acting: this is a checkpoint, not a live dashboard.
 
 ## Start here
 
 1. Read `AGENTS.md`, `CLAUDE.md`, the relevant parts of `ARCHITECTURE.md`, and the design notes before editing.
-2. Review the pending work below, then open its linked PR and saved progress note. The source and regression tests are pushed.
+2. Review the completed checkpoints and unresolved follow-ups below, then open the relevant PR and saved progress note. The source and regression tests are pushed.
 3. Reuse the indicated worktree when present. `/workspace/kidney-health` is an older device-fix checkout, **not the current audit branch**.
-4. Finish pending verification, correct any failures, update that PR's progress note/body, and mark it ready. Keep it unmerged.
+4. Verification for this batch is complete. Inspect current main before continuing: another session has integrated #153–167. The two user-reported follow-ups below remain open. Keep any new PR unmerged.
 5. Continue auditing from the recorded leads only after checking what is already covered. Commit only your own paths.
 
 These branches started from main `cea3c944f5fb80c4110ce60a512b874e6da79d7e` (release 0.22.2). No release, version bump or deployment was made. Earlier fixes #144, #145, #146, #148 and #149 were integrated by another session through releases #151/#152.
 
 ## Published changes
 
-'Ready' means open and ready for review, not merged. The full pytest results listed below have two expected skips; the runs that report warnings have the two existing handbook citation warnings. Exact commands and limitations are in each saved note and PR body.
+The latest refresh shows #153–167 merged by another session. This audit did not merge any PR. The table preserves their verification and saved notes. The full pytest results listed below have two expected skips; the runs that report warnings have the two existing handbook citation warnings. Exact commands and limitations are in each saved note and PR body.
 
 | PR and change | State at snapshot | Verification | Saved progress note |
 |---|---|---|---|
-| [#153: Recheck assistant and phone access before saving](https://github.com/ksullivan86/kidney-health/pull/153) | Ready; open | 7,431 pytest; 45 authorization races | [ca2b0ae](https://github.com/ksullivan86/kidney-health/blob/ca2b0aec2cbdedaa324f245eb3e0e52674017563/docs/dev/progress/token-write-audit.md) |
-| [#154: Keep Plan sheet replies with their original draft](https://github.com/ksullivan86/kidney-health/pull/154) | Ready; open | 20 Node cases; 44 browser checks; 59 affected rechecks (see note below) | [bc1b38b](https://github.com/ksullivan86/kidney-health/blob/bc1b38bc856e4ba6a6f4d76b5270bac11c7a9b3d/docs/dev/progress/saved-meal-audit.md) |
-| [#155: Keep account imports tied to the reviewed file and choices](https://github.com/ksullivan86/kidney-health/pull/155) | Ready; open | 7,387 pytest; 113 import browser checks | [d3918fe](https://github.com/ksullivan86/kidney-health/blob/d3918fe9f19061ca774ea5e0c030e858ac74c651/docs/dev/progress/account-import-audit.md) |
-| [#156: Keep iPhone sync work with its original server and token](https://github.com/ksullivan86/kidney-health/pull/156) | Ready; open | 7,386 pytest in CI; native iOS/Swift tests; 17 local policy checks | [c5b6f70](https://github.com/ksullivan86/kidney-health/blob/c5b6f70e6229bedd6ba39e05e63a25991e8bf170/docs/dev/progress/ios-settings-audit.md) |
-| [#157: Keep concurrent Care team changes counted once](https://github.com/ksullivan86/kidney-health/pull/157) | Ready; open | 7,392 pytest; 6 concurrent helper-count cases | [cdcfd2a](https://github.com/ksullivan86/kidney-health/blob/cdcfd2ab655edecdb6985de0f1d820c33cbd491e/docs/dev/progress/care-change-accounting-audit.md) |
-| [#158: Correct stale security support and upgrade guidance](https://github.com/ksullivan86/kidney-health/pull/158) | Ready; open | 100 deployment/documentation checks; documentation only | [c5d7eb4](https://github.com/ksullivan86/kidney-health/blob/c5d7eb414c0e913f7fb63e48482933ee5e6dde8f/docs/dev/progress/security-support-docs-audit.md) |
-| [#159: Recheck Ask trust before each automatic save](https://github.com/ksullivan86/kidney-health/pull/159) | Ready; open | 7,400 pytest; 210 focused; 144 browser checks | [79d4ab8](https://github.com/ksullivan86/kidney-health/blob/79d4ab8e12d0e9e5aa8ca5e498d6dd8421a4888f/docs/dev/progress/ask-trust-audit.md) |
-| [#160: Cancel stale device sign-in callbacks before storing credentials](https://github.com/ksullivan86/kidney-health/pull/160) | Ready; open | 7,414 pytest; 82 device checks; [complete CI](https://github.com/ksullivan86/kidney-health/actions/runs/42220785538) | [09695ba](https://github.com/ksullivan86/kidney-health/blob/09695ba3a9a8bd646f82cc19651156f69417b22c/docs/dev/progress/device-callback-audit.md) |
-| [#161: Apply password-change requirements to pending provider account actions](https://github.com/ksullivan86/kidney-health/pull/161) | Ready; open | 7,392 pytest; 116 focused; [complete CI](https://github.com/ksullivan86/kidney-health/actions/runs/42221270024) | [2e985e0](https://github.com/ksullivan86/kidney-health/blob/2e985e0e164fdad4ce9376d052fb5828ef50f974/docs/dev/progress/oidc-password-change-audit.md) |
-| [#162: Preserve measurement drafts and their displayed units during late saves](https://github.com/ksullivan86/kidney-health/pull/162) | Ready; open | 7,387 pytest; 414 browser checks; [complete CI](https://github.com/ksullivan86/kidney-health/actions/runs/42223205700) | [c1a6019](https://github.com/ksullivan86/kidney-health/blob/c1a6019baf03aa6da043fd29ae3542beaefd66a2/docs/dev/progress/body-editor-audit.md) |
-| [#163: Serialize import duplicate checks and daily measurement limits](https://github.com/ksullivan86/kidney-health/pull/163) | Ready; open | 7,399 pytest; 270 focused; [complete CI](https://github.com/ksullivan86/kidney-health/actions/runs/42223648313) | [a1e84e9](https://github.com/ksullivan86/kidney-health/blob/a1e84e9c3e2bb441cc587c65d2c1363af6475a60/docs/dev/progress/record-write-transactions-audit.md) |
-| [#164: Keep AI connection-test results with the settings they tested](https://github.com/ksullivan86/kidney-health/pull/164) | Ready; open | 7,402 pytest; 16 lifecycle cases; [complete CI](https://github.com/ksullivan86/kidney-health/actions/runs/42225013275) | [7aebc8c](https://github.com/ksullivan86/kidney-health/blob/7aebc8c4f65dbda9d94e428e950084121e6ef270/docs/dev/progress/ai-probe-audit.md) |
-| [#165: Keep newer symptom drafts intact when older saves return](https://github.com/ksullivan86/kidney-health/pull/165) | Ready; open | 7,387 pytest; 65 focused; 87 browser checks; [complete CI](https://github.com/ksullivan86/kidney-health/actions/runs/42225683694) | [36077d1](https://github.com/ksullivan86/kidney-health/blob/36077d1eb059329d6e37a8ac5e9d8ff072e610f0/docs/dev/progress/symptom-editor-audit.md) |
-| [#166: Reuse the shared USDA food during simultaneous imports](https://github.com/ksullivan86/kidney-health/pull/166) | Draft; open | 7,392 local pytest; 6 concurrency/rollback cases; 200 + 77 focused; CI pending | [768e86c](https://github.com/ksullivan86/kidney-health/blob/768e86ca489550c85ed9acab8aa8f0b56d4c2398/docs/dev/progress/usda-import-audit.md) |
-| [#167: Preserve food entry and Quick add drafts across delayed requests](https://github.com/ksullivan86/kidney-health/pull/167) | Draft; open | 23 Node cases; 62 focused; 78 browser checks; full suite/reliability pending | [368581e](https://github.com/ksullivan86/kidney-health/blob/368581e97403f4347d0c052698312c22cef66726/docs/dev/progress/food-entry-audit.md) |
+| [#153: Recheck assistant and phone access before saving](https://github.com/ksullivan86/kidney-health/pull/153) | Merged by another session; closed | 7,431 pytest; 45 authorization races | [ca2b0ae](https://github.com/ksullivan86/kidney-health/blob/ca2b0aec2cbdedaa324f245eb3e0e52674017563/docs/dev/progress/token-write-audit.md) |
+| [#154: Keep Plan sheet replies with their original draft](https://github.com/ksullivan86/kidney-health/pull/154) | Merged by another session; closed | 20 Node cases; 44 browser checks; 59 affected rechecks (see note below) | [bc1b38b](https://github.com/ksullivan86/kidney-health/blob/bc1b38bc856e4ba6a6f4d76b5270bac11c7a9b3d/docs/dev/progress/saved-meal-audit.md) |
+| [#155: Keep account imports tied to the reviewed file and choices](https://github.com/ksullivan86/kidney-health/pull/155) | Merged by another session; closed | 7,387 pytest; 113 import browser checks | [d3918fe](https://github.com/ksullivan86/kidney-health/blob/d3918fe9f19061ca774ea5e0c030e858ac74c651/docs/dev/progress/account-import-audit.md) |
+| [#156: Keep iPhone sync work with its original server and token](https://github.com/ksullivan86/kidney-health/pull/156) | Merged by another session; closed | 7,386 pytest in CI; native iOS/Swift tests; 17 local policy checks | [c5b6f70](https://github.com/ksullivan86/kidney-health/blob/c5b6f70e6229bedd6ba39e05e63a25991e8bf170/docs/dev/progress/ios-settings-audit.md) |
+| [#157: Keep concurrent Care team changes counted once](https://github.com/ksullivan86/kidney-health/pull/157) | Merged by another session; closed | 7,392 pytest; 6 concurrent helper-count cases | [cdcfd2a](https://github.com/ksullivan86/kidney-health/blob/cdcfd2ab655edecdb6985de0f1d820c33cbd491e/docs/dev/progress/care-change-accounting-audit.md) |
+| [#158: Correct stale security support and upgrade guidance](https://github.com/ksullivan86/kidney-health/pull/158) | Merged by another session; closed | 100 deployment/documentation checks; documentation only | [c5d7eb4](https://github.com/ksullivan86/kidney-health/blob/c5d7eb414c0e913f7fb63e48482933ee5e6dde8f/docs/dev/progress/security-support-docs-audit.md) |
+| [#159: Recheck Ask trust before each automatic save](https://github.com/ksullivan86/kidney-health/pull/159) | Merged by another session; closed | 7,400 pytest; 210 focused; 144 browser checks | [79d4ab8](https://github.com/ksullivan86/kidney-health/blob/79d4ab8e12d0e9e5aa8ca5e498d6dd8421a4888f/docs/dev/progress/ask-trust-audit.md) |
+| [#160: Cancel stale device sign-in callbacks before storing credentials](https://github.com/ksullivan86/kidney-health/pull/160) | Merged by another session; closed | 7,414 pytest; 82 device checks; [complete CI](https://github.com/ksullivan86/kidney-health/actions/runs/42220785538) | [09695ba](https://github.com/ksullivan86/kidney-health/blob/09695ba3a9a8bd646f82cc19651156f69417b22c/docs/dev/progress/device-callback-audit.md) |
+| [#161: Apply password-change requirements to pending provider account actions](https://github.com/ksullivan86/kidney-health/pull/161) | Merged by another session; closed | 7,392 pytest; 116 focused; [complete CI](https://github.com/ksullivan86/kidney-health/actions/runs/42221270024) | [2e985e0](https://github.com/ksullivan86/kidney-health/blob/2e985e0e164fdad4ce9376d052fb5828ef50f974/docs/dev/progress/oidc-password-change-audit.md) |
+| [#162: Preserve measurement drafts and their displayed units during late saves](https://github.com/ksullivan86/kidney-health/pull/162) | Merged by another session; closed | 7,387 pytest; 414 browser checks; [complete CI](https://github.com/ksullivan86/kidney-health/actions/runs/42223205700) | [c1a6019](https://github.com/ksullivan86/kidney-health/blob/c1a6019baf03aa6da043fd29ae3542beaefd66a2/docs/dev/progress/body-editor-audit.md) |
+| [#163: Serialize import duplicate checks and daily measurement limits](https://github.com/ksullivan86/kidney-health/pull/163) | Merged by another session; closed | 7,399 pytest; 270 focused; [complete CI](https://github.com/ksullivan86/kidney-health/actions/runs/42223648313) | [a1e84e9](https://github.com/ksullivan86/kidney-health/blob/a1e84e9c3e2bb441cc587c65d2c1363af6475a60/docs/dev/progress/record-write-transactions-audit.md) |
+| [#164: Keep AI connection-test results with the settings they tested](https://github.com/ksullivan86/kidney-health/pull/164) | Merged by another session; closed | 7,402 pytest; 16 lifecycle cases; [complete CI](https://github.com/ksullivan86/kidney-health/actions/runs/42225013275) | [7aebc8c](https://github.com/ksullivan86/kidney-health/blob/7aebc8c4f65dbda9d94e428e950084121e6ef270/docs/dev/progress/ai-probe-audit.md) |
+| [#165: Keep newer symptom drafts intact when older saves return](https://github.com/ksullivan86/kidney-health/pull/165) | Merged by another session; closed | 7,387 pytest; 65 focused; 87 browser checks; [complete CI](https://github.com/ksullivan86/kidney-health/actions/runs/42225683694) | [36077d1](https://github.com/ksullivan86/kidney-health/blob/36077d1eb059329d6e37a8ac5e9d8ff072e610f0/docs/dev/progress/symptom-editor-audit.md) |
+| [#166: Reuse the shared USDA food during simultaneous imports](https://github.com/ksullivan86/kidney-health/pull/166) | Merged by another session; closed | 7,392 local pytest; 6 concurrency/rollback cases; 200 + 77 focused; complete CI | [0be5d56](https://github.com/ksullivan86/kidney-health/blob/0be5d5698d699700f15b379659fee597534c7a51/docs/dev/progress/usda-import-audit.md) |
+| [#167: Preserve food entry and Quick add drafts across delayed requests](https://github.com/ksullivan86/kidney-health/pull/167) | Merged by another session; closed | 7,388 pytest; 23 Node cases; 62 focused; 78 new + 87 reliability browser checks; complete CI | [374c40a](https://github.com/ksullivan86/kidney-health/blob/374c40adb3a3a18b46c1e91528b0d6d3e28272ef/docs/dev/progress/food-entry-audit.md) |
 
 For #154, the first full run had 7,386 passes and two failures in test-maintenance assertions. Those assertions were corrected and all 59 affected tests passed afterward. All 7,388 unique cases were checked; do not describe that as a second all-green local full run. Follow the PR checks for any later CI run.
 
 The complete CI links for #160–165 passed Python 3.12/3.14/3.15, native iOS/Swift, handbook, lint and image checks at their tested commits. Later progress-note-only commits may have started fresh runs. Check the current head and current checks before integration.
 
-## Pending work
+## Resume details
 
-### #166: simultaneous USDA imports
+### #166: simultaneous USDA imports — complete
 
-- Branch: `audit/usda-import-concurrency`; saved head `768e86ca489550c85ed9acab8aa8f0b56d4c2398`.
+- Branch: `audit/usda-import-concurrency`; saved head `0be5d5698d699700f15b379659fee597534c7a51`.
 - Worktree: `/workspace/work/usda-import-audit-src`.
 - Full local result: **7,392 passed, 2 skipped, 2 existing warnings**. All six new cases pass; unchanged main fails four actual duplicate-ID cases and passes two rollback cases. An earlier test harness needed HTTPS setup correction; its setup failures are not product evidence.
 - Broader API/isolation/MCP/Ask suite: 200 passed. Separate MCP transactional-write suite: 77 passed. Ruff, OpenAPI, generated pages, parity and strict handbook pass.
-- CI run: [42279711531](https://github.com/ksullivan86/kidney-health/actions/runs/42279711531), still running at the snapshot.
-- Next: inspect CI, finalize `docs/dev/progress/usda-import-audit.md` and PR #166's validation, then mark ready without merging.
+- CI run: [42279711531](https://github.com/ksullivan86/kidney-health/actions/runs/42279711531), complete and successful.
+- Complete: progress note and validation finalized; another session has merged #166. No code work remains for this fix.
 - Logs: `/workspace/work/usda-import-audit/`, especially `baseline-final.log`, `lifecycle-verified.log`, `focused.log`, `mcp-write.log`, `full-pytest.log` and `handbook.log`.
 - Preserve the transaction contract: `upsert_usda_food` must not commit an existing assistant write. It starts `BEGIN IMMEDIATE` only when the caller has no transaction. Do not replace this with the committing `begin_immediate` wrapper inside a wider save.
 
-### #167: food-entry and Quick add request ownership
+### #167: food-entry and Quick add request ownership — complete
 
-- Branch: `audit/food-entry-editor-lifecycle`; saved head `368581e97403f4347d0c052698312c22cef66726`.
+- Branch: `audit/food-entry-editor-lifecycle`; saved head `374c40adb3a3a18b46c1e91528b0d6d3e28272ef`.
 - Worktree: `/workspace/work/food-entry-audit-src`.
 - Source: `app/static/js/views/add.js`; regression cases: `tests/js/food_entry_lifecycle.test.mjs` and its Python wrapper.
 - **23 Node cases pass; unchanged main fails 17 and passes six.** These cover saves/deletes after reopen, duplicate prevention, stale metadata for the same entry object, frozen submitted entry controls, deferred metadata, current versus stale offline conflicts, base versions, untouched quantities, date navigation and low-treatment purpose.
 - **62 focused checks and all 78 new Chromium checks pass** at 375 light / 1280 dark. Browser harness: `tools/e2e/food_entry_late_replies.py`, registered in the tool index/tests. The first browser run used a duplicate fixture name across viewports; distinct names fixed that harness issue and the complete rerun passed.
-- Ruff, OpenAPI, generated pages, Node parity and strict handbook pass. Full pytest and the existing reliability browser walk are still running at this snapshot.
-- Next: inspect `full-pytest.log`, `reliability.log`, current CI and the latest PR checks. Fix genuine failures; update the progress note and PR body; mark ready after verification. Do not merge.
+- Ruff, OpenAPI, generated pages, all 30 direct Node regression files, parity and strict handbook pass. The existing reliability browser walk also passed all 87 checks (exit 0; Playwright emitted teardown cancellation diagnostics). **Full local pytest: 7,388 passed, 2 skipped, 2 existing warnings.** Complete CI also passes. CI run: [42283407355](https://github.com/ksullivan86/kidney-health/actions/runs/42283407355).
+- Complete: full verification passed. Another session merged #167 while its final documentation checkpoint was being pushed. This audit did not merge it. The saved note links to the final checkpoint on the original branch. Inspect main before further code changes; continue with the unresolved follow-ups below.
 - Logs: `/workspace/work/food-entry-audit/`; browser result: `browser-final/report.json`.
 - Keep existing offline behavior: send the entry's base/version, omit untouched amounts, let current conflicts open review, and preserve the low-treatment purpose. Quick add's new guard preserves reopened drafts; this change does not freeze its fields or alter photo handling.
 
@@ -110,13 +110,18 @@ GitHub tooling notes: authenticated bounded `git push` and `gh pr create --body-
 
 ## Combining changes
 
-The user's other session handles integration. Refresh main and PR checks, combine independent Unreleased entries, and run the required checks on the combined changes.
+The user's other session handled integration of #153–167. Refresh main before further work; these original feature branches are historical checkpoints. For any future integration, combine independent Unreleased entries and run required checks on the combined changes.
 
 - A `git merge-tree` simulation of #153 + #159 auto-merged `app/mcp/tools.py`; the independent changelog entries conflicted.
 - A simulation of #162 + #163 auto-merged source changes; `CHANGELOG.md` and `docs/body.md` conflicted. Keep both behavior notes.
-- These were tree comparisons only. No branch or PR was merged by this audit.
+- These were tree comparisons only. No branch or PR was merged by this audit; merged states above were observed from integration by another session.
 
 ## Coverage and leads
+
+Two user-reported follow-ups remain **not fixed** in this batch:
+
+- **Ask retry while a save is in progress:** rarely, a retried save can show a confirmation card for food that the original request is already saving. This is separate from #159's completed-save retry and stored-trust checks. Reproduce with overlapping requests for the same save key; check the in-progress state before offering confirmation. Verify that the original save still completes once and that legitimate unsaved actions still require confirmation. Do not mark this resolved based on #159 alone.
+- **Device session-check duplication:** #160 revalidates the session before storing device credentials, but copies some session rules in `app/devices/api.py::_person_still_current`. A future rule change could miss this copy. Consider a shared, read-only session/owner validation helper, with local/proxy/no-login and expired/revoked/disabled/password-change cases. Preserve the write transaction: ordinary session validation can touch rows and commit, so it cannot simply replace the read-only check under the callback's write lock. This is a maintenance follow-up, not a newly reproduced authorization bypass.
 
 - Every fix has a per-branch note with its reproduction and verification. Do not repeat completed baseline runs merely to recover context.
 - Remaining lead: menu-plan submission also awaits a write before closing its dialog. It has not yet been reproduced or fixed; inspect its opening/busy behavior before declaring a bug.
