@@ -1,15 +1,21 @@
-Status: in progress
+Status: complete
 
-Branch `audit/record-import-transactions`, main `cea3c94`. Keep PR unmerged.
+Branch audit/record-import-transactions, main cea3c94. PR #163 ready for review; do not merge.
 
-Confirmed: body batch duplicate keys/measurements, lab import duplicate results and the manual/batch per-date
-measurement limits are checked before acquiring SQLite's write lock. Reproduced overlapping real requests
-with a held first snapshot; the second can finish on main, or wait for the lock after a fix. Cases cover
-same/different import keys, lab imports, and create/move/batch capacity for weight/BP/symptoms. Clinical
-limits and conversion/dedup rules must stay unchanged. Push already uses BEGIN IMMEDIATE; account import
-and device writes do too. All 13 new cases fail on clean main and pass after taking BEGIN IMMEDIATE before the relevant reads.
-This serializes body creates/moves/batches, symptom creates/moves and lab imports. Batch validation stays
-before the lock, and no network is inside these transactions. Existing per-request connection cleanup
-rolls back a refused check. Docs/handbook/changelog updated; 13 focused concurrency cases pass. Broad body/symptoms/lab-import suite and full pytest are running.
-Ruff, OpenAPI, generated handbook and Node parity pass; strict handbook running. Next: finish checks,
-update PR validation, mark ready but never merge. Logs: `/workspace/work/record-import-audit/`.
+Confirmed: simultaneous body imports could duplicate a measurement or fail on an import key, lab imports
+could duplicate a result, and creates/moves/batches could exceed the existing daily limits. All13 new real
+concurrent-request cases fail on clean main and pass with the fix. The held body snapshot is _per_day,
+after existing keys and measurement marks were read. Cases cover same/different keys, lab results and
+create/move/batch capacity for weight/BP, plus symptom creates/moves. No timing assertion: release the first
+snapshot after the second finishes or a bounded wait when the corrected write lock blocks it.
+
+BEGIN IMMEDIATE now protects those reads and saves. Batch validation stays before the lock; no network is
+inside it. Failed checks roll back when the request connection closes. Existing limits, matching rules,
+conversions, API shapes and schema stay unchanged. Architecture, guides, handbook and changelog updated.
+
+Focused suite:270passed. Ruff, OpenAPI, generated handbook, Node parity and strict handbook pass. Complete
+CI run42223648313 for functional commit04f11e0 is green: Python3.12/3.14/3.15, native iOS/Swift, handbook,
+lint and image checks. Python3.12 job127911545858 reports7399passed,2skipped and the two existing handbook
+citation warnings. Concurrent local full runs exhausted /tmp; the passing isolated CI run verifies the full
+suite. Completed local failure artifacts were removed; new checks use /workspace/work/pytest-scratch.
+No branch or PR was merged. Logs: /workspace/work/record-import-audit/.
