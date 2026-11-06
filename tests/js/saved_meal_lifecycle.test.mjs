@@ -91,6 +91,7 @@ for (const reject of [false, true]) {
     await settle();
     assert.equal(s.$('#sheet-meal').open, true); assert.equal(s.$('#meal-name').value, 'New draft');
     assert.equal(s.$('#meal-save').disabled, false); assert.deepEqual(s.errors, []);
+    assert.equal(s.notices.includes('An earlier save did not go through. Check it and try again.'), reject); // the earlier failure is still said
   });
 }
 test('saving freezes the submitted editor, rejects duplicates, and a failure restores the draft', async () => {
@@ -119,6 +120,7 @@ for (const reject of [false, true]) {
     if (reject) s.last('mealFromLog').reject(new Error('old save failed')); else s.last('mealFromLog').resolve(dish());
     await settle(); assert.equal(s.$('#sheet-savemeal').open, true); assert.equal(s.$('#savemeal-name').value, 'Dinner');
     assert.equal(s.$('#savemeal-save').disabled, false); assert.deepEqual(s.errors, []);
+    assert.equal(s.notices.includes('An earlier save did not go through. Check it and try again.'), reject); // the earlier failure is still said
   });
 }
 test('Save as meal freezes fields while saving and restores them after a failure', async () => {
@@ -164,6 +166,7 @@ for (const reject of [false, true]) {
     if (reject) s.last('copyDay').reject(new Error('old copy failed')); else s.last('copyDay').resolve({ created: 1 });
     await settle(); assert.equal(s.$('#sheet-copy').open, true); assert.equal(s.$('#copy-to').value, '2026-12-02');
     assert.equal(s.$('#copy-save').disabled, false); assert.deepEqual(s.errors, []);
+    assert.equal(s.notices.includes('An earlier save did not go through. Check it and try again.'), reject); // the earlier failure is still said
     if (!reject) assert.equal(s.changes[0][0], null);
   });
 }

@@ -5,9 +5,22 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
-## Unreleased
+## 0.22.3 — 2026-11-06
+
+### Upgrading from 0.22.2
+
+* No schema step and no new settings. A host that tracks `:0.22` gets this release on its next pull. The iPhone app, when
+  the server refuses its token, now waits for you to tap Test connection or Save before it sends again.
+
+### Security
+
+* New Chainguard base images for the builder and the runtime (libexpat 2.10.0-r1).
 
 ### Fixed
+
+* A sheet you close before its save answers no longer hides a failure. If that save fails, the app says "An earlier save did
+  not go through", and the sheet you opened since stays as it is. This covers food entries, Quick add, saved meals, Copy day,
+  weight, blood pressure and symptoms.
 
 * Assistant saves and phone submissions now check access again before saving. A request that was waiting when
   its token ended or access was turned off is refused without saving anything.

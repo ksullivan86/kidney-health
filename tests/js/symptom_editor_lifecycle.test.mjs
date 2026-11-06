@@ -23,7 +23,7 @@ function setup() {
     dlg: page.$('#sheet-symptom'), addBtn: page.$('#symptoms-add'),
     sheets: { open(dlg) { dlg.open = true; }, onSubmit(form, fn) { form.addEventListener('submit', fn); } },
     shownDate: '2026-11-06', todayStr: () => '2026-11-06', flagEl: () => page.h('p'),
-    toast() {}, live() {}, sevWord: String, fmtDateShort: String, loadToday: async () => {}, toastError: (e) => errors.push(e.message),
+    toast: (m, kind) => { if (kind === 'error') errors.push(m); }, live() {}, sevWord: String, fmtDateShort: String, loadToday: async () => {}, toastError: (e) => errors.push(e.message),
   });
   vm.runInContext('globalThis.window = globalThis;', context);
   vm.runInContext(readFileSync(new URL('../../app/static/js/engine/symptoms.js', import.meta.url), 'utf8'), context);
@@ -48,7 +48,8 @@ for (const outcome of ['success', 'validation', 'error']) {
     await settle();
     assert.equal(s.$('#sheet-symptom').open, true);
     assert.equal(s.$('#symptom-note').value, 'Keep this new draft');
-    assert.equal(s.$('#symptom-error').hidden, true); assert.deepEqual(s.errors, []);
+    assert.equal(s.$('#symptom-error').hidden, true);
+    assert.deepEqual(s.errors, outcome === 'success' ? [] : ['An earlier save did not go through. Check it and try again.']); // said, without touching the new draft
     assert.equal(s.$('#symptom-save').disabled, false);
     await s.submit(); assert.equal(s.calls.length, 2); assert.equal(s.calls[1].method, 'update');
     assert.equal(s.calls[1].args[0], 9); s.calls[1].resolve(answer(s.calls[1])); await settle();

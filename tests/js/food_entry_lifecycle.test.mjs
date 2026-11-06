@@ -99,6 +99,7 @@ for (const action of ['add', 'edit', 'deleteEntry', 'deleteFood']) {
       await settle();
       assert.equal(s.$('#sheet-entry').open, true); assert.equal(s.$('#entry-note').value, 'Keep the next draft');
       assert.deepEqual(s.routes, []); assert.deepEqual(s.errors, []);
+      assert.equal(s.notices.includes('An earlier save did not go through. Check it and try again.'), failure); // the earlier failure is still said
       assert.equal(s.$('#entry-save').disabled, false);
     });
   }

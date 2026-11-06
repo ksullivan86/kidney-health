@@ -26,7 +26,7 @@ function setup() {
     weightDlg: page.$('#sheet-weight'), bpDlg: page.$('#sheet-bp'), addWeightBtn: page.$('#body-add-weight'), addBpBtn: page.$('#body-add-bp'),
     api: Object.fromEntries(['addWeight', 'updateWeight', 'addBloodPressure', 'updateBloodPressure'].map((name) => [name, request(name)])),
     todayStr: () => '2026-11-06', onDialysis: () => false, learnLink: () => null, flagBlock: () => page.h('p'),
-    live() {}, toast() {}, toastError: (e) => errors.push(e.message), readingText: (r) => `${r.systolic}/${r.diastolic}`,
+    live() {}, toast: (m, kind) => { if (kind === 'error') errors.push(m); }, toastError: (e) => errors.push(e.message), readingText: (r) => `${r.systolic}/${r.diastolic}`,
     fmtDateShort: String, loadToday: async (d) => loads.push(d), todayBody: page.h('div'), NEEDS_CONNECTION: 'Connection needed',
   });
   vm.runInContext('globalThis.window = globalThis;', context);
@@ -63,7 +63,8 @@ for (const type of ['weight', 'bp']) {
       assert.equal(s.$(`#${type}-note`).value, 'Keep this new draft');
       assert.equal(s.$(`#${type}-error`).hidden, true);
       assert.equal(s.$(`#${type}-save`).disabled, false);
-      assert.deepEqual(s.errors, []);
+      // the closed sheet's failure is still said, without touching the new draft
+      assert.deepEqual(s.errors, failure ? ['An earlier save did not go through. Check it and try again.'] : []);
       await s.submit(type); assert.equal(s.calls.length, 2);
       assert.match(s.calls[1].method, /^update/); s.calls[1].resolve(answer(type, s.calls[1])); await settle();
       assert.equal(s.$(`#sheet-${type}`).open, false);

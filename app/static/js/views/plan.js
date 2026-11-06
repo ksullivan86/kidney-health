@@ -293,6 +293,8 @@
   }
 
   // ---- Copy day sheet -------------------------------------------------------
+  // A save for a sheet that was closed or reopened since: leave that sheet alone, but say it failed (the person may think it saved).
+  const lateFailed = (err) => { if (!err || !err.handled) toast('An earlier save did not go through. Check it and try again.', 'error'); };
   const copyDlg = $('#sheet-copy');
   sheets.setup(copyDlg);
   let copyBusy = false;
@@ -338,7 +340,7 @@
       const n = res && typeof res.created === 'number' ? res.created : (res && res.entries ? res.entries.length : 0);
       toast(n ? `Copied ${n} ${n === 1 ? 'entry' : 'entries'} to ${fmtDateLong(to_date)} as ${body.status}` : 'Nothing to copy from that day', n ? 'ok' : '');
       if (n) afterLogChange(current ? to_date : null);
-    } catch (err) { if (currentCopy(opening)) toastError(err); }
+    } catch (err) { if (currentCopy(opening)) toastError(err); else lateFailed(err); }
     finally {
       copyBusy = false;
       if (currentCopy(opening)) sheetWriteFields($('#copy-form'), false);
@@ -465,7 +467,7 @@
       const n = res && res.entries ? res.entries.length : t.items.length;
       toast(`${body.status === 'planned' ? 'Planned' : 'Added'} ${t.name} (${n} ${n === 1 ? 'food' : 'foods'}) for ${MEAL_LABEL[body.meal].toLowerCase()}, ${fmtDateLong(date)}`, 'ok');
       afterLogChange(current ? date : null, { goToDay: current && state.view === 'add' });
-    } catch (err) { if (currentApply(opening)) toastError(err); }
+    } catch (err) { if (currentApply(opening)) toastError(err); else lateFailed(err); }
     finally {
       applyBusy = false;
       if (currentApply(opening)) sheetWriteFields($('#apply-form'), false);
@@ -510,7 +512,7 @@
       if (currentSaveMeal(opening)) saveMealDlg.close();
       KH.invalidateMeals();
       toast(`Saved “${t.name}” (${t.items.length} ${t.items.length === 1 ? 'food' : 'foods'}). Find it under Plan.`, 'ok');
-    } catch (err) { if (currentSaveMeal(opening)) toastError(err); }
+    } catch (err) { if (currentSaveMeal(opening)) toastError(err); else lateFailed(err); }
     finally {
       saveMealBusy = false;
       if (currentSaveMeal(opening)) sheetWriteFields($('#savemeal-form'), false);
@@ -644,7 +646,7 @@
       await KH.loadMeals(true);
       renderSavedMeals();
       if (state.view === 'add') KH.views.add.renderSavedShortcuts();
-    } catch (err) { if (currentMealEditor(editing)) toastError(err); }
+    } catch (err) { if (currentMealEditor(editing)) toastError(err); else lateFailed(err); }
     finally {
       mealBusy = false; editing.saving = false;
       if (currentMealEditor(editing)) sheetWriteFields($('#meal-form'), false);

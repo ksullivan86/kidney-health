@@ -1106,7 +1106,9 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
 
-**Status (2026-11-06): v0.22.2 is prepared.** The owner's four choices from the sharing and passkey review (a reset link removes
+**Status (2026-11-06): v0.22.3 is prepared.** Fifteen audit fixes: writes recheck access and trust inside their write lock
+(assistant and phone tokens, Ask, device sign-in, provider account actions), imports and daily limits are serialised, and every
+sheet keeps late replies with the opening that sent them while still saying when an earlier save failed. **v0.22.2**: the owner's four choices from the sharing and passkey review (a reset link removes
 passkeys; no Care team member's network in the owner's activity; an admin's End sharing on both sides; the note line on the share
 form), checkbox rows that wrap at 200 % text, and `tools/e2e/everything.py`, every recent feature on at once. **v0.22.1**: fixes for answers that arrive late: the shopping sheets, connected devices, recipe
 import, Care team plans and list-app settings each keep a late reply with the request that made it, and new base images.
@@ -5077,7 +5079,7 @@ Signed in only (`current_user`; an anonymous caller gets the generic `401`, so a
 (`no-store` like every `/api` answer). The answer:
 
 ```json
-{"app_version": "0.22.2", "api_version": 1,
+{"app_version": "0.22.3", "api_version": 1,
  "capabilities": {"ai": false, "ai_next_meal": false, "ai_parse_meal": false, "ai_label": false, "ai_plate": false, "ai_lab_report": false,
                   "chat": false, "voice": false, "assistant": false, "push": false,
                   "barcode": false, "barcode_off": false, "barcode_usda": false, "handbook": false},

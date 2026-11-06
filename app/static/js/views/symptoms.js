@@ -102,6 +102,8 @@
   }
 
   // ---- the sheet ----------------------------------------------------------------------------------------------------
+  // A save for a sheet that was closed or reopened since: leave that sheet alone, but say it failed (the person may think it saved).
+  const lateFailed = (err) => { if (!err || !err.handled) toast('An earlier save did not go through. Check it and try again.', 'error'); };
   const form = $('#symptom-form');
   const kind = $('#symptom-kind');
   const labelField = $('#symptom-label-field');
@@ -183,7 +185,7 @@
       if (current()) {
         if (err && err.status === 400) showError(err.detail || err.message);
         else toastError(err);
-      }
+      } else lateFailed(err);
     } finally {
       S.busy = false;
       if (current()) lockFields(false);

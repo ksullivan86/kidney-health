@@ -187,6 +187,8 @@
   }
 
   // ---- the sheets: shared parts ----------------------------------------------------------------------------------------
+  // A save for a sheet that was closed or reopened since: leave that sheet alone, but say it failed (the person may think it saved).
+  const lateFailed = (err) => { if (!err || !err.handled) toast('An earlier save did not go through. Check it and try again.', 'error'); };
   const timeOf = (input) => (input.value ? input.value : null);
   function fillContexts(box, name, kind, current) {
     clear(box);
@@ -279,7 +281,7 @@
       live(`${editing ? 'Updated' : 'Saved'} weight ${R.formatWeight(saved.kg, units)}, ${fmtDateShort(saved.date)}.`);
       await loadToday(S.shownDate || todayStr());
     } catch (err) {
-      if (current()) saveFailed(wError, err);
+      if (current()) saveFailed(wError, err); else lateFailed(err);
     } finally {
       W.writing = false;
       if (current()) lockMeasurementFields(wForm, false);
@@ -367,7 +369,7 @@
       await loadToday(S.shownDate || todayStr());
       if (saved.flag && !weightDlg.open && !bpDlg.open) { const block = $('.body-flag', todayBody); if (block) { block.setAttribute('tabindex', '-1'); block.focus(); } }
     } catch (err) {
-      if (current()) saveFailed(bError, err);
+      if (current()) saveFailed(bError, err); else lateFailed(err);
     } finally {
       B.writing = false;
       if (current()) lockMeasurementFields(bForm, false);

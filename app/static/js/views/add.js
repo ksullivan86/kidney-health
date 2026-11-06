@@ -128,6 +128,8 @@
   // ENTRY sheet (add + edit)
   // ---------------------------------------------------------------------------
   const entryDlg = $('#sheet-entry');
+  // A save for a sheet that was closed or reopened since: leave that sheet alone, but say it failed (the person may think it saved).
+  const lateFailed = (err) => { if (!err || !err.handled) toast('An earlier save did not go through. Check it and try again.', 'error'); };
   const entryForm = $('#entry-form');
   const entryServings = $('#entry-servings');
   const entryGrams = $('#entry-grams');
@@ -403,7 +405,7 @@
         if (state.date === date && body.date && body.date !== state.date) KH.views.today.setDate(body.date); else KH.views.today.loadDay();
       }
     } catch (err) {
-      if (!current()) return;
+      if (!current()) { lateFailed(err); return; }
       toastError(err);
       if (err && err.conflict) { entryDlg.close(); KH.views.today.loadDay(); $('#sync-badge').click(); } // the card waits in Settings → This device
     }
@@ -429,7 +431,7 @@
           KH.views.today.loadDay();
           return true;
         } catch (err) {
-          if (!current()) return false;
+          if (!current()) { lateFailed(err); return false; }
           toastError(err);
           if (err && err.conflict) { entryDlg.close(); KH.views.today.loadDay(); $('#sync-badge').click(); }
           return false;
@@ -456,7 +458,7 @@
           toast('Food deleted', 'ok');
           runSearch();
           return true;
-        } catch (err) { if (current()) toastError(err); return false; }
+        } catch (err) { if (current()) toastError(err); else lateFailed(err); return false; }
         finally { finishEntryWrite(); }
       },
     });
@@ -573,7 +575,7 @@
       state.dayLoadedFor = null;
       router.show('today');
     } catch (err) {
-      if (!current()) return;
+      if (!current()) { lateFailed(err); return; }
       const parts = KH.forms.splitFieldErrors(err.detail);
       const fieldOf = { name: '#q-name', serving_desc: '#q-serving-desc', serving_g: '#q-serving-g', gtin: '#q-gtin', ingredients_text: '#q-ingredients' };
       let shown = false;
