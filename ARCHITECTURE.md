@@ -377,7 +377,9 @@ Every target may be a number, `{"min","max"}`, or `null` (= not tracked).
 * `POST /api/foods/usda/import` body `{"fdc_id": 173944}` → Food (source `usda`, serving 100 g unless
   the USDA record supplies a household portion; nutrients mapped by USDA nutrient numbers:
   208/1008 kcal, 203/1003 protein, 204/1004 fat, 606/1258 sat fat, 205/1005 carbs, 291/1079 fiber,
-  269/2000 sugar, 307/1093 sodium, 306/1092 potassium, 305/1091 phosphorus, 301/1087 calcium, 255/1051 water)
+  269/2000 sugar, 307/1093 sodium, 306/1092 potassium, 305/1091 phosphorus, 301/1087 calcium, 255/1051 water).
+  Shared USDA upserts reserve a write lock before looking up the FDC id, so simultaneous imports reuse one row. The helper
+  starts a write transaction only when the caller has none and never commits a surrounding assistant save.
 
 ```json
 Food = {
@@ -512,6 +514,11 @@ Mobile-first single page, five views switched client-side (no router library):
    answer to the newest search while it is open: an older search, or one from before the sheet was
    closed, is dropped, and an import that finishes after the sheet was closed says so in a toast
    without opening the entry sheet (`tests/js/usda_late_reply.test.mjs`).
+   Each entry opening owns its serving-size reads, save/delete replies and offline-conflict navigation. Reopening never resets
+   an outstanding write; the new draft stays editable with Save/Delete waiting. Submitted entry controls freeze while Close remains usable. Late metadata cannot alter a newer draft or unlock submitted fields. Quick add also keeps a
+   reopened draft separate from the previous save and its field errors. Submitted writes may finish after closing; stale
+   replies invalidate the day cache without closing the new draft or changing its view. Versions, untouched amounts and
+   low-treatment purpose follow the existing offline rules.
 3. **Trends**: last 14 days, one small inline-SVG bar chart per limited nutrient
    (K, P, Na, protein, carbs, fluid if set) with target line. Export CSV button.
 4. **Profile & targets**: profile fields, targets editor, "Suggest targets" button
@@ -649,6 +656,12 @@ Interdialytic interval: `since` is the most recent dialysis weekday on or before
 Only eaten entries count. Include only nutrients that have a numeric target.
 
 ### Saved meals (templates), prefix `/api/meals`
+
+The New/Edit, Add to a day, Save as meal and Copy day sheets keep replies attached to their opening. A late food
+search cannot populate another draft; a completed save or deletion cannot close a newer sheet or navigate
+to its earlier day. Submitted fields are disabled until the write answers, with Close and Cancel still available.
+Reopening allows another draft, but the save button waits for the earlier write to finish, preventing a second
+submission while its outcome is unknown. A failed write restores the submitted draft when it is still open.
 * `GET /api/meals` → `{"meals": [MealTemplate]}` (alphabetical)
 * `POST /api/meals` body `{"name", "note"?, "items": [{"food_id", "servings"}]}` → MealTemplate (201); 404 if a food id is unknown; 400 if items empty.
 * `GET /api/meals/{id}` → MealTemplate; `PUT /api/meals/{id}` (same body) → MealTemplate; `DELETE /api/meals/{id}` → 204.
@@ -1093,7 +1106,9 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
 
-**Status (2026-11-06): v0.22.2 is prepared.** The owner's four choices from the sharing and passkey review (a reset link removes
+**Status (2026-11-06): v0.22.3 is prepared.** Fifteen audit fixes: writes recheck access and trust inside their write lock
+(assistant and phone tokens, Ask, device sign-in, provider account actions), imports and daily limits are serialised, and every
+sheet keeps late replies with the opening that sent them while still saying when an earlier save failed. **v0.22.2**: the owner's four choices from the sharing and passkey review (a reset link removes
 passkeys; no Care team member's network in the owner's activity; an admin's End sharing on both sides; the note line on the share
 form), checkbox rows that wrap at 200 % text, and `tools/e2e/everything.py`, every recent feature on at once. **v0.22.1**: fixes for answers that arrive late: the shopping sheets, connected devices, recipe
 import, Care team plans and list-app settings each keep a late reply with the request that made it, and new base images.
@@ -1277,7 +1292,7 @@ optional HIBP check (`PASSWORD_BREACH_CHECK`, off by default; the k-anonymity ra
 | `PATCH /api/me/passkeys/{id}` | user (local) | `{name}` → the item; 404 if not yours |
 | `DELETE /api/me/passkeys/{id}` | user (local) *(re-auth)* | → 204; audit `passkey.removed` (`via: self`); 404 if not yours |
 | `GET /api/me/oidc` | user | → `{available, enabled, label, providers: [{id, label, linked}], links: [{id, provider (the issuer's host), provider_id, name, email, created_at, last_used_at, current}], can_link, has_password, passkeys}` (`provider_id` and `name` are null, and `current` false, for a provider no longer in use; `can_link`: a provider in use is not linked yet) (never a subject or a token); works while sign-in with a provider is off, for a link left from before |
-| `POST /api/me/oidc/link` | user (local) *(re-auth)* | `?provider=` as for the start → `{url}` (and the flow cookie); the callback links only when this same session comes back and that provider account is not linked to someone else (`taken`); audit `oidc.linked` (`via: settings`). 409 when already linked to this issuer; 404 unless it is on |
+| `POST /api/me/oidc/link` | user (local) *(re-auth)* | `?provider=` as for the start → `{url}` (and the flow cookie); the callback links only when this same session comes back and that provider account is not linked to someone else (`taken`); audit `oidc.linked` (`via: settings`). Linking and re-auth callbacks expire if a password change is required before completion. 409 when already linked to this issuer; 404 unless it is on |
 | `DELETE /api/me/oidc/{id}` | user (local) *(re-auth)* | → 204; audit `oidc.unlinked` (`via: self`). 409 when it is the last way in (no password, no passkey, no other link); 404 if not yours |
 | `GET /api/me/shares` | user | → `{enabled, areas, roles, max: 10, sharing: [{id, name, username, areas, since, until, last_viewed_at, active, role, may_plan, may_log, may_use_saved_meals, may_suggest, helper_changes}], codes: [{id, areas, days, created_at, expires_at, role}], invites: [{id, username, areas, role, days, created_at, expires_at}]}` (never a link); `enabled` false while `sharing.enabled` is off; 404 in `AUTH_MODE=none` |
 | `POST /api/me/shares` | user *(re-auth)* | `{areas, days?, role?}` (`role` `viewer` by default; `care_helper` adds `food`) (1 to 5 of `food`, `labs`, `body`, `symptoms`, `activity` (step 30); `days` 1 to 365 makes the share end that long after it is accepted, absent or null: until stopped) → 201 `{code, link}`: `/#/share/<id>.<verifier>`, shown only here, works once for 7 days; 409 at 5 unused links or 10 shares; audit `share.code_created` |
@@ -1334,6 +1349,11 @@ leaves out the sections the import never reads (`user`, `ai_audit`,
 `activity`, `ai_usage`, `ai_consents`, `ai_provider`), calls it with `dry_run=1`, shows the report and imports
 with a second call. Both calls need the password entered recently, the app header (CSRF) and the signed-in
 person; they act on that person only (`user.id`), never on a name or id in the file.
+
+The Import button belongs to the checked file and options. Changing a choice disables the previous button
+until the new check returns. During the actual import, file selection, options and Cancel are disabled; a
+write already sent cannot be cancelled. On failure the reviewed file and choices remain available. Cancel
+still forgets a preview and invalidates an outstanding dry run.
 
 * **Reading the file** (`parse_export`, nothing is written until all of it is good). `json.loads` refuses NaN,
   Infinity and numbers beyond a float. `format` must be `kidney-health-export` and `version` `1` (others: 400 with
@@ -1606,7 +1626,7 @@ when `targets.lab_rules_enabled` is off.
 |---|---|
 | `POST /api/labs` | `{analyte, value, unit, taken_on, note?}` → 201 `LabResult + {"alerts": [SafetyAlert]}`; 400 for an unknown analyte or unit, a value outside the plausible range (message names the entered unit and the converted value), a negative or non-finite value, a date after tomorrow or before 1900, a note over 500 characters, or an unknown field |
 | `GET /api/labs?analyte=&limit=` | → `{"labs": [LabResult], "alerts": [SafetyAlert]}` newest first (`taken_on`, then entry order); `limit` 1–1000, default 200. `alerts`: the newest potassium's safety alert while fresh under `targets.lab_fresh_days.potassium` (whatever the filters), the window the suggestions use |
-| `POST /api/labs/import` | v0.3.1. `{"results": [{analyte, value, unit, taken_on, note?}, …]}` (1–1,000 items) → 200 `{"saved": int, "duplicates": int, "refused": [{"index", "reason"}], "alerts": [SafetyAlert]}`. Each item is checked like `POST /api/labs`: a refused one is listed with the same message (`flatten_validation_errors`, as the 400 handler words it) and the others are saved in one transaction. An item that repeats a saved result of the same person (same test, date and value as shown) or an earlier item is skipped and counted in `duplicates`. `alerts` is what `GET /api/labs` returns. 400 only for the request's shape (no `results`, an empty or over-long list, an item that is not an object, an unknown field) |
+| `POST /api/labs/import` | v0.3.1. `{"results": [{analyte, value, unit, taken_on, note?}, …]}` (1–1,000 items) → 200 `{"saved": int, "duplicates": int, "refused": [{"index", "reason"}], "alerts": [SafetyAlert]}`. Each item is checked like `POST /api/labs`: a refused one is listed with the same message (`flatten_validation_errors`, as the 400 handler words it) and the others are saved in one transaction. An item that repeats a saved result of the same person (same test, date and value as shown) or an earlier item is skipped and counted in `duplicates`. The saved-result check and inserts hold one write lock so simultaneous imports skip each other's committed rows. `alerts` is what `GET /api/labs` returns. 400 only for the request's shape (no `results`, an empty or over-long list, an item that is not an object, an unknown field) |
 | `DELETE /api/labs/{id}` | → 204; 404 when it is not yours or does not exist |
 | `GET /api/labs/kidney-function` | → `KidneyFunction` (below); never changes the saved stage |
 
@@ -2504,6 +2524,9 @@ routes), `app/imagecheck.py` (JPEG check and rewrite, pure); schema step 6
   with `Keyring.seal(purpose="ai_provider:<id>", owner=<owner id or None>)` and shown only as
   `{set, last4}` (last 4 for keys of ≥ 20 characters), `{set, source: "env", locked: true}` or
   `{set, status: "unreadable"}`.
+  Manual and daily connection tests recheck the tested provider settings under a write lock before storing a result.
+  Changed or deleted settings discard the old result; a manual test answers 409 asking to test the current settings again.
+  Earlier probe receipts alone do not invalidate another test of unchanged settings. No provider call holds that lock.
 * **Resolution** (`config.resolve`, the rule before routing; every feature now calls `routing.resolve_feature`, which
   uses it for `any` and for a person's own provider): the person's own provider when they chose `own` and it is usable and
   allowed; else the shared provider they chose (`shared:<id>`) or the first usable shared one (if
@@ -3153,6 +3176,11 @@ setting: `set_food_preference` is always a card** (the last bullet, "Tastes").
   Photo and label readings are always shown to you to check first."; the focus starts on "Keep asking me").
   The stored choice is not reset when the AI provider changes or a consent is withdrawn (withdrawing the `chat` consent stops
   Ask altogether).
+  The stored choice and admin switch are rechecked before each automatic save and under its write lock
+  (`Asker.authorize_write`). If trust ends during a model or food lookup, the pending action becomes a confirmation
+  card, with no food import or retry key committed. The request can only lose trust, never gain it mid-flight.
+  Completed saves remain saved; retries report them even after trust ends. If an earlier save completed in the same
+  answer, the confirmation text says so rather than claiming nothing was saved.
 * **Residual risk, not closed in code.** A food name from USDA or Open Food Facts reaches the model as untrusted data (cleaned,
   cut, escaped and marked as data), and in a trusted mode a prompt injection could still make the model ask for a save. What limits
   it: both trusted modes are off by default and behind an admin switch and a warning, at most 2 saves a message, all or nothing,
@@ -3606,7 +3634,8 @@ later: `validate_past_date`), `symptom` (`swelling`, `itching`, `tiredness`, `cr
 **required for `other`, refused for every other symptom**) and `note` (≤ 300 characters, plain text: control characters
 refused, tab, newline and carriage return allowed). A `null` label or note is empty. One person holds at most 30
 symptoms per date (`MAX_SYMPTOMS_PER_DAY`, a bound on storage, not a clinical number; a 31st, or a move into a full day,
-is a 400). `SymptomOut`: `{id, date, symptom, label, name, severity, severity_label, note, created_at, red_flag}`; `name` is
+is a 400). Creates and moves hold a write lock while checking that date's capacity and saving, including overlapping requests.
+`SymptomOut`: `{id, date, symptom, label, name, severity, severity_label, note, created_at, red_flag}`; `name` is
 "Swelling" or, for `other`, the label; `severity_label` is `Mild`, `Moderate` or `Severe`.
 
 ### Red flags (what the app says, and where it comes from)
@@ -3639,6 +3668,9 @@ that `handbook/REVIEW.md` tracks for the page itself.
   Changing the date clears the Symptoms card before waiting. The loading message cannot retain
   another day's entries or handbook blocks; failures offer **Try again**, including handled
   sign-in failures. Late replies and errors cannot replace the newest day's card.
+  Each sheet opening owns its pending save/error. Submitted fields freeze while Close/Cancel remain usable; a submitted
+  write may finish after closing. Reopening gives an editable draft whose Save waits for that earlier write. A late reply
+  cannot close or overwrite the newer draft; successful writes refresh the current day's actual entries.
   The Symptoms read starts at the beginning of Today loading, independently of the food request;
   rendering food or its error does not restart that read.
 * **Trends** (`KH.symptoms.trends(start, end)`): one row per symptom (an `other` per label) with the number of days, the
@@ -3705,7 +3737,9 @@ newline and carriage return allowed; null is empty). `BloodPressureCreate`: the 
 300), `diastolic` (20 to 200), **`systolic > diastolic`** (a model rule: `400 "systolic must be greater than diastolic"`) and an optional `pulse` (20 to
 250). **The ranges are the project's own plausibility choice** (they keep a typing error out of the log), not clinical numbers (note 10 §3); `kg` is the
 profile's `weight_6_months_ago_kg` range. One person holds at most 20 weights and 30 readings per date (`MAX_WEIGHTS_PER_DAY`, `MAX_READINGS_PER_DAY`:
-bounds on storage; a 21st / 31st, or a move into a full day, is a 400). `kg` is stored rounded half up to 0.01. `WeightOut`: `{id, date, time, kg, context,
+bounds on storage; a 21st / 31st, or a move into a full day, is a 400). Creates, moves and batch imports take a write lock before
+checking capacity or existing import keys/measurement marks, so overlapping requests see each other's committed rows.
+`kg` is stored rounded half up to 0.01. `WeightOut`: `{id, date, time, kg, context,
 note, source, via, created_at, updated_at}` (`via` is the name of the device token that sent a `shortcut` row, else `null`; read with a `LEFT JOIN` on the row's token and owner);
 `BloodPressureOut` adds `systolic`, `diastolic`, `pulse` and **`flag`**. `source_key` is internal (it is in the export).
 The two batch routes share one limit, `body_batch`: **60 requests an hour per person** (`app/auth/ratelimit.py`; 60,000 rows an hour, room for years of daily
@@ -3779,7 +3813,10 @@ a person types and how it is worded, the chart scales, the table rows) and, for 
 * **The sheets**: the weight in the person's unit (`user.units.weight`, pounds until the server says otherwise) with the other unit echoed ("154.3 lb = 70.0 kg"),
   and **when it was taken** as radio choices that the page makes (morning / before dialysis / after dialysis / other; the two dialysis ones only when the
   profile's `dialysis` is not `none`, and always the row's own choice when editing); **no choice is pre-ticked**. A note-only edit keeps the stored weight to
-  the hundredth. The reading sheet has the **top number (systolic)** then the **bottom number (diastolic)**, an optional pulse, the one line from MedlinePlus
+  the hundredth. Each weight draft keeps the unit displayed when it opened. Submitted measurement fields freeze while saving;
+  Close and Cancel still work, and a submitted save can finish afterward. A late save or refusal cannot close or overwrite a
+  newer draft. A reopened draft stays editable, with Save waiting for the earlier write of that kind to finish.
+  The reading sheet has the **top number (systolic)** then the **bottom number (diastolic)**, an optional pulse, the one line from MedlinePlus
   ("Rest about 5 minutes first, sit with your feet flat, and put the cuff on your upper arm." and a link "How to measure" into the handbook page), the echo
   ("Top 180, bottom 95") and the same choices (morning / evening / ... / other). The ranges are the server's (`WeightCreate`, `BloodPressureCreate`), checked in the
   page by `KH.bodyUi` so a typing slip is refused in words before a request.
@@ -4063,6 +4100,10 @@ TokenItem = {"id": 3, "name": "Open WebUI", "prefix": "kha_AbCd1234", "scopes": 
   `Retry-After`. No bearer header, or the switch off: `401`, not counted (nothing was guessed or looked up).
 * On success `last_used_at` is written at most once a minute, and the route gets `request.state.user` and
   `request.state.api_token` (`TokenInfo`: id, user_id, name, scopes) for its own limits and logs.
+* Bearer writes recheck the token, required scope, family switch and current owner under the same
+  `BEGIN IMMEDIATE` lock as the save (`require_current_write`). A request waiting on a food lookup or body
+  upload cannot save after its access ends. Rejection is the family's generic 401; the transaction rolls back,
+  including imported foods and retry keys. This check does not touch last use or commit the caller's transaction.
 
 ### Revocation and the activity log
 
@@ -4468,6 +4509,8 @@ changes it in place (`PUT /api/me/shares/{id}/role`). Someone with an account ca
 * **Activity.** `care.invited`, `care.invite_cancelled` and `care.role_changed` target the invite or the share (the owner's own
   actions); `care.invite_answered` and `care.plan_changed` target the owner. `care.plan_changed` is written at the helper's first
   change each UTC day; `shares.helper_changes` keeps that day's counts for the owner's list (audit rows cannot be updated).
+  `note_change` reads and updates the counts and daily activity note under one `BEGIN IMMEDIATE` transaction,
+  so simultaneous requests from the same helper cannot lose a count or duplicate that day's note.
 * **The same answer.** `POST /api/me/shares/invite` stores the invite with `invitee_user_id` NULL when no active account has the
   name, and answers the same either way. The owner's list shows the name as typed.
 * **Saved meals** are not shared, listed or used for a helper unless the person turns on `may_use_saved_meals` (note 25 §7;
@@ -4584,6 +4627,13 @@ must read a link exactly as `pairing.parse` does: `tests/data/pairing_vectors.js
 the server makes and 50 it refuses (another scheme or fixed part, a fragment, a field twice, missing or extra, another version, a server
 with a path, user, query or IPv6 literal, a token of the wrong shape, spaces or controls). Tests: `tests/test_pairing.py`, the pairing
 checks of `tests/test_push_ui.py` and `tests/test_ios_app.py`, `PairingVectorTests.swift`.
+
+The native app's `SyncModel` ties connection checks and sync work to the saved settings generation. Removing
+or saving settings invalidates earlier work: an issued request may finish, but no later request uses those old
+settings and its reply cannot restore anchors, status or a rate-limit wait. Changing server or token resets
+the Health position and last-send summary; saving identical credentials keeps the position. A refused token
+pauses automatic sending until settings are saved or Test connection succeeds. `HealthReading` is the
+HealthKit boundary used by the simulator tests; `SettingsTransport` checks the generation before each batch request.
 
 ### `POST /push/v1/body` (`app/push.py`, router outside `/api`, like `/mcp`)
 
@@ -4744,6 +4794,10 @@ Nothing about the person is sent out. 0.16 has Withings (weight, blood pressure,
 * **Tokens** are sealed with `Keyring.seal(purpose="device:<provider>", owner=user_id)`; `device_connections.tokens_enc` is in
   `ENCRYPTED_COLUMNS`. They are never logged, never in an audit row and never in a response. A refresh is saved at once (Withings
   ends the old refresh token 8 hours after a new one).
+* **Sign-in completion** remembers the connection present at the start. Disconnecting or completing another sign-in cancels
+  an older flow, including one already exchanging its code. After the provider answers, a write transaction rechecks that
+  connection, the server switch, the person and (in local mode) the original session's validity before storing credentials
+  and the connect audit row. Sync receipt timestamps alone do not cancel a sign-in. Provider calls hold no write transaction.
 * **Sync** (`sync_connection`): refresh when the access token has under 5 minutes left; fetch since `sync_cursor` (the first time,
   365 days back); on `auth` one refresh and one retry, then `needs_reconnect` (tokens deleted); `rate_limited` pauses the
   connection for an hour (`next_sync_after`); other errors are kept as `last_error`. One `device.sync_failed` audit row when the
@@ -5025,7 +5079,7 @@ Signed in only (`current_user`; an anonymous caller gets the generic `401`, so a
 (`no-store` like every `/api` answer). The answer:
 
 ```json
-{"app_version": "0.22.2", "api_version": 1,
+{"app_version": "0.22.3", "api_version": 1,
  "capabilities": {"ai": false, "ai_next_meal": false, "ai_parse_meal": false, "ai_label": false, "ai_plate": false, "ai_lab_report": false,
                   "chat": false, "voice": false, "assistant": false, "push": false,
                   "barcode": false, "barcode_off": false, "barcode_usda": false, "handbook": false},

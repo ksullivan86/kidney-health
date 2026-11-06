@@ -496,14 +496,15 @@ def _count_by_day(conn: sqlite3.Connection, table: str, user_id: int, days: set[
 
 
 def store(conn: sqlite3.Connection, user: User, token_id: int, weights: list[PlannedWeight],
-          readings: list[PlannedReading]) -> dict[str, Any]:
-    """Add the rows the person does not have yet, in one transaction (all or nothing), and count them. The only error is the
-    per-day limit, a ``400`` naming the row, after which nothing has been written."""
+          readings: list[PlannedReading], request: Request) -> dict[str, Any]:
+    """Recheck access, then add missing rows and count them in one transaction. Ended access gives the generic
+    ``401``; the per-day limit gives a ``400`` naming the row. Either refusal leaves nothing written."""
     added = {"weights": 0, "readings": 0}
     there = {"weights": 0, "readings": 0}
     watch = 0
     begin_immediate(conn)  # the checks below and the inserts see the same rows
     try:
+        api_tokens.require_current_write(request, conn, api_tokens.BODY_WRITE)
         wkeys = _keys_present(conn, "weights", user.id, [w.key for w in weights])
         rkeys = _keys_present(conn, "blood_pressures", user.id, [r.key for r in readings if not r.watch])
         wmarks = known_weight_marks(conn, user.id, {w.date for w in weights})
@@ -558,10 +559,10 @@ def store(conn: sqlite3.Connection, user: User, token_id: int, weights: list[Pla
     return {"added": added, "already_there": there, "refused": {"watch": watch}}
 
 
-def process(conn: sqlite3.Connection, user: User, token_id: int, raw: bytes) -> dict[str, Any]:
+def process(conn: sqlite3.Connection, user: User, token_id: int, raw: bytes, request: Request) -> dict[str, Any]:
     """Check the body, then store it (runs in a worker thread)."""
     weights, readings = read_body(raw)
-    result = store(conn, user, token_id, weights, readings)
+    result = store(conn, user, token_id, weights, readings, request)
     # Counts and the token's id only: never a value, a time or a source name.
     logger.info("push: token %d added %d weights and %d readings, %d already there, %d refused", token_id,
                 result["added"]["weights"], result["added"]["readings"],
@@ -579,7 +580,7 @@ async def push_body(request: Request, response: Response, conn: sqlite3.Connecti
     if not _is_json_type(request):
         raise ApiProblem(415, "Send the body as JSON with the header Content-Type: application/json.")
     raw = await _read_capped(request)
-    result = await run_in_threadpool(process, conn, user, token.id, raw)
+    result = await run_in_threadpool(process, conn, user, token.id, raw, request)
     response.headers.update(NO_STORE)
     return result
 

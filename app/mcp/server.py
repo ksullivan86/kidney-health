@@ -176,7 +176,7 @@ def call_tool(tool: T.Tool, call: T.Call, arguments: Mapping[str, Any]) -> dict[
         return tool_result(T.run(tool, call, arguments))
     except T.ToolError as exc:
         return tool_error(str(exc))
-    except ApiProblem:  # a limit inside the tool (the daily cap on taste changes): its own 429 with Retry-After
+    except ApiProblem:  # a tool limit (429) or access that ended before its write (generic 401)
         raise
     except Exception:  # noqa: BLE001 - never a stack trace or a value in the answer; the log has the details
         logger.exception("assistant tool %s failed", tool.name)

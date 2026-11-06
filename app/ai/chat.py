@@ -63,6 +63,7 @@ WITHHELD_NUMBER_TEXT = ("The assistant's answer had a number the app did not wor
                         "Here are the app's own numbers.")
 UNFINISHED_TEXT = "The assistant could not finish; here are the app's numbers."
 CONFIRM_TEXT = "Nothing has been saved yet. Check this, then press a Save button, or Cancel."
+CONFIRM_MORE_TEXT = "Earlier saves are complete. Check this next save, then press a Save button, or Cancel."
 CONFIRM_PREFERENCE_TEXT = "Nothing has been remembered yet. Check this, then press Remember, or Cancel."
 SAVE_LIMIT_ERROR = (f"At most {MAX_SAVES} saves can be made for one message. Tell the person what was saved and answer.")
 SAVES_CLOSED_ERROR = "This message's save was already made once. Tell the person what was saved and answer; do not save again."
@@ -599,6 +600,7 @@ class SaveStep:
     saved: dict[str, Any] | None = None
     questions: list[dict[str, Any]] | None = None
     closes: bool = False  # a repeat of an earlier save: no further save in this message
+    trust_revoked: bool = False  # the route downgrades this request to ask mode; never expands an earlier grant
 
 
 class StopLoop(Exception):
@@ -628,9 +630,9 @@ async def converse(base_body: dict[str, Any], *, person_texts: Sequence[str], ne
 
     ``run_save(name, arguments, n)`` handles the model's ``n``-th (1-based) call of a saving tool (at most
     :data:`MAX_SAVES` per message, a taste counts too); without it the saving tools are not offered. A :class:`SaveStep` with
-    ``pending`` ends the loop at once with ``kind: "confirm_save"`` and the fixed :data:`CONFIRM_TEXT` (or
-    :data:`CONFIRM_PREFERENCE_TEXT` for a taste); the model's words are not used: nothing was saved, and the card says
-    exactly what would be."""
+    ``pending`` ends the loop at once with ``kind: "confirm_save"`` and fixed confirmation text (or
+    :data:`CONFIRM_PREFERENCE_TEXT` for a taste). The pending action was not saved; any earlier saves remain
+    listed and :data:`CONFIRM_MORE_TEXT` says they completed. The model's words are not used for the card."""
     messages = list(base_body["messages"])
     runs: list[ToolRun] = []
     out = Outcome(kind="unfinished", text=UNFINISHED_TEXT, runs=runs)
@@ -700,7 +702,7 @@ async def converse(base_body: dict[str, Any], *, person_texts: Sequence[str], ne
                     out.pending = taken.pending
                     out.audit_id = await record(result, {"step": index, "tool": name, "outcome": "confirm_save"})
                     out.kind, out.reason = "confirm_save", None
-                    out.text = CONFIRM_PREFERENCE_TEXT if name == PREFERENCE_TOOL else CONFIRM_TEXT
+                    out.text = CONFIRM_PREFERENCE_TEXT if name == PREFERENCE_TOOL else CONFIRM_MORE_TEXT if out.saves else CONFIRM_TEXT
                     out.notes = [LAB_NOTE] if lab_words(newest) else []
                     return out
         else:

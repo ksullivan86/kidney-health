@@ -901,7 +901,13 @@ def usda_provenance(mapped: UsdaMapped, *, retrieved_at: str | None = None) -> P
 
 
 def upsert_usda_food(conn: sqlite3.Connection, fdc_id: int, kwargs: Mapping[str, Any], provenance: Provenance) -> int:
-    """The one shared ``usda`` row for ``fdc_id``: updated in place when it exists, else inserted."""
+    """The one shared ``usda`` row for ``fdc_id``: updated in place when it exists, else inserted.
+
+    Reserve the write before looking it up. Wider write transactions (assistant saves, for example)
+    already hold that lock and keep ownership; this function never commits the caller's work.
+    """
+    if not conn.in_transaction:
+        conn.execute("BEGIN IMMEDIATE")
     existing = conn.execute(
         "SELECT id FROM foods WHERE source = 'usda' AND fdc_id = ? AND owner_user_id IS NULL ORDER BY id LIMIT 1", (fdc_id,)
     ).fetchone()

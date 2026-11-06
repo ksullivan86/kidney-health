@@ -453,6 +453,24 @@ def authenticate(request: Request, conn: sqlite3.Connection, scope: str = READ) 
     return user
 
 
+def require_current_write(request: Request, conn: sqlite3.Connection, scope: str) -> None:
+    """Recheck an authenticated bearer under the caller's write lock, before saving anything.
+
+    A body read or external food lookup can outlive revocation. Do not authenticate again here: that would
+    touch last use and commit the caller's transaction. The original request already passed the address gate.
+    """
+    token = request.state.api_token
+    family = family_of_scope(scope)
+    ctx = auth_context(request)
+    row = conn.execute(
+        "SELECT user_id, scopes, expires_at, revoked_at FROM api_tokens WHERE id = ?", (token.id,),
+    ).fetchone()
+    if not is_enabled(conn, ctx, family) or row is None or int(row["user_id"]) != token.user_id \
+            or row["revoked_at"] is not None or row["expires_at"] <= clock.now_iso() \
+            or scope not in parse_scopes(row["scopes"]) or _owner(conn, ctx, token.user_id) is None:
+        raise _denied(True, family)
+
+
 def assistant_user(request: Request, conn: Annotated[sqlite3.Connection, Depends(get_db)]) -> User:
     """FastAPI dependency for the assistant surface (``/mcp``, part B): a token with ``assistant:read``."""
     return authenticate(request, conn, READ)

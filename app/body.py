@@ -66,6 +66,7 @@ from typing import Any, Sequence, get_args
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import ValidationError
 
+from .auth.accounts import begin_immediate
 from .auth.deps import CurrentUser, current_user
 from .db import get_db, utcnow
 from .log import parse_date_param, parse_range
@@ -480,6 +481,7 @@ def list_weights(user: CurrentUser, conn: sqlite3.Connection = Depends(get_db), 
 
 @router.post("/weights", status_code=201, response_model=WeightOut)
 def create_weight(body: WeightCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    begin_immediate(conn)
     _check_weight_day(conn, user.id, body.date)
     now = utcnow()
     cur = conn.execute(
@@ -493,6 +495,7 @@ def create_weight(body: WeightCreate, user: CurrentUser, conn: sqlite3.Connectio
 
 @router.put("/weights/{weight_id}", response_model=WeightOut)
 def update_weight(weight_id: int, body: WeightCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    begin_immediate(conn)
     _fetch_weight(conn, user.id, weight_id)
     _check_weight_day(conn, user.id, body.date, except_id=weight_id)
     conn.execute(
@@ -572,6 +575,7 @@ def known_reading_marks(conn: sqlite3.Connection, user_id: int, days: set[str]) 
 def create_weights(body: BodyBatch, request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     request.app.state.auth.limits.take("body_batch", user.id)
     rows: list[WeightBatchRow] = _checked_rows(WeightBatchRow, body)
+    begin_immediate(conn)
     known = _known_keys(conn, "weights", user.id)
     marks = known_weight_marks(conn, user.id, {r.date for r in rows})
     per_day = _per_day(conn, "weights", user.id, {r.date for r in rows})
@@ -613,6 +617,7 @@ def list_readings(user: CurrentUser, conn: sqlite3.Connection = Depends(get_db),
 
 @router.post("/blood-pressure", status_code=201, response_model=BloodPressureOut)
 def create_reading(body: BloodPressureCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    begin_immediate(conn)
     _check_reading_day(conn, user.id, body.date)
     now = utcnow()
     cur = conn.execute(
@@ -627,6 +632,7 @@ def create_reading(body: BloodPressureCreate, user: CurrentUser, conn: sqlite3.C
 @router.put("/blood-pressure/{reading_id}", response_model=BloodPressureOut)
 def update_reading(reading_id: int, body: BloodPressureCreate, user: CurrentUser,
                    conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    begin_immediate(conn)
     _fetch_reading(conn, user.id, reading_id)
     _check_reading_day(conn, user.id, body.date, except_id=reading_id)
     conn.execute(
@@ -650,6 +656,7 @@ def delete_reading(reading_id: int, user: CurrentUser, conn: sqlite3.Connection 
 def create_readings(body: BodyBatch, request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     request.app.state.auth.limits.take("body_batch", user.id)
     rows: list[BloodPressureBatchRow] = _checked_rows(BloodPressureBatchRow, body)
+    begin_immediate(conn)
     known = _known_keys(conn, "blood_pressures", user.id)
     marks = known_reading_marks(conn, user.id, {r.date for r in rows})
     per_day = _per_day(conn, "blood_pressures", user.id, {r.date for r in rows})

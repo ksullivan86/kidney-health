@@ -50,7 +50,7 @@ from playwright.sync_api import sync_playwright
 OUT = Path(tempfile.gettempdir()) / "kidney-health-e2e" / "ask"
 PORT, AI_PORT = 8074, 8075
 RESULTS: list[dict[str, Any]] = []
-NOTE = "Answers come from an AI model; every number is the app's own. Not medical advice."
+NOTE = "Answers are written by an AI language model and can be wrong. Every number is the app's own. Not medical advice."
 
 
 def check(name: str, ok: Any, detail: str = "") -> bool:
@@ -228,7 +228,7 @@ def saving(browser: Any, admin: Any, fake: FakeAi, base: str, out: Path, width: 
     # --- the default: a card, nothing saved until Save ---------------------------------------------------------------
     open_ask(page)
     check(f"[{tag}] the default line: Ask asks first, and there is no trust button",
-          "Ask asks you before it saves." in page.inner_text("#ask-trust-line") and page.locator("#ask-trust-actions .btn").count() == 0)
+          "The AI assistant asks you before it saves." in page.inner_text("#ask-trust-line") and page.locator("#ask-trust-actions .btn").count() == 0)
     check(f"[{tag}] the link to the choice is there", page.is_visible("#ask-trust-actions >> text=Change this in Settings"))
     send_text(page, "log a banana for breakfast")
     page.wait_for_selector(".ask-pending", timeout=20000)
@@ -292,7 +292,7 @@ def saving(browser: Any, admin: Any, fake: FakeAi, base: str, out: Path, width: 
     page.click("#tab-ask")
     page.wait_for_selector("#view-ask:not([hidden])")
     page.click("#ask-new")
-    check(f"[{tag}] New conversation ends the trust", "Ask asks you before it saves." in page.inner_text("#ask-trust-line")
+    check(f"[{tag}] New conversation ends the trust", "The AI assistant asks you before it saves." in page.inner_text("#ask-trust-line")
           and page.is_visible("#ask-trust-actions >> text=Trust it for this conversation"))
     send_text(page, "log a banana for breakfast")
     page.wait_for_selector(".ask-pending", timeout=20000)
@@ -321,7 +321,7 @@ def saving(browser: Any, admin: Any, fake: FakeAi, base: str, out: Path, width: 
     page.locator("#set-ai-trust label.check", has_text="Trust it always").click()
     page.wait_for_selector("#sheet-ai-trust[open]")
     sheet = page.inner_text("#sheet-ai-trust")
-    check(f"[{tag}] the warning opens first", "The assistant will save food and recipes without asking you first." in sheet
+    check(f"[{tag}] the warning opens first", "The AI assistant will save food and recipes without asking you first." in sheet
           and "It can pick the wrong food or the wrong amount." in sheet and "undo each save" in sheet and "Photo and label readings" in sheet, sheet[:300])
     check(f"[{tag}] nothing is changed while the warning is open", admin.json("GET", "/api/me/ai")["settings"]["trust"] == "ask")
     try:  # the sheet moves the focus a moment after it opens
@@ -451,7 +451,7 @@ def demo(browser: Any, base: str, out: Path) -> None:
         page.wait_for_selector("#view-ask:not([hidden])", timeout=15000)
         note = page.inner_text("#ask-demo")
         tag = f"demo-{width}-{scheme}"
-        check(f"[{tag}] the tab and the note", page.is_visible("#tab-ask") and "installed app" in note and "AI provider" in note, note)
+        check(f"[{tag}] the tab and the note", page.is_visible("#tab-ask") and "installed app" in note and "AI your admin sets up" in note, note)
         check(f"[{tag}] no input, no sideways scroll, no page errors",
               not page.is_visible("#ask-input") and not page.is_visible("#ask-send") and not overflow(page) and not errors, "; ".join(errors))
         page.screenshot(path=str(out / "shots" / f"{tag}.png"))

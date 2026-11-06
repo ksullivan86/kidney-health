@@ -26,7 +26,7 @@
   const REG = KH.settings;
 
   // Kept equal to APP_VERSION in app/main.py (tests/test_settings_ui.py).
-  const APP_VERSION = '0.22.2';
+  const APP_VERSION = '0.22.3';
 
   const A = {
     sessions: () => request('GET', '/api/me/sessions'),
@@ -597,6 +597,8 @@
       h('span', { class: 'hint', id: 'set-import-hint' }, `The export.json can be up to ${fmtBytes(IMPORT_MAX_BYTES)}. Passwords, sign-in sessions, assistant tokens and keys are never imported, even if a file has them.`)), msg, result);
 
     let payload = null; // the parsed file, kept only while the person decides
+    let writing = false;
+    const optionFields = [];
     const options = { merge: false, replace_profile: false };
     // Forget the file and what was chosen; `keepFile` leaves the file input alone (the person has just picked a new one).
     let latest = 0; // an answer to an older check is dropped
@@ -610,7 +612,10 @@
     };
 
     async function check(focusId) {
+      if (writing) return;
       const mine = ++latest;
+      const previousGo = $('#set-import-go', result);
+      if (previousGo) previousGo.disabled = true;
       msg.textContent = 'Checking the file…';
       try {
         const res = await A.importData(payload, { ...options, dry_run: true });
@@ -629,12 +634,14 @@
     function option(id, key, label, help, checked) {
       const box = h('input', { type: 'checkbox', id, 'aria-describedby': `${id}-help` });
       box.checked = checked;
-      box.addEventListener('change', () => { options[key] = box.checked; check(id); });
+      optionFields.push(box);
+      box.addEventListener('change', () => { if (writing) return; options[key] = box.checked; check(id); });
       return h('label', { class: 'check', for: id }, box, h('span', { class: 'check-text' }, label, h('span', { class: 'hint', id: `${id}-help` }, help)));
     }
     function list(items) { return h('ul', { class: 'about-list' }, items.map((t) => h('li', {}, t))); }
     function render(res, focusId) {
       clear(result);
+      optionFields.length = 0;
       const f = res.file || {};
       const rec = f.records || {};
       const heading = h('h4', { class: 'import-title', tabindex: '-1', id: 'set-import-title' }, 'What this file would add');
@@ -665,21 +672,38 @@
       }
       result.append(h('details', { class: 'settings-details', id: 'set-import-never' }, h('summary', {}, 'What is never imported'), list(res.not_imported || [])),
         h('details', { class: 'settings-details', id: 'set-import-rule' }, h('summary', {}, 'How duplicates are handled'), h('p', {}, res.rule || '')));
+      const reviewed = latest, reviewedPayload = payload, reviewedOptions = { ...options };
       const go = action('Import', 'primary', async () => {
-        const done = await A.importData(payload, { ...options, dry_run: false });
-        const lines = importLines(done.counts);
-        const sentence = lines.length ? `Imported ${lines.join(', ')}.` : 'Nothing new was imported.';
-        reset();
-        msg.textContent = sentence;
-        toast(sentence, 'ok');
-        // Everything the other views keep is stale now.
-        state.dayLoadedFor = null; state.plan = null; state.planStart = null; state.trends = null; state.summary = null; state.shopping = null;
-        KH.invalidateSharedCaches();
-        if (KH.labs) KH.labs.invalidate();
-        try { await KH.loadProfile(true); } catch (e) { /* the next visit loads it */ }
+        if (writing || reviewed !== latest || !res.can_import) return;
+        writing = true;
+        input.disabled = true;
+        for (const field of optionFields) field.disabled = true;
+        cancel.disabled = true;
+        msg.textContent = 'Importing the checked file…';
+        try {
+          const done = await A.importData(reviewedPayload, { ...reviewedOptions, dry_run: false });
+          const lines = importLines(done.counts);
+          const sentence = lines.length ? `Imported ${lines.join(', ')}.` : 'Nothing new was imported.';
+          reset();
+          msg.textContent = sentence;
+          toast(sentence, 'ok');
+          // Everything the other views keep is stale now.
+          state.dayLoadedFor = null; state.plan = null; state.planStart = null; state.trends = null; state.summary = null; state.shopping = null;
+          KH.invalidateSharedCaches();
+          if (KH.labs) KH.labs.invalidate();
+          try { await KH.loadProfile(true); } catch (e) { /* the next visit loads it */ }
+        } catch (err) {
+          msg.textContent = err.cancelled ? 'Not imported: the password prompt was closed.' : 'The import result could not be confirmed. Your file and choices are still here. Check your data before trying again.';
+          throw err;
+        } finally {
+          writing = false;
+          input.disabled = false;
+          for (const field of optionFields) field.disabled = false;
+          cancel.disabled = false;
+        }
       }, { id: 'set-import-go' });
       go.disabled = !res.can_import;
-      const cancel = action('Cancel', 'secondary', async () => { reset(); msg.textContent = 'Nothing was imported.'; }, { id: 'set-import-cancel' });
+      const cancel = action('Cancel', 'secondary', async () => { if (writing) return; reset(); msg.textContent = 'Nothing was imported.'; }, { id: 'set-import-cancel' });
       result.append(h('div', { class: 'settings-actions' }, go, cancel));
       const target = focusId ? $(`#${focusId}`) : heading;
       if (target) target.focus();
@@ -710,6 +734,7 @@
     }
 
     input.addEventListener('change', async () => {
+      if (writing) return;
       const file = input.files && input.files[0];
       reset(true);
       msg.textContent = '';

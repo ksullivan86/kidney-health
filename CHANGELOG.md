@@ -5,6 +5,60 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## 0.22.3 — 2026-11-06
+
+### Upgrading from 0.22.2
+
+* No schema step and no new settings. A host that tracks `:0.22` gets this release on its next pull. The iPhone app, when
+  the server refuses its token, now waits for you to tap Test connection or Save before it sends again.
+
+### Security
+
+* New Chainguard base images for the builder and the runtime (libexpat 2.10.0-r1).
+
+### Fixed
+
+* A sheet you close before its save answers no longer hides a failure. If that save fails, the app says "An earlier save did
+  not go through", and the sheet you opened since stays as it is. This covers food entries, Quick add, saved meals, Copy day,
+  weight, blood pressure and symptoms.
+
+* Assistant saves and phone submissions now check access again before saving. A request that was waiting when
+  its token ended or access was turned off is refused without saving anything.
+* Saved-meal searches and saves stay with the draft that requested them. A late reply cannot fill another
+  editor, close a newer sheet or take you to an earlier submitted day. Saving holds the fields and prevents
+  another submission until the first finishes; a failed save keeps the open draft.
+* Account imports stay tied to the checked file and choices. Changing an option waits for a new preview.
+  While the import runs, file selection, options and Cancel wait for its answer, so Cancel cannot report
+  that nothing was imported after a write was sent. A failed answer keeps the reviewed file and choices.
+* The iPhone app keeps connection checks and sync replies with their original settings. Removed or replaced
+  credentials stop further requests; old replies cannot restore a sync position or pause the new server.
+  Replacing a token at the same server now starts a fresh sync position too. A refused token pauses sending
+  until settings are saved or Test connection succeeds.
+* Care team counts keep every change when a helper sends requests at the same time. Concurrent requests
+  no longer overwrite a count or create duplicate daily activity entries.
+* Ask rechecks the saved trust choice and admin switch before saving. If trust ends while the AI or a food lookup
+  is pending, it asks for confirmation and saves nothing from that action. Earlier completed saves stay saved,
+  and retrying them after trust ends reports the original save instead of offering a duplicate confirmation.
+* A late Withings or Whoop sign-in can no longer undo Disconnect or replace a newer connection. Pending sign-ins also stop
+  if your session ends, your account loses access, or the admin turns connected devices off before the company answers.
+* A pending linked sign-in or provider confirmation now stops if an admin requires a password change before it completes.
+  Change the password before starting the action again.
+* Late weight and blood-pressure saves keep a newer draft open and leave its values and errors alone. Submitted fields stay
+  fixed while saving, and a weight draft keeps the unit shown when it opened if settings refresh in the meantime.
+* Imports arriving together now skip repeated lab results and weight/blood-pressure measurements reliably. They cannot
+  fail on a repeated import key or add the same measurement twice. Adding or moving measurements and symptoms from two
+  devices at once also keeps the existing per-day limits.
+* An old AI connection test can no longer mark edited settings as tested. Manual tests ask you to test again after a change,
+  and automatic daily tests discard replies for old keys or vision models too. Removing a shared provider during a test
+  returns a clear response instead of a server error.
+* A late symptom save or refusal leaves your next draft open and keeps its values and errors intact. Fields stay fixed while
+  their save is waiting; Close and Cancel still work.
+* Simultaneous USDA imports reuse the same shared food instead of creating separate copies. Assistant saves still roll back
+  their food additions and links if any part fails.
+* Food-entry and Quick add replies keep newer drafts intact. Reopening no longer permits a duplicate entry write while an
+  earlier save or deletion waits. Old serving-size replies and offline conflicts cannot replace the next draft or take you
+  away from it. Submitted entry controls stay fixed while Close remains available.
+
 ## 0.22.2 — 2026-11-06
 
 ### Upgrading from 0.22.1

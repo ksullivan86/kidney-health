@@ -128,13 +128,38 @@
   // ENTRY sheet (add + edit)
   // ---------------------------------------------------------------------------
   const entryDlg = $('#sheet-entry');
+  // A save for a sheet that was closed or reopened since: leave that sheet alone, but say it failed (the person may think it saved).
+  const lateFailed = (err) => { if (!err || !err.handled) toast('An earlier save did not go through. Check it and try again.', 'error'); };
   const entryForm = $('#entry-form');
   const entryServings = $('#entry-servings');
   const entryGrams = $('#entry-grams');
   const entryNote = $('#entry-note');
   const entryDate = $('#entry-date');
-  const sheet = { mode: 'add', food: null, entry: null, perServing: null, lastEdited: 'servings', amountTouched: false, busy: false };
+  const sheet = { mode: 'add', food: null, entry: null, perServing: null, lastEdited: 'servings', amountTouched: false, busy: false,
+    turn: 0, writeTurn: null, pendingFood: null };
   sheets.setup(entryDlg);
+  const lockedEntryFields = new Map();
+  const entryCurrent = (turn) => entryDlg.open && sheet.turn === turn;
+  function restoreEntryFields() {
+    for (const [field, disabled] of lockedEntryFields) field.disabled = disabled;
+    lockedEntryFields.clear();
+  }
+  function entryButtons() {
+    for (const id of ['entry-save', 'entry-delete', 'entry-delete-food']) $(`#${id}`).disabled = sheet.busy;
+  }
+  function startEntryWrite(turn) {
+    sheet.busy = true; sheet.writeTurn = turn;
+    for (const field of entryForm.querySelectorAll('input, select, textarea, button')) {
+      if (field.hasAttribute('data-close')) continue;
+      lockedEntryFields.set(field, field.disabled); field.disabled = true;
+    }
+    entryButtons();
+  }
+  function finishEntryWrite() {
+    sheet.busy = false; sheet.writeTurn = null;
+    restoreEntryFields(); applyPendingFood(); entryButtons();
+  }
+  entryDlg.addEventListener('close', () => { sheet.turn++; sheet.pendingFood = null; });
 
   function perServingFromEntry(entry) {
     const out = {};
@@ -166,8 +191,11 @@
 
   // servings / status: prefilled by a suggestion (KH.guidance: What fits now, swap ideas).
   async function openEntrySheet(mode, { food, entry, meal, trigger, servings = null, status = null }) {
+    restoreEntryFields();
+    const turn = ++sheet.turn;
+    sheet.pendingFood = null;
     sheet.mode = mode; sheet.food = food || null; sheet.entry = entry || null;
-    sheet.lastEdited = 'servings'; sheet.amountTouched = false; sheet.busy = false;
+    sheet.lastEdited = 'servings'; sheet.amountTouched = false;
     entryDlg.dataset.mode = mode;
     $('#sheet-entry-title').textContent = mode === 'add' ? 'Add food' : 'Edit entry';
     $('#entry-save').textContent = mode === 'add' ? 'Add to meal' : 'Save changes';
@@ -190,27 +218,38 @@
     if (food && !entryGrams.value) syncGramsFromServings();
     if (KH.guidance) KH.guidance.entry.open({ mode, food, entry, onChange: updatePreview });
     updatePreview();
+    entryButtons();
     sheets.open(entryDlg, trigger, entryServings);
     if (!food && entry && entry.food_id == null) {
       $('#entry-grams-hint').textContent = 'Serving size unavailable offline';
     } else if (!food && entry) {
       try {
         const f = await api.food(entry.food_id);
-        if (sheet.entry !== entry) return;
-        sheet.food = f;
-        sheet.perServing = f.nutrients;
-        entryGrams.disabled = false;
-        $('#entry-grams-hint').textContent = `1 serving = ${fmtNum(f.serving_g, 'fluid_ml')} g`;
-        applyWeightRule(f);
-        if (!entryGrams.value) syncGramsFromServings();
-        renderSheetFood();
-        if (KH.guidance) KH.guidance.entry.open({ mode, food: f, entry, onChange: updatePreview, refresh: true });
-        updatePreview();
+        if (!entryCurrent(turn)) return;
+        sheet.pendingFood = { f, mode, entry, turn };
+        applyPendingFood();
       } catch (e) {
+        if (!entryCurrent(turn)) return;
         $('#entry-grams-hint').textContent = 'Serving size unavailable';
         $('#sheet-entry-food').textContent = name;
       }
     }
+  }
+  function applyPendingFood() {
+    const pending = sheet.pendingFood;
+    if (!pending || (sheet.busy && sheet.writeTurn === sheet.turn)) return;
+    sheet.pendingFood = null;
+    const { f, mode, entry, turn } = pending;
+    if (!entryCurrent(turn)) return;
+    sheet.food = f;
+    sheet.perServing = f.nutrients;
+    entryGrams.disabled = false;
+    $('#entry-grams-hint').textContent = `1 serving = ${fmtNum(f.serving_g, 'fluid_ml')} g`;
+    applyWeightRule(f);
+    if (!entryGrams.value) syncGramsFromServings();
+    renderSheetFood();
+    if (KH.guidance) KH.guidance.entry.open({ mode, food: f, entry, onChange: updatePreview, refresh: true });
+    updatePreview();
   }
   function renderSheetFood() {
     const f = sheet.food;
@@ -321,7 +360,7 @@
 
   sheets.onSubmit(entryForm, async (e) => {
     e.preventDefault();
-    if (sheet.busy) return;
+    if (sheet.busy || !entryDlg.open) return;
     const sv = servingsValue();
     if (!(sv > 0)) { toast('Servings must be more than 0', 'error'); entryServings.focus(); return; }
     if (sv > 1000) { toast('Servings must be 1000 or fewer', 'error'); entryServings.focus(); return; }
@@ -330,9 +369,10 @@
     const note = entryNote.value.trim() || null;
     const grams = sheet.lastEdited === 'grams' && entryGrams.value !== '' ? Number(entryGrams.value) : null;
     if (grams != null && !(grams > 0 && grams <= 100000)) { toast('Grams must be between 1 and 100,000', 'error'); entryGrams.focus(); return; }
-    sheet.busy = true;
-    const saveBtn = $('#entry-save');
-    saveBtn.disabled = true;
+    const turn = sheet.turn;
+    const current = () => entryCurrent(turn);
+    const date = state.date;
+    startEntryWrite(turn);
     try {
       if (sheet.mode === 'add') {
         const body = { date: state.date, meal, food_id: sheet.food.id, servings: sv, note, status };
@@ -340,8 +380,10 @@
         const purpose = KH.guidance ? KH.guidance.entry.purpose('add') : undefined;
         if (purpose) body.purpose = purpose;
         const created = await api.addEntry(body);
+        state.dayLoadedFor = null;
+        if (!current()) return;
         entryDlg.close();
-        const when = state.date !== todayStr() ? `, ${fmtDateLong(state.date)}` : '';
+        const when = date !== todayStr() ? `, ${fmtDateLong(date)}` : '';
         // Offline (js/offline.js), the entry waits on this device and syncs when the server is reachable.
         const verb = created && created.pending ? 'Saved on this device:' : status === 'planned' ? 'Planned' : 'Added';
         toast(`${verb} ${created.food_name || sheet.food.name} ${status === 'planned' ? 'for' : 'to'} ${MEAL_LABEL[meal].toLowerCase()}${when}`, 'ok');
@@ -356,55 +398,68 @@
         // The entry's version goes with the change (If-Match): if another device changed the entry meanwhile, nothing is
         // overwritten and the two versions are put side by side in Settings → This device (js/offline.js).
         const updated = await api.updateEntry(sheet.entry.id, body, sheet.entry);
+        state.dayLoadedFor = null;
+        if (!current()) return;
         entryDlg.close();
         toast(updated && updated.pending ? 'Saved on this device: the change reaches your server when it can be reached' : 'Entry updated', 'ok');
-        if (body.date && body.date !== state.date) KH.views.today.setDate(body.date); else KH.views.today.loadDay();
+        if (state.date === date && body.date && body.date !== state.date) KH.views.today.setDate(body.date); else KH.views.today.loadDay();
       }
     } catch (err) {
+      if (!current()) { lateFailed(err); return; }
       toastError(err);
       if (err && err.conflict) { entryDlg.close(); KH.views.today.loadDay(); $('#sync-badge').click(); } // the card waits in Settings → This device
     }
-    finally { sheet.busy = false; saveBtn.disabled = false; }
+    finally { finishEntryWrite(); }
   });
   $('#entry-delete').addEventListener('click', (ev) => {
     const entry = sheet.entry;
-    if (!entry || sheet.busy) return;
+    if (!entry || sheet.busy || !entryDlg.open) return;
+    const turn = sheet.turn;
+    const current = () => entryCurrent(turn);
     confirm.inline($('.sheet-foot', entryDlg), ev.currentTarget, {
       message: `Delete ${entry.food_name} from ${MEAL_LABEL[entry.meal].toLowerCase()}${entry.date !== todayStr() ? ` on ${fmtDateLong(entry.date)}` : ''}?`,
       confirmText: 'Delete entry',
       onConfirm: async () => {
-        sheet.busy = true;
+        if (!current() || sheet.busy) return false;
+        startEntryWrite(turn);
         try {
           const res = await api.deleteEntry(entry.id, entry);
+          state.dayLoadedFor = null;
+          if (!current()) return true;
           entryDlg.close();
           toast(res && res.pending ? 'Saved on this device: the entry is deleted when your server can be reached' : 'Entry deleted', 'ok');
           KH.views.today.loadDay();
           return true;
         } catch (err) {
+          if (!current()) { lateFailed(err); return false; }
           toastError(err);
           if (err && err.conflict) { entryDlg.close(); KH.views.today.loadDay(); $('#sync-badge').click(); }
           return false;
         }
-        finally { sheet.busy = false; }
+        finally { finishEntryWrite(); }
       },
     });
   });
   $('#entry-delete-food').addEventListener('click', (ev) => {
     const f = sheet.food;
-    if (!f || sheet.busy) return;
+    if (!f || sheet.busy || !entryDlg.open) return;
+    const turn = sheet.turn;
+    const current = () => entryCurrent(turn);
     confirm.inline($('.sheet-foot', entryDlg), ev.currentTarget, {
       message: `Delete the food "${f.name}" from your database? Logged entries keep their numbers.`,
       confirmText: 'Delete food',
       onConfirm: async () => {
-        sheet.busy = true;
+        if (!current() || sheet.busy) return false;
+        startEntryWrite(turn);
         try {
           await api.deleteFood(f.id);
+          if (!current()) { runSearch(); return true; }
           entryDlg.close();
           toast('Food deleted', 'ok');
           runSearch();
           return true;
-        } catch (err) { toastError(err); return false; }
-        finally { sheet.busy = false; }
+        } catch (err) { if (current()) toastError(err); else lateFailed(err); return false; }
+        finally { finishEntryWrite(); }
       },
     });
   });
@@ -415,6 +470,8 @@
   const quickDlg = $('#sheet-quick');
   const quickForm = $('#quick-form');
   sheets.setup(quickDlg);
+  let quickTurn = 0;
+  quickDlg.addEventListener('close', () => { quickTurn++; });
   // The order of a nutrition label (note 03 R8): serving, calories, fat, sodium, carbohydrate, fibre, sugars,
   // protein, potassium, phosphorus, calcium; fluid last (it is not on a label).
   const LABEL_ORDER = ['calories_kcal', 'fat_g', 'sat_fat_g', 'sodium_mg', 'carbs_g', 'fiber_g', 'sugar_g', 'protein_g', 'potassium_mg',
@@ -463,6 +520,7 @@
   }
   // Quick add, fresh; from a barcode that was not found, prefilled with its name and number (note 03 R7).
   function openQuick({ name = '', gtin = '', trigger = null, photoFirst = false } = {}) {
+    quickTurn++;
     quickForm.reset();
     KH.forms.clearFieldErrors(quickForm);
     $('#q-name').value = name;
@@ -474,13 +532,14 @@
     setStatus($('#quick-status'), state.addStatusHint || defaultStatusFor(state.date));
     if (KH.scan) KH.scan.quickOpened({ photoFirst });
     updateQuickPreview();
+    $('#quick-save').disabled = quickBusy;
     sheets.open(quickDlg, trigger, photoFirst ? $('#q-photo') : $('#q-name'));
   }
   $('#btn-quick').addEventListener('click', (e) => openQuick({ trigger: e.currentTarget }));
   let quickBusy = false;
   sheets.onSubmit(quickForm, async (e) => {
     e.preventDefault();
-    if (quickBusy) return;
+    if (quickBusy || !quickDlg.open) return;
     KH.forms.clearFieldErrors(quickForm);
     const name = $('#q-name').value.trim();
     if (!name) { KH.forms.fieldError($('#q-name'), 'Give the food a name.'); toast('Give the food a name', 'error'); $('#q-name').focus(); return; }
@@ -502,16 +561,21 @@
     if (gtinRaw) body.gtin = gtinRaw;
     const ingredients = $('#q-ingredients').value.trim();
     if (ingredients) body.ingredients_text = ingredients;
+    const turn = quickTurn;
+    const current = () => quickDlg.open && quickTurn === turn;
     quickBusy = true; $('#quick-save').disabled = true;
     try {
       const created = await api.quick(body);
+      state.dayLoadedFor = null;
+      if (!current()) return;
       quickDlg.close();
-      const when = state.date !== todayStr() ? `, ${fmtDateLong(state.date)}` : '';
+      const when = body.date !== todayStr() ? `, ${fmtDateLong(body.date)}` : '';
       const verb = created && created.pending ? 'Saved on this device:' : body.status === 'planned' ? 'Planned' : 'Logged';
       toast(`${verb} ${created.food_name || name} ${body.status === 'planned' ? 'for' : 'to'} ${MEAL_LABEL[body.meal].toLowerCase()}${when}`, 'ok');
       state.dayLoadedFor = null;
       router.show('today');
     } catch (err) {
+      if (!current()) { lateFailed(err); return; }
       const parts = KH.forms.splitFieldErrors(err.detail);
       const fieldOf = { name: '#q-name', serving_desc: '#q-serving-desc', serving_g: '#q-serving-g', gtin: '#q-gtin', ingredients_text: '#q-ingredients' };
       let shown = false;

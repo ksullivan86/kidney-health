@@ -275,6 +275,10 @@ The New/Edit saved-meal preview keeps missing nutrients distinct from zero too. 
 **not listed** when no ingredient lists a value and **≥** when only some do. Changing ingredients
 or **Makes** updates the preview; a known zero stays 0.
 
+While a saved meal is saving or being added to a day, its fields wait for the answer. You can still close the
+sheet. If you open another draft, an earlier search or save cannot replace it, close it or take you to another
+day. The save button waits for the earlier request to finish. A failed save leaves the open draft ready to try again.
+
 Replace and Undo stay attached to the recipe you confirmed. If you open another recipe while a
 save waits, the old save may finish, but it cannot offer Undo on the new recipe or close its sheet.
 Changing the fit target clears any earlier Replace question so you can review the new result.

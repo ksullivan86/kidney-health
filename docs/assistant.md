@@ -109,6 +109,9 @@ taste": the food or kind of food, what it was and what it is now, and the token'
 * While the admin has assistant access **turned off**, no token works and no new one can be made. You can still
   see and revoke yours. When it is turned on again, tokens that have not expired or been revoked work again.
 
+Before saving food, a recipe or a taste, the server checks that the token still works. If access ended while
+the request was waiting, it refuses the save and keeps nothing from it. A save already completed stays in your log.
+
 ### What the server keeps
 
 For each token: its name, its first 12 characters, the dates (made, last used, expires, revoked) and a one-way
@@ -412,6 +415,11 @@ name (never a token name), and every change of the choice is a row too.
   trust Ask to save without asking** (`ai.allow_trusted_saves`, `AI_ALLOW_TRUSTED_SAVES`; off by default). With it off the
   choices are greyed out and Ask always asks first, whatever you chose before; the choice is kept and applies again if the
   admin turns it back on.
+
+If you change the stored choice to **Ask me before every save**, or your admin turns trusted saves off while Ask
+is waiting, the pending food or recipe is shown for confirmation. A save that already completed stays saved and
+still offers Undo. Retrying that request reports its earlier save; it does not offer another copy to confirm.
+A request that began in ask mode keeps asking even if trusted saves are turned on while it waits.
 
 **Telling Ask a taste: always a card, whatever you trust.** Say "I don't really like salmon", "I like lentils" or "I'd like
 fewer sweets" and the assistant may ask the app to remember it for your meal suggestions (the tool is called

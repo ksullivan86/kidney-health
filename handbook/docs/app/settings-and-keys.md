@@ -24,7 +24,7 @@ can be shared by your admin or added by you ([design note 07][NOTE07]).
 |---|---|
 | **Account** | your name, user name, **Change password**, **Two-step sign-in**, **Passkeys**, **Signed-in devices**, **Your data** (export, import, **Phone shortcuts** for an iPhone Shortcut that sends your weight and blood pressure: [Weight and blood pressure](weight-and-blood-pressure.md#from-a-phone-shortcut); delete account), your recent sign-in activity, **Sign out** |
 | **Care team** | family, a caregiver or a dietitian on your server who can look at your log (**Viewer**), also plan your meals (**Care helper**) or also log food you ate (**Caregiver**), with a switch for each thing; invites for you; the Care teams you are on ([Care team](#sharing)) |
-| **Connected devices** (when your admin sets it up) | **Connect Withings** so the server fetches your weight, blood pressure and pulse ([Weight and blood pressure](weight-and-blood-pressure.md#from-withings)); **Connect Whoop** for calories burned, strain, recovery, HRV, sleep and workouts ([Activity and recovery](reports-for-your-team.md#activity-and-recovery)), and **Add active-day calories to my target** ([More calories on active days](targets-and-warnings.md#active-day-calories)); **Sync now**; **Disconnect** stops pending imports too |
+| **Connected devices** (when your admin sets it up) | **Connect Withings** so the server fetches your weight, blood pressure and pulse ([Weight and blood pressure](weight-and-blood-pressure.md#from-withings)); **Connect Whoop** for calories burned, strain, recovery, HRV, sleep and workouts ([Activity and recovery](reports-for-your-team.md#activity-and-recovery)), and **Add active-day calories to my target** ([More calories on active days](targets-and-warnings.md#active-day-calories)); **Sync now**; **Disconnect** stops pending imports and sign-ins too |
 | **Shopping list app** (when your admin turns it on) | your own **Grocy**, **KitchenOwl** or **Mealie**: its address and a key you make there, **Test**, the list the food goes to, **Remove**. The key is never shown again. Plan's shopping list then has **Send** ([Send it to your own list app](planning-and-menus.md#send-it-to-your-own-list-app); [design note 30][NOTE30]) |
 | **Preferences** | theme (match device, light, dark), the day your week starts on, **Units for lab results** (US or SI: the unit offered first) |
 | **Meal guidance** | on or off, carbohydrate tolerance, low-treatment amount, foods to leave out, your "Not for me" foods ([Meal guidance](guidance.md)) |
@@ -113,6 +113,8 @@ So if a switch is grayed out with "Set by the server", only the person who runs 
 - Sensitive actions (changing a password or key, turning two-step sign-in on or off, adding or removing a passkey, making an assistant token,
   exporting, deleting your account) ask for your password again if you entered it more than 10 minutes ago. If you have a
   passkey, **Use a passkey instead** answers with your fingerprint, face or PIN.
+- If your admin requires a password change while a linked sign-in or **Confirm with** action is waiting, change your password
+  first, then start that action again. Its old reply cannot finish the action.
 
 ## Two-step sign-in
 
@@ -207,6 +209,7 @@ food log, they also see the note you wrote on each entry.
   of your food.
 - Your activity shows invites, answers, role and switch changes, once a day that someone changed your plan or logged food, and
   each suggestion.
+  Changes sent at the same time are all counted, with one daily entry per helper for planning and one for logging food.
 - A share with an end date stops by itself on that day.
 
 **Suggestions from your Care team.** If you turned on **Suggest meals for me to add** for someone, their suggestions wait at the
@@ -260,6 +263,7 @@ change is listed in your activity, and a food it set shows in **Settings → Mea
   account (your activity says so). That ends your phone shortcut tokens too. If your admin changes how the
   server signs people in, every token ends and you make new ones.
 - If an assistant retries a save, it is not saved twice: the app answers the repeat with what was saved the first time.
+- If its access ends while a save is waiting, nothing from that save is kept. Food, recipes and tastes already saved stay in the app.
 - Treat a token like a password: never send it by text message or email.
 
 ## What to do

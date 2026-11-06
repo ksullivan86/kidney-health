@@ -102,6 +102,8 @@
   }
 
   // ---- the sheet ----------------------------------------------------------------------------------------------------
+  // A save for a sheet that was closed or reopened since: leave that sheet alone, but say it failed (the person may think it saved).
+  const lateFailed = (err) => { if (!err || !err.handled) toast('An earlier save did not go through. Check it and try again.', 'error'); };
   const form = $('#symptom-form');
   const kind = $('#symptom-kind');
   const labelField = $('#symptom-label-field');
@@ -112,7 +114,11 @@
   const flagBox = $('#symptom-flag');
   const errorBox = $('#symptom-error');
   const saveBtn = $('#symptom-save');
-  const S = { editing: null, busy: false };
+  const S = { editing: null, busy: false, generation: 0 };
+  dlg.addEventListener('close', () => { S.generation++; });
+  function lockFields(locked) {
+    for (const field of form.querySelectorAll('input, select, textarea')) field.disabled = locked;
+  }
 
   kind.append(h('option', { value: '' }, 'Choose a symptom'),
     ...R.SYMPTOMS.map(([key, name]) => h('option', { value: key }, key === 'other' ? 'Other (name it)' : name)));
@@ -132,6 +138,7 @@
   sevGroup.addEventListener('change', syncForm);
 
   function openSheet({ symptom = null, trigger = null } = {}) {
+    S.generation++;
     S.editing = symptom;
     $('#sheet-symptom-title').textContent = symptom ? 'Edit symptom' : 'Add a symptom';
     kind.value = symptom ? symptom.symptom : '';
@@ -142,6 +149,8 @@
     dateInput.max = todayStr();
     noteInput.value = symptom ? symptom.note : '';
     showError('');
+    lockFields(false);
+    saveBtn.disabled = S.busy;
     syncForm();
     sheets.open(dlg, trigger, kind);
   }
@@ -150,6 +159,7 @@
   sheets.onSubmit(form, async (e) => {
     e.preventDefault();
     if (S.busy) return;
+    if (!dlg.open) return;
     const key = kind.value;
     if (!R.KEYS.includes(key)) { showError('Choose which symptom it is.'); kind.focus(); return; }
     if (key === 'other' && !labelInput.value.trim()) { showError('Name the symptom, for example dry mouth.'); labelInput.focus(); return; }
@@ -158,20 +168,27 @@
     const body = { date: dateInput.value, symptom: key, severity: severity(), note: noteInput.value };
     if (key === 'other') body.label = labelInput.value;
     const editing = S.editing;
+    const generation = S.generation;
+    const current = () => dlg.open && S.generation === generation;
     S.busy = true;
+    lockFields(true);
     saveBtn.disabled = true;
     showError('');
     try {
       const saved = editing ? await api.updateSymptom(editing.id, body) : await api.addSymptom(body);
+      if (!current()) { await loadToday(shownDate || todayStr()); return; }
       dlg.close();
       toast(editing ? 'Symptom updated' : 'Symptom saved', 'ok');
       live(`${editing ? 'Updated' : 'Saved'} ${saved.name}, ${sevWord(saved.severity)}, ${fmtDateShort(saved.date)}.`);
       await loadToday(shownDate || todayStr());
     } catch (err) {
-      if (err && err.status === 400) showError(err.detail || err.message);
-      else toastError(err);
+      if (current()) {
+        if (err && err.status === 400) showError(err.detail || err.message);
+        else toastError(err);
+      } else lateFailed(err);
     } finally {
       S.busy = false;
+      if (current()) lockFields(false);
       saveBtn.disabled = false;
     }
   });

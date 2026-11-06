@@ -4,7 +4,13 @@ import Foundation
 import HealthKit
 import KidneyHealthCore
 
-final class HealthSource {
+protocol HealthReading {
+    func requestAccess() async throws
+    func observe(_ onChange: @escaping () async -> Void)
+    func newSamples(since stored: Data?) async throws -> (batch: SampleBatch, more: Bool)
+}
+
+final class HealthSource: HealthReading {
     /// At most this many new samples of each kind per round, so a round fits in a few requests and its anchor can be kept.
     static let roundSize = 500
 

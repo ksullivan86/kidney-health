@@ -143,11 +143,22 @@ kidneyhealthsync://pair?v=1&server=https%3A%2F%2Ffood.example.org&token=khd_…
 
 ## What a leaked token can do
 
+In the iPhone app, changing the server or token starts a fresh sync position. Saving the same settings keeps
+it. Removing or replacing the settings stops further requests with the old token; a request already sent may
+still finish. Its reply cannot bring back the old status or sync position, or pause the new server.
+
+When the server refuses the token (it was revoked, phone shortcuts were turned off, or the person must change their password),
+the iPhone app stops sending in the background. It does not try again by itself. Open the app and tap **Test connection** or
+**Save** once the token works again, and sending carries on from where it stopped.
+
 It can add up to 60 requests of up to 50 plausible weights and readings an hour (never more than 20 weights and 30 readings a day) to
 **one** person's log, until it expires (at most 365 days, or never when the person chose so) or is revoked. It cannot read the log, the profile or anything else, change or
 delete a row, make or see tokens, or reach any other route (every other route ignores the `Authorization` header). The check route only says whether it works. The false rows are
 marked as sent by that token, so the person can see them and delete all of them in one step. Nothing is acted on automatically. Revoke the
 token (and delete what it sent) if a phone is lost or a Shortcut was shared.
+
+The server checks the token again before saving the readings. If access ended while the phone was sending,
+the request gets 401 and none of its readings are saved. Readings already saved stay in your log until you delete them.
 
 Tokens are not in the export (a credential, like sessions); the rows are, as `source: shortcut`, without the token. Rows a token sent
 are never sent to an AI provider or the assistant, like the rest of the weight and blood pressure log ([`privacy.md`](privacy.md)).

@@ -50,7 +50,7 @@ from .settings_store import SettingsStore, default_store
 
 logger = logging.getLogger(brand.LOGGER_NAME)
 
-APP_VERSION = "0.22.2"
+APP_VERSION = "0.22.3"
 STATIC_DIR = DEFAULT_STATIC_DIR
 
 

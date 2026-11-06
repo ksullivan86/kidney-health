@@ -185,6 +185,7 @@ def set_food_preference(call: T.Call, args: PreferenceCall) -> dict[str, Any]:
     conn = call.conn
     try:
         begin_immediate(conn)
+        api_tokens.require_current_write(call.request, conn, api_tokens.PREFS)
         raced = T.earlier_save(call, TOOL_NAME, key)  # inside the write lock: a retry that raced the first call
         if raced is not None:
             conn.rollback()

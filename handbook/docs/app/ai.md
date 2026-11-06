@@ -176,6 +176,8 @@ My own AI provider** (and, if your admin allows it, the address of another AI se
 Your key is encrypted on the server and never shown again; changing it asks for your password. If your
 own provider fails, the app never sends your data to the shared one instead
 ([Settings and keys](settings-and-keys.md)).
+If you change your AI settings while **Test connection** is waiting, test the new settings again. The old reply cannot mark
+the new settings as tested.
 
 ## Where to find it
 
@@ -285,6 +287,9 @@ for example "How much potassium do I have left today?" or "Can I have a banana a
   readings are always shown to you to check, whatever you choose. These two options only work if your admin has
   allowed them; if not, Ask always asks first. "This conversation" ends when you start a new conversation or after
   12 hours.
+  Changing the stored choice to **Ask me before every save**, or turning the admin switch off while Ask waits,
+  makes a pending save ask for confirmation. Earlier saves stay saved and still offer Undo. A retry reports
+  those earlier saves without offering another copy to confirm.
 - **Telling Ask what you like.** Say "I don't really like salmon" and Ask may offer to remember it for your meal
   suggestions. This is **always a card, even if you chose to trust Ask**: "Remember this for your suggestions?
   Salmon: less often." with **Remember** and **Cancel**. Nothing changes until you press **Remember**, and **Undo**

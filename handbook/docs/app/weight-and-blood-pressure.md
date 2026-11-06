@@ -40,6 +40,9 @@ pressure**. Nothing is saved until you press **Save**. Each entry has **Edit** a
   nothing ([architecture contract][ARCH]).
 - If the server cannot save it, the sheet stays open with what you typed and the message shows on top of
   it. Press **Save** again to try once more.
+- While saving, the fields stay fixed. **Close** or **Cancel** still closes the sheet; a save you already submitted may finish
+  afterward. A late reply cannot close your next draft. You can type that draft while its **Save** waits for the earlier save.
+- A weight draft uses the unit printed beside its box, even if settings refresh while it is open.
 
 ## How to measure blood pressure at home {#how-to-measure}
 
@@ -147,6 +150,7 @@ Treat it like a password: never post it or send it by email.
   without a cuff is not a good source for this log, see
   [Which device](#which-device)). A weight from a watch is saved.
 - Only weights and blood pressure are accepted. Nothing else from the Health app is sent or kept.
+- If the token's access ends while the phone is sending, none of that request's readings are saved. Earlier readings stay in your log.
 - Sending the same reading twice, or importing your Health export after the Shortcut has sent it, adds nothing.
   A reading you typed yourself is never counted as the same.
 - The app marks each row it received this way, for example "from a shortcut (Morning weight)", on Today and in the
@@ -228,6 +232,13 @@ iPhone app, which sends new weights and readings from Health by itself. The app 
 does not need the code. Point the iPhone Camera at it and tap the link: the app asks "Pair with" and your server's name
 before it saves anything. Keep the code private, like the token, and do not photograph it.
 
+In the iPhone app, changing the server or token starts a fresh sync position; saving the same settings keeps
+it. Removing or replacing them stops further requests with the old settings. A request already sent may
+finish, but its reply cannot bring back the old status or position.
+
+If your server stops accepting the app's token, for example after you change your password, the app stops sending. Open it
+and tap **Test connection** or **Save** when the token works again, and it carries on from where it stopped.
+
 ### If the phone is lost or the shortcut was shared
 
 Open **Settings → Account → Your data → Phone shortcuts** on another device and **Revoke** the token. The shortcut stops
@@ -264,7 +275,8 @@ After that the server fetches new readings every few hours. **Sync now** fetches
 - **Disconnect** stops the fetching. Your readings stay, unless you tick **Also delete the readings that came from
   Withings** (readings you edited stay either way).
   A reply still on its way cannot add readings back after you disconnect. If you connect again, the old sync cannot change
-  your new connection.
+  your new connection. Disconnect also cancels a sign-in or reconnect still waiting for Withings. An old sign-in reply
+  cannot replace a newer connection.
 - If the section says **Withings needs you to connect again**, press **Connect again**. This happens when Withings stops
   accepting the server's sign-in, for example after you removed the app in your Withings account.
 - Like a shortcut, nothing here sends you an alert. A reading past a limit shows its warning when you open the app.

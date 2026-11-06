@@ -205,6 +205,8 @@ Albuminuria (KDIGO 2024 Table 3) uses the unit it was entered in: A1 below 30 mg
 
 After saving, deleting or importing a lab result, the lab history and kidney-function card refresh together.
 An older request still loading at that point cannot put the old results back. Profile's lab summary follows the same rule.
+Two lab imports arriving together also share the saved-result check: the same test, date and shown value is saved once,
+and the other import counts it as a duplicate.
 
 **Profile** (`js/views/profile.js`) has four cards:
 

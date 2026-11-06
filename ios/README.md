@@ -27,6 +27,10 @@ How a sync works:
 * New samples are read in rounds of at most 500 of each kind. A round's place in Health is kept only after the server accepted all of
   it. A round that failed is sent again later, and the server counts what it already has as already there.
 * A refused token stops sending until a new one is saved. "Too many requests" waits as long as the server says.
+* Changing the server or token starts a fresh sync position; saving the same address and token keeps it. Older
+  connection checks and sync replies cannot change the new settings' status or position. Removing a token stops
+  further requests with it; a request already sent may still finish. A successful **Test connection** also allows
+  sending again after a refused token.
 * Readings deleted in Health stay on the server. In the web app, Settings → Phone shortcuts → "Delete what it sent" removes them.
 
 Signing, TestFlight and a real iPhone come next, with the owner's Apple Developer account (step 3 of the design note).

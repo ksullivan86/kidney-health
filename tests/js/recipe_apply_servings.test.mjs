@@ -5,7 +5,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 const source = readFileSync(new URL('../../app/static/js/views/plan.js', import.meta.url), 'utf8');
-const start = source.indexOf("  const applyDlg = $('#sheet-apply');");
+const start = source.indexOf('  // ---- Apply saved meal sheet');
 const end = source.indexOf('  // ---- Save a logged meal', start);
 assert.ok(start >= 0 && end > start);
 const template = (makes = 4) => ({ id: 1, name: 'Recipe', servings_made: makes, note: null,
@@ -25,7 +25,7 @@ function setup(t = template()) {
   const context = vm.createContext({ window: { KH: {} }, console });
   vm.runInContext(readFileSync(new URL('../../app/static/js/engine/rules.js', import.meta.url), 'utf8'), context);
   const rules = context.window.KH.rules;
-  Object.assign(context, {
+  Object.assign(context, { $$: () => [],
     $, h, state, clear: (node) => { node.children = []; return node; }, KH: { loadMeals: async () => state.meals },
     sheets: { setup() {}, onSubmit: (form, handler) => { submit = handler; }, open: (dialog) => { dialog.open = true; } },
     isRecipe: (meal) => meal.servings_made != null && meal.servings_made !== 1,

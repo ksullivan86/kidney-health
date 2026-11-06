@@ -293,10 +293,15 @@
   }
 
   // ---- Copy day sheet -------------------------------------------------------
+  // A save for a sheet that was closed or reopened since: leave that sheet alone, but say it failed (the person may think it saved).
+  const lateFailed = (err) => { if (!err || !err.handled) toast('An earlier save did not go through. Check it and try again.', 'error'); };
   const copyDlg = $('#sheet-copy');
   sheets.setup(copyDlg);
   let copyBusy = false;
+  let copyOpening = 0;
+  const currentCopy = (opening) => copyDlg.open && opening === copyOpening;
   function openCopySheet({ from, to, trigger } = {}) {
+    copyOpening += 1;
     const f = from || state.date || todayStr();
     $('#copy-from').value = f;
     $('#copy-to').value = to || addDays(f, 1);
@@ -304,6 +309,8 @@
     $('#copy-include').value = 'all';
     setStatus($('#copy-status'), 'planned');
     updateCopySummary();
+    sheetWriteFields($('#copy-form'), false);
+    $('#copy-save').disabled = copyBusy;
     sheets.open(copyDlg, trigger, $('#copy-to'));
   }
   function updateCopySummary() {
@@ -316,7 +323,7 @@
   $('#copy-to').addEventListener('change', updateCopySummary);
   sheets.onSubmit($('#copy-form'), async (e) => {
     e.preventDefault();
-    if (copyBusy) return;
+    if (copyBusy || !copyDlg.open) return;
     const from_date = $('#copy-from').value, to_date = $('#copy-to').value;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(from_date) || !/^\d{4}-\d{2}-\d{2}$/.test(to_date)) { toast('Pick both dates', 'error'); return; }
     if (from_date === to_date) { toast('Choose two different days', 'error'); $('#copy-to').focus(); return; }
@@ -324,20 +331,37 @@
     if (!meals.length) { toast('Pick at least one meal', 'error'); return; }
     const body = { from_date, to_date, include: $('#copy-include').value, status: selectedStatus($('#copy-status')) };
     if (meals.length < MEALS.length) body.meals = meals;
-    copyBusy = true; $('#copy-save').disabled = true;
+    const opening = copyOpening;
+    copyBusy = true; sheetWriteFields($('#copy-form'), true);
     try {
       const res = await api.copyDay(body);
-      copyDlg.close();
+      const current = currentCopy(opening);
+      if (current) copyDlg.close();
       const n = res && typeof res.created === 'number' ? res.created : (res && res.entries ? res.entries.length : 0);
       toast(n ? `Copied ${n} ${n === 1 ? 'entry' : 'entries'} to ${fmtDateLong(to_date)} as ${body.status}` : 'Nothing to copy from that day', n ? 'ok' : '');
-      if (n) afterLogChange(to_date);
-    } catch (err) { toastError(err); }
-    finally { copyBusy = false; $('#copy-save').disabled = false; }
+      if (n) afterLogChange(current ? to_date : null);
+    } catch (err) { if (currentCopy(opening)) toastError(err); else lateFailed(err); }
+    finally {
+      copyBusy = false;
+      if (currentCopy(opening)) sheetWriteFields($('#copy-form'), false);
+      $('#copy-save').disabled = false;
+    }
   });
 
   // ---- Apply saved meal sheet ----------------------------------------------
+  function sheetWriteFields(form, busy) {
+    for (const field of $$('input, select, textarea, button', form)) {
+      if (!field.hasAttribute('data-close')) field.disabled = busy;
+    }
+  }
   const applyDlg = $('#sheet-apply');
   sheets.setup(applyDlg);
+  let applyOpening = 0;
+  let applyShown = 0;
+  const currentApply = (opening) => applyDlg.open && opening === applyOpening;
+  applyDlg.addEventListener('close', () => {
+    if (!applyDlg.open && applyShown === applyOpening) applyOpening += 1;
+  });
   let applyBusy = false;
   let applyStatusTouched = false; // until the person picks a status, it follows the chosen date (past/today → eaten, future → planned)
   $('#apply-status').addEventListener('change', () => { applyStatusTouched = true; });
@@ -346,7 +370,9 @@
     if (!applyStatusTouched && /^\d{4}-\d{2}-\d{2}$/.test(d)) setStatus($('#apply-status'), defaultStatusFor(d));
   });
   async function openApplySheet({ mealId, date, meal, status, trigger } = {}) {
-    try { await KH.loadMeals(); } catch (e) { toastError(e); return; }
+    const opening = ++applyOpening;
+    try { await KH.loadMeals(); } catch (e) { if (opening === applyOpening) toastError(e); return; }
+    if (opening !== applyOpening) return;
     const meals = state.meals || [];
     if (!meals.length) {
       toast('No saved meals yet. Create one in Plan, or use "Save as meal" under a meal in Today.');
@@ -364,6 +390,9 @@
     setStatus($('#apply-status'), status || defaultStatusFor(d));
     applyStatusTouched = !!status;
     updateApplyPreview();
+    sheetWriteFields($('#apply-form'), false);
+    $('#apply-save').disabled = applyBusy;
+    applyShown = opening;
     sheets.open(applyDlg, trigger, mealId ? $('#apply-date') : sel);
   }
   function applyTemplate() { return (state.meals || []).find((t) => t.id === Number($('#apply-meal-id').value)) || null; }
@@ -414,7 +443,7 @@
   $('#apply-form').addEventListener('change', updateApplyPreview);
   sheets.onSubmit($('#apply-form'), async (e) => {
     e.preventDefault();
-    if (applyBusy) return;
+    if (applyBusy || !applyDlg.open) return;
     const t = applyTemplate();
     if (!t) return;
     const date = $('#apply-date').value;
@@ -429,23 +458,31 @@
     const scale = applyScale(t, amount);
     const body = { date, meal: selectedMeal($('#apply-meal')), status: selectedStatus($('#apply-status')) };
     if (scale !== 1) body.scale = scale;
-    applyBusy = true; $('#apply-save').disabled = true;
+    const opening = applyShown;
+    applyBusy = true; sheetWriteFields($('#apply-form'), true);
     try {
       const res = await api.applyMeal(t.id, body);
-      applyDlg.close();
+      const current = currentApply(opening);
+      if (current) applyDlg.close();
       const n = res && res.entries ? res.entries.length : t.items.length;
       toast(`${body.status === 'planned' ? 'Planned' : 'Added'} ${t.name} (${n} ${n === 1 ? 'food' : 'foods'}) for ${MEAL_LABEL[body.meal].toLowerCase()}, ${fmtDateLong(date)}`, 'ok');
-      afterLogChange(date, { goToDay: state.view === 'add' });
-    } catch (err) { toastError(err); }
-    finally { applyBusy = false; $('#apply-save').disabled = false; }
+      afterLogChange(current ? date : null, { goToDay: current && state.view === 'add' });
+    } catch (err) { if (currentApply(opening)) toastError(err); else lateFailed(err); }
+    finally {
+      applyBusy = false;
+      if (currentApply(opening)) sheetWriteFields($('#apply-form'), false);
+      $('#apply-save').disabled = false;
+    }
   });
 
   // ---- Save a logged meal as a template ------------------------------------
   const saveMealDlg = $('#sheet-savemeal');
   sheets.setup(saveMealDlg);
-  const saveMealState = { date: null, meal: null, busy: false };
+  let saveMealState = null;
+  let saveMealBusy = false;
+  const currentSaveMeal = (opening) => saveMealDlg.open && saveMealState === opening;
   function openSaveMealSheet(date, meal, entries, trigger) {
-    saveMealState.date = date; saveMealState.meal = meal;
+    saveMealState = { date, meal };
     $('#savemeal-name').value = '';
     $('#savemeal-note').value = '';
     // The server leaves low treatments (purpose "hypo") out of a saved meal: say so instead of listing them.
@@ -459,27 +496,36 @@
         h('span', { class: 'ci-name' }, e.food_name, isPlanned(e) ? h('span', { class: 'badge planned' }, 'planned') : null),
         h('span', { class: 'ci-amt muted' }, fmtServings(e.servings))));
     }
+    sheetWriteFields($('#savemeal-form'), false);
+    $('#savemeal-save').disabled = saveMealBusy;
     sheets.open(saveMealDlg, trigger, $('#savemeal-name'));
   }
   sheets.onSubmit($('#savemeal-form'), async (e) => {
     e.preventDefault();
-    if (saveMealState.busy) return;
+    if (saveMealBusy || !saveMealDlg.open) return;
+    const opening = saveMealState;
     const name = $('#savemeal-name').value.trim();
     if (!name) { toast('Give the meal a name', 'error'); $('#savemeal-name').focus(); return; }
-    saveMealState.busy = true; $('#savemeal-save').disabled = true;
+    saveMealBusy = true; sheetWriteFields($('#savemeal-form'), true);
     try {
-      const t = await api.mealFromLog({ date: saveMealState.date, meal: saveMealState.meal, name, note: $('#savemeal-note').value.trim() || null });
-      saveMealDlg.close();
+      const t = await api.mealFromLog({ date: opening.date, meal: opening.meal, name, note: $('#savemeal-note').value.trim() || null });
+      if (currentSaveMeal(opening)) saveMealDlg.close();
       KH.invalidateMeals();
       toast(`Saved “${t.name}” (${t.items.length} ${t.items.length === 1 ? 'food' : 'foods'}). Find it under Plan.`, 'ok');
-    } catch (err) { toastError(err); }
-    finally { saveMealState.busy = false; $('#savemeal-save').disabled = false; }
+    } catch (err) { if (currentSaveMeal(opening)) toastError(err); else lateFailed(err); }
+    finally {
+      saveMealBusy = false;
+      if (currentSaveMeal(opening)) sheetWriteFields($('#savemeal-form'), false);
+      $('#savemeal-save').disabled = false;
+    }
   });
 
   // ---- Saved meal editor (create / edit) -----------------------------------
   const mealDlg = $('#sheet-meal');
   sheets.setup(mealDlg);
-  const mealEd = { id: null, items: [], busy: false, search: 0 };
+  let mealEd = { id: null, items: [], search: 0, saving: false };
+  let mealBusy = false;
+  const currentMealEditor = (editing) => mealDlg.open && mealEd === editing;
   function perServingOfItem(it) {
     const out = {};
     for (const n of NUTRIENTS) { const v = it.nutrients ? it.nutrients[n.key] : null; out[n.key] = v == null || !it.servings ? v : v / it.servings; }
@@ -488,7 +534,7 @@
   // `t` is the saved meal to edit, or null for a new one. `draft` ({ name, meal_hint, foods: [{ food, servings }] }, with `food`
   // as GET /api/foods/{id} answers) starts a new meal with those foods: Settings → Meal guidance → "Save as a meal" on a usual meal.
   function openMealEditor(t, trigger, draft = null) {
-    mealEd.id = t ? t.id : null;
+    mealEd = { id: t ? t.id : null, items: [], search: 0, saving: false };
     mealEd.items = t ? t.items.map((it) => ({ food_id: it.food_id, food_name: it.food_name, serving_desc: it.serving_desc, servings: it.servings,
       per: perServingOfItem(it), kidney_rating: it.kidney_rating, hidden: !!it.hidden }))
       : draft ? draft.foods.map(({ food, servings }) => ({ food_id: food.id, food_name: food.name, serving_desc: food.serving_desc, servings,
@@ -504,17 +550,20 @@
     $('#meal-search').value = '';
     clear($('#meal-search-results'));
     renderMealItems();
+    sheetWriteFields($('#meal-form'), false);
+    $('#meal-save').disabled = mealBusy;
     sheets.open(mealDlg, trigger, $('#meal-name'));
   }
   function renderMealItems() {
+    const editing = mealEd;
     const ul = clear($('#meal-items'));
     if (!mealEd.items.length) ul.append(h('li', { class: 'empty-state' }, 'No foods yet. Search below to add some.'));
     mealEd.items.forEach((it, idx) => {
       const inp = h('input', { type: 'number', inputmode: 'decimal', min: 0.25, step: 0.25, value: String(it.servings), 'aria-label': `Servings of ${it.food_name}` });
-      inp.addEventListener('input', () => { const v = Number(inp.value); if (v > 0) { it.servings = v; renderMealTotals(); } });
+      inp.addEventListener('input', () => { if (!currentMealEditor(editing) || editing.saving) return; const v = Number(inp.value); if (v > 0) { it.servings = v; renderMealTotals(); } });
       inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } });
       const rm = h('button', { class: 'icon-btn', type: 'button', 'aria-label': `Remove ${it.food_name}` }, closeIcon());
-      rm.addEventListener('click', () => { mealEd.items.splice(idx, 1); renderMealItems(); });
+      rm.addEventListener('click', () => { if (!currentMealEditor(editing) || editing.saving) return; editing.items.splice(idx, 1); renderMealItems(); });
       ul.append(h('li', { class: 'meal-item' }, ratingIcon(it.kidney_rating, { decorative: true }),
         h('div', { class: 'row-main' }, h('div', { class: 'row-title' }, it.food_name, it.hidden ? h('span', { class: 'food-source' }, 'hidden') : null), h('div', { class: 'row-sub' }, it.serving_desc || '')),
         h('div', { class: 'meal-item-sv' }, inp, h('span', { class: 'muted small' }, 'srv')),
@@ -541,13 +590,15 @@
     $('#meal-preview-count').textContent = `${mealEd.items.length} ${mealEd.items.length === 1 ? 'food' : 'foods'}${makes !== 1 ? ', one serving' : ''}`;
   }
   async function runMealSearch() {
+    const editing = mealEd;
+    if (!currentMealEditor(editing) || editing.saving) return;
     const q = $('#meal-search').value.trim();
-    const reqId = ++mealEd.search;
+    const reqId = ++editing.search;
     const ul = $('#meal-search-results');
     if (!q) { clear(ul); return; }
     try {
       const res = await api.foods({ q, limit: 8 });
-      if (reqId !== mealEd.search) return;
+      if (!currentMealEditor(editing) || editing.saving || reqId !== editing.search || q !== $('#meal-search').value.trim()) return;
       clear(ul);
       const foods = res.foods || [];
       if (!foods.length) ul.append(h('li', { class: 'empty-state' }, 'No foods match.'));
@@ -556,6 +607,7 @@
           h('div', { class: 'row-main' }, h('div', { class: 'row-title' }, f.name), h('div', { class: 'row-sub' }, f.serving_desc)),
           h('span', { class: 'add-word' }, plusIcon(), 'Add'));
         b.addEventListener('click', () => {
+          if (!currentMealEditor(editing) || editing.saving || reqId !== editing.search) return;
           const existing = mealEd.items.find((it) => it.food_id === f.id);
           if (existing) existing.servings = Math.round((existing.servings + 1) * 100) / 100;
           else mealEd.items.push({ food_id: f.id, food_name: f.name, serving_desc: f.serving_desc, servings: 1, per: f.nutrients, kidney_rating: f.kidney_rating, hidden: false });
@@ -566,14 +618,16 @@
         });
         ul.append(h('li', {}, b));
       }
-    } catch (err) { if (reqId === mealEd.search) toastError(err); }
+    } catch (err) { if (currentMealEditor(editing) && !editing.saving && reqId === editing.search && q === $('#meal-search').value.trim()) toastError(err); }
   }
   $('#meal-makes').addEventListener('input', renderMealTotals);
-  $('#meal-search').addEventListener('input', debounce(runMealSearch, 200));
+  const scheduleMealSearch = debounce(runMealSearch, 200);
+  $('#meal-search').addEventListener('input', () => { mealEd.search += 1; clear($('#meal-search-results')); scheduleMealSearch(); });
   $('#meal-search').addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); runMealSearch(); } });
   sheets.onSubmit($('#meal-form'), async (e) => {
     e.preventDefault();
-    if (mealEd.busy) return;
+    if (mealBusy || !mealDlg.open) return;
+    const editing = mealEd;
     const name = $('#meal-name').value.trim();
     if (!name) { toast('Give the meal a name', 'error'); $('#meal-name').focus(); return; }
     if (!mealEd.items.length) { toast('Add at least one food', 'error'); $('#meal-search').focus(); return; }
@@ -583,21 +637,29 @@
     const body = { name, note: $('#meal-note').value.trim() || null, meal_hint: $('#meal-hint').value || null,
       items: mealEd.items.map((it) => ({ food_id: it.food_id, servings: it.servings })),
       servings_made: makes ? Number(makes) : null, steps: steps.length ? steps : null, source_url: $('#meal-source').value.trim() || null };
-    mealEd.busy = true; $('#meal-save').disabled = true;
+    mealBusy = true; editing.saving = true; editing.search += 1;
+    sheetWriteFields($('#meal-form'), true);
     try {
-      const t = mealEd.id != null ? await api.updateMeal(mealEd.id, body) : await api.createMeal(body);
-      mealDlg.close();
+      const t = editing.id != null ? await api.updateMeal(editing.id, body) : await api.createMeal(body);
+      if (currentMealEditor(editing)) mealDlg.close();
       toast(`Saved “${t.name}”`, 'ok');
       await KH.loadMeals(true);
       renderSavedMeals();
       if (state.view === 'add') KH.views.add.renderSavedShortcuts();
-    } catch (err) { toastError(err); }
-    finally { mealEd.busy = false; $('#meal-save').disabled = false; }
+    } catch (err) { if (currentMealEditor(editing)) toastError(err); else lateFailed(err); }
+    finally {
+      mealBusy = false; editing.saving = false;
+      if (currentMealEditor(editing)) sheetWriteFields($('#meal-form'), false);
+      $('#meal-save').disabled = false;
+    }
   });
   $('#meal-delete').addEventListener('click', (ev) => {
-    if (mealEd.id == null) return;
+    const editing = mealEd;
+    if (editing.id == null || editing.saving || !currentMealEditor(editing)) return;
     const t = (state.meals || []).find((x) => x.id === mealEd.id) || { id: mealEd.id, name: $('#meal-name').value };
-    confirmDeleteSavedMeal(t, $('.sheet-foot', mealDlg), ev.currentTarget, () => { mealDlg.close(); $('#btn-new-meal').focus(); });
+    confirmDeleteSavedMeal(t, $('.sheet-foot', mealDlg), ev.currentTarget, () => {
+      if (currentMealEditor(editing)) { mealDlg.close(); $('#btn-new-meal').focus(); }
+    });
   });
 
   // ---- Fit to my targets (note 16 §10): POST /api/guidance/fit-recipe, then Save a fitted copy or Replace ---------------

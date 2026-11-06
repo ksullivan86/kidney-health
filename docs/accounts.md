@@ -187,6 +187,8 @@ Good to know:
 * **No password.** Someone who signed up through the provider has no password here. When an action asks for the password again,
   **Confirm with Authentik** answers it. They can add a passkey, or you can send a reset link to set a password.
 * Signing out of the app does not sign out at the provider.
+* Requiring a password change also cancels a pending **Link** or **Confirm with** return. Change the password first, then
+  start the action again.
 * The activity log records sign-ins through the provider and every link and unlink. Tokens are never stored or logged, and the
   server's access log shows the one-time code and state as `[redacted]`.
 
@@ -351,6 +353,7 @@ export; the import leaves them out.
   looked, and the helper's changes that day.
 * The person's activity shows invites, answers, role and switch changes, people leaving, the first look each day, once a day that
   a helper changed the plan or logged food, and each suggestion sent, added, declined or expired.
+  Changes sent at the same time are all counted; they keep one daily activity entry per helper for planning and one for logging food.
 * A share with an end date stops by itself on that day.
 * At most 10 people on one Care team, 5 unused links and 5 waiting invites. Invites are limited to 20 tries an hour.
 * An admin can end everything for a person in **Server administration → People → End Care team**. Deleting either account

@@ -106,6 +106,10 @@ The product is stored once on the server, read-only, and appears in your food se
 To change it, make an editable copy of it; the copy keeps the barcode (and the attribution) and is what
 you get next time.
 
+Closing the food-entry or Quick add sheet does not cancel a save you already sent. If you reopen it, the new draft keeps its
+own values and errors; an old reply cannot close it or take you to another view. Save waits for the earlier request to finish.
+Submitted entry controls stay fixed during a save or deletion, while Close remains available.
+
 ### What you see, and how far to trust it
 
 * **"Potassium: not listed"** and **"Phosphorus: not listed"** instead of 0. Most packaged foods do not
@@ -177,6 +181,10 @@ barcode reader and no camera: type the digits.
   reached".
 
 ### Privacy
+
+Simultaneous USDA imports reuse one shared food row for that FoodData Central record, including imports through Search USDA,
+barcodes or an assistant save. Each person's link to it remains separate. The shared-food helper does not commit an
+assistant's wider save; if that save fails, its food additions and links roll back with it.
 
 * The server stores the product data it fetched in a shared cache (`barcode_cache`) and the product
   itself as a shared food row. **Which products you scanned** is stored only as your link to that row; it
