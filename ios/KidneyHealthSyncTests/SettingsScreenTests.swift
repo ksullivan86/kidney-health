@@ -85,4 +85,79 @@ final class SettingsScreenTests: XCTestCase {
     func testTheDayIsThePhonesCalendarDay() {
         XCTAssertEqual(SyncModel.day(Date(timeIntervalSince1970: 0)).count, 10)
     }
+
+    func testANewTokenAtTheSameServerStartsWithItsOwnSyncPosition() throws {
+        let m = model()
+        XCTAssertNil(m.save(address: "https://one.example.org", token: "khd_" + String(repeating: "a", count: 43)))
+        try Keychain.save(Data("old-token-anchor".utf8), as: .anchors)
+        let defaults = UserDefaults(suiteName: "SettingsScreenTests")!
+        defaults.set("2026-01-01", forKey: "since")
+        XCTAssertNil(m.save(address: "https://one.example.org/", token: "khd_" + String(repeating: "b", count: 43)))
+        XCTAssertNil(Keychain.read(.anchors))
+        XCTAssertNil(defaults.string(forKey: "since"))
+    }
+
+    func testSavingTheSameTokenAndServerKeepsTheSyncPosition() throws {
+        let m = model()
+        let token = "khd_" + String(repeating: "a", count: 43)
+        XCTAssertNil(m.save(address: "https://one.example.org", token: token))
+        let anchor = Data("same-token-anchor".utf8)
+        try Keychain.save(anchor, as: .anchors)
+        XCTAssertNil(m.save(address: "https://one.example.org/", token: token))
+        XCTAssertEqual(Keychain.read(.anchors), anchor)
+    }
+
+    func testALateConnectionAnswerCannotRestoreTheResultAfterRemovingTheToken() async {
+        let transport = HeldCheck()
+        let m = model(transport: transport)
+        XCTAssertNil(m.save(address: "https://one.example.org", token: "khd_" + String(repeating: "a", count: 43)))
+        let check = Task { await m.testConnection() }
+        await transport.waitForRequest()
+        m.removeToken()
+        await transport.answer(HTTPReply(status: 200, body: Data(#"{"ok": true}"#.utf8)))
+        await check.value
+        XCTAssertNil(m.checkResult)
+        XCTAssertFalse(m.hasToken)
+        XCTAssertEqual(m.status, "The token was removed from this phone.")
+    }
+
+    func testALateRateLimitCannotPauseTheNewServer() async {
+        let transport = HeldCheck()
+        let m = model(transport: transport)
+        XCTAssertNil(m.save(address: "https://one.example.org", token: "khd_" + String(repeating: "a", count: 43)))
+        let check = Task { await m.testConnection() }
+        await transport.waitForRequest()
+        XCTAssertNil(m.save(address: "https://two.example.org", token: "khd_" + String(repeating: "b", count: 43)))
+        await transport.answer(HTTPReply(status: 429, headers: ["Retry-After": "3600"]))
+        await check.value
+        XCTAssertNil(m.checkResult)
+        XCTAssertNil(UserDefaults(suiteName: "SettingsScreenTests")!.object(forKey: "waitUntil"))
+    }
+}
+
+private actor HeldCheck: PushTransport {
+    private var reply: CheckedContinuation<HTTPReply, Never>?
+    private var arrival: CheckedContinuation<Void, Never>?
+
+    func get(_ url: URL, token: String) async throws -> HTTPReply {
+        await withCheckedContinuation { continuation in
+            reply = continuation
+            arrival?.resume()
+            arrival = nil
+        }
+    }
+
+    func post(_ body: Data, to url: URL, token: String) async throws -> HTTPReply {
+        throw URLError(.unsupportedURL)
+    }
+
+    func waitForRequest() async {
+        if reply != nil { return }
+        await withCheckedContinuation { arrival = $0 }
+    }
+
+    func answer(_ value: HTTPReply) {
+        reply?.resume(returning: value)
+        reply = nil
+    }
 }
