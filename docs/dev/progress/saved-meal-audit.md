@@ -11,9 +11,9 @@ fields (Close/Cancel still work). Keep one outstanding write per sheet type acro
 be edited but cannot submit until that write finishes. After an old apply, refresh the current view without
 navigation. A failed current save restores controls and preserves the draft. Server/demo share these views.
 
-Verified 19 Node cases pass, plus existing unknown-nutrient and recipe-serving editor cases.
+Verified 20 Node cases pass, plus existing unknown-nutrient and recipe-serving editor cases.
 Real Chromium harness: 44 checks pass at 375 light and 1280 dark. Existing reliability walk: 87 checks pass.
 Full pytest is running. Ruff, vectors, generated pages and strict handbook pass. Initial harness seeded apple juice, correctly
 excluded by Save as meal as a low treatment; changed fixture to raw apple. This was a harness issue.
 
-Next: finish full pytest, rerun Node regression files after the Copy day change, review, commit/push own paths, create PR. Logs `/workspace/work/meal-audit/`.
+Next: finish full pytest, run all Node regression files after final opening guards, and mark the PR ready after checks pass. Logs `/workspace/work/meal-audit/`.

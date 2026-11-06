@@ -148,6 +148,13 @@ test('a queued close event from the former opening does not cancel the next meal
   s.$('#sheet-apply').fire('close'); load.resolve(); await next;
   assert.equal(s.$('#sheet-apply').open, true); assert.equal(s.$('#apply-meal-id').value, '2');
 });
+test('applying the displayed meal while another opening loads cannot close that next opening', async () => {
+  const s = setup(); await s.openApplySheet({ mealId: 1 });
+  const load = deferred(); s.pendingLoads.push(load);
+  const next = s.openApplySheet({ mealId: 2, date: '2026-12-01' }); await s.submit('apply');
+  load.resolve(); await next; s.last('applyMeal').resolve({ entries: [] }); await settle();
+  assert.equal(s.$('#sheet-apply').open, true); assert.equal(s.$('#apply-meal-id').value, '2');
+});
 for (const reject of [false, true]) {
   test(`old Copy day ${reject ? 'failure' : 'success'} preserves the new dates and current day`, async () => {
     const s = setup(); s.openCopySheet({ from: '2026-11-06', to: '2026-11-07' }); await s.submit('copy');

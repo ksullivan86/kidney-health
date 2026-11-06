@@ -456,7 +456,7 @@
     const scale = applyScale(t, amount);
     const body = { date, meal: selectedMeal($('#apply-meal')), status: selectedStatus($('#apply-status')) };
     if (scale !== 1) body.scale = scale;
-    const opening = applyOpening;
+    const opening = applyShown;
     applyBusy = true; sheetWriteFields($('#apply-form'), true);
     try {
       const res = await api.applyMeal(t.id, body);
