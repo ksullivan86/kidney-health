@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 Branch `audit/account-import-write-lifecycle` from main `cea3c94`. Create a PR and leave it unmerged.
 
@@ -13,9 +13,10 @@ with handler guards too. A failed answer restores controls and keeps the reviewe
 that the person should check their data before retrying an uncertain result. Dry-run Cancel still works.
 Backend import remains one transaction with rollback, duplicate detection and post-rollback cache invalidation.
 
-Verified: 5 Node lifecycle cases, 14 focused pytest cases. Full pytest running. Extended the existing
+Verified: 5 Node lifecycle cases, 14 focused pytest cases. Full pytest: 7,387 passed, 2 skipped, 2 existing handbook citation warnings. Extended the existing
 `tools/e2e/import_walk.py` to hold the real committed reply after password re-authentication, check disabled
 controls and verify Cancel cannot claim to cancel that committed import. Browser: 113 checks pass at phone/desktop sizes. The first run found an outdated harness expectation that omitted the exported activity/workouts CSV files; aligned it with app/account.py and reran successfully.
 
-Ruff, vectors and generated pages pass. Next: finish all Node tests/strict handbook/full suite, review,
-commit/push owned paths and create unmerged PR. Logs: `/workspace/work/import-audit/`.
+All 30 Node regression files, Ruff, vectors, generated pages and strict handbook pass.
+PR https://github.com/ksullivan86/kidney-health/pull/155 is ready for review and remains unmerged.
+No API, schema, import-rule or clinical-number changes. Logs: `/workspace/work/import-audit/`.
