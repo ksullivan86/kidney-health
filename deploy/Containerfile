@@ -30,7 +30,7 @@
 # ---------------------------------------------------------------------------------------------------
 # Stage 1: builder. A venv without pip; the builder's own pip installs into it (pip >= 22.3 --python).
 # ---------------------------------------------------------------------------------------------------
-FROM cgr.dev/chainguard/python:latest-dev@sha256:29ab100be9f9be1ec5e31d7b7c384134171ee8f052e24e2285e697538c199aa6 AS builder
+FROM cgr.dev/chainguard/python:latest-dev@sha256:a41dd09d107afef6bdd9cc566e4663e504a90f5d5cb6ca7627928db5704631ad AS builder
 # Root only in this throw-away stage (it creates /opt/venv); the runtime stage ends as 10001.
 # hadolint ignore=DL3002
 USER 0
@@ -73,7 +73,7 @@ RUN /opt/venv/bin/python -m compileall -q -j 0 /opt/venv /opt/app/app \
 # Dependabot will keep proposing to bump this line to the 3.15 digest; until then that bump fails the
 # image build at the handbook stage, so do not merge it (tests/test_deploy.py checks this comment stays).
 # ---------------------------------------------------------------------------------------------------
-FROM cgr.dev/chainguard/python:latest-dev@sha256:630df1be3733f7b38d1b535872904248adfe23fbea4befcb08da47cb7436ddb2 AS handbook
+FROM cgr.dev/chainguard/python:latest-dev@sha256:a41dd09d107afef6bdd9cc566e4663e504a90f5d5cb6ca7627928db5704631ad AS handbook
 # Root only in this throw-away stage (it creates /opt/hb and /out/learn).
 # hadolint ignore=DL3002
 USER 0
@@ -107,7 +107,7 @@ RUN /opt/hb/bin/mkdocs build --strict -d /out/learn \
 # ---------------------------------------------------------------------------------------------------
 # Stage 3: runtime. Chainguard python:latest: no shell, no pip, no apk; glibc (manylinux wheels).
 # ---------------------------------------------------------------------------------------------------
-FROM cgr.dev/chainguard/python:latest@sha256:31dd69d84fe5235fe18f8ceb5b76620e6f44a0ce1f9b0d3a46c491576f8b453b
+FROM cgr.dev/chainguard/python:latest@sha256:f73b534b99afc3a17c9d7a863a688d9c2577de23e12af21d55ad7b3fdbaf83f0
 
 # OCI annotations. CI (docker/metadata-action) adds version, revision and created. The licences are
 # SPDX ids: the code's LICENSE, PolyForm Noncommercial 1.0.0 (personal and noncommercial use only),
