@@ -870,18 +870,23 @@ def note_change(conn: sqlite3.Connection, care: CareShare, kind: str, n: int, re
     ``care.plan_changed`` or ``care.food_logged``. Commits."""
     if n <= 0:
         return
-    row = conn.execute("SELECT helper_changes FROM shares WHERE id = ?", (care.share_id,)).fetchone()
-    today = _today()
-    got = _helper_changes(row) if row is not None else None
-    if got is None or got["day"] != today:
-        got = {"day": today, **{k: 0 for k in _CHANGE_KINDS}}
-    logged = kind == "logged"
-    if (got["logged"] if logged else got["added"] + got["changed"] + got["removed"]) == 0:
-        audit(conn, care.helper.id, "care.food_logged" if logged else "care.plan_changed", "user", care.owner.id,
-              ip=request_ip(request), share=care.share_id)
-    got[kind] += int(n)
-    conn.execute("UPDATE shares SET helper_changes = ? WHERE id = ?", (json.dumps(got, sort_keys=True), care.share_id))
-    conn.commit()
+    try:
+        begin_immediate(conn)  # the count and daily note are one read-modify-write
+        row = conn.execute("SELECT helper_changes FROM shares WHERE id = ?", (care.share_id,)).fetchone()
+        today = _today()
+        got = _helper_changes(row) if row is not None else None
+        if got is None or got["day"] != today:
+            got = {"day": today, **{k: 0 for k in _CHANGE_KINDS}}
+        logged = kind == "logged"
+        if (got["logged"] if logged else got["added"] + got["changed"] + got["removed"]) == 0:
+            audit(conn, care.helper.id, "care.food_logged" if logged else "care.plan_changed", "user", care.owner.id,
+                  ip=request_ip(request), share=care.share_id)
+        got[kind] += int(n)
+        conn.execute("UPDATE shares SET helper_changes = ? WHERE id = ?", (json.dumps(got, sort_keys=True), care.share_id))
+        conn.commit()
+    except BaseException:
+        conn.rollback()
+        raise
 
 
 def _helper_entry(conn: sqlite3.Connection, care: CareShare, entry_id: int, *, eating: bool = False) -> sqlite3.Row:

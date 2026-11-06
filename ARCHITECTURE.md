@@ -4468,6 +4468,8 @@ changes it in place (`PUT /api/me/shares/{id}/role`). Someone with an account ca
 * **Activity.** `care.invited`, `care.invite_cancelled` and `care.role_changed` target the invite or the share (the owner's own
   actions); `care.invite_answered` and `care.plan_changed` target the owner. `care.plan_changed` is written at the helper's first
   change each UTC day; `shares.helper_changes` keeps that day's counts for the owner's list (audit rows cannot be updated).
+  `note_change` reads and updates the counts and daily activity note under one `BEGIN IMMEDIATE` transaction,
+  so simultaneous requests from the same helper cannot lose a count or duplicate that day's note.
 * **The same answer.** `POST /api/me/shares/invite` stores the invite with `invitee_user_id` NULL when no active account has the
   name, and answers the same either way. The owner's list shows the name as typed.
 * **Saved meals** are not shared, listed or used for a helper unless the person turns on `may_use_saved_meals` (note 25 §7;

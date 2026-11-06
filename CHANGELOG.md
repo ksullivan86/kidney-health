@@ -5,6 +5,13 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## Unreleased
+
+### Fixed
+
+* Care team counts keep every change when a helper sends requests at the same time. Concurrent requests
+  no longer overwrite a count or create duplicate daily activity entries.
+
 ## 0.22.2 — 2026-11-06
 
 ### Upgrading from 0.22.1
