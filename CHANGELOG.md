@@ -35,6 +35,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * Imports arriving together now skip repeated lab results and weight/blood-pressure measurements reliably. They cannot
   fail on a repeated import key or add the same measurement twice. Adding or moving measurements and symptoms from two
   devices at once also keeps the existing per-day limits.
+* An old AI connection test can no longer mark edited settings as tested. Manual tests ask you to test again after a change,
+  and automatic daily tests discard replies for old keys or vision models too. Removing a shared provider during a test
+  returns a clear response instead of a server error.
 
 ## 0.22.2 — 2026-11-06
 

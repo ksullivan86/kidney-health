@@ -514,6 +514,12 @@ def clear_probe(conn: sqlite3.Connection, provider_id: int) -> None:
     conn.execute("UPDATE ai_providers SET probe_json = NULL, probed_at = NULL, disabled_reason = NULL WHERE id = ?", (provider_id,))
 
 
+def same_probe_settings(current: Mapping[str, Any] | None, tested: Mapping[str, Any]) -> bool:
+    """Whether a reply still describes this provider; earlier probe receipts are not settings."""
+    receipts = {"probe_json", "probed_at", "disabled_reason"}
+    return current is not None and all(current[key] == tested[key] for key in tested.keys() if key not in receipts)
+
+
 def save_probe(conn: sqlite3.Connection, provider_id: int, probe: Mapping[str, Any]) -> None:
     """Store a probe result; a Hermes tool check that failed sets ``disabled_reason`` (§9 A1)."""
     tools = probe.get("tools")

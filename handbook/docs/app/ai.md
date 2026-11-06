@@ -176,6 +176,8 @@ My own AI provider** (and, if your admin allows it, the address of another AI se
 Your key is encrypted on the server and never shown again; changing it asks for your password. If your
 own provider fails, the app never sends your data to the shared one instead
 ([Settings and keys](settings-and-keys.md)).
+If you change your AI settings while **Test connection** is waiting, test the new settings again. The old reply cannot mark
+the new settings as tested.
 
 ## Where to find it
 
