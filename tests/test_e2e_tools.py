@@ -18,7 +18,7 @@ HARNESSES = ("khserver.py", "parity.py", "regress.py", "sandbox.py", "learn.py",
              "journey.py", "upgrade.py", "replay_app.py", "mcp_smoke.py", "ask.py", "menuplan.py", "plandays.py", "ask_voice.py", "symptoms.py",
              "visitprep.py", "fallback.py", "demo_local.py", "prefs.py", "import_walk.py", "body_import.py", "lab_pdf.py", "body.py",
              "readme_shots.py", "push.py", "cloud_env.py", "reliability.py", "a11y.py", "boot_fail.py", "test_accounts.py",
-             "instacart.py", "instacart_app.py", "shopping_late_replies.py", "recipe_import_late_replies.py", "care_plan_actions.py", "everything.py")
+             "instacart.py", "instacart_app.py", "shopping_late_replies.py", "recipe_import_late_replies.py", "care_plan_actions.py", "food_entry_late_replies.py", "everything.py")
 
 
 def load_khserver():

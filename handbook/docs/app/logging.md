@@ -49,10 +49,14 @@ Weighing is the most accurate way to count carbohydrate ([Carb counting](../eat/
 On **Today**, tap the entry. Change the amount, meal, day or note, then **Save changes**, or tap
 **Delete**. Planned entries have an **Eaten** button; **Mark all eaten** turns a whole meal's plan into
 eaten food ([Planning meals](planning-and-menus.md)).
+While an entry saves or deletes, its controls stay fixed. Close still closes the sheet; a request you already sent
+may finish afterward. Your next draft stays open and editable while Save waits for that earlier request.
 
 ## Quick add: type in a label
 
 Use **Add → Quick add** for a packaged food that is not in the list.
+If you close and reopen Quick add while saving, its old reply cannot close or put old errors into the next draft. Closing
+does not cancel a save you already sent.
 
 1. Enter the **name** and the **serving** as the label says it ("2 cakes") and its weight in grams.
 2. Copy the numbers **per serving** from the Nutrition Facts label.

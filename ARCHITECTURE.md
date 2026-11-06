@@ -512,6 +512,11 @@ Mobile-first single page, five views switched client-side (no router library):
    answer to the newest search while it is open: an older search, or one from before the sheet was
    closed, is dropped, and an import that finishes after the sheet was closed says so in a toast
    without opening the entry sheet (`tests/js/usda_late_reply.test.mjs`).
+   Each entry opening owns its serving-size reads, save/delete replies and offline-conflict navigation. Reopening never resets
+   an outstanding write; the new draft stays editable with Save/Delete waiting. Submitted entry controls freeze while Close remains usable. Late metadata cannot alter a newer draft or unlock submitted fields. Quick add also keeps a
+   reopened draft separate from the previous save and its field errors. Submitted writes may finish after closing; stale
+   replies invalidate the day cache without closing the new draft or changing its view. Versions, untouched amounts and
+   low-treatment purpose follow the existing offline rules.
 3. **Trends**: last 14 days, one small inline-SVG bar chart per limited nutrient
    (K, P, Na, protein, carbs, fluid if set) with target line. Export CSV button.
 4. **Profile & targets**: profile fields, targets editor, "Suggest targets" button
