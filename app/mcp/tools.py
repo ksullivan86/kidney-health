@@ -97,6 +97,7 @@ class Asker:
 
     id: None = None
     name: str = ASK_VIA
+    authorize_write: Callable[[], None] | None = None  # recheck Ask's permission inside the save transaction
 
 
 @dataclass(frozen=True)
@@ -896,6 +897,8 @@ def write_once(call: Call, placed: list[Placed], body: Callable[[list[dict[str, 
         begin_immediate(conn)
         food_ids: dict[int, int] = {}
         added: list[dict[str, Any]] = []
+        if call.asker is not None and call.asker.authorize_write is not None:
+            call.asker.authorize_write()
         for one in placed:
             if one.mapped is None:
                 continue

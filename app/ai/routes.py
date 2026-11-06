@@ -1141,8 +1141,12 @@ async def run_chat(request: Request, conn: sqlite3.Connection, user: User, prep:
     newest = body.messages[-1].text
 
     async def run_save(name: str, arguments: dict[str, Any], n: int) -> CH.SaveStep:
-        return await run_in_threadpool(CS.run_save, request, conn, user, name, arguments, n, mode=trust,
-                                       request_id=request_id, newest=newest)
+        nonlocal trust
+        step = await run_in_threadpool(CS.run_save, request, conn, user, name, arguments, n, mode=trust,
+                                      request_id=request_id, newest=newest, requested_trust=body.trust)
+        if step.trust_revoked:
+            trust = "ask"
+        return step
 
     async with ai_slot(request, conn, user.id):
         await tool_gate(request, conn, prep, client)

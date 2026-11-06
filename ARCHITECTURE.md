@@ -3153,6 +3153,11 @@ setting: `set_food_preference` is always a card** (the last bullet, "Tastes").
   Photo and label readings are always shown to you to check first."; the focus starts on "Keep asking me").
   The stored choice is not reset when the AI provider changes or a consent is withdrawn (withdrawing the `chat` consent stops
   Ask altogether).
+  The stored choice and admin switch are rechecked before each automatic save and under its write lock
+  (`Asker.authorize_write`). If trust ends during a model or food lookup, the pending action becomes a confirmation
+  card, with no food import or retry key committed. The request can only lose trust, never gain it mid-flight.
+  Completed saves remain saved; retries report them even after trust ends. If an earlier save completed in the same
+  answer, the confirmation text says so rather than claiming nothing was saved.
 * **Residual risk, not closed in code.** A food name from USDA or Open Food Facts reaches the model as untrusted data (cleaned,
   cut, escaped and marked as data), and in a trusted mode a prompt injection could still make the model ask for a save. What limits
   it: both trusted modes are off by default and behind an admin switch and a warning, at most 2 saves a message, all or nothing,

@@ -45,6 +45,7 @@ from ..settings_registry import TRUST_CHOICES
 from ..textclean import clean_label
 from . import chat as CH
 from . import chat_preference as PREF
+from . import config as K
 from . import prompts
 
 log = logging.getLogger(f"{brand.LOGGER_NAME}.ai")
@@ -255,21 +256,51 @@ def save_now(call: T.Call, name: str, arguments: Mapping[str, Any], key: str) ->
     return CH.SaveStep(result=result, saved=saved, questions=questions, closes=closes)
 
 
+class _NeedsConfirmation(Exception):
+    """Trusted saving ended while the request was waiting. Roll back and offer the ordinary confirmation card."""
+
+
 def run_save(request: Request, conn: sqlite3.Connection, user: User, name: str, arguments: Mapping[str, Any], n: int, *,
-             mode: str, request_id: str, newest: str) -> CH.SaveStep:
+             mode: str, request_id: str, newest: str, requested_trust: str | None = None) -> CH.SaveStep:
     """The model's ``n``-th save call of this message, in a worker thread. ``mode`` is :func:`effective_trust`'s answer.
     A taste (``set_food_preference``) ignores ``mode``: it is a card whatever the person trusts. A short message for the model
     on a refused or invalid call; a bug never ends the conversation with a 500."""
     if CH.is_safety_text(newest):  # cannot happen (the rules answer such a message first); a save never follows one
         return CH.SaveStep(error=SAFETY_ERROR)
-    call = T.Call(request, conn, user, T.Asker())
     args = {k: v for k, v in arguments.items() if k != "request_key"}  # the app makes the key; the model never does
+
+    def may_save() -> bool:
+        if mode == "ask":
+            return False
+        store = request.app.state.ai.store
+        return effective_trust(admin_allows=bool(store.get(conn, "ai.allow_trusted_saves")),
+                               stored=K.trust_setting(conn, store, user.id), requested=requested_trust) != "ask"
+
+    def authorize() -> None:
+        if not may_save():
+            raise _NeedsConfirmation
+
+    call = T.Call(request, conn, user, T.Asker(authorize_write=authorize))
+
+    def confirmation() -> CH.SaveStep:
+        step = propose(call, name, args, request_id)
+        step.trust_revoked = mode != "ask"
+        return step
+
     try:
         if name == PREF.TOOL_NAME:  # always a card, in every mode (note 09 §4.8); writes nothing
             return PREF.propose(call, args)
-        if mode == "ask":
-            return propose(call, name, args, request_id)
-        return save_now(call, name, args, save_key(request_id, n))
+        key = save_key(request_id, n)
+        allowed = may_save()
+        # A replay of a completed save reports it even after trust ends. A fresh confirmation card could duplicate it.
+        if T.earlier_save(call, name, key) is None and not allowed:
+            return confirmation()
+        try:
+            step = save_now(call, name, args, key)
+        except _NeedsConfirmation:
+            return confirmation()
+        step.trust_revoked = mode != "ask" and not allowed
+        return step
     except T.ToolError as exc:
         return CH.SaveStep(error=str(exc))
     except Exception:  # noqa: BLE001
