@@ -13,6 +13,10 @@ the API. Security fixes are released as patch versions of the newest minor versi
   Instacart or your list app no longer replaces or closes the new sheet, shows an old error there, or opens an unexpected tab.
 * Send stays disabled until the previous send finishes, including after closing and reopening the sheet or changing a
   checkbox. A delayed status check no longer shows a shopping button on an empty week.
+* Disconnecting Withings or Whoop while it syncs now stops its late reply from adding readings or activity back. Connecting
+  again also stops an old sync from importing the previous account's data or replacing or clearing the new sign-in.
+* Turning devices off or disabling an account now stops imports that were already waiting for a reply. A fetched batch's
+  readings, activity, import record and sync cursor are saved together, so a failed save leaves no partial batch.
 
 ### Security
 

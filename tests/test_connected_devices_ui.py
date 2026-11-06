@@ -60,12 +60,13 @@ def test_no_html_and_no_other_routes() -> None:
 
 def test_every_way_back_has_a_sentence_and_the_server_words_match() -> None:
     from app.devices import api
+    from app.devices.base import ERROR_CODES
 
     words = set(re.findall(r"^    ([a-z_]+): \{ (?:ok: true, )?text:", VIEW, re.M))
     assert words == set(api.RESULTS)
     assert "if (KH.devices) KH.devices.openPending()" in MAIN
     errors = set(re.findall(r"^    ([a-z_]+): '", VIEW[VIEW.index("const ERRORS = {"):VIEW.index("const RESULTS = {")], re.M))
-    assert errors == {"auth", "rate_limited", "unreachable", "provider_error", "scope", "account_taken"}
+    assert errors == set(ERROR_CODES)
 
 
 def test_activity_and_server_administration_name_it() -> None:

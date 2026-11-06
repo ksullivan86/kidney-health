@@ -286,6 +286,7 @@ def callback(request: Request, user: CurrentUser, provider_id: ProviderId = Path
 @router.post("/{provider_id}/sync", response_model=SyncOut)
 def sync_now(request: Request, user: CurrentUser, provider_id: ProviderId = Path(),
              conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Fetch current data. A connection changed while waiting cancels the old sync; disconnected meanwhile is 404."""
     _require_on(request, conn)
     provider = _provider(request, provider_id)
     row = store.connection(conn, user.id, provider_id)
@@ -308,12 +309,15 @@ def sync_now(request: Request, user: CurrentUser, provider_id: ProviderId = Path
     try:
         if conn.in_transaction:
             conn.commit()
-        result = sync_connection(conn, keyring, provider, row)
+        result = sync_connection(conn, keyring, provider, row, auth_context(request).store)
     except ProviderError as exc:
         code = exc.code
     finally:
         devices.release(int(row["id"]))
-    return {"connection": _connection_out(conn, user.id, provider_id), "result": result, "error": code}
+    connection = _connection_out(conn, user.id, provider_id)
+    if connection is None:
+        raise ApiProblem(404, "This device was disconnected while syncing. Nothing more was imported.")
+    return {"connection": connection, "result": result, "error": code}
 
 
 @router.delete("/{provider_id}", response_model=DisconnectOut)
