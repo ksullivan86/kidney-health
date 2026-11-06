@@ -20,11 +20,14 @@ final class SyncModel: ObservableObject {
     @Published private(set) var checkResult: String?
 
     private let defaults: UserDefaults
-    private let health: HealthSource?
+    private let health: HealthReading?
     private let transport: PushTransport
     private var observing = false
+    private var settingsGeneration: UInt64 = 0
 
-    init(defaults: UserDefaults = .standard, health: HealthSource? = HealthSource.available ? HealthSource() : nil,
+    private func generationIsCurrent(_ generation: UInt64) -> Bool { generation == settingsGeneration }
+
+    init(defaults: UserDefaults = .standard, health: HealthReading? = HealthSource.available ? HealthSource() : nil,
          transport: PushTransport = URLSessionTransport()) {
         self.defaults = defaults
         self.health = health
@@ -43,6 +46,7 @@ final class SyncModel: ObservableObject {
             return "Type the address of your server. It starts with https://."
         }
         let pasted = token.trimmingCharacters(in: .whitespacesAndNewlines)
+        let tokenChanged = !pasted.isEmpty && Data(pasted.utf8) != Keychain.read(.token)
         if !pasted.isEmpty {
             guard Settings.isDeviceToken(pasted) else {
                 return "That is not a phone token. Make one in Settings → Phone shortcuts. It starts with khd_."
@@ -56,11 +60,17 @@ final class SyncModel: ObservableObject {
             defaults.removeObject(forKey: Key.waitUntil)
         }
         let cleaned = newAddress.trimmingCharacters(in: .whitespacesAndNewlines)
-        if Settings.pushURL(cleaned) != Settings.pushURL(address) {
-            // Another server: start again from three months back.
+        if Settings.pushURL(cleaned) != Settings.pushURL(address) || tokenChanged {
+            // A different server or token may belong to another account: start again from three months back.
             Keychain.delete(.anchors)
             defaults.removeObject(forKey: Key.since)
+            defaults.removeObject(forKey: Key.waitUntil)
+            defaults.removeObject(forKey: Key.lastSent)
+            lastSent = nil
+            setStatus("Nothing sent yet.")
         }
+        settingsGeneration &+= 1
+        defaults.removeObject(forKey: Key.sendingPaused)
         address = cleaned
         defaults.set(cleaned, forKey: Key.address)
         checkResult = nil
@@ -81,9 +91,12 @@ final class SyncModel: ObservableObject {
 
     /// Removes the token and the anchors from this phone. Rows already sent stay on the server ("Delete what it sent" removes them).
     func removeToken() {
+        settingsGeneration &+= 1
         Keychain.delete(.token)
         Keychain.delete(.anchors)
         defaults.removeObject(forKey: Key.since)
+        defaults.removeObject(forKey: Key.waitUntil)
+        defaults.removeObject(forKey: Key.sendingPaused)
         hasToken = false
         checkResult = nil
         setStatus("The token was removed from this phone.")
@@ -96,9 +109,17 @@ final class SyncModel: ObservableObject {
             checkResult = "Save the address and a token first."
             return
         }
+        let generation = settingsGeneration
         testing = true
         defer { testing = false }
         let result = await ConnectionCheck.run(url, token: token, transport: transport)
+        guard generationIsCurrent(generation) else { return }
+        if result == .ok {
+            defaults.removeObject(forKey: Key.sendingPaused)
+            defaults.removeObject(forKey: Key.waitUntil)
+        } else if result == .badToken {
+            defaults.set(true, forKey: Key.sendingPaused)
+        }
         if case .wait(let seconds) = result {
             // The check shares the token's hour with sending, so sending would be refused too.
             defaults.set(Date().addingTimeInterval(TimeInterval(seconds)), forKey: Key.waitUntil)
@@ -132,9 +153,13 @@ final class SyncModel: ObservableObject {
     /// Sends what is new, in rounds of at most 500 samples of each kind. A round's anchor is kept only when the server took all of
     /// it, so a failed round is sent again next time; the server counts the repeats as already there.
     func syncNow() async {
-        guard !syncing, let health, let url = Settings.pushURL(address),
+        guard !syncing, !defaults.bool(forKey: Key.sendingPaused), let health, let url = Settings.pushURL(address),
               let tokenData = Keychain.read(.token), let token = String(data: tokenData, encoding: .utf8) else { return }
         if let until = defaults.object(forKey: Key.waitUntil) as? Date, until > Date() { return }
+        let generation = settingsGeneration
+        let activeTransport = SettingsTransport(base: transport, isCurrent: { [weak self] in
+            await self?.generationIsCurrent(generation) ?? false
+        })
         syncing = true
         defer { syncing = false }
         let today = Self.day(Date())
@@ -144,14 +169,20 @@ final class SyncModel: ObservableObject {
         let since = defaults.string(forKey: Key.since)
         var total = SyncOutcome(state: .done)
         for _ in 0..<Self.maxRounds {
+            guard generationIsCurrent(generation) else { return }
             let round: (batch: SampleBatch, more: Bool)
             do {
                 round = try await health.newSamples(since: Keychain.read(.anchors))
             } catch {
-                setStatus("Health data could not be read. Check that the app may read weight and blood pressure.")
+                if generationIsCurrent(generation) {
+                    setStatus("Health data could not be read. Check that the app may read weight and blood pressure.")
+                }
                 return
             }
-            let outcome = await Sync.run(round.batch, to: url, token: token, today: today, since: since, transport: transport)
+            guard generationIsCurrent(generation) else { return }
+            let outcome = await Sync.run(round.batch, to: url, token: token, today: today, since: since, transport: activeTransport)
+            guard generationIsCurrent(generation) else { return }
+            if case .needsNewToken = outcome.state { defaults.set(true, forKey: Key.sendingPaused) }
             total = Self.adding(outcome, to: total)
             if case .wait(let seconds) = outcome.state {
                 defaults.set(Date().addingTimeInterval(TimeInterval(seconds)), forKey: Key.waitUntil)
@@ -194,5 +225,23 @@ final class SyncModel: ObservableObject {
         static let lastSent = "lastSent"
         static let waitUntil = "waitUntil"
         static let since = "since"
+        static let sendingPaused = "sendingPaused"
+    }
+}
+
+
+/// A sync may finish an issued request, but must not start another with removed or replaced settings.
+struct SettingsTransport: PushTransport {
+    let base: PushTransport
+    let isCurrent: @Sendable () async -> Bool
+
+    func post(_ body: Data, to url: URL, token: String) async throws -> HTTPReply {
+        guard await isCurrent() else { throw CancellationError() }
+        return try await base.post(body, to: url, token: token)
+    }
+
+    func get(_ url: URL, token: String) async throws -> HTTPReply {
+        guard await isCurrent() else { throw CancellationError() }
+        return try await base.get(url, token: token)
     }
 }

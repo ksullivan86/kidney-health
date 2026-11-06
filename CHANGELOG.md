@@ -5,6 +5,15 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## Unreleased
+
+### Fixed
+
+* The iPhone app keeps connection checks and sync replies with their original settings. Removed or replaced
+  credentials stop further requests; old replies cannot restore a sync position or pause the new server.
+  Replacing a token at the same server now starts a fresh sync position too. A refused token pauses sending
+  until settings are saved or Test connection succeeds.
+
 ## 0.22.2 — 2026-11-06
 
 ### Upgrading from 0.22.1

@@ -143,6 +143,10 @@ kidneyhealthsync://pair?v=1&server=https%3A%2F%2Ffood.example.org&token=khd_…
 
 ## What a leaked token can do
 
+In the iPhone app, changing the server or token starts a fresh sync position. Saving the same settings keeps
+it. Removing or replacing the settings stops further requests with the old token; a request already sent may
+still finish. Its reply cannot bring back the old status or sync position, or pause the new server.
+
 It can add up to 60 requests of up to 50 plausible weights and readings an hour (never more than 20 weights and 30 readings a day) to
 **one** person's log, until it expires (at most 365 days, or never when the person chose so) or is revoked. It cannot read the log, the profile or anything else, change or
 delete a row, make or see tokens, or reach any other route (every other route ignores the `Authorization` header). The check route only says whether it works. The false rows are
