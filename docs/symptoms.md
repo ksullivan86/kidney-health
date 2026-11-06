@@ -8,6 +8,7 @@ Changing the date clears the card before the new day's request starts. It shows 
 while waiting. A failed read offers **Try again**, and a late reply cannot restore another day's
 entries or handbook blocks. Symptoms loads independently, even if the food log is delayed or fails.
 A failed save keeps the entries in the form so the person can retry.
+Adding or moving entries from two devices at once still keeps the same daily storage limit.
 
 **Trends → Symptoms** groups entries by symptom, with the number of days, worst severity and dates.
 Symptoms also appear in the person's data export and Visit prep. They are not sent to an AI provider.

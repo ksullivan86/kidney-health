@@ -5,6 +5,14 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## Unreleased
+
+### Fixed
+
+* Imports arriving together now skip repeated lab results and weight/blood-pressure measurements reliably. They cannot
+  fail on a repeated import key or add the same measurement twice. Adding or moving measurements and symptoms from two
+  devices at once also keeps the existing per-day limits.
+
 ## 0.22.2 — 2026-11-06
 
 ### Upgrading from 0.22.1

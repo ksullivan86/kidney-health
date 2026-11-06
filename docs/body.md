@@ -83,6 +83,9 @@ longer has. Changing these lines needs the same clinical review as the page itse
 
 ## The screens (Part B)
 
+If two imports arrive together, their checks still skip the same saved measurement or import key. A second request cannot
+overfill a day while the first one saves. The same daily limits apply when entries are added or moved from two devices at once.
+
 Where a person sees it; the code is `js/views/body.js` (`KH.body`), `js/views/body_trends.js` (`KH.bodyTrends`) and `js/engine/body_ui.js` (`KH.bodyUi`, pure),
 the styles `css/body.css`, the cards and sheets in `index.html`. No screen adds a route; the full description is ARCHITECTURE.md "Weight and blood pressure", "Where it shows".
 
