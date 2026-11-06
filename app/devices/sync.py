@@ -22,6 +22,7 @@ from typing import Any
 
 from .. import brand
 from ..audit import audit
+from ..auth.accounts import begin_immediate
 from ..config import Settings
 from ..crypto import Keyring
 from ..settings_store import SettingsStore
@@ -85,26 +86,60 @@ def seconds_since(text: str | None) -> float | None:
     return None if at is None else (datetime.now(timezone.utc) - at).total_seconds()
 
 
-def _record_error(conn: sqlite3.Connection, row: sqlite3.Row, code: str, **kwargs: Any) -> None:
-    if row["last_error"] != code:
-        audit(conn, int(row["user_id"]), "device.sync_failed", "device", row["provider"], provider=row["provider"], error=code)
-    store.mark(conn, row, error=code, **kwargs)
+def _require_current(conn: sqlite3.Connection, row: sqlite3.Row, settings_store: SettingsStore | None) -> None:
+    """Refuse an old snapshot after disconnect, reconnect, or an account/server change.
+
+    Call inside the write transaction when a write follows. Comparing sealed credentials also catches
+    reconnecting to the same provider account; timestamps alone cannot distinguish every replacement.
+    """
+    current = store.connection(conn, int(row["user_id"]), row["provider"])
+    user = conn.execute("SELECT status, is_test_account FROM users WHERE id = ?", (row["user_id"],)).fetchone()
+    if (current is None or current["id"] != row["id"] or current["status"] != store.STATUS_ACTIVE
+            or current["tokens_enc"] != row["tokens_enc"] or current["external_user_id"] != row["external_user_id"]
+            or user is None or user["status"] != "active" or user["is_test_account"]
+            or (settings_store is not None and not settings_store.get(conn, "devices.enabled"))):
+        raise ProviderError("connection_changed")
 
 
-def sync_connection(conn: sqlite3.Connection, keyring: Keyring, provider: Provider, row: sqlite3.Row) -> dict[str, Any]:
+def _record_error(conn: sqlite3.Connection, row: sqlite3.Row, code: str, settings_store: SettingsStore | None,
+                  **kwargs: Any) -> None:
+    begin_immediate(conn)
+    try:
+        _require_current(conn, row, settings_store)
+        if row["last_error"] != code:
+            audit(conn, int(row["user_id"]), "device.sync_failed", "device", row["provider"], provider=row["provider"], error=code)
+        store.mark(conn, row, error=code, **kwargs)
+    except BaseException:
+        conn.rollback()
+        raise
+
+
+def sync_connection(conn: sqlite3.Connection, keyring: Keyring, provider: Provider, row: sqlite3.Row,
+                    settings_store: SettingsStore | None = None) -> dict[str, Any]:
     """Sync one connection and record the outcome (commits). Returns the counts; raises :class:`ProviderError` after recording
     a failure."""
+    _require_current(conn, row, settings_store)
     pair = store.load_tokens(keyring, row)
     if pair is None:
-        _record_error(conn, row, "auth", needs_reconnect=True)
+        _record_error(conn, row, "auth", settings_store, needs_reconnect=True)
         raise ProviderError("auth", "no_tokens")
     access, refresh_token = pair
     refreshed = False
 
     def refresh() -> str:
-        nonlocal refreshed
+        nonlocal refreshed, row
+        _require_current(conn, row, settings_store)
         tokens = provider.refresh(refresh_token)
-        store.save_refreshed(conn, keyring, row, tokens)
+        begin_immediate(conn)
+        try:
+            _require_current(conn, row, settings_store)
+            store.save_refreshed(conn, keyring, row, tokens, commit=False)
+            # Capture our own rotated credentials while the lock still excludes reconnects.
+            row = store.connection(conn, int(row["user_id"]), row["provider"])
+            conn.commit()
+        except BaseException:
+            conn.rollback()
+            raise
         refreshed = True
         return tokens.access
 
@@ -122,23 +157,27 @@ def sync_connection(conn: sqlite3.Connection, keyring: Keyring, provider: Provid
             result = provider.fetch(access, cursor=row["sync_cursor"], since=since)
     except ProviderError as exc:
         if exc.code == "auth":
-            _record_error(conn, row, "auth", needs_reconnect=True)
+            _record_error(conn, row, "auth", settings_store, needs_reconnect=True)
         elif exc.code == "rate_limited":
-            _record_error(conn, row, "rate_limited", pause_s=RATE_PAUSE_S)
-        else:
-            _record_error(conn, row, exc.code)
+            _record_error(conn, row, "rate_limited", settings_store, pause_s=RATE_PAUSE_S)
+        elif exc.code != "connection_changed":
+            _record_error(conn, row, exc.code, settings_store)
         raise
-    if result.external_user_id and not row["external_user_id"]:
-        try:
+    begin_immediate(conn)
+    try:
+        _require_current(conn, row, settings_store)
+        if result.external_user_id and not row["external_user_id"]:
             store.set_external(conn, row, result.external_user_id)
-        except ProviderError:  # that company account is connected to someone else here: nothing of it is kept
-            conn.rollback()
-            _record_error(conn, row, "account_taken", needs_reconnect=True)
-            raise
+        counts = store.add_readings(conn, int(row["user_id"]), row["provider"], result.readings, commit=False)
+        activity = store.add_activity(conn, int(row["user_id"]), row["provider"], result.days, result.workouts,
+                                      today=today_local(), commit=False)
+        store.mark(conn, row, error=None, cursor=result.cursor, commit=False)
         conn.commit()
-    counts = store.add_readings(conn, int(row["user_id"]), row["provider"], result.readings)
-    activity = store.add_activity(conn, int(row["user_id"]), row["provider"], result.days, result.workouts, today=today_local())
-    store.mark(conn, row, error=None, cursor=result.cursor)
+    except BaseException as exc:
+        conn.rollback()
+        if isinstance(exc, ProviderError) and exc.code == "account_taken":
+            _record_error(conn, row, "account_taken", settings_store, needs_reconnect=True)
+        raise
     counts["added"].update(days=activity["days"], workouts=activity["workouts"])
     counts["updated"] = activity["updated"]
     counts["skipped"] += activity["skipped"]
@@ -179,7 +218,7 @@ def run_due(devices: Devices, keyring: Keyring, settings_store: SettingsStore, d
                     continue
                 tried += 1
                 try:
-                    sync_connection(conn, keyring, provider, row)
+                    sync_connection(conn, keyring, provider, row, settings_store)
                 except ProviderError:
                     pass  # recorded on the connection
                 except Exception:

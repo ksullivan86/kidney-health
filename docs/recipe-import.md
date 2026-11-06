@@ -23,6 +23,13 @@ handbook: **Planning, menus and shopping → Import a recipe**. Recipes themselv
 4. **Save recipe** saves it as a saved meal with its servings, the page's cooking steps and the page's link. Lines left out are
    named in the recipe's note ("Not counted: salt to taste").
 
+Each opening keeps its own draft. Closing or reopening the sheet drops older loading replies and errors. A save already
+sent still finishes and refreshes the caller that started it; it cannot close a newer sheet. The review fields stay disabled
+while saving. If saving fails, the same checked ingredients and values remain for another try.
+
+Searching for two different ingredient lines works independently. Changing a line's choice drops any search still waiting
+for that line.
+
 What the app does with a line:
 
 * It reads the amount and unit ("1 ½ cups", "2 (15-ounce) cans", "a pinch of"), the food words, and keeps what comes after a comma

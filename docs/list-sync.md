@@ -31,6 +31,11 @@ Closing the sheet drops replies for that opening. Opening another week keeps its
 or put an error over it. A send already started may still finish after you close the sheet. Send stays disabled until it
 finishes, even if you reopen the sheet.
 
+A connection test that finishes after you change or remove the connection cannot change your new list. Test the current
+connection again if the app says it changed. An already issued send may still finish at the previous list. Its confirmed
+count is reported and recorded in your activity, but never shown as a send to the new list. Check the previous list before
+sending again. Choosing a different list, address or key clears the previous list's last-send notice.
+
 ## Turn it on (server owner)
 
 1. Set `LIST_SYNC_ENABLED=true` (or turn on **Server administration → Server settings → Shopping list app and recipe import**).

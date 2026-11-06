@@ -5,7 +5,11 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
-## Unreleased
+## 0.22.1 — 2026-11-06
+
+### Upgrading from 0.22.0
+
+* No schema step and no new settings. A host that tracks `:0.22` gets this release on its next pull.
 
 ### Fixed
 
@@ -13,6 +17,21 @@ the API. Security fixes are released as patch versions of the newest minor versi
   Instacart or your list app no longer replaces or closes the new sheet, shows an old error there, or opens an unexpected tab.
 * Send stays disabled until the previous send finishes, including after closing and reopening the sheet or changing a
   checkbox. A delayed status check no longer shows a shopping button on an empty week.
+* Disconnecting Withings or Whoop while it syncs now stops its late reply from adding readings or activity back. Connecting
+  again also stops an old sync from importing the previous account's data or replacing or clearing the new sign-in.
+* Turning devices off or disabling an account now stops imports that were already waiting for a reply. A fetched batch's
+  readings, activity, import record and sync cursor are saved together, so a failed save leaves no partial batch.
+* Recipe import keeps late loading replies and save results with the draft that requested them. Reopening no longer loses
+  new typing or closes the new sheet when an earlier save finishes. Failed saves keep the checked draft for another try.
+* Food searches in different ingredient lines now work independently. A reply or error for a line you have left no longer
+  interrupts the current choice. Review fields stay disabled while saving.
+* Care team: Clear planned days now clears exactly the dates shown in its confirmation, even if the date fields change.
+* A Care team plan preview cannot be resent after an interrupted batch. Review the current plan before making another, so
+  food already added is not duplicated by retrying the same preview.
+* List apps: a late connection test no longer overwrites a newer list choice. Test and Send no longer crash if the connection
+  was removed while they waited. The app explains that the previous send may have finished and asks you to check before retrying.
+* A send to the previous connection no longer marks a new list as sent. Changing the list, address or key clears the old
+  destination's last-send notice, on the server and in the demo.
 
 ### Security
 

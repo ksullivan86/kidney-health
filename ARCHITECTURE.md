@@ -1093,7 +1093,9 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
 
-**Status (2026-11-01): v0.22.0 is prepared.** Open the shopping list at Instacart (note 33): off by default, with
+**Status (2026-11-06): v0.22.1 is prepared.** Fixes for answers that arrive late: the shopping sheets, connected devices, recipe
+import, Care team plans and list-app settings each keep a late reply with the request that made it, and new base images.
+**v0.22.0**: open the shopping list at Instacart (note 33): off by default, with
 `INSTACART_ENABLED` and the server's key in `INSTACART_API_KEY_FILE`; only the food names and amounts leave the server. See
 [docs/instacart.md](docs/instacart.md). **v0.21.1**: the AI activity log keeps no request or reply text by default
 (`ai.audit_retention_days` 0). **v0.21.0 (2026-11-01)**: Chosen people pick the server's local or cloud AI (note 32,
@@ -4484,6 +4486,11 @@ time. Any switch on adds `food`. Links and invites carry a role; the switches ar
 |---|---|---|
 | `GET /api/shared/{id}/foods` | plan, log or suggest | as before |
 | `GET /api/shared/{id}/plan/shopping`, `POST …/log/clear-planned`, `POST …/guidance/plan-days` | plan | as before; plan-days uses saved meals only when asked and `may_use_saved_meals` is on |
+
+The Care team's Clear planned days question captures its date range when shown; later field edits cannot change what that
+confirmation clears. A generated plan preview can be submitted only once. Helper batches do not use `client_id`, so after
+any failed response the same preview remains disabled and offers **Review the plan**. Some food may already have arrived;
+the helper checks the current plan before generating another preview. No automatic retry or rollback removes food.
 | `POST /api/shared/{id}/log`, `/log/batch` | plan (`planned`) / log (`eaten`) | each entry records the helper (`added_by`); a low treatment may be added, also as eaten |
 | `PUT /api/shared/{id}/log/{entry}` | see below | `{status?: "eaten", date?, meal?, servings?, grams?, note?}` |
 | `DELETE /api/shared/{id}/log/{entry}` | see below | → 204 |
@@ -4722,7 +4729,7 @@ Nothing about the person is sent out. 0.16 has Withings (weight, blood pressure,
   `WITHINGS_CLIENT_SECRET_FILE` (`WITHINGS_CLIENT_SECRET` is a `ConfigError`); on needs `PUBLIC_URL`. While `devices.enabled` is
   off `GET /api/devices` answers `enabled: false`, every other `/api/devices` route is 404 and nothing syncs; a provider that is not set up is 404 for its routes.
 * **Modules.** `app/devices/base.py` (`Provider`, `TokenSet`, `Reading`, `ProviderError` with the codes `auth`, `rate_limited`,
-  `unreachable`, `provider_error`, `scope`, `account_taken`), `withings.py` (the client, through `egress.CheckedTransport`, no
+  `unreachable`, `provider_error`, `scope`, `account_taken`, `connection_changed`), `withings.py` (the client, through `egress.CheckedTransport`, no
   redirects, 2 MiB, 15 s), `store.py` (connections, sealed tokens, the ledger, adding rows), `sync.py` (one sync, the loop,
   `app.state.devices`), `api.py` (the routes, the in-memory flow store, `about_view`).
 * **Withings.** Authorize at `account.withings.com/oauth2_user/authorize2` with `scope=user.metrics` (the browser only); tokens at
@@ -4741,6 +4748,11 @@ Nothing about the person is sent out. 0.16 has Withings (weight, blood pressure,
   there, a value the request models refuse (a pulse out of range drops the pulse), and a full day; every measure seen goes into
   `device_imports`, so a deleted reading never comes back. Rows: `source = 'withings'`, `source_key = 'withings:<grpid>:weight|bp'`,
   context by `body.context_for`.
+  Every refresh, error update and import checks the connection's id, sealed credentials, provider account and active status,
+  the person's active/non-test status and the current server switch. A disconnect, reconnect or account change while the
+  provider is answering cancels the old sync (`connection_changed`), without changing the new connection or importing the old
+  account's data. The fetched readings, activity, ledger and cursor commit in one write transaction; provider calls hold no
+  write transaction. A disconnect after that transaction can delete the whole committed batch.
 * **The loop** (`sync.loop`, started in the lifespan): every 10 minutes, in a worker thread, while `devices.enabled` is on, each
   active connection of an account that is not disabled and not a test account whose last try is older than
   `devices.sync_hours`, one after another (0.6 s apart). A connection being synced is claimed (`Devices.claim`), so Sync now and
@@ -4753,7 +4765,7 @@ Nothing about the person is sent out. 0.16 has Withings (weight, blood pressure,
 | `GET /api/devices` | signed in | `{enabled, can_connect, sync_hours, providers: [{id, name, what, available, connection: null \| {status, connected_at, last_sync_at, last_success_at, last_error, imported: {weights, readings}}}]}` |
 | `POST /api/devices/{provider}/start` | signed in | `{url}`: the state (32 random bytes, 10 minutes, single use, tied to the person and the SHA-256 of the session id; at most 5 waiting a person). 403 test account, 409 already connected, 429 too many waiting |
 | `GET /api/devices/{provider}/callback?code=&state=&error=` | signed in | 303 to `/#/devices/<word>/<provider>`: `connected`, `cancelled`, `expired`, `wrong_account`, `scope`, `taken`, `test_account`, `unavailable`, `failed`. The code is used only after the state, person and session matched |
-| `POST /api/devices/{provider}/sync` | signed in | `{connection, result: {added: {weights, readings}, already_there, skipped, left_out} \| null, error}`. 404 not connected, 409 needs reconnect or already running, 429 within 10 minutes or while paused |
+| `POST /api/devices/{provider}/sync` | signed in | `{connection, result: {added: {weights, readings}, already_there, skipped, left_out} \| null, error}`. `connection_changed` means the old sync was cancelled. 404 not connected (including disconnect while waiting), 409 needs reconnect or already running, 429 within 10 minutes or while paused |
 | `DELETE /api/devices/{provider}?delete_readings=` | signed in | `{removed: {weights, readings}, revoked}`. Deletes the connection (and with `delete_readings` the rows still `source = 'withings'` and the ledger), then asks Withings to revoke |
 
 `GET /api/admin/about` has `devices: {enabled, providers: [{id, name, enabled, client_id, secret: "set"|"not set", hosts,
@@ -4857,6 +4869,12 @@ opening another week drops their UI updates. A send already issued may finish af
 so reopening or changing a checkbox cannot start another send in the meantime. Tests: `tests/test_list_sync.py` (fakes of the three apps behind the real transport,
 `tests/lists_support.py`), `tests/test_lists_recipes_ui.py`, `tests/js/lists_recipes_demo.mjs`.
 
+List-app Test and Send use a connection snapshot during the network call, then check the configuration again under a write
+transaction. A changed/removed connection or switched-off feature answers 409 with `reason: connection_changed`; old Test
+results cannot change the new list. An issued Send may still finish at the previous list. Its confirmed count is returned as
+`sent` with the conflict and audited, but is never written as the new list's receipt. The person checks the previous list
+before sending again. Changing app, address, key or chosen list clears the previous destination's last-send receipt.
+
 ## Recipe import (design note 30)
 
 A recipe from pasted ingredients (always) or from a web page the server reads (`recipes.import_enabled`,
@@ -4893,6 +4911,10 @@ for another food…", "Leave this out"), servings (empty when unknown) and **Che
 One serving's key numbers ("≥", "not listed"; a missing value is never 0), the warnings for one serving
 (`KH.rules.evaluateWarnings` over the chosen foods, additive flags, each food's `avoid_ckd` note; carbohydrate left out only when
 every counted food is a low treatment), and the fixed estimate sentence. Lines left out go into the note ("Not counted: …").
+Each opening owns its capability read, draft requests and save callback. Closing or reopening drops old read replies and
+errors; an issued save still completes and refreshes its original caller, but cannot close or alter the newer sheet. Controls
+stay disabled while saving; failure restores the same checked draft. Searches are ordered per ingredient row, so independent
+rows do not discard each other's results; an abandoned search cannot report an error over another choice.
 The demo answers any link with a sample page (`js/mock/lists.js`). Tests: `tests/test_recipe_import.py`,
 `tests/test_lists_recipes_ui.py`, `tools/e2e/lists_recipes.py`.
 
@@ -4999,7 +5021,7 @@ Signed in only (`current_user`; an anonymous caller gets the generic `401`, so a
 (`no-store` like every `/api` answer). The answer:
 
 ```json
-{"app_version": "0.22.0", "api_version": 1,
+{"app_version": "0.22.1", "api_version": 1,
  "capabilities": {"ai": false, "ai_next_meal": false, "ai_parse_meal": false, "ai_label": false, "ai_plate": false, "ai_lab_report": false,
                   "chat": false, "voice": false, "assistant": false, "push": false,
                   "barcode": false, "barcode_off": false, "barcode_usda": false, "handbook": false},

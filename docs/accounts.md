@@ -327,6 +327,10 @@ plan** returns to yours. What shows follows the switches:
 * With suggestions on: **Suggest a meal** (a day, a meal, foods and a note of up to 280 characters). The answer shows how it fits
   the person's day. **Suggestions you sent** shows what the person chose, never why.
 * A low treatment says only the person changes it. **Clear planned days** leaves planned low treatments and eaten food.
+
+Clear planned days uses the dates shown in its confirmation, even if the date fields change before the helper confirms.
+A generated plan preview is sent only once. If a batch fails, **Review the plan** shows what reached the server before the
+helper makes another preview. An unanswered request may already have saved food, so that preview is never sent again.
 * Changes for someone else need a connection: they never wait on the device, and they never go to the helper's own log.
 
 **Suggestions, for the person.** Suggestions wait at the top of the Plan tab. Each card shows who sent it, the foods, what it

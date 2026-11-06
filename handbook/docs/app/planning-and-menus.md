@@ -134,6 +134,10 @@ See [Optional AI](ai.md) for what is sent and where.
 **Plan** → **Saved meals** → **Import a recipe** turns a recipe you found into a saved recipe the app can count
 ([design note 30][NOTE30]).
 
+You can close the sheet while it loads. An older reply will not replace a new import you start. During Save, the fields stay
+disabled until saving finishes. If it fails, your checked choices stay for another try. If you close and start another import,
+the first save can still finish, but it will not close the new sheet.
+
 1. **Paste the ingredients**, one on each line, with how many servings the recipe makes. This always works, and nothing leaves
    your server. If your server can read recipe pages, you can paste the **link of a recipe page** instead: your server opens
    the page (your phone does not), reads its ingredients and steps, and keeps only the link.
@@ -239,6 +243,10 @@ A list app on your home network works only if the person who runs your server al
 If you close the sheet while it is sending, the send may still finish. Reopening waits for that send to finish before you can
 send again. An older reply will not close a sheet you opened for another week.
 
+If you change or remove the connection while a send waits, that send may still finish at the previous list. The app tells you
+what was confirmed sent and asks you to check there before sending again. It will not call that a send to your new list.
+Changing the list, address or key clears the previous list's last-send notice.
+
 ### Open it at Instacart
 
 If the person who runs your server turned it on, **Plan** → **Shopping list** has **Open in Instacart**. Instacart is a grocery
@@ -269,6 +277,10 @@ allow: add, change and remove planned food, plan several days and use their shop
 ate and mark planned food eaten (a **Caregiver**); add their saved meals; or send them a meal suggestion. A low treatment stays
 as it is. **Back to my own plan** takes you back. Food you add shows "Added by" and your name on their day
 ([Care team](settings-and-keys.md#sharing), [design notes 25][NOTE25] and [29][NOTE29]).
+
+**Clear planned days** clears the dates shown in its question. Changing the date fields while the question is open does not
+change those dates. If adding several days stops part way through, choose **Review the plan** before making another plan.
+Some food may already have arrived even if its reply was lost. The same preview cannot be sent again.
 
 **Suggestions for you.** When someone on your Care team suggests a meal, it waits at the top of your own Plan tab with what it
 adds to that day. **Add to my plan** adds it as planned food of your own; **No thanks** says no. Nothing changes until you choose.
