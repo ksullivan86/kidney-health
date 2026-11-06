@@ -12,6 +12,7 @@ signed revoke); isolation between people; the background pass; config rules; Ser
 from __future__ import annotations
 
 import logging
+import re
 import sqlite3
 import time
 from datetime import datetime, timezone
@@ -254,8 +255,10 @@ def test_tokens_are_sealed_bound_to_their_owner_and_never_shown(dev, caplog: pyt
         keyring.unseal(row["tokens_enc"], purpose="device:withings", owner=row["user_id"] + 1)
     for path in ("/api/devices", "/api/admin/about", "/api/me/activity", "/api/me/export"):
         text = admin.get(path).text
-        for secret in (access, refresh, CLIENT_SECRET, "4242"):
+        for secret in (access, refresh, CLIENT_SECRET):
             assert secret not in text, path
+        # the Withings user id, as a whole number: a timestamp such as ".424270Z" may contain its digits
+        assert not re.search(r"(?<![0-9])4242(?![0-9])", text), path
     about = admin.get("/api/admin/about").json()["devices"]
     w = about["providers"][0]
     assert about["enabled"] is True and w["secret"] == "set" and w["client_id"] == "kh-test-client"

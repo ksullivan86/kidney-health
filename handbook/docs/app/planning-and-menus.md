@@ -236,6 +236,9 @@ about you ([design note 30][NOTE30]). Sending again adds the lines again.
 
 A list app on your home network works only if the person who runs your server allowed its address.
 
+If you close the sheet while it is sending, the send may still finish. Reopening waits for that send to finish before you can
+send again. An older reply will not close a sheet you opened for another week.
+
 ### Open it at Instacart
 
 If the person who runs your server turned it on, **Plan** → **Shopping list** has **Open in Instacart**. Instacart is a grocery
@@ -254,6 +257,9 @@ chose: the same food can come with added salt or phosphate ([Reading labels](../
 [Phosphate additives](../eat/phosphate-additives.md)).
 
 The link works for 7 days. The app does not keep it. Press the button again to make a new one.
+
+If you close the sheet while it is sending, the send may still finish. Reopening waits for it before you can send again.
+An older reply will not replace the new week's preview or open a tab after you closed its sheet.
 
 ## Planning for someone on your Care team
 

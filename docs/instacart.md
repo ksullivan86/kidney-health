@@ -20,6 +20,10 @@ Instacart's docs, is [`dev/research/33-instacart.md`](dev/research/33-instacart.
 * Settings → Account → Activity lists each send with the number of items.
 * The demo has the button too, but nothing leaves the page.
 
+Closing the sheet drops replies for that opening. Opening another week keeps its own preview; an older send cannot replace
+it or open a tab. A send already started may still finish after you close the sheet. Send stays disabled until it finishes,
+even if you reopen the sheet.
+
 ## What is sent
 
 Only on **Send to Instacart**, from this server to Instacart:

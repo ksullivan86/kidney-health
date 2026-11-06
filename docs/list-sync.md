@@ -27,6 +27,10 @@ handbook: **Planning, menus and shopping**.
 * Settings → Account → Activity lists setting it up, removing it and each send (the app and how many items).
 * Test accounts cannot set one up: they are shared by testers. The demo shows a sample Grocy and a fake list app inside the page.
 
+Closing the sheet drops replies for that opening. Opening another week keeps its own preview; an older send cannot close it
+or put an error over it. A send already started may still finish after you close the sheet. Send stays disabled until it
+finishes, even if you reopen the sheet.
+
 ## Turn it on (server owner)
 
 1. Set `LIST_SYNC_ENABLED=true` (or turn on **Server administration → Server settings → Shopping list app and recipe import**).
