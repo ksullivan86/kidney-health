@@ -68,6 +68,9 @@ A saved meal is a list of foods and amounts you eat often, such as "Usual breakf
 
 Each saved meal shows its total carbohydrate and potassium, and the worst rating of its foods.
 After a save or import, an older request will not bring back an out-of-date saved-meal list.
+While a meal is saving or being added to a day, its fields wait for the answer. You can still close it.
+An earlier search or save cannot replace or close a newer draft. Its save button waits for the earlier request
+to finish; if a save fails, your open draft is kept so you can try again.
 The preview while creating or editing a meal says **not listed** for a missing nutrient amount and
 **≥** for a partial amount. Changing **Makes** divides the known amounts between the servings.
 

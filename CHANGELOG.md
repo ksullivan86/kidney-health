@@ -5,6 +5,14 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## Unreleased
+
+### Fixed
+
+* Saved-meal searches and saves stay with the draft that requested them. A late reply cannot fill another
+  editor, close a newer sheet or take you to an earlier submitted day. Saving holds the fields and prevents
+  another submission until the first finishes; a failed save keeps the open draft.
+
 ## 0.22.2 — 2026-11-06
 
 ### Upgrading from 0.22.1
