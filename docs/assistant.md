@@ -416,6 +416,11 @@ name (never a token name), and every change of the choice is a row too.
   choices are greyed out and Ask always asks first, whatever you chose before; the choice is kept and applies again if the
   admin turns it back on.
 
+If you change the stored choice to **Ask me before every save**, or your admin turns trusted saves off while Ask
+is waiting, the pending food or recipe is shown for confirmation. A save that already completed stays saved and
+still offers Undo. Retrying that request reports its earlier save; it does not offer another copy to confirm.
+A request that began in ask mode keeps asking even if trusted saves are turned on while it waits.
+
 **Telling Ask a taste: always a card, whatever you trust.** Say "I don't really like salmon", "I like lentils" or "I'd like
 fewer sweets" and the assistant may ask the app to remember it for your meal suggestions (the tool is called
 `set_food_preference`: one food or one food group, and *like*, *less often*, *not for me* or *forget it*). A taste quietly

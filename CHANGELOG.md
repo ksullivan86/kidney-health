@@ -23,6 +23,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
   until settings are saved or Test connection succeeds.
 * Care team counts keep every change when a helper sends requests at the same time. Concurrent requests
   no longer overwrite a count or create duplicate daily activity entries.
+* Ask rechecks the saved trust choice and admin switch before saving. If trust ends while the AI or a food lookup
+  is pending, it asks for confirmation and saves nothing from that action. Earlier completed saves stay saved,
+  and retrying them after trust ends reports the original save instead of offering a duplicate confirmation.
 
 ## 0.22.2 — 2026-11-06
 
