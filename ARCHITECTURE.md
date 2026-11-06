@@ -3779,7 +3779,10 @@ a person types and how it is worded, the chart scales, the table rows) and, for 
 * **The sheets**: the weight in the person's unit (`user.units.weight`, pounds until the server says otherwise) with the other unit echoed ("154.3 lb = 70.0 kg"),
   and **when it was taken** as radio choices that the page makes (morning / before dialysis / after dialysis / other; the two dialysis ones only when the
   profile's `dialysis` is not `none`, and always the row's own choice when editing); **no choice is pre-ticked**. A note-only edit keeps the stored weight to
-  the hundredth. The reading sheet has the **top number (systolic)** then the **bottom number (diastolic)**, an optional pulse, the one line from MedlinePlus
+  the hundredth. Each weight draft keeps the unit displayed when it opened. Submitted measurement fields freeze while saving;
+  Close and Cancel still work, and a submitted save can finish afterward. A late save or refusal cannot close or overwrite a
+  newer draft. A reopened draft stays editable, with Save waiting for the earlier write of that kind to finish.
+  The reading sheet has the **top number (systolic)** then the **bottom number (diastolic)**, an optional pulse, the one line from MedlinePlus
   ("Rest about 5 minutes first, sit with your feet flat, and put the cuff on your upper arm." and a link "How to measure" into the handbook page), the echo
   ("Top 180, bottom 95") and the same choices (morning / evening / ... / other). The ranges are the server's (`WeightCreate`, `BloodPressureCreate`), checked in the
   page by `KH.bodyUi` so a typing slip is refused in words before a request.

@@ -40,6 +40,9 @@ pressure**. Nothing is saved until you press **Save**. Each entry has **Edit** a
   nothing ([architecture contract][ARCH]).
 - If the server cannot save it, the sheet stays open with what you typed and the message shows on top of
   it. Press **Save** again to try once more.
+- While saving, the fields stay fixed. **Close** or **Cancel** still closes the sheet; a save you already submitted may finish
+  afterward. A late reply cannot close your next draft. You can type that draft while its **Save** waits for the earlier save.
+- A weight draft uses the unit printed beside its box, even if settings refresh while it is open.
 
 ## How to measure blood pressure at home {#how-to-measure}
 

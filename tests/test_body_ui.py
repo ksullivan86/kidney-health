@@ -133,7 +133,7 @@ def test_the_blood_pressure_sheet_has_the_top_number_then_the_bottom_number_with
 def test_the_sheets_show_the_one_hint_the_echo_and_the_other_unit():
     assert "const BP_HINT = 'Rest about 5 minutes first, sit with your feet flat, and put the cuff on your upper arm.';" in ENGINE
     assert "U.BP_HINT" in VIEW_CODE and "learnLink('weight_and_blood_pressure', 'How to measure', '#how-to-measure')" in VIEW_CODE
-    assert "U.echoWeight(res.kg, S.units)" in VIEW_CODE and "U.echoReading(bTop.value, bBottom.value, bPulse.value)" in VIEW_CODE
+    assert "U.echoWeight(res.kg, W.units)" in VIEW_CODE and "U.echoReading(bTop.value, bBottom.value, bPulse.value)" in VIEW_CODE
     # a very high reading shows the handbook's words before Save, from the twin of the server's rule
     assert "R.bpFlag(res.systolic, res.diastolic)" in VIEW_CODE and "bFlag.append(flagBlock(flag" in VIEW_CODE
     # both sheets listen while the person types
@@ -149,7 +149,7 @@ def test_a_save_writes_only_from_the_submit_handler_and_needs_the_choices_first(
     assert "KH.confirm.inline(actions" in VIEW and "confirm(" not in VIEW_CODE.replace("KH.confirm.inline(", "")  # a delete asks in the page
     for message in ("Choose when it was taken.", "Choose the date."):
         assert message in VIEW, message
-    assert VIEW.count("if (S.busy) return;") == 2  # a second press does not save twice
+    # Duplicate writes and late replies are exercised by test_body_editor_lifecycle.py.
     assert "addWeightBtn.disabled = future" in VIEW and "addBpBtn.disabled = future" in VIEW and "date > todayStr()" in VIEW
     # a save without a connection says so and keeps what was typed
     assert "const NEEDS_CONNECTION = 'Weights and blood pressure readings need a connection to your server, and there is none right now.';" in VIEW

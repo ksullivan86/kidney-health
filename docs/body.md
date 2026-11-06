@@ -83,6 +83,11 @@ longer has. Changing these lines needs the same clinical review as the page itse
 
 ## The screens (Part B)
 
+While a measurement saves, its fields are fixed. Close or Cancel can still dismiss the sheet; a submitted save may finish
+afterward. A late reply cannot close a newer draft or put the old error into it. If you reopen the same kind of sheet, you can
+type the next draft while Save waits for that earlier write. A weight draft always uses the unit shown beside its box when it
+opened, even if the page refreshes its settings meanwhile.
+
 Where a person sees it; the code is `js/views/body.js` (`KH.body`), `js/views/body_trends.js` (`KH.bodyTrends`) and `js/engine/body_ui.js` (`KH.bodyUi`, pure),
 the styles `css/body.css`, the cards and sheets in `index.html`. No screen adds a route; the full description is ARCHITECTURE.md "Weight and blood pressure", "Where it shows".
 
