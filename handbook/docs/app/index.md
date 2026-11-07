@@ -138,8 +138,8 @@ The app is a logging aid. It is **not a medical device** and it gives no medical
   USDA data; foods you or others typed in can have mistakes ([Logging food](logging.md)).
 - **The app will not open away from home.** Most home servers are reachable only on your home Wi-Fi
   or through a VPN. Ask your admin.
-- **You forgot your password.** Ask the admin for a reset link. There is no email reset
-  ([Privacy and your data](privacy.md)).
+- **You forgot your password.** Tap **Forgot your password?** on the sign-in page if your server has email and you confirmed
+  yours ([Email for password resets](settings-and-keys.md#email)). Otherwise ask the admin for a reset link.
 
 ## Related pages
 

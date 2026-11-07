@@ -1702,6 +1702,13 @@ NOTE33:
   licence: "PolyForm Noncommercial 1.0.0 (project)"
   checked: 2026-11-01
   kind: project
+NOTE34:
+  cite: "kidney-health design note 34: password reset by email."
+  short: "Design note 34"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/34-password-reset-by-email.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-11-07
+  kind: project
 INSTACART-IDP:
   cite: "Instacart Developer Platform. Create shopping list page (POST /idp/v1/products/products_link)."
   short: "Instacart Developer Platform"

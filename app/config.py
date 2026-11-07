@@ -46,6 +46,10 @@ Keys (defaults in brackets):
   ``INSTACART_API_KEY`` is refused), the server owner's own key, and ``INSTACART_BASE_URL`` [``https://connect.instacart.com``;
   the development host is ``https://connect.dev.instacart.tools``]. Env only. The switch ``INSTACART_ENABLED`` is a setting
   (``lists.instacart_enabled``); it does nothing without the key.
+* Email for password resets (design note 34; :class:`EmailEnv`, ``Settings.email``): ``EMAIL_ENABLED`` [false], ``SMTP_HOST``,
+  ``SMTP_PORT`` [587], ``SMTP_SECURITY`` [``starttls``; ``tls``; ``none`` only to localhost, 127.0.0.1 or ::1], ``SMTP_USERNAME``,
+  ``SMTP_PASSWORD_FILE`` (only as a file: ``SMTP_PASSWORD`` is refused), ``SMTP_FROM`` (required when on), ``SMTP_TIMEOUT_S`` [15].
+  Env only. On needs ``AUTH_MODE=local`` and ``PUBLIC_URL`` (the links in the emails use it).
 * Test accounts (design note 26): ``TEST_ACCOUNT_PASSWORD_FILE`` (only as a file: ``TEST_ACCOUNT_PASSWORD`` is refused). The file
   is read when the accounts are made or reset. The switches ``TEST_ACCOUNT_ENABLED`` and ``TEST_ACCOUNT_AI`` are settings
   (``test_accounts.*``).
@@ -500,6 +504,77 @@ def _validate_instacart(s: "Settings") -> list[str]:
     return []
 
 
+SMTP_SECURITIES = ("starttls", "tls", "none")
+SMTP_LOCAL_HOSTS = ("localhost", "127.0.0.1", "::1")
+
+
+@dataclass(frozen=True)
+class EmailEnv:
+    """Email for password resets (design note 34): the mail server this server sends through. Env only, like every outbound
+    address. The password is never returned by any API; Server administration says only whether email is on."""
+
+    enabled: bool = False
+    host: str | None = None
+    port: int = 587
+    security: str = "starttls"  # starttls | tls | none (none only to this machine)
+    username: str | None = None
+    password: str | None = field(default=None, repr=False)  # SMTP_PASSWORD_FILE only
+    sender: str | None = None  # SMTP_FROM
+    timeout_s: int = 15
+
+    @property
+    def password_set(self) -> bool:
+        return bool(self.password)
+
+
+def load_email_env(env: Mapping[str, str]) -> EmailEnv:
+    if env.get("SMTP_PASSWORD"):
+        raise ConfigError("Give the mail server password as a file: put it in a file and set SMTP_PASSWORD_FILE to its path. "
+                          "Remove SMTP_PASSWORD.")
+    value, _, _ = read_secret({k: v for k, v in env.items() if k == "SMTP_PASSWORD_FILE"}, "SMTP_PASSWORD")
+    host = _raw(env, "SMTP_HOST")
+    return EmailEnv(
+        enabled=parse_bool(env, "EMAIL_ENABLED", False),
+        host=host.lower().strip("[]") if host else None,
+        port=parse_int(env, "SMTP_PORT", 587, 1, 65535),
+        security=_choice(env, "SMTP_SECURITY", "starttls", SMTP_SECURITIES),
+        username=_raw(env, "SMTP_USERNAME"),
+        password=(value or "").strip() or None,
+        sender=_raw(env, "SMTP_FROM"),
+        timeout_s=parse_int(env, "SMTP_TIMEOUT_S", 15, 1, 120),
+    )
+
+
+def _validate_email(s: "Settings") -> list[str]:
+    e = s.email
+    if not e.enabled:
+        stray = [n for n, val in (("SMTP_HOST", e.host), ("SMTP_FROM", e.sender)) if val]
+        return [f"{', '.join(stray)} set without EMAIL_ENABLED=true: email for password resets stays off."] if stray else []
+    if s.auth_mode != "local":
+        raise ConfigError("EMAIL_ENABLED=true needs AUTH_MODE=local: with a sign-in proxy, or no sign-in, there is no password "
+                          "here to reset.")
+    if not s.public_url:
+        raise ConfigError("EMAIL_ENABLED=true needs PUBLIC_URL: the links in the emails use it, for example "
+                          "PUBLIC_URL=https://kidney.example.org.")
+    if not e.host:
+        raise ConfigError("EMAIL_ENABLED=true needs SMTP_HOST: the name of your mail server, for example smtp.example.org.")
+    if e.security not in SMTP_SECURITIES:
+        raise ConfigError(f"SMTP_SECURITY must be one of {', '.join(SMTP_SECURITIES)}, not {e.security!r}.")
+    if e.security == "none" and e.host not in SMTP_LOCAL_HOSTS:
+        raise ConfigError("SMTP_SECURITY=none sends the mail and the password unencrypted, so it is only allowed to a mail "
+                          "server on this machine (localhost, 127.0.0.1 or ::1). Use starttls or tls for "
+                          f"{e.host}.")
+    if not e.sender:
+        raise ConfigError("EMAIL_ENABLED=true needs SMTP_FROM: the address the emails come from, for example "
+                          "SMTP_FROM=kidney@example.org.")
+    from .mail import check_sender
+
+    check_sender(e.sender)
+    if e.password and not e.username:
+        raise ConfigError("SMTP_PASSWORD_FILE is set but SMTP_USERNAME is not. Set the user name your mail server expects.")
+    return []
+
+
 def check_oidc_issuer(raw: str, var: str = "OIDC_ISSUER") -> str:
     """``OIDC_ISSUER``: ``https://`` with a host (plain ``http://`` only for a loopback host, for tests), no query, no fragment."""
     try:
@@ -673,6 +748,8 @@ class Settings:
     list_sync_allowed_hosts: tuple[str, ...] = ()
     # Instacart (design note 33): the server owner's key and host; no key for Settings built in code.
     instacart: InstacartEnv = field(default_factory=InstacartEnv, repr=False)
+    # Email for password resets (design note 34): off for Settings built in code.
+    email: EmailEnv = field(default_factory=EmailEnv, repr=False)
 
     # Secrets at rest (note 07 §4.12). ``secret_key`` holds the raw SECRET_KEY text (one key per
     # line); None means "use or create $DATA_DIR/secret.key" (see app.crypto.load_keyring).
@@ -738,7 +815,7 @@ class Settings:
         values = [self.usda_api_key, self.app_password, self.admin_password, self.trusted_proxy_secret, self.ai.api_key,
                   self.ai.cloud.api_key, self.ai.stt_api_key, self.oidc.client_secret,
                   *(p.client_secret for p in self.oidc.providers), self.withings.client_secret, self.whoop.client_secret,
-                  self.instacart.api_key]
+                  self.instacart.api_key, self.email.password]
         return [v for v in values if v] + self.secret_key_lines()
 
     def validate(self) -> tuple[str, ...]:
@@ -1061,6 +1138,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         whoop=load_whoop_env(env),
         list_sync_allowed_hosts=tuple(h.lower() for h in _split_list(env.get("LIST_SYNC_ALLOWED_HOSTS"))),
         instacart=load_instacart_env(env),
+        email=load_email_env(env),
     )
     extra: list[str] = []
     if env.get("FORWARDED_ALLOW_IPS"):
@@ -1160,6 +1238,7 @@ def _validate(s: Settings) -> list[str]:
     warnings += _validate_withings(s)
     warnings += _validate_whoop(s)
     warnings += _validate_instacart(s)
+    warnings += _validate_email(s)
     if "*" in s.allowed_hosts:
         warnings.append("ALLOWED_HOSTS contains '*': the Host check (DNS-rebinding defence) is switched off.")
     if s.docs_enabled:

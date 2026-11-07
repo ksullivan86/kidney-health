@@ -76,6 +76,13 @@ spec:
       ports:
         - port: 443
           protocol: TCP
+    # Optional mail server for password reset by email (EMAIL_ENABLED; SMTP_PORT 587, or 465 with SMTP_SECURITY=tls).
+    # - to:
+    #     - ipBlock:
+    #         cidr: 203.0.113.25/32   # your SMTP_HOST's address
+    #   ports:
+    #     - port: 587
+    #       protocol: TCP
     # Optional LAN AI host (Ollama 11434, Hermes 8643, LiteLLM 4000). Also list it in AI_PRIVATE_HOSTS.
     # - to:
     #     - ipBlock:

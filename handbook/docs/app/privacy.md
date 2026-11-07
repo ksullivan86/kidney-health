@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-31
 fact_checked: 2026-10-05
-sources: [NOTE01, NOTE02, NOTE03, NOTE04, NOTE31, NOTE07, ARCH, GDPR]
+sources: [NOTE01, NOTE02, NOTE03, NOTE04, NOTE31, NOTE07, ARCH, GDPR, NOTE34]
 ---
 
 # Privacy and your data
@@ -47,6 +47,8 @@ or delete it.
     - An admin can issue a password-reset link for your account and so could sign in as you. It cannot
       be done quietly: your devices are signed out, you see "Your password was reset by an admin on …"
       when you next sign in, and it shows in your activity.
+- **Your email**, if you add one for password resets, is seen only by you. The admin sees only whether you confirmed one. The
+  emails hold your user name and a link, never health data ([design note 34][NOTE34]).
 - **Backups** made by the admin contain everyone's data until they expire.
 
 !!! warning "If the app says “No sign-in”"

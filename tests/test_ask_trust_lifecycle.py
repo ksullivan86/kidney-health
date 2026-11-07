@@ -136,3 +136,38 @@ def test_trust_ending_after_one_save_keeps_it_and_requests_confirmation_for_the_
     assert body["text"] != CH.CONFIRM_TEXT and "complete" in body["text"].lower()
     assert count(client, "log_entries") == 1 and count(client, "meal_templates") == 0
     assert count(client, "assistant_ask_keys") == 1
+
+
+def first_call_still_writing(monkeypatch):
+    """Make a retry see the first call's key only inside a write transaction, as when that call commits while the
+    retry waits for the lock."""
+    from app.mcp import tools as T
+    real = T.earlier_save
+
+    def seen_only_under_the_lock(call, tool, key):
+        return real(call, tool, key) if call.conn.in_transaction else None
+    monkeypatch.setattr(T, "earlier_save", seen_only_under_the_lock)
+
+
+@pytest.mark.parametrize("tool,table", [("log_food", "log_entries"), ("save_recipe", "meal_templates")])
+@pytest.mark.parametrize("trust_on_retry", ["ask", "always"])
+def test_a_retry_racing_its_first_call_reports_that_save_not_a_card(trusting_client, monkeypatch, tool, table, trust_on_retry):  # noqa: F811
+    # "ask": the retry finds trust off before it saves; "always": trust ends while it waits for the write lock.
+    client = trusting_client
+    trust(client, "always")
+    with attach(client.app, FakeProvider([save_call(tool), step_answer("Saved.")])):
+        first = send(client, "Save this fruit for lunch", request_id="trust-race-original")
+    assert first.status_code == 200 and first.json()["saved"], first.text
+    first_call_still_writing(monkeypatch)
+    if trust_on_retry == "ask":
+        trust(client, "ask")
+    else:  # trusted when the retry starts, ended by the time it holds the lock
+        from app.ai import chat_save
+        real, answers = chat_save.effective_trust, iter(["always"])
+        monkeypatch.setattr(chat_save, "effective_trust", lambda **kw: next(answers, "ask") if real(**kw) != "ask" else "ask")
+    with attach(client.app, FakeProvider([save_call(tool), step_answer("Already saved.")])):
+        response = send(client, "Save this fruit for lunch", request_id="trust-race-original")
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert body["pending_save"] is None, body
+    assert count(client, table) == 1 and count(client, "assistant_ask_keys") == 1

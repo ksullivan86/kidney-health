@@ -7,9 +7,9 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-10-31
+last_checked: 2026-11-07
 fact_checked: 2026-10-05
-sources: [NOTE07, NOTE03, NOTE04, NOTE06, NOTE02, FDC-API, NOTE17, NOTE18, NOTE19, NOTE25, NOTE28, NOTE29, NOTE30]
+sources: [NOTE07, NOTE03, NOTE04, NOTE06, NOTE02, FDC-API, NOTE17, NOTE18, NOTE19, NOTE25, NOTE28, NOTE29, NOTE30, NOTE34]
 ---
 
 # Settings and keys
@@ -22,7 +22,7 @@ can be shared by your admin or added by you ([design note 07][NOTE07]).
 
 | Section | What you find there |
 |---|---|
-| **Account** | your name, user name, **Change password**, **Two-step sign-in**, **Passkeys**, **Signed-in devices**, **Your data** (export, import, **Phone shortcuts** for an iPhone Shortcut that sends your weight and blood pressure: [Weight and blood pressure](weight-and-blood-pressure.md#from-a-phone-shortcut); delete account), your recent sign-in activity, **Sign out** |
+| **Account** | your name, user name, **Change password**, **Email for password resets** (when your admin turns email on), **Two-step sign-in**, **Passkeys**, **Signed-in devices**, **Your data** (export, import, **Phone shortcuts** for an iPhone Shortcut that sends your weight and blood pressure: [Weight and blood pressure](weight-and-blood-pressure.md#from-a-phone-shortcut); delete account), your recent sign-in activity, **Sign out** |
 | **Care team** | family, a caregiver or a dietitian on your server who can look at your log (**Viewer**), also plan your meals (**Care helper**) or also log food you ate (**Caregiver**), with a switch for each thing; invites for you; the Care teams you are on ([Care team](#sharing)) |
 | **Connected devices** (when your admin sets it up) | **Connect Withings** so the server fetches your weight, blood pressure and pulse ([Weight and blood pressure](weight-and-blood-pressure.md#from-withings)); **Connect Whoop** for calories burned, strain, recovery, HRV, sleep and workouts ([Activity and recovery](reports-for-your-team.md#activity-and-recovery)), and **Add active-day calories to my target** ([More calories on active days](targets-and-warnings.md#active-day-calories)); **Sync now**; **Disconnect** stops pending imports and sign-ins too |
 | **Shopping list app** (when your admin turns it on) | your own **Grocy**, **KitchenOwl** or **Mealie**: its address and a key you make there, **Test**, the list the food goes to, **Remove**. The key is never shown again. Plan's shopping list then has **Send** ([Send it to your own list app](planning-and-menus.md#send-it-to-your-own-list-app); [design note 30][NOTE30]) |
@@ -110,11 +110,30 @@ So if a switch is grayed out with "Set by the server", only the person who runs 
   another minimum). Your other devices are signed out.
 - **Signed-in devices**: lists your sessions. **Sign out** one you do not recognize, or
   **Sign out everywhere else**.
-- Sensitive actions (changing a password or key, turning two-step sign-in on or off, adding or removing a passkey, making an assistant token,
+- Sensitive actions (changing a password, an email or a key, turning two-step sign-in on or off, adding or removing a passkey, making an assistant token,
   exporting, deleting your account) ask for your password again if you entered it more than 10 minutes ago. If you have a
   passkey, **Use a passkey instead** answers with your fingerprint, face or PIN.
 - If your admin requires a password change while a linked sign-in or **Confirm with** action is waiting, change your password
   first, then start that action again. Its old reply cannot finish the action.
+
+## Email for password resets {#email}
+
+If your admin has turned email on, you can add an email address in **Settings → Account → Email for password resets**. It is
+optional. The app uses it for one thing only: to send you a link if you forget your password ([design note 34][NOTE34]).
+
+1. Type your address and tap **Save and send a link**. The app asks for your password again.
+2. Open the email and its link within 24 hours. The address then shows as confirmed.
+3. Until you confirm it, it shows "Not confirmed yet" and gets no reset emails. **Send the link again** if the first one did
+   not come.
+
+If you forget your password, tap **Forgot your password?** on the sign-in page and type your user name. If your account has a
+confirmed email, a link comes within a few minutes. It works once, for 1 hour. Choosing a new password signs you out on your
+other devices and removes your passkeys. Two-step sign-in still asks for your code.
+
+- Nobody else sees your address. Your admin sees only that you have a confirmed email.
+- **Change** or **Remove** it at any time. Removing it needs no email. Without one, your admin can still make you a reset link.
+- The email holds your user name and the link. It holds no health data.
+- An email you did not ask for? Ignore it. Your password stays the same. If it happens often, tell your admin.
 
 ## Two-step sign-in
 
@@ -272,6 +291,7 @@ change is listed in your activity, and a food it set shows in **Settings → Mea
 - [ ] Look at **Signed-in devices** after you get a new phone, and sign out the old one.
 - [ ] Turn on **Two-step sign-in**, and keep the recovery codes somewhere safe.
 - [ ] Add a **passkey** on the phone you use most, so signing in is a fingerprint or a glance.
+- [ ] If your server has email, add and confirm an **email for password resets**.
 - [ ] Never send a key by text message or email to anyone; paste it only into the app.
 
 ## If something goes wrong
@@ -279,6 +299,8 @@ change is listed in your activity, and a food it set shows in **Settings → Mea
 - **"Key rejected" after Test.** Copy it again, without spaces, and check you used the right service.
 - **"Today's shared lookups are used up."** Wait until tomorrow, use the builtin foods and Quick add, or
   add your own key.
+- **No reset email came.** Check your spam folder. The link only goes to a confirmed address, at most 3 times an hour. Or ask
+  your admin for a reset link.
 - **"Please enter your password again."** This is normal for sensitive actions; enter it and the app
   carries on.
 - **"That code is not right."** The codes depend on the phone's clock. Set the phone's date and time to set
@@ -297,3 +319,4 @@ change is listed in your activity, and a food it set shows in **Settings → Mea
 - [Design note 19][NOTE19]: read-only sharing. [Design note 25][NOTE25]: the Care team. [Design note 29][NOTE29]: switches,
   the Caregiver, saved meals and suggestions.
 - [USDA FoodData Central API guide][FDC-API]: free keys and rate limits.
+- [Design note 34][NOTE34]: password reset by email.

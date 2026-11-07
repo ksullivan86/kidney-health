@@ -38,6 +38,7 @@ from pydantic import ValidationError
 from .. import brand
 from .. import foods
 from .. import log as food_log
+from ..auth.accounts import begin_immediate
 from ..auth.models import User
 from ..mcp import tools as T
 from ..nutrients import scale_nutrients
@@ -278,6 +279,9 @@ def run_save(request: Request, conn: sqlite3.Connection, user: User, name: str, 
 
     def authorize() -> None:
         if not may_save():
+            # A retry whose first call finished while this one waited: the save reports that call, never a new card.
+            if T.earlier_save(call, name, save_key(request_id, n)) is not None:
+                return
             raise _NeedsConfirmation
 
     call = T.Call(request, conn, user, T.Asker(authorize_write=authorize))
@@ -293,8 +297,16 @@ def run_save(request: Request, conn: sqlite3.Connection, user: User, name: str, 
         key = save_key(request_id, n)
         allowed = may_save()
         # A replay of a completed save reports it even after trust ends. A fresh confirmation card could duplicate it.
-        if T.earlier_save(call, name, key) is None and not allowed:
-            return confirmation()
+        if not allowed:
+            # Wait for a first call with this key that is still writing (its write lock), then look again: a card for
+            # food that call is saving would invite a second copy.
+            begin_immediate(conn)
+            try:
+                seen = T.earlier_save(call, name, key)
+            finally:
+                conn.rollback()
+            if seen is None:
+                return confirmation()
         try:
             step = save_now(call, name, args, key)
         except _NeedsConfirmation:

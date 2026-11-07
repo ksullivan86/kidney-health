@@ -22,10 +22,34 @@
   const USERNAME_HELP = 'Use 3 to 64 characters: letters, digits and . _ @ + -';
   const DEMO_LINK_BASE = 'https://kidney.example';
   const PUBLIC_AUTH = new Set(['GET /api/auth/status', 'POST /api/auth/login', 'POST /api/auth/setup', 'POST /api/auth/register', 'POST /api/auth/reset',
-    'POST /api/auth/reset/info']);
+    'POST /api/auth/reset/info', 'POST /api/auth/forgot', 'POST /api/auth/email/confirm']);
   const USER_VISIBLE_ACTIONS = new Set(['login.succeeded', 'login.failed', 'user.locked', 'user.password_changed', 'user.reset_link_issued',
-    'user.reset_link_revoked', 'user.must_change_password', 'sessions.revoked', 'session.revoked_reauth', 'secret.set', 'secret.removed', 'export.created', 'data.imported']);
+    'user.reset_link_revoked', 'user.must_change_password', 'sessions.revoked', 'session.revoked_reauth', 'secret.set', 'secret.removed', 'export.created', 'data.imported',
+    'email.set', 'email.confirmed', 'email.removed']);
   const LINK_INVALID = 'This link is not valid any more. Ask your admin for a new one.';
+  // Password reset by email (design note 34; app/auth/email_api.py and app/mail.py). The demo sends nothing: an address counts as
+  // confirmed at once, "Forgot your password?" gives the server's answer, and the test email says nothing was sent.
+  const EMAIL_TEXTS = {
+    forgot: 'If that account has a confirmed email, a link is on its way. It works for 1 hour.',
+    confirm_invalid: 'This link is not valid any more. Ask for a new one in Settings → Account.',
+    address_help: 'Enter an email address such as name@example.org.',
+    address_long: 'That address is too long. Use at most 320 characters.',
+    admin_no_email: 'Add and confirm your own email in Settings → Account first. The test email goes there.',
+    already: 'This address is already confirmed.',
+  };
+  const EMAIL_LOCAL = /^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*$/;
+  const EMAIL_DOMAIN = /^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]([a-z0-9-]{0,61}[a-z0-9])?$/;
+  // app/mail.check_address: { ok, value } or { ok: false, detail }.
+  function emailAddress(raw) {
+    const text = String(raw == null ? '' : raw).trim().toLowerCase();
+    if (!text) return { ok: false, detail: EMAIL_TEXTS.address_help };
+    if (text.length > 320) return { ok: false, detail: EMAIL_TEXTS.address_long };
+    const at = text.lastIndexOf('@');
+    const local = at < 0 ? '' : text.slice(0, at);
+    const domain = at < 0 ? '' : text.slice(at + 1);
+    if (at < 0 || !local || local.length > 64 || !EMAIL_LOCAL.test(local) || !EMAIL_DOMAIN.test(domain)) return { ok: false, detail: EMAIL_TEXTS.address_help };
+    return { ok: true, value: text };
+  }
   const APP_WORDS = ['kidneyhealth', 'kidney health', 'kidney-health', 'kidney_health', 'kidney health food log'];
   const SEQUENCES = ['abcdefghijklmnopqrstuvwxyz', '0123456789', 'qwertyuiopasdfghjklzxcvbnm', 'qwertzuiopasdfghjklyxcvbnm',
     'azertyuiopqsdfghjklmwxcvbn', '1qaz2wsx3edc4rfv5tgb6yhn7ujm8ik9ol0p', 'qazwsxedcrfvtgbyhnujmikolp', '1234567890qwertyuiopasdfghjklzxcvbnm', '!@#$%^&*()'];
@@ -124,11 +148,12 @@
         two_step: false, // nor two-step sign-in (design note 17)
         passkeys: 0, // nor passkeys (design note 18)
         oidc_links: 0, // nor links to a sign-in provider (design note 24)
+        email_confirmed: !!(u.email && u.email_confirmed_at), // never the address (design note 34)
         shares: 0 }; // nor shares (design note 19)
     },
     // app/auth/tokens.py: an open reset/setup link per account (the demo never shows its token).
     _issueResetLink(u, adminId, ms) {
-      u.reset_link = { id: `demo-link-${randomToken(8)}`, created_by: adminId, created_at: this._stamp(), expires_at: this._stamp(new Date(Date.now() + ms)) };
+      u.reset_link = { id: `demo-link-${randomToken(8)}`, created_by: adminId, created_at: this._stamp(), expires_at: this._stamp(new Date(Date.now() + ms)), via: 'link' };
       return u.reset_link;
     },
     // tokens.void_issued_by: an admin who is demoted, disabled or deleted takes their links with them.
@@ -193,6 +218,7 @@
         no_login: false,
         passkeys: false, // the demo has no passkeys (design note 18): the sign-in page offers none
         oidc: { enabled: false, label: null, providers: [], only: false, password: 'on' }, // nor a sign-in provider (design note 24): no button, nothing to go to
+        email_reset: true, // "Forgot your password?" shows; the demo sends nothing (design note 34)
       };
     },
     _sessionView(s) {
@@ -267,6 +293,18 @@
   });
   route('POST', '/api/auth/reset/info', function () {
     fail(400, LINK_INVALID, { field: 'token' });
+  });
+  route('POST', '/api/auth/forgot', function ({ body }) {
+    const c = new Check(body);
+    c.str('username', { required: true, min: 1, max: 255, nullable: false });
+    c.done();
+    return { detail: EMAIL_TEXTS.forgot, demo: true };
+  });
+  route('POST', '/api/auth/email/confirm', function ({ body }) {
+    const c = new Check(body);
+    c.str('token', { required: true, min: 1, max: 200, nullable: false });
+    c.done();
+    fail(400, EMAIL_TEXTS.confirm_invalid, { field: 'token' }); // the demo sends no links, so none is valid
   });
   route('POST', '/api/auth/reauth', function ({ body }) {
     this._currentUser();
@@ -372,6 +410,37 @@
   route('DELETE', /^\/api\/me\/tokens\/(\d+)\/body-rows$/, function () { this._currentUser(); fail(404, 'token not found'); });
   // Two-step sign-in (app/auth/totp_api.py, design note 17): the demo has no real sign-in, so it answers as a server does where two-step
   // sign-in is not available (the sign-in proxy's case): the status says so and every change is a 404.
+  // Email for password resets (design note 34): the demo keeps the address in memory and confirms it at once (it sends nothing).
+  const emailView = (u) => ({ available: true, reason: null, email: u.email || null, confirmed: !!(u.email && u.email_confirmed_at),
+    confirmed_at: u.email ? (u.email_confirmed_at || null) : null });
+  route('GET', '/api/me/email', function () { return emailView(this._currentUser()); });
+  route('PUT', '/api/me/email', function ({ body }) {
+    const u = this._currentUser();
+    this._requireRecent();
+    const c = new Check(body);
+    c.str('email', { required: true, min: 1, max: 400, nullable: false });
+    const data = c.done();
+    const checked = emailAddress(data.email);
+    if (!checked.ok) fail(400, checked.detail, { field: 'email' });
+    if (u.email === checked.value && u.email_confirmed_at) return { ...emailView(u), sent: false, message: EMAIL_TEXTS.already };
+    u.email = checked.value;
+    u.email_confirmed_at = this._stamp();
+    this._audit(u.id, 'email.set', 'user', u.id, { changed: false, again: false });
+    this._audit(u.id, 'email.confirmed', 'user', u.id);
+    return { ...emailView(u), sent: false, message: 'Demo: no email was sent, so the address counts as confirmed now.' };
+  });
+  route('DELETE', '/api/me/email', function () {
+    const u = this._currentUser();
+    if (u.email) { u.email = null; u.email_confirmed_at = null; this._audit(u.id, 'email.removed', 'user', u.id); }
+    return null;
+  });
+  route('POST', '/api/admin/email/test', function () {
+    const u = this._requireAdmin();
+    this._requireRecent();
+    if (!u.email || !u.email_confirmed_at) fail(409, EMAIL_TEXTS.admin_no_email);
+    return { sent: false, to: u.email, demo: true };
+  });
+
   route('GET', '/api/me/totp', function () { this._currentUser(); return { available: false, enabled: false, enabled_at: null, recovery_codes_left: 0, required: false }; });
   for (const [m, p] of [['POST', '/api/me/totp/setup'], ['POST', '/api/me/totp/enable'], ['POST', '/api/me/totp/recovery-codes'], ['DELETE', '/api/me/totp']]) {
     route(m, p, function () { this._currentUser(); fail(404, 'Not Found'); });
@@ -609,8 +678,10 @@
       pre_v3_backup: null,
       last_backup_at: null,
       backup_reminder_days: 7,
+      // An example mail server (design note 34): the demo never connects to it.
+      email: { enabled: true, configured: true, host: 'smtp.example.org', port: 587, security: 'starttls', sender: 'Kidney Health <kidney@example.org>', login: true },
     };
   });
 
-  Object.assign(M, { passwordProblems });
+  Object.assign(M, { passwordProblems, emailAddress, EMAIL_TEXTS });
 })();

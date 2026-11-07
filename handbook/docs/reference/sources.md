@@ -590,6 +590,8 @@ Pages cite these by id, for example `[KDIGO 2024 CKD guideline][K24]`. The list 
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-31.
 - **NOTE33**: kidney-health design note 33: open the Plan's shopping list at Instacart. <https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/33-instacart.md>  
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-11-01.
+- **NOTE34**: kidney-health design note 34: password reset by email. <https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/34-password-reset-by-email.md>  
+  Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-11-07.
 - **DEPLOY**: kidney-health project. docs/deployment.md: Podman, Quadlet and Kubernetes. <https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md>  
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-05.
 - **ASSISTANT-DOC**: kidney-health project. docs/assistant.md: the assistant (access tokens, the MCP server, connecting Open WebUI or a Hermes Agent profile, the system prompt, honest limits). <https://github.com/ksullivan86/kidney-health/blob/main/docs/assistant.md>  

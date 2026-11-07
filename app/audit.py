@@ -112,6 +112,9 @@ ACTIONS: set[str] = {
     "list_sync.removed",
     "list_sync.sent",
     "instacart.sent",  # the shopping list opened at Instacart (design note 33; app/instacart.py)
+    "email.set",  # email for password resets (design note 34; app/auth/email_api.py); never the address
+    "email.confirmed",
+    "email.removed",
 }
 USER_VISIBLE_ACTIONS = frozenset(
     {
@@ -170,6 +173,9 @@ USER_VISIBLE_ACTIONS = frozenset(
         "list_sync.removed",
         "list_sync.sent",
         "instacart.sent",
+        "email.set",
+        "email.confirmed",
+        "email.removed",
     }
 )
 _ACTION = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")

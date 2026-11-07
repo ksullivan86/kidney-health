@@ -19,7 +19,7 @@ from ..audit import audit, list_events
 from ..crypto import secret_report
 from ..devices import api as devices_api
 from ..db import database_file, get_db, get_meta, get_schema_version, utcnow
-from . import api_tokens, clock, oidc_api, passkeys, sessions, tokens, totp
+from . import api_tokens, clock, email_api, oidc_api, passkeys, sessions, tokens, totp
 from .accounts import (
     begin_immediate,
     check_local_username,
@@ -41,6 +41,8 @@ log = logging.getLogger(f"{brand.LOGGER_NAME}.admin")
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 
 RESET_LINK_HOURS = 24
+# Design note 34: an admin sees only whether a person has a confirmed email for password resets, never the address.
+EMAIL_CONFIRMED = "(email IS NOT NULL AND email_confirmed_at IS NOT NULL) AS email_confirmed"
 TEST_PASSWORD_ONLY = "Test accounts use the password in TEST_ACCOUNT_PASSWORD_FILE. Reset test accounts puts it back."
 PRE_V3_BACKUP_DAYS = 30
 
@@ -52,7 +54,7 @@ def _no_accounts_in_none_mode(ctx: AuthContext) -> None:
 
 def _user_or_404(conn: sqlite3.Connection, user_id: int) -> sqlite3.Row:
     try:
-        row = conn.execute(f"SELECT {USER_COLUMNS}, can_choose_ai FROM users WHERE id = ?", (int(user_id),)).fetchone()
+        row = conn.execute(f"SELECT {USER_COLUMNS}, can_choose_ai, {EMAIL_CONFIRMED} FROM users WHERE id = ?", (int(user_id),)).fetchone()
     except OverflowError:
         row = None
     if row is None or (row["status"] == "pending_setup" and row["username_norm"].startswith("#")):
@@ -105,7 +107,7 @@ def _void_admin_links(conn: sqlite3.Connection, uid: int) -> dict[str, int]:
 @router.get("/users")
 def list_users(request: Request, admin: AdminUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     _no_accounts_in_none_mode(auth_context(request))
-    rows = conn.execute(f"SELECT {USER_COLUMNS}, can_choose_ai FROM users WHERE username_norm NOT LIKE '#%' ORDER BY id").fetchall()
+    rows = conn.execute(f"SELECT {USER_COLUMNS}, can_choose_ai, {EMAIL_CONFIRMED} FROM users WHERE username_norm NOT LIKE '#%' ORDER BY id").fetchall()
     links = tokens.open_reset_links(conn)
     assistant = api_tokens.active_counts(conn, api_tokens.ASSISTANT)
     device = api_tokens.active_counts(conn, api_tokens.DEVICE)
@@ -560,4 +562,5 @@ def about(request: Request, admin: AdminUser, conn: sqlite3.Connection = Depends
         "backup_reminder_days": s.backup_reminder_days,
         "oidc": oidc_api.about_view(request, conn),
         "devices": devices_api.about_view(request, conn),
+        "email": email_api.about_view(request),  # design note 34: never the password
     }

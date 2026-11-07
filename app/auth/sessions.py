@@ -22,7 +22,7 @@ import hmac
 import secrets
 import sqlite3
 from dataclasses import dataclass
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 from starlette.requests import Request
@@ -127,6 +127,14 @@ def lookup(conn: sqlite3.Connection, token: str | None) -> SessionInfo | None:
     return _info(row)
 
 
+def is_live(info: SessionInfo, *, idle_days: int, now: datetime | None = None) -> bool:
+    """Whether a session is inside its absolute and idle limits: the one rule for :func:`validate` and for checks that
+    must not write (a device sign-in finishing under a write lock)."""
+    now = now or clock.now()
+    expires, last_seen = clock.parse(info.expires_at), clock.parse(info.last_seen_at)
+    return expires is not None and last_seen is not None and now < expires and now < last_seen + timedelta(days=idle_days)
+
+
 def validate(conn: sqlite3.Connection, token: str | None, *, idle_days: int) -> SessionInfo | None:
     """The session for ``token`` if it exists, matches, and has not expired (absolute or idle)."""
     parts = split_token(token)
@@ -137,13 +145,12 @@ def validate(conn: sqlite3.Connection, token: str | None, *, idle_days: int) -> 
     if row is None or not hmac.compare_digest(bytes(row["verifier_hash"]), _hash(verifier)):
         return None
     now = clock.now()
-    expires = clock.parse(row["expires_at"])
-    last_seen = clock.parse(row["last_seen_at"])
-    if expires is None or last_seen is None or now >= expires or now >= last_seen + timedelta(days=idle_days):
+    info = _info(row)
+    if not is_live(info, idle_days=idle_days, now=now):
         conn.execute("DELETE FROM sessions WHERE id = ?", (sid,))
         conn.commit()
         return None
-    info = _info(row)
+    last_seen = clock.parse(row["last_seen_at"])
     if now - last_seen >= TOUCH_INTERVAL:
         stamp = clock.iso(now)
         conn.execute("UPDATE sessions SET last_seen_at = ? WHERE id = ?", (stamp, sid))

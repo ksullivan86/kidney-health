@@ -2,7 +2,8 @@
    acceptance, password reset links, the forced new password, sign-out, the re-authentication
    prompt, the "no sign-in" banner and the plain-HTTP / HTTPS-required notes.
 
-   Hash routes: #/login, #/setup, #/invite/<token>, #/reset/<token>. Tokens only ever travel in the
+   Hash routes: #/login, #/setup, #/invite/<token>, #/reset/<token>, #/forgot and #/confirm-email/<token> (password reset
+   by email, design note 34). Tokens only ever travel in the
    URL fragment (browsers never send it to the server); the page moves the token out of the
    address bar into memory (and this tab's sessionStorage, so a reload keeps it) as soon as it
    reads it, and forgets it once used.
@@ -31,8 +32,9 @@
     change: 'Choose a new password',
     proxy: 'Sign in again',
     signedin: 'You are signed in',
+    forgot: 'Forgot your password?',
   };
-  const HASH = { login: '#/login', setup: '#/setup', invite: '#/invite', reset: '#/reset' };
+  const HASH = { login: '#/login', setup: '#/setup', invite: '#/invite', reset: '#/reset', forgot: '#/forgot' };
   const TOKEN_KEY = 'kdl-link-token';
   const NOTICE_KEY = 'kdl-next-notice'; // one message for the sign-in screen after a reload
   const TOKEN_RE = /^[A-Za-z0-9._~-]{8,200}$/;
@@ -223,7 +225,7 @@
   // The plain-HTTP and HTTPS-required notes, and texts that depend on the server's policy.
   function applyStatusNotes(screen) {
     const st = status();
-    const accountScreens = ['login', 'invite', 'reset', 'change', 'setup'];
+    const accountScreens = ['login', 'invite', 'reset', 'change', 'setup', 'forgot'];
     $('#auth-https').hidden = !(st.https_required && accountScreens.includes(screen) && screen !== 'setup');
     $('#auth-insecure').hidden = !(st.insecure_http && !st.https_required && accountScreens.includes(screen));
     $('#auth-instance').textContent = instanceName();
@@ -250,6 +252,10 @@
     $$('#form-login .pw-signin').forEach((el) => { el.hidden = !showPw; });
     $('#login-only-note').hidden = mode === 'on';
     $('#login-test-toggle').hidden = !(mode === 'test_accounts' && !testFormShown);
+    // Password reset by email (design note 34): a button when the server has email on, else the "ask your admin" hint.
+    const byEmail = !!status().email_reset && mode === 'on';
+    $('#login-forgot').hidden = !byEmail;
+    if (byEmail) $('#login-forgot-help').hidden = true;
     $$('#form-register .pw-signup').forEach((el) => { el.hidden = mode !== 'on'; });
     if (mode !== 'on') $('#register-intro').textContent = `You have been invited to ${instanceName()}. Create your account with your sign-in provider: no username or password to choose.`;
   }
@@ -336,7 +342,7 @@
     const raw = (() => { try { return location.hash || ''; } catch (e) { return ''; } })();
     let m = /^#\/(invite|reset)\/(.+)$/.exec(raw);
     if (m) return { screen: m[1], token: decodeURIComponent(m[2]) };
-    m = /^#\/(login|setup|invite|reset)\/?$/.exec(raw);
+    m = /^#\/(login|setup|invite|reset|forgot)\/?$/.exec(raw);
     return m ? { screen: m[1] } : null;
   }
   function takeLinkToken(route) {
@@ -393,6 +399,30 @@
       TITLES.reset = resetTarget && resetTarget.new_account ? 'Set up your account' : 'Choose a password';
     }
     showScreen(kind);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Confirming an email address (#/confirm-email/<token>, design note 34)
+  // ---------------------------------------------------------------------------
+  /** The token of a confirmation link in the address bar ('' when damaged), or null; the address bar is cleared at once. */
+  function takeConfirmToken() {
+    const raw = (() => { try { return location.hash || ''; } catch (e) { return ''; } })();
+    const m = /^#\/confirm-email\/(.+)$/.exec(raw);
+    if (!m) return null;
+    try { history.replaceState(null, '', location.pathname); } catch (e) { /* sandboxed frame */ }
+    let token = '';
+    try { token = decodeURIComponent(m[1]); } catch (e) { token = ''; }
+    return TOKEN_RE.test(token) ? token : '';
+  }
+  /** POST /api/auth/email/confirm; resolves { ok, text } for the sign-in screen or a toast. */
+  async function confirmEmail(token) {
+    if (!token) return { ok: false, text: 'This link is incomplete or damaged. Open the whole link again, or ask for a new one in Settings → Account.' };
+    try {
+      await request('POST', '/api/auth/email/confirm', { token }, { quiet401: true });
+      return { ok: true, text: 'Your email is confirmed. If you forget your password, you can now ask for a reset link by email.' };
+    } catch (err) {
+      return { ok: false, text: err.detail || 'This link is not valid any more. Ask for a new one in Settings → Account.' };
+    }
   }
 
   // ---------------------------------------------------------------------------
@@ -474,12 +504,17 @@
     if (router.VIEWS.includes(initial)) resumeView = initial;
     const route = parseHash();
     takeLinkToken(route);
+    const confirmToken = takeConfirmToken();
     let st;
     try { st = await loadStatus(); } catch (err) {
       showLogin({ error: err.status === 0 ? 'Cannot reach the server. Check your connection, then reload the page.' : (err.detail || 'The server did not answer. Reload the page to try again.') });
       return false;
     }
     if (st.setup_required) { showScreen('setup'); return false; }
+    const confirmed = confirmToken != null ? await confirmEmail(confirmToken) : null;
+    if (confirmed && st.user) setTimeout(() => toast(confirmed.text, confirmed.ok ? 'ok' : 'error'), 300);
+    if (confirmed && !st.user && st.auth_mode !== 'proxy') { showLogin(confirmed.ok ? { notice: confirmed.text } : { error: confirmed.text }); return false; }
+    if (route && route.screen === 'forgot' && !st.user && st.email_reset) { showForgot(); return false; }
     if (route && (route.screen === 'invite' || route.screen === 'reset')) {
       if (st.user) { showSignedIn(st.user, route.screen); return false; }
       linkScreen(route.screen);
@@ -659,6 +694,31 @@
         }
         afterSignIn(res.user, fresh ? `Your account is ready. Next time, sign in as ${res.user.username} with this password.`
           : 'Password saved. Other devices signed in to this account were signed out.');
+      } catch (err) { showApiError(err, form, btn); }
+    });
+  });
+
+  // Password reset by email (design note 34): the same answer for every name, so the screen cannot tell who has an account.
+  function showForgot() {
+    const typed = $('#login-username').value.trim();
+    if (typed && !$('#forgot-username').value) $('#forgot-username').value = typed;
+    showScreen('forgot');
+  }
+  $('#login-forgot').addEventListener('click', () => showForgot());
+  $('#forgot-back').addEventListener('click', () => showLogin());
+  sheets.onSubmit($('#form-forgot'), async (e) => {
+    e.preventDefault();
+    const form = $('#form-forgot');
+    const user = $('#forgot-username');
+    if (!requireFields(form, [[user, 'Enter your username.']])) return;
+    const btn = $('#forgot-submit');
+    await busy(btn, async () => {
+      setError('');
+      try {
+        const res = await request('POST', '/api/auth/forgot', { username: user.value.trim() }, { quiet401: true });
+        if (!$('#login-username').value) $('#login-username').value = user.value.trim();
+        const said = res.detail || 'If that account has a confirmed email, a link is on its way. It works for 1 hour.';
+        showLogin({ notice: res.demo ? `${said} Demo: nothing was sent.` : said });
       } catch (err) { showApiError(err, form, btn); }
     });
   });
@@ -881,6 +941,14 @@
 
   // A link pasted into the address bar of a page that is already open.
   window.addEventListener('hashchange', () => {
+    const confirmToken = takeConfirmToken();
+    if (confirmToken != null) {
+      confirmEmail(confirmToken).then((res) => {
+        if (state.me) toast(res.text, res.ok ? 'ok' : 'error');
+        else showLogin(res.ok ? { notice: res.text } : { error: res.text });
+      });
+      return;
+    }
     const route = parseHash();
     if (!route) return;
     if (route.token != null) {
@@ -888,6 +956,7 @@
       if (state.me) { showSignedIn(state.me, route.screen); return; }
       linkScreen(route.screen);
     } else if (route.screen === 'setup' && status().setup_required) showScreen('setup');
+    else if (route.screen === 'forgot' && !state.me && status().email_reset) showForgot();
   });
 
   setupPwToggles();

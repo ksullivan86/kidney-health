@@ -47,7 +47,7 @@ spec:
       containers:
         - name: app
           # The tag and digest are set in kustomization.yaml (`images:`).
-          image: ghcr.io/ksullivan86/kidney-health:0.22
+          image: ghcr.io/ksullivan86/kidney-health:0.23
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -159,6 +159,16 @@ spec:
             #   value: /run/secrets/kidney-health/instacart_api_key
             # - name: INSTACART_BASE_URL          # the development host while the production key waits for approval
             #   value: https://connect.dev.instacart.tools
+            # - name: EMAIL_ENABLED               # password reset by email (docs/accounts.md); needs PUBLIC_URL
+            #   value: "true"
+            # - name: SMTP_HOST                   # your mail server; also allow it in networkpolicy.yaml if private
+            #   value: smtp.example.org
+            # - name: SMTP_USERNAME
+            #   value: kidney@example.org
+            # - name: SMTP_PASSWORD_FILE          # from the Secret (add smtp_password there)
+            #   value: /run/secrets/kidney-health/smtp_password
+            # - name: SMTP_FROM
+            #   value: Kidney Health <kidney@example.org>
             # - name: TEST_ACCOUNT_ENABLED        # tester and tester-helper for people who test the app
             #   value: "true"                     # (docs/test-the-full-app.md); never admins
             # - name: TEST_ACCOUNT_PASSWORD_FILE  # their one password, from the Secret (add test_account_password there)

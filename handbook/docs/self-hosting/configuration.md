@@ -7,9 +7,9 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-11-01
+last_checked: 2026-11-07
 fact_checked: 2026-10-05
-sources: [NOTE01, NOTE03, NOTE04, NOTE06, NOTE07, NOTE08, NOTE12, NOTE17, NOTE27, NOTE28, WHOOP-API, NOTE30, NOTE33, NOTE20, DEPLOY, SECDOC, NIST-63B4, FDC-API, OFF-API]
+sources: [NOTE01, NOTE03, NOTE04, NOTE06, NOTE07, NOTE08, NOTE12, NOTE17, NOTE27, NOTE28, WHOOP-API, NOTE30, NOTE33, NOTE34, NOTE20, DEPLOY, SECDOC, NIST-63B4, FDC-API, OFF-API]
 ---
 
 # Configuration
@@ -74,6 +74,25 @@ the app with a message that names the variable; it never starts half-configured
 | `REGISTRATION_MODE` | `invite` | `invite` (single-use links), `closed` (admin creates accounts), `open` (anyone who reaches the page; HTTPS required). |
 | `AUDIT_RETENTION_DAYS` | 365 | How long security events are kept. |
 | `USDA_SHARED_DAILY_LIMIT` | 200 | Shared-key USDA lookups per person per day (0 = unlimited). |
+
+## Email for password resets {#email}
+
+Off by default. When on, people can add an email in **Settings → Account**, confirm it, and then use **Forgot your password?**
+on the sign-in page. The link works once, for 1 hour ([design note 34][NOTE34]). Without email, an admin makes reset links as
+before. The server sends mail only to the mail server you set here.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `EMAIL_ENABLED` | `false` | Turns it on. Needs `AUTH_MODE=local` and `PUBLIC_URL` (the links use it), or the server does not start. |
+| `SMTP_HOST` | unset | Your mail server, for example `smtp.example.org`. Required when on. |
+| `SMTP_PORT` | 587 | Its port (465 for `tls`). |
+| `SMTP_SECURITY` | `starttls` | `starttls`, `tls`, or `none`. The certificate is always checked. `none` works only with a mail server on the same machine (`localhost`, `127.0.0.1`, `::1`). |
+| `SMTP_USERNAME` | unset | The user name, if your mail server asks for one. |
+| `SMTP_PASSWORD_FILE` | unset | A file holding its password. `SMTP_PASSWORD` is refused: use the file. |
+| `SMTP_FROM` | unset | The sender, for example `kidney@example.org` or `Kidney Health <kidney@example.org>`. Required when on. |
+| `SMTP_TIMEOUT_S` | 15 | Seconds to wait at each step. A send stops after twice this. |
+
+Check it with **Server administration → About this server → Send a test email**. It goes to your own confirmed email.
 
 ## Proxy sign-in (`AUTH_MODE=proxy`)
 
@@ -234,5 +253,6 @@ Environment=AUTH_MODE=local
 - [Design note 03][NOTE03] R10; [design note 04][NOTE04] R4; [design note 06][NOTE06] §4.14; [design note 08][NOTE08] §4.6.
 - [Design note 12][NOTE12] §4.4: the `PUSH_ENABLED` switch.
 - [Design note 20][NOTE20]: first values from the environment.
+- [Design note 34][NOTE34]: password reset by email.
 - [Deployment guide][DEPLOY]; [operator security guide][SECDOC].
 - [NIST SP 800-63B-4][NIST-63B4]; [USDA FoodData Central API guide][FDC-API]; [Open Food Facts API][OFF-API].

@@ -39,7 +39,8 @@ Every person has their own account, with their own log, profile, targets and key
 
 Some changes, such as a new password, exporting your data or adding a key, ask for your password again
 if you have not typed it in the last 10 minutes. If you forget your password, ask the admin for a reset
-link; there is no email reset. If your admin set up sign-in through another service (for example
+link. If your server has email and you confirmed yours, tap **Forgot your password?** on the sign-in page instead
+([Email for password resets](settings-and-keys.md#email)). If your admin set up sign-in through another service (for example
 Authelia or Tailscale), you sign in there instead and never set a password in the app.
 
 The person who installs the server creates the first account, the admin, with a one-time setup code

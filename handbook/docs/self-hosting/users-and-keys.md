@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-31
 fact_checked: 2026-10-05
-sources: [NOTE07, NOTE04, DEPLOY, SECDOC, NIST-63B4, FDC-API, NOTE24, NOTE26, NOTE32]
+sources: [NOTE07, NOTE04, DEPLOY, SECDOC, NIST-63B4, FDC-API, NOTE24, NOTE26, NOTE32, NOTE34]
 ---
 
 # Users and keys
@@ -85,9 +85,11 @@ from other machines ([HTTPS for phones](https.md)).
 
 ## Passwords and lock-outs
 
-- The app sends no e-mail, so there is no self-service reset. **Server administration → People → Reset link** (24 hours,
-  single use), or `python -m app.admin reset-password USERNAME`. `--stdin` sets a password directly
-  (break-glass; also unlocks a locked account).
+- **Server administration → People → Reset link** (24 hours, single use), or `python -m app.admin reset-password USERNAME`.
+  `--stdin` sets a password directly (break-glass; also unlocks a locked account).
+- With email set up ([Configuration](configuration.md#email)), people who confirmed an email in **Settings → Account** can use
+  **Forgot your password?** themselves. The link works for 1 hour ([design note 34][NOTE34]). You see only "Email confirmed"
+  in People, never the address. A link someone asked for shows as "asked for by email".
 - Repeated wrong passwords slow that account down, then block the address for a while (refused
   attempts of any kind count, and an IPv6 network counts as one address). After 100 failures in a
   row an account needs an admin reset.

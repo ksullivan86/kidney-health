@@ -157,7 +157,15 @@ def auth_status(request: Request, conn: sqlite3.Connection = Depends(get_db)) ->
         "passkeys": mode == "local" and not _passkeys_need_a_name(request, s),
         # Sign-in with a provider (design note 24 §7): whether the sign-in page shows its button, and the button's words.
         "oidc": _oidc_status(request, conn),
+        # Password reset by email (design note 34): whether the sign-in page offers "Forgot your password?".
+        "email_reset": _email_reset_on(request),
     }
+
+
+def _email_reset_on(request: Request) -> bool:
+    from .email_api import server_on
+
+    return server_on(request)
 
 
 def _oidc_status(request: Request, conn: sqlite3.Connection) -> dict[str, Any]:
@@ -517,6 +525,8 @@ def reset(body: ResetBody, request: Request, response: Response, conn: sqlite3.C
     ctx.throttle.forget(conn, ctx.throttle.name_mac(row["username_norm"]))
     if row["status"] == "pending_setup":
         via = "account_setup"  # a new account created by an admin: the first password, not a reset
+    elif token["note"] == "email":
+        via = "email_link"  # asked for with "Forgot your password?" and sent to the confirmed address (design note 34)
     elif token["created_by"] is not None and int(token["created_by"]) != user_id:
         via = "admin_reset_link"
     else:

@@ -868,6 +868,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 32 | `m032_list_sync.py` | your own list app (note 30 §4) | new table `list_sync` (`user_id` primary key `ON DELETE CASCADE`, `app`, `base_url`, `list_id`, `list_name`, `key_enc` (the person's key sealed, purpose `list-sync`), `key_id`, `last_test_at`, `last_test_error`, `last_sent_at`, `last_sent_count`, `created_at`, `updated_at`). No CHECK on `app`. Recipe import needs no table. |
 | 31 | `m031_care_team_full.py` | the full Care team (note 29 §6) | `shares` and `care_invites` each gain four switches, `INTEGER NOT NULL DEFAULT 0 CHECK (… IN (0, 1))`: `may_plan`, `may_log`, `may_use_saved_meals`, `may_suggest`. When the columns are first added, a `care_helper` row gets `may_plan = 1`, so every share keeps its meaning. The `role` column of step 27 stays with its `CHECK`; the app writes it `care_helper` exactly when `may_plan` is on. New table `care_suggestions` (`share_id` `ON DELETE CASCADE`, `owner_user_id` and `from_user_id` `ON DELETE CASCADE`, never the same; `date`, `meal`, `items_json` a JSON list of 1 to 30, `note` at most 280 characters, `created_at`, `expires_at`, `answered_at`, `answer` (`accepted`, `declined`, `expired`, `ended`)). |
 | 33 | `m033_ai_route_choice.py` | a person may choose the server's local or cloud AI (note 32) | `users.can_choose_ai` (`INTEGER NOT NULL DEFAULT 0 CHECK (… IN (0, 1))`): an admin's tick in Server administration → Users. Every existing account starts without it. The person's choices are the personal setting `ai.route_choice`, not a column. |
+| 34 | `m034_reset_email.py` | password reset by email (note 34) | `users.email` (TEXT, NULL, at most 320 characters, stored lower case) and `users.email_confirmed_at`; unique index `users_email_confirmed` on `email` for confirmed addresses only (an address typed but not confirmed blocks nobody); `email_tokens` (id, user_id `ON DELETE CASCADE`, the address it was sent to, SHA-256 of the verifier, 24 h, single use): the confirmation links, in their own table because `auth_tokens.purpose` has a CHECK. Every existing account starts without an address. |
 | 23 | `m023_passkeys.py` | passkeys (note 18) | `passkeys` (one row per passkey: `credential_id` BLOB, unique, 1 to 1,023 bytes; `public_key`, the COSE key as sent; `alg`; `user_handle`, 32 random bytes shared by one person's passkeys; `sign_count`; `name`; `backed_up`; `created_at`; `last_used_at`). `ON DELETE CASCADE`. Nothing is sealed: a public key is not a secret. Nobody has a passkey after the upgrade. |
 
 ## Backend file ownership
@@ -1106,7 +1107,8 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
 
-**Status (2026-11-06): v0.22.3 is prepared.** Fifteen audit fixes: writes recheck access and trust inside their write lock
+**Status (2026-11-07): v0.23.0 is prepared.** Password reset by email (note 34, schema step 34), off until `EMAIL_ENABLED`;
+an Ask retry that races its first save reports that save; device sign-in shares `sessions.is_live`. **v0.22.3**: fifteen audit fixes: writes recheck access and trust inside their write lock
 (assistant and phone tokens, Ask, device sign-in, provider account actions), imports and daily limits are serialised, and every
 sheet keeps late replies with the opening that sent them while still saying when an earlier save failed. **v0.22.2**: the owner's four choices from the sharing and passkey review (a reset link removes
 passkeys; no Care team member's network in the owner's activity; an admin's End sharing on both sides; the note line on the share
@@ -1246,7 +1248,7 @@ Me = {"id": 1, "username": "mum", "display_name": "Mum", "role": "admin",
 
 | Method and path | Auth | Body → response |
 |---|---|---|
-| `GET /api/auth/status` | public | → `{setup_required, auth_mode, registration ("invite"\|"closed"\|"open"\|"disabled"), insecure_http, https_required, password_min_length, password_max_length (128), instance_name, user: Me\|null, logout_url, no_login, passkeys, oidc: {enabled, label, providers: [{id, label}], only, password}}`; `passkeys` is true in local mode when this address is a name, not an IP address (the sign-in page then offers a passkey, note 18); `oidc` says whether the sign-in page shows provider buttons, one per provider with its words (`label` is the first one's; never an issuer or client ID; note 24), whether `OIDC_ONLY` is on, and `password`: `on`, `off` (`OIDC_ONLY`) or `test_accounts` (`OIDC_ONLY` while the test accounts are on: only they use the password form; note 24 §13) |
+| `GET /api/auth/status` | public | → `{setup_required, auth_mode, registration ("invite"\|"closed"\|"open"\|"disabled"), insecure_http, https_required, password_min_length, password_max_length (128), instance_name, user: Me\|null, logout_url, no_login, passkeys, oidc: {enabled, label, providers: [{id, label}], only, password}, email_reset}`; `email_reset` is true when the sign-in page offers "Forgot your password?" (`EMAIL_ENABLED`, local sign-in, no `OIDC_ONLY`; note 34); `passkeys` is true in local mode when this address is a name, not an IP address (the sign-in page then offers a passkey, note 18); `oidc` says whether the sign-in page shows provider buttons, one per provider with its words (`label` is the first one's; never an issuer or client ID; note 24), whether `OIDC_ONLY` is on, and `password`: `on`, `off` (`OIDC_ONLY`) or `test_accounts` (`OIDC_ONLY` while the test accounts are on: only they use the password form; note 24 §13) |
 | `GET /api/auth/oidc/start` | public | `?provider=<id>` (`default` for the provider of `OIDC_ISSUER`, else its name in `OIDC_PROVIDERS`; left out, the first; not in use: 404) → `303` to that provider's authorization endpoint (`response_type=code`, `scope`, `state`, `nonce`, `code_challenge` S256, `redirect_uri` = `<PUBLIC_URL>/api/auth/oidc/callback`, or `…/callback/<name>` for a named provider) and the cookie `__Host-kh_oidc` (`kh_oidc` on plain HTTP; `HttpOnly`, `SameSite=Lax`, `Path=/`, 10 minutes) whose hash is kept with the flow (in memory, single use, 10 minutes). Counts toward the per-address sign-in attempts, `oidc_start` (30 a minute) and `oidc_start_all` (300 a minute for everyone, per provider); at
 most 10 flows wait per address (per person for link and re-entry) across providers and 10,000 in all, an equal share per provider, beyond which a start is refused (`full`, or `503`
 "Too many sign-ins started. Try again soon." on the JSON starts) and nothing waiting is dropped; a blocked address, a provider that cannot be reached or a check that fails is a `303` to `/#/oidc/<word>` (`/#/oidc/<word>/<name>` for a named provider). 404 unless `AUTH_MODE=local` and `OIDC_ENABLED` (note 24 §3) |
@@ -1259,6 +1261,8 @@ most 10 flows wait per address (per person for link and re-entry) across provide
 | `POST /api/auth/register` | public + invite token (or open mode) | `{token?, username, display_name?, password}` → 201 `{user: Me}`, signed in. 403 closed/no invite, 400 bad token, 409 username taken; 403 `{oidc_only: true}` with `OIDC_ONLY` (an invite is redeemed with a provider) |
 | `POST /api/auth/reset` | public + reset token | `{token, password}` → `{user: Me}`; claims the single-use link first (two racing requests: one 200, one 400), signs out every other session, voids the account's other open links, removes every passkey (audit `passkey.removed`, the owner's choice of 2026-11-06), clears `locked`, activates a new account. With two-step sign-in on it sets the password but does not sign in: `{user: null, totp_required: true}` |
 | `POST /api/auth/reset/info` | public + reset token | `{token}` → `{username, display_name, new_account, expires_at}` for the page the link opens (the owner of an admin-created account never saw its username); 400 (counts as a per-IP failure) when the link is not valid. 404 in proxy/none mode |
+| `POST /api/auth/forgot` | public | `{username}` → **always** `202 {detail: "If that account has a confirmed email, a link is on its way. It works for 1 hour."}` (note 34). For an active local account (not a test account) with a confirmed email: voids the account's open reset links, makes a reset link (`auth_tokens` purpose `reset`, `note: "email"`, `created_by` the account, 1 h) and emails `<PUBLIC_URL>/#/reset/<token>` after answering; audit `user.reset_link_issued` (`via: email`). 10 an hour per address (`forgot_ip`, 429); 3 an hour per typed name (`forgot_account`, counted for any name, then the same 202 and nothing sent). 404 unless `EMAIL_ENABLED` and `AUTH_MODE=local`; 403 `{oidc_only: true}` with `OIDC_ONLY`. A reset with such a link audits `user.password_changed` `via: email_link` |
+| `POST /api/auth/email/confirm` | public + confirmation token | `{token}` → `{ok: true, username}`: confirms the address the link was sent to (`users.email_confirmed_at`), single use, deletes the account's other confirmation links; audit `email.confirmed`. 400 (a per-IP failure) when the link is wrong, used, older than 24 h or for an address the person has changed since; 409 when another account confirmed that address first. Does not sign in. 404 unless email is on |
 | `POST /api/auth/passkey/options` | public | → `{challenge_id, publicKey: {challenge, rpId, timeout, userVerification: "required", allowCredentials: []}}` for `navigator.credentials.get`; a single-use challenge for 5 minutes, kept in memory. 30 a minute per address (`passkey_options`); the per-address sign-in block and HTTPS rule apply. 404 in proxy/none mode (note 18 §5) |
 | `POST /api/auth/passkey` | public | `{challenge_id, credential}` (the `PublicKeyCredential.toJSON()` of the answer) → `{user: Me, notice}` + cookies, as a password sign-in but without the two-step code. Every failed check is the same 401 `"That passkey did not work. Try again, or sign in with your password."`, counted against the address (audit `login.failed` with `via: "passkey"` when the passkey is known); a signature counter that did not go up is refused and audited `passkey.counter_went_back`. Success: audit `login.succeeded` with `via: "passkey"`. 404 in proxy/none mode |
 | `POST /api/auth/reauth/passkey/options` | user (local) | → `{challenge_id, publicKey}` for `navigator.credentials.get` listing only this person's passkeys (`allowCredentials`), with a challenge tied to them. 409 with no passkey; 30 a minute (`passkey_options`). Note 18 §10 |
@@ -1281,6 +1285,9 @@ optional HIBP check (`PASSWORD_BREACH_CHECK`, off by default; the k-anonymity ra
 | `GET /api/me` · `PATCH /api/me` | user | → Me; PATCH `{display_name}` |
 | `DELETE /api/me` | user + password | `{password, confirm: "DELETE"}` → 204, cookies cleared, `Clear-Site-Data`; an account with no password (made through the provider, note 24 §8) needs a recent re-entry instead (`403 reauth_required` otherwise); 409 for the last active admin, and always 409 with `AUTH_MODE=none` (every request is user 1; start-up also recreates a missing user 1 in that mode). Deletes the account and everything it owns (cascade), after deleting the unused invites and links it created |
 | `POST /api/me/password` | user (local) | `{current_password, new_password}` → `{user: Me}`; signs out other devices, voids open reset links for the account, renews this session |
+| `GET /api/me/email` | user | → `{available, reason ("off"\|"mode"\|"test_account"\|null), email, confirmed, confirmed_at}`: the person's own address (note 34); nobody else is ever shown it |
+| `PUT /api/me/email` | user *(re-auth)* | `{email}` → the same shape plus `{sent, message}`: saves the address lower case, not confirmed, voids older confirmation links and the reset links sent by email, and emails a confirmation link (`<PUBLIC_URL>/#/confirm-email/<token>`, 24 h); `sent: false` with a sentence when the mail server refused (the address is kept). The same confirmed address again: nothing changes. 400 `field: email` for an address `app/mail.check_address` refuses; 409 email off or a test account; 404 outside local sign-in; 5 an hour per person (`email_confirm`). Audit `email.set` |
+| `DELETE /api/me/email` | user | → 204: removes the address and its links (no email, no re-auth needed); audit `email.removed` when there was one |
 | `GET /api/me/totp` | user | → `{available, enabled, enabled_at, recovery_codes_left, required}` (never the secret); `available` is false outside local mode and for a proxy account; `required` is true for an admin while `auth.require_two_step_admins` is on |
 | `POST /api/me/totp/setup` | user (local) *(re-auth)* | → `{secret, uri, issuer, account, digits: 6, period: 30}`: a new pending secret (the only time it leaves the server; replaces an unfinished one). `uri` is the `otpauth://totp/…` link for a QR code. 409 when on |
 | `POST /api/me/totp/enable` | user (local) *(re-auth)* | `{code}` → `{recovery_codes: [10], signed_out: n, enabled, enabled_at, recovery_codes_left}`: on when the code is right for the pending secret (that step counts as used); the other sessions are signed out; audit `totp.enabled`. 400 wrong code (`field: code`), 409 nothing pending or already on, 429 after 10 tries in 15 minutes (`totp_enable`) |
@@ -1449,6 +1456,7 @@ audited; they are sealed with Fernet under keys derived from `SECRET_KEY` (`app/
 | `GET /api/admin/usage?days=30` | → `{days, usage: [{user_id, username, provider, key_scope, requests}]}` (counts only) |
 | `GET /api/admin/audit?before=&limit=` | → `{events: [{id, at, actor_user_id, ip_prefix, action, target_type, target_id, details}]}` |
 | `GET /api/admin/about` | → `{version, schema_version, auth_mode, accounts, https, public_url, secret_key: {source, on_data_volume, warning, secrets: {current, older_key, unreadable}}, proxy: {first_forwarded_peer, ignored_identity_headers, …}, pre_v3_backup, last_backup_at, backup_reminder_days, oidc: {enabled, issuer, client_id, secret ("set"\|"not set"), scopes, private_issuer_allowed, redirect_uri, discovery ("ok" or a short reason)}}` (never the client secret; note 24 §10) (`BACKUP_REMINDER_DAYS`, 0 = no reminder; `last_backup_at` is the newest `backup.created`, which `app.admin backup` and `app.admin record-backup` write) |
+| `POST /api/admin/email/test` | *(re-auth)* → `{sent: true, to}`: a test email to the admin's own confirmed address, waiting for the mail server (note 34). 409 email off, or no confirmed address; 502 `{detail, error}` with a plain reason when sending failed. Shares `email_confirm`. `GET /api/admin/about` has `email: {enabled, configured, host, port, security, sender, login}` (never the password), and `GET /api/admin/users` has `email_confirmed` per account (never the address) and `reset_link.via` (`"email"` or `"link"`) |
 
 With `AUTH_MODE=none` the users and invites routes answer 404.
 
@@ -2369,6 +2377,11 @@ and pinning is its job. `read_capped` counts decoded bytes. Every outbound clien
 `app/list_sync/apps.py` (its `ListTransport` subclass allows the private hosts of `LIST_SYNC_ALLOWED_HOSTS` and keeps plain
 `http` on them), recipe pages `app/recipe_import/fetch.py`, Instacart `app/instacart.py`) or, for AI,
 `app/ai/transport.py`'s `PinnedTransport`; `tests/test_egress.py` fails on any other client.
+
+Email (note 34) is SMTP, not HTTP, so it is outside this rule: `app/mail.py` connects with `smtplib` only to `SMTP_HOST`, which
+the operator sets in the environment, never to a host from a request. Only the recipient comes from a person, checked by
+`app.mail.check_address` (ASCII, no spaces or line breaks). TLS is verified (`ssl.create_default_context`); plain SMTP is a
+start-up error unless the host is `localhost`, `127.0.0.1` or `::1`.
 
 ### Parity
 
@@ -5079,7 +5092,7 @@ Signed in only (`current_user`; an anonymous caller gets the generic `401`, so a
 (`no-store` like every `/api` answer). The answer:
 
 ```json
-{"app_version": "0.22.3", "api_version": 1,
+{"app_version": "0.23.0", "api_version": 1,
  "capabilities": {"ai": false, "ai_next_meal": false, "ai_parse_meal": false, "ai_label": false, "ai_plate": false, "ai_lab_report": false,
                   "chat": false, "voice": false, "assistant": false, "push": false,
                   "barcode": false, "barcode_off": false, "barcode_usda": false, "handbook": false},
@@ -5369,3 +5382,38 @@ last one when sheets are stacked), and `setupDialog` moves it back to `body` whe
 keeps the sheet open, what was typed and the button. Checked by `tests/js/reliability_ui.test.mjs` (run by
 `tests/test_reliability_ui.py`) and in Chromium by `tools/e2e/reliability.py`, on the entry sheet, Plan's saved meal editor and
 "Add to a day", Labs, Profile and the weight and blood pressure sheets.
+
+## Password reset by email (design note 34)
+
+Built 2026-11-07, not yet released. Schema step 34. A person adds an email in Settings → Account and confirms it; then
+"Forgot your password?" on the sign-in page emails a reset link for 1 hour. Off unless the operator sets a mail server.
+
+* **Config** (env only, `app/config.py` `EmailEnv`, `Settings.email`): `EMAIL_ENABLED` [false], `SMTP_HOST`, `SMTP_PORT` [587],
+  `SMTP_SECURITY` [`starttls`; `tls`; `none` only to `localhost`, `127.0.0.1`, `::1`], `SMTP_USERNAME`, `SMTP_PASSWORD_FILE` (only as
+  a file: `SMTP_PASSWORD` is a `ConfigError`; in `secret_values()`, out of `repr`), `SMTP_FROM` (an address or `Name <address>`),
+  `SMTP_TIMEOUT_S` [15]. On needs `AUTH_MODE=local`, `PUBLIC_URL`, `SMTP_HOST` and `SMTP_FROM`, or the start stops with a sentence.
+  Not in the settings registry: where mail goes is never changed at run time.
+* **Sending** (`app/mail.py`): `Mailer` (`app.state.mailer`) builds a plain-text `EmailMessage` (From, To, Subject, Date,
+  Message-ID, `Auto-Submitted: auto-generated`) and sends it with `smtplib` (`SMTP` + `starttls(context=ssl.create_default_context())`,
+  or `SMTP_SSL` with that context, or plain to this machine), `local_hostname` the host of `PUBLIC_URL` (no DNS lookup), login when
+  a user name and password are set. `send` waits at most `2 × SMTP_TIMEOUT_S` (`egress.run_with_deadline`, pool `email`) and raises
+  `MailFailed(kind, message)`; `send_later` sends from a pool of its own and does not wait (used by forgot). The log says only
+  `email sent` or `email failed: <class>`. The letters (`reset_letter`, `confirm_letter`, `test_letter`) hold the user name, the
+  instance name and the link; no health data.
+* **Routes** (`app/auth/email_api.py`): `GET/PUT/DELETE /api/me/email`, `POST /api/auth/email/confirm`, `POST /api/auth/forgot`,
+  `POST /api/admin/email/test` (the M1 API tables above). Reset links sent by email are ordinary `auth_tokens` reset rows with
+  `note = "email"`, so `POST /api/auth/reset` and `reset/info` work unchanged; `reset` records `via: email_link`. Changing or removing
+  the address voids the reset links sent to it. `tokens.open_reset_links` adds `via` (`email` or `link`).
+* **Audit**: `email.set` (`changed`, `again`), `email.confirmed`, `email.removed`, all in `USER_VISIBLE_ACTIONS`; never the address.
+* **Export**: `export.json` `user` gains `email` and `email_confirmed_at`; the import skips `user`.
+* **Frontend**: the sign-in page's **Forgot your password?** (shown when `email_reset`) opens the `forgot` screen (`#/forgot`);
+  `#/confirm-email/<token>` is read at boot or on `hashchange`, removed from the address bar, and posted (`js/views/auth.js`).
+  Settings → Account → **Email for password resets** (`js/views/settings.js`, "email block"): address, state, **Change**, **Send
+  the link again**, **Remove**; hidden for test accounts and without password sign-in. Server administration → About this server:
+  the email row and **Send a test email**; People: an **Email confirmed** badge and "asked for by email" on a link.
+* **Parity**: `js/mock/auth.js` answers the same routes and sends nothing: an address counts as confirmed at once, forgot answers
+  `{detail, demo: true}`, the test email `{sent: false, to, demo: true}`. `tests/data/email_vectors.json`
+  (`tests/data/gen_email_vectors.py`: `app.mail.check_address` cases and the fixed sentences) is replayed by
+  `node tests/js/run_vectors.mjs` against `KH.mock.emailAddress` and `EMAIL_TEXTS`.
+* **Tests**: `tests/test_reset_email.py` (a small SMTP server in `tests/fake_smtp.py` on 127.0.0.1; TLS checked at the `smtplib`
+  seam), `tests/test_reset_email_ui.py`, `tests/test_migration_m034.py`.

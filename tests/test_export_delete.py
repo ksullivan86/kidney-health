@@ -52,7 +52,7 @@ def test_export_zip_contents_shape_and_no_secrets(client):
     data = json.loads(files["export.json"])
     assert set(data) == JSON_KEYS
     assert data["format"] == "kidney-health-export" and data["version"] == 1
-    assert data["user"]["username"] == "admin" and set(data["user"]) == {"username", "display_name", "created_at"}
+    assert data["user"]["username"] == "admin" and set(data["user"]) == {"username", "display_name", "created_at", "email", "email_confirmed_at"}
     assert data["profile"]["name"] == "Sam" and data["settings"] == {"ui.theme": "dark"}
     assert [e["meal"] for e in data["log_entries"]] == ["lunch", "dinner"]
     assert [f["name"] for f in data["custom_foods"]] == ['=HYPERLINK("http://evil")']

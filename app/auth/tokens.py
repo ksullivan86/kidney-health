@@ -155,7 +155,7 @@ def open_reset_links(conn: sqlite3.Connection) -> dict[int, dict[str, Any]]:
     """The newest unused, unexpired reset or setup link per account: ``{user_id: link}`` (no token)."""
     out: dict[int, dict[str, Any]] = {}
     rows = conn.execute(
-        """SELECT id, user_id, created_by, created_at, expires_at FROM auth_tokens
+        """SELECT id, user_id, created_by, created_at, expires_at, note FROM auth_tokens
            WHERE purpose = 'reset' AND used_at IS NULL AND expires_at > ? AND user_id IS NOT NULL ORDER BY created_at""",
         (clock.now_iso(),),
     ).fetchall()
@@ -165,6 +165,7 @@ def open_reset_links(conn: sqlite3.Connection) -> dict[int, dict[str, Any]]:
             "created_by": row["created_by"],
             "created_at": row["created_at"],
             "expires_at": row["expires_at"],
+            "via": "email" if row["note"] == "email" else "link",  # "email": the person asked for it (design note 34)
         }
     return out
 

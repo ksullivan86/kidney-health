@@ -21,6 +21,7 @@ from typing import Any, Iterator
 
 import pytest
 
+import test_reset_email
 import test_ai_chat_save
 import test_ai_routes as ai_tests
 import test_api_tokens
@@ -123,6 +124,8 @@ MATRIX: dict[str, tuple[str, ...]] = {
     "oidc_links": ("test_oidc.test_another_persons_link_is_404",  # sign-in with a provider, step 26 (note 24)
                    "test_oidc.test_a_provider_account_linked_to_someone_else_is_refused",
                    "test_oidc.test_deleting_the_account_deletes_its_links"),
+    "email_tokens": ("test_reset_email.test_a_link_confirms_only_its_own_account_and_goes_with_it",  # step 34 (note 34)
+                     "test_reset_email.test_a_link_for_an_older_address_does_not_confirm_a_newer_one"),
     "list_sync": ("test_list_sync.test_another_person_never_sees_or_uses_it",  # your own list app, step 32 (note 30)
                   "test_list_sync.test_the_key_is_write_only_and_sealed_for_its_owner",
                   "test_migration_m032.test_a_step_31_database_gains_the_table_and_runs_twice"),
@@ -150,7 +153,7 @@ SHARED_OR_SYSTEM = {
     "meta": "schema version and counters",
     "sqlite_sequence": "SQLite internal",
 }
-MODULES = {"test_isolation": test_isolation, "test_export_delete": test_export_delete,
+MODULES = {"test_reset_email": test_reset_email, "test_isolation": test_isolation, "test_export_delete": test_export_delete,
            "test_auth_coverage": test_auth_coverage, "test_api_tokens": test_api_tokens,
            "test_mcp_write": test_mcp_write, "test_data_import": test_data_import,
            "test_ai_chat_save": test_ai_chat_save, "test_symptoms": test_symptoms, "test_body": test_body, "test_lab_photo": test_lab_photo,
