@@ -124,7 +124,7 @@ def test_one_button_per_provider_and_the_password_parts_can_hide():
     login = _form("form-login")
     assert '<div class="auth-oidc-list" id="login-oidc-list"><a class="btn secondary auth-passkey-btn" id="login-oidc-btn"' in login
     for needle in ('<div class="field pw-signin">\n          <label for="login-username">', '<div class="field pw-signin">\n          <label for="login-password">',
-                   'class="btn primary auth-submit pw-signin" type="submit" id="login-submit"', '<p class="hint auth-help pw-signin">Forgot'):
+                   'class="btn primary auth-submit pw-signin" type="submit" id="login-submit"', '<p class="hint auth-help pw-signin" id="login-forgot-help">Forgot'):
         assert needle in login, needle
     assert re.search(r'<button [^>]*id="login-test-toggle" hidden>', login) and re.search(r'<p [^>]*id="login-only-note" hidden>', login)
     register = _form("form-register")

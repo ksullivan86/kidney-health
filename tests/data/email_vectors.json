@@ -1,0 +1,173 @@
+{
+ "about": "app.mail.check_address and the fixed sentences of app/auth/email_api.py (design note 34).",
+ "address_cases": [
+  {
+   "input": "sam@example.org",
+   "ok": true,
+   "value": "sam@example.org"
+  },
+  {
+   "input": "  Sam.Smith+kidney@Example.ORG ",
+   "ok": true,
+   "value": "sam.smith+kidney@example.org"
+  },
+  {
+   "input": "o'brien@mail.example.co.uk",
+   "ok": true,
+   "value": "o'brien@mail.example.co.uk"
+  },
+  {
+   "input": "a@b.co",
+   "ok": true,
+   "value": "a@b.co"
+  },
+  {
+   "input": "x-y_z@sub-domain.example.org",
+   "ok": true,
+   "value": "x-y_z@sub-domain.example.org"
+  },
+  {
+   "input": "",
+   "ok": false,
+   "detail": "Enter an email address such as name@example.org."
+  },
+  {
+   "input": "   ",
+   "ok": false,
+   "detail": "Enter an email address such as name@example.org."
+  },
+  {
+   "input": "sam",
+   "ok": false,
+   "detail": "Enter an email address such as name@example.org."
+  },
+  {
+   "input": "sam@",
+   "ok": false,
+   "detail": "Enter an email address such as name@example.org."
+  },
+  {
+   "input": "@example.org",
+   "ok": false,
+   "detail": "Enter an email address such as name@example.org."
+  },
+  {
+   "input": "sam@example",
+   "ok": false,
+   "detail": "Enter an email address such as name@example.org."
+  },
+  {
+   "input": "sam smith@example.org",
+   "ok": false,
+   "detail": "Enter an email address such as name@example.org."
+  },
+  {
+   "input": "sam@example.org\r\nBcc: x@y.org",
+   "ok": false,
+   "detail": "Enter an email address such as name@example.org."
+  },
+  {
+   "input": "sam@@example.org",
+   "ok": false,
+   "detail": "Enter an email address such as name@example.org."
+  },
+  {
+   "input": "säm@example.org",
+   "ok": false,
+   "detail": "Enter an email address such as name@example.org."
+  },
+  {
+   "input": "sam@exämple.org",
+   "ok": false,
+   "detail": "Enter an email address such as name@example.org."
+  },
+  {
+   "input": "sam..x@example.org",
+   "ok": false,
+   "detail": "Enter an email address such as name@example.org."
+  },
+  {
+   "input": ".sam@example.org",
+   "ok": false,
+   "detail": "Enter an email address such as name@example.org."
+  },
+  {
+   "input": "sam.@example.org",
+   "ok": false,
+   "detail": "Enter an email address such as name@example.org."
+  },
+  {
+   "input": "sam@-example.org",
+   "ok": false,
+   "detail": "Enter an email address such as name@example.org."
+  },
+  {
+   "input": "sam@example-.org",
+   "ok": false,
+   "detail": "Enter an email address such as name@example.org."
+  },
+  {
+   "input": "sam@example.123",
+   "ok": false,
+   "detail": "Enter an email address such as name@example.org."
+  },
+  {
+   "input": "sam@example.org.",
+   "ok": false,
+   "detail": "Enter an email address such as name@example.org."
+  },
+  {
+   "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@example.org",
+   "ok": true,
+   "value": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@example.org"
+  },
+  {
+   "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa@example.org",
+   "ok": false,
+   "detail": "Enter an email address such as name@example.org."
+  },
+  {
+   "input": "sam@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.org",
+   "ok": true,
+   "value": "sam@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.org"
+  },
+  {
+   "input": "sam@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.org",
+   "ok": false,
+   "detail": "Enter an email address such as name@example.org."
+  },
+  {
+   "input": "sam@aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.org",
+   "ok": false,
+   "detail": "Enter an email address such as name@example.org."
+  },
+  {
+   "input": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+   "ok": false,
+   "detail": "That address is too long. Use at most 320 characters."
+  },
+  {
+   "input": "<sam@example.org>",
+   "ok": false,
+   "detail": "Enter an email address such as name@example.org."
+  },
+  {
+   "input": "Sam <sam@example.org>",
+   "ok": false,
+   "detail": "Enter an email address such as name@example.org."
+  },
+  {
+   "input": "sam@[127.0.0.1]",
+   "ok": false,
+   "detail": "Enter an email address such as name@example.org."
+  }
+ ],
+ "texts": {
+  "forgot": "If that account has a confirmed email, a link is on its way. It works for 1 hour.",
+  "confirm_invalid": "This link is not valid any more. Ask for a new one in Settings → Account.",
+  "address_help": "Enter an email address such as name@example.org.",
+  "address_long": "That address is too long. Use at most 320 characters.",
+  "admin_no_email": "Add and confirm your own email in Settings → Account first. The test email goes there.",
+  "already": "This address is already confirmed."
+ }
+}

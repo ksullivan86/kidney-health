@@ -214,7 +214,9 @@
           <div class="auth-oidc-list" id="login-oidc-list"><a class="btn secondary auth-passkey-btn" id="login-oidc-btn" href="api/auth/oidc/start">Sign in with single sign-on</a></div>
           <span class="hint">You sign in on that site, then come back here.</span>
         </div>
-        <p class="hint auth-help pw-signin">Forgot your password? Ask your admin for a reset link; there is no email reset.</p>
+        <!-- Password reset by email (design note 34): the button shows when the server says email_reset (js/views/auth.js). -->
+        <button class="link-btn auth-alt" type="button" id="login-forgot" hidden>Forgot your password?</button>
+        <p class="hint auth-help pw-signin" id="login-forgot-help">Forgot your password? Ask your admin for a reset link.</p>
         <button class="btn secondary auth-alt" type="button" id="login-test-toggle" hidden>Sign in to a test account with its password</button>
         <p class="hint auth-help" id="login-demo" hidden>Demo: sign in as <b>sam</b> with any password of 15 or more characters. Nothing is sent anywhere.</p>
       </form>
@@ -301,6 +303,17 @@
         </div>
         <button class="btn primary auth-submit" type="submit" id="reset-submit">Save password</button>
         <p class="hint auth-help">The link works once and expires. If it no longer works, ask your admin for a new one.</p>
+      </form>
+
+      <form id="form-forgot" class="auth-form" data-screen="forgot" novalidate hidden>
+        <p class="auth-intro">Type your username. If your account has a confirmed email, we send a link to it. The link works for 1 hour.</p>
+        <div class="field">
+          <label for="forgot-username">Username</label>
+          <input id="forgot-username" name="username" type="text" autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" required maxlength="64">
+        </div>
+        <button class="btn primary auth-submit" type="submit" id="forgot-submit">Send the link</button>
+        <button class="link-btn auth-alt" type="button" id="forgot-back">Back to sign in</button>
+        <p class="hint auth-help">No email set up, or no email came? Ask your admin for a reset link.</p>
       </form>
 
       <form id="form-change" class="auth-form" data-screen="change" novalidate hidden>

@@ -66,7 +66,7 @@
         version: EXPORT_VERSION,
         exported_at: this._stamp(new Date()),
         app_version: views.settings && views.settings.APP_VERSION ? views.settings.APP_VERSION : null,
-        user: { username: u.username, display_name: u.display_name || '', created_at: u.created_at },
+        user: { username: u.username, display_name: u.display_name || '', created_at: u.created_at, email: u.email || null, email_confirmed_at: u.email ? (u.email_confirmed_at || null) : null },
         profile: this._profileView(),
         settings,
         log_entries: entries,

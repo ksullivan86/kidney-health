@@ -2721,6 +2721,22 @@
         "title": "EgfrResult",
         "type": "object"
       },
+      "EmailBody": {
+        "description": "``PUT /api/me/email`` (design note 34). Checked by :func:`app.mail.check_address`.",
+        "properties": {
+          "email": {
+            "maxLength": 400,
+            "minLength": 1,
+            "title": "Email",
+            "type": "string"
+          }
+        },
+        "required": [
+          "email"
+        ],
+        "title": "EmailBody",
+        "type": "object"
+      },
       "EnergyNote": {
         "additionalProperties": false,
         "properties": {
@@ -3868,6 +3884,22 @@
           "renal_rating"
         ],
         "title": "FoodPortion",
+        "type": "object"
+      },
+      "ForgotBody": {
+        "description": "``POST /api/auth/forgot`` (design note 34): the user name only; the answer is the same for every name.",
+        "properties": {
+          "username": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Username",
+            "type": "string"
+          }
+        },
+        "required": [
+          "username"
+        ],
+        "title": "ForgotBody",
         "type": "object"
       },
       "GuidanceFood": {
@@ -14274,6 +14306,47 @@
         ]
       }
     },
+    "/api/admin/email/test": {
+      "post": {
+        "description": "Send a test email to the admin's own confirmed address and wait for the mail server's answer.",
+        "operationId": "admin_send_test_email",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Admin Send Test Email",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Send Test Email",
+        "tags": [
+          "admin"
+        ]
+      }
+    },
     "/api/admin/feedback": {
       "get": {
         "description": "``{feedback, counts}``: what testers sent, newest first, filtered by ``state`` (``open``, ``done``, ``all``) and\n``unsafe`` (only \"looked wrong or unsafe\"); ``before`` pages back. ``counts``: ``open``, ``done``, ``unsafe_open``.",
@@ -16435,6 +16508,94 @@
         "tags": [
           "ai",
           "voice"
+        ]
+      }
+    },
+    "/api/auth/email/confirm": {
+      "post": {
+        "description": "Confirm the address a link was sent to. A wrong, used or old link, or one for an address the person has changed since,\nis a 400 that counts as a per-IP failure. It does not sign anyone in.",
+        "operationId": "auth_confirm_email",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkInfoBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Auth Confirm Email",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "summary": "Confirm Email",
+        "tags": [
+          "auth"
+        ]
+      }
+    },
+    "/api/auth/forgot": {
+      "post": {
+        "description": "\"Forgot your password?\": the same 202 and words for every name (no account, no confirmed address, too many requests\nfor that account, or a link on its way). 10 requests an hour per address answer 429; 3 an hour per account are kept\nsilently.",
+        "operationId": "auth_forgot_password",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForgotBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "summary": "Forgot Password",
+        "tags": [
+          "auth"
         ]
       }
     },
@@ -22172,6 +22333,123 @@
         "summary": "Set My Route Choice",
         "tags": [
           "ai"
+        ]
+      }
+    },
+    "/api/me/email": {
+      "delete": {
+        "description": "Remove the address. No email and no password needed: it only takes a way to reset away.",
+        "operationId": "me_remove_my_email",
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Remove My Email",
+        "tags": [
+          "me"
+        ]
+      },
+      "get": {
+        "description": "``{available, reason, email, confirmed, confirmed_at}``: the address is shown to its owner only.",
+        "operationId": "me_read_my_email",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Me Read My Email",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Read My Email",
+        "tags": [
+          "me"
+        ]
+      },
+      "put": {
+        "description": "Save the address (not confirmed yet) and email a confirmation link to it. ``sent`` says whether that email went;\nthe address is kept either way, and saving the same address again sends a new link.",
+        "operationId": "me_set_my_email",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmailBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Me Set My Email",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Set My Email",
+        "tags": [
+          "me"
         ]
       }
     },

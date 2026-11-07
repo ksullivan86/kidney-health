@@ -66,6 +66,11 @@
     usage: () => request('GET', '/api/admin/usage?days=30'),
     audit: (before) => request('GET', `/api/admin/audit?limit=30${before ? `&before=${before}` : ''}`),
     about: () => request('GET', '/api/admin/about'),
+    // Password reset by email (design note 34; app/auth/email_api.py)
+    myEmail: () => request('GET', '/api/me/email'),
+    setMyEmail: (email) => request('PUT', '/api/me/email', { email }),
+    removeMyEmail: () => request('DELETE', '/api/me/email'),
+    testEmail: () => request('POST', '/api/admin/email/test'),
   };
 
   // Last answers, so one part can re-render without fetching everything again.
@@ -354,6 +359,7 @@
     body.append(nameForm);
 
     if (hasLocalPassword()) body.append(passwordForm(me));
+    if (hasLocalPassword()) body.append(emailBlock()); // password reset by email (design note 34): hidden when it cannot be used
     if (hasLocalPassword() && KH.twoStep) body.append(KH.twoStep.block()); // js/views/two_step.js (design note 17)
     if (hasLocalPassword() && KH.passkeys) body.append(KH.passkeys.block()); // js/views/passkeys.js (design note 18)
     if (hasLocalPassword() && KH.oidc) body.append(KH.oidc.block()); // js/views/oidc.js (design note 24): hidden without a provider
@@ -377,7 +383,7 @@
       pwField('set-pw-new', 'New password', 'new-password', newPwHint()),
       err,
       h('div', { class: 'settings-actions' }, h('button', { class: 'btn primary', type: 'submit', id: 'set-pw-save' }, 'Save new password')),
-      h('p', { class: 'hint' }, 'Changing your password signs out every other device. Forgot it? Ask your admin for a reset link.'));
+      h('p', { class: 'hint' }, 'Changing your password signs out every other device. Forgot it? Use "Forgot your password?" on the sign-in page if you have a confirmed email below, or ask your admin for a reset link.'));
     const details = h('details', { class: 'settings-details', id: 'set-password' }, h('summary', {}, 'Change password'), form);
     KH.auth.setupPwToggles(form);
     sheets.onSubmit(form, async (e) => {
@@ -403,6 +409,85 @@
     });
     return details;
   }
+
+  // email block (begin)
+  // Settings → Account → Email for password resets (design note 34). Optional. Setting or changing it asks for the password
+  // (js/core.js shows the prompt) and sends a confirmation link; only a confirmed address gets reset emails. Removing it needs no
+  // email. Hidden for test accounts and on servers without password sign-in; with email off it says an admin can turn it on.
+  function emailBlock() {
+    const wrap = h('div', { class: 'email-block', id: 'set-email' });
+    const title = subtitle('Email for password resets', 'set-email-h');
+    const box = h('div', { role: 'region', 'aria-labelledby': 'set-email-h' }, loading());
+    wrap.append(title, box);
+    loadEmail(wrap, box);
+    return wrap;
+  }
+  async function loadEmail(wrap, box, message = '') {
+    let st;
+    try { st = await A.myEmail(); } catch (err) { if (document.contains(box)) { clear(box); box.append(failed(err)); } return; }
+    if (!document.contains(box)) return;
+    clear(box);
+    if (!st.available && (st.reason === 'mode' || st.reason === 'test_account') && !st.email) { wrap.hidden = true; return; }
+    wrap.hidden = false;
+    const msg = statusMsg('set-email-msg');
+    const err = formError();
+    if (message) msg.textContent = message;
+    const remove = () => {
+      const btn = h('button', { class: 'btn secondary', type: 'button', id: 'set-email-remove' }, 'Remove');
+      btn.addEventListener('click', () => confirm.inline(box, btn, {
+        message: 'Remove this email? You can still ask your admin for a reset link.',
+        confirmText: 'Remove',
+        onConfirm: async () => { await A.removeMyEmail(); toast('Email removed.', 'ok'); await loadEmail(wrap, box); return true; },
+      }));
+      return btn;
+    };
+    if (!st.available) {
+      box.append(h('p', { class: 'hint' }, st.reason === 'off'
+        ? 'Email is off on this server, so it cannot send reset links. Your admin can turn it on. Until then, ask your admin for a reset link if you forget your password.'
+        : 'This account cannot use email for password resets.'));
+      if (st.email) box.append(kv([['Saved address', st.email]]), h('div', { class: 'settings-actions' }, remove()));
+      return;
+    }
+    const form = (value) => {
+      const id = 'set-email-input';
+      const input = h('input', { id, type: 'email', autocomplete: 'email', maxlength: 320, spellcheck: 'false', autocapitalize: 'none', 'aria-describedby': `${id}-hint` });
+      input.value = value || '';
+      const f = h('form', { class: 'settings-form', novalidate: true },
+        h('div', { class: 'field' },
+          h('label', { for: id }, 'Email address'),
+          h('div', { class: 'inline-row' }, input, h('button', { class: 'btn primary', type: 'submit', id: 'set-email-save' }, 'Save and send a link')),
+          h('span', { class: 'hint', id: `${id}-hint` }, 'Optional. Used only to send you a link if you forget your password. Your admin does not see it.')),
+        err);
+      sheets.onSubmit(f, async (e) => {
+        e.preventDefault();
+        const btn = $('#set-email-save', f);
+        if (btn.disabled) return;
+        if (!input.value.trim()) { showFormError(err, 'Enter an email address such as name@example.org.'); input.focus(); return; }
+        btn.disabled = true;
+        clear(err);
+        try {
+          const res = await A.setMyEmail(input.value.trim());
+          await loadEmail(wrap, box, res.message || '');
+        } catch (e2) { if (!e2.handled) { showFormError(err, e2); input.focus(); } } finally { if (document.contains(btn)) btn.disabled = false; }
+      });
+      return f;
+    };
+    if (!st.email) { box.append(form(''), msg); return; }
+    box.append(kv([['Address', st.email], ['State', st.confirmed ? `Confirmed ${fmtDate(st.confirmed_at)}` : 'Not confirmed yet. Open the link we sent to it.']]));
+    const actions = h('div', { class: 'settings-actions wrap' });
+    const change = h('button', { class: 'btn secondary', type: 'button', id: 'set-email-change' }, 'Change');
+    change.addEventListener('click', () => { actions.hidden = true; const f = form(''); box.insertBefore(f, msg); $('#set-email-input').focus(); });
+    actions.append(change);
+    if (!st.confirmed) {
+      actions.append(action('Send the link again', 'secondary', async () => {
+        const res = await A.setMyEmail(st.email);
+        await loadEmail(wrap, box, res.message || '');
+      }, { id: 'set-email-resend' }));
+    }
+    actions.append(remove());
+    box.append(actions, msg);
+  }
+  // email block (end)
 
   // Only the newest load draws: a slow older list could show a device that was signed out since.
   let devicesRequest = 0;
@@ -788,6 +873,7 @@
     'activity.extra_on': 'Active-day calories turned on', 'activity.extra_off': 'Active-day calories turned off',
     'list_sync.set_up': 'Shopping list app set up', 'list_sync.removed': 'Shopping list app removed', 'list_sync.sent': 'Shopping list sent',
     'instacart.sent': 'Shopping list sent to Instacart',
+    'email.set': 'Email for password resets saved', 'email.confirmed': 'Email for password resets confirmed', 'email.removed': 'Email for password resets removed',
     'test_accounts.created': 'Test account made', 'test_accounts.enabled': 'Test account turned on', 'test_accounts.disabled': 'Test account turned off',
     'test_accounts.reset': 'Test accounts reset',
   };
@@ -825,7 +911,8 @@
     if (ev.action === 'sessions.revoked' && d.count != null) return d.count === 1 ? '1 device' : `${d.count} devices`;
     if (ev.action === 'user.role_changed') return `${ROLE_LABEL[d.old] || d.old} → ${ROLE_LABEL[d.new] || d.new}`;
     if (ev.action === 'login.failed' && d.via === 'reauth') return 'when asked for the password again';
-    if (ev.action === 'user.password_changed' && d.via) return { self: 'by the person', admin_reset_link: 'with an admin reset link', reset_link: 'with a reset link', account_setup: 'first password' }[d.via] || '';
+    if (ev.action === 'user.password_changed' && d.via) return { self: 'by the person', admin_reset_link: 'with an admin reset link', reset_link: 'with a reset link', email_link: 'with a link sent by email', account_setup: 'first password' }[d.via] || '';
+    if (ev.action === 'user.reset_link_issued' && d.via === 'email') return 'sent by email';
     if (ev.action === 'api_token.created' && d.expires_in_days === 'never') return 'never expires';
     if (ev.action === 'api_token.created' && d.expires_in_days) return `valid for ${EXPIRY_LABEL[d.expires_in_days] || `${d.expires_in_days} days`}`;
     if (ev.action === 'api_token.revoked') return [d.count > 1 ? `${d.count} tokens` : '', TOKEN_REVOKED_WHY[d.reason] || ''].filter(Boolean).join(', ');
@@ -1621,6 +1708,7 @@
     if (u.two_step) badges.push(h('span', { class: 'badge two-step-on' }, 'Two-step sign-in'));
     if (u.passkeys) badges.push(h('span', { class: 'badge passkeys-on' }, u.passkeys === 1 ? '1 passkey' : `${u.passkeys} passkeys`));
     if (u.oidc_links) badges.push(h('span', { class: 'badge passkeys-on' }, 'Linked sign-in'));
+    if (u.email_confirmed) badges.push(h('span', { class: 'badge passkeys-on' }, 'Email confirmed')); // never the address (design note 34)
     if (u.shares) badges.push(h('span', { class: 'badge shares-on' }, `Care team: ${u.shares}`));
     if (u.test_account) badges.push(h('span', { class: 'badge test-account' }, 'Test account'));
     if (self) badges.push(h('span', { class: 'badge this-device' }, 'You'));
@@ -1628,14 +1716,14 @@
       u.auth_source === 'proxy' ? 'signs in through the proxy' : null].filter(Boolean).join(' · ');
     const link = u.reset_link;
     const linkText = link ? `${u.status === 'pending_setup' ? 'Setup link' : 'Password reset link'} open until ${fmtDateTime(link.expires_at)}`
-      + `${link.created_by != null ? `, created by ${state.me && link.created_by === state.me.id ? 'you' : accountName(link.created_by)}` : ', created with the command line'}` : null;
+      + `${link.via === 'email' ? ', asked for by email' : link.created_by != null ? `, created by ${state.me && link.created_by === state.me.id ? 'you' : accountName(link.created_by)}` : ', created with the command line'}` : null;
     const li = h('li', { class: 'user-row', id: `user-${u.id}` },
       h('div', { class: 'user-main' },
         h('span', { class: 'row-title' }, u.display_name || u.username, u.display_name ? h('span', { class: 'muted' }, ` (${u.username})`) : null),
         h('span', { class: 'user-badges' }, badges),
         h('span', { class: 'row-sub' }, sub),
         linkText ? h('span', { class: 'row-sub open-link' }, linkText) : null));
-    if (self && link && link.created_by !== state.me.id) {
+    if (self && link && link.created_by !== state.me.id && link.via !== 'email') {
       li.append(note('caution', h('p', {}, h('strong', {}, 'Someone created a password reset link for your account. '),
         'Whoever holds it can set your password and sign in as you. If you did not ask for it, revoke it under Manage.')));
     }
@@ -2267,6 +2355,8 @@
       ...oidcRows,
       // Connected devices (design note 27): each provider's app, never its client secret.
       ...deviceRows(a.devices),
+      // Password reset by email (design note 34): where the mail goes, never the password.
+      ['Email for password resets', emailAboutText(a.email)],
       proxy.ignored_identity_headers ? ['Identity headers ignored', `${proxy.ignored_identity_headers} from untrusted peers (check TRUSTED_PROXIES)`] : null,
       ['Last backup', a.last_backup_at ? fmtDateTime(a.last_backup_at) : 'None recorded (python -m app.admin backup)'],
       a.pre_v3_backup ? ['Pre-v0.3 backup', `${a.pre_v3_backup.path} (${fmtBytes(a.pre_v3_backup.bytes)}), deleted after ${fmtDate(a.pre_v3_backup.deleted_after)}`] : null,
@@ -2280,6 +2370,22 @@
         + (oidc.admins_linked === 0 ? ' No admin has linked a provider yet: link yours in Settings → Account before you sign out.' : ''))));
     }
     if (secrets.unreadable) box.append(note('caution', h('p', {}, 'Some stored keys can no longer be read (the secret key changed). Ask the people concerned to enter their keys again.')));
+    if (a.email && a.email.enabled) {
+      const msg = statusMsg('set-email-test-msg');
+      box.append(h('div', { class: 'settings-actions' }, action('Send a test email', 'secondary', async () => {
+        msg.textContent = 'Sending…';
+        try {
+          const r = await A.testEmail();
+          msg.textContent = r.demo ? 'Demo: nothing was sent. On a real server the test email goes to your confirmed email.' : `Sent to ${r.to}. Check that inbox (and its spam folder).`;
+        } catch (err) { msg.textContent = ''; throw err; }
+      }, { id: 'set-email-test' }), h('span', { class: 'hint' }, 'Goes to your own confirmed email (Settings → Account).')), msg);
+    }
+  }
+  function emailAboutText(e) {
+    if (!e || !e.configured) return 'Off (EMAIL_ENABLED). People ask an admin for a reset link.';
+    if (!e.enabled) return 'Set up, but not used: this server has no password sign-in';
+    const how = { starttls: 'STARTTLS', tls: 'TLS', none: 'no encryption, this machine only' }[e.security] || e.security;
+    return `On: through ${e.host}:${e.port} (${how}), from ${e.sender}${e.login ? ', with a user name and password' : ''}`;
   }
 
   // ---------------------------------------------------------------------------

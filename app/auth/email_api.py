@@ -47,6 +47,8 @@ EMAIL_OFF = "Email is off on this server. An admin can turn it on (EMAIL_ENABLED
 TEST_ACCOUNT = "This is a test account, shared by the testers, so it cannot have an email for password resets."
 CONFIRM_INVALID = "This link is not valid any more. Ask for a new one in Settings → Account."
 CONFIRM_TAKEN = "This address is already confirmed for another account here. Use a different address."
+ADMIN_NO_EMAIL = "Add and confirm your own email in Settings → Account first. The test email goes there."
+ALREADY_CONFIRMED = "This address is already confirmed."
 RESET_NOTE = "email"  # auth_tokens.note of a reset link sent by email (the reset audit says via="email_link")
 
 register_limit("forgot_ip", 10, 3600, "Too many password reset requests from this address. Try again later.")
@@ -170,7 +172,7 @@ def set_my_email(body: EmailBody, request: Request, user: RecentUser, conn: sqli
         raise ApiProblem(400, str(exc), field="email") from None
     row = _address(conn, user.id)
     if row["email"] == address and row["email_confirmed_at"]:
-        return {**_view(request, conn, user), "sent": False, "message": "This address is already confirmed."}
+        return {**_view(request, conn, user), "sent": False, "message": ALREADY_CONFIRMED}
     ctx.limits.take("email_confirm", user.id)
     changed = row["email"] != address
     _void_email_links(conn, user.id)
@@ -321,7 +323,7 @@ def send_test_email(request: Request, admin: RecentAdmin, conn: sqlite3.Connecti
         raise ApiProblem(409, EMAIL_OFF)
     row = _address(conn, admin.id)
     if row is None or not row["email"] or not row["email_confirmed_at"]:
-        raise ApiProblem(409, "Add and confirm your own email in Settings → Account first. The test email goes there.")
+        raise ApiProblem(409, ADMIN_NO_EMAIL)
     ctx.limits.take("email_confirm", admin.id)
     try:
         mailer(request).send(mail.test_letter(str(row["email"]), admin.username, _instance(conn, ctx)))

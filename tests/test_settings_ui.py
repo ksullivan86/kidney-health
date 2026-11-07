@@ -283,7 +283,8 @@ def test_api_has_the_reset_link_routes(two_clients) -> None:
     sam_id = sam.get("/api/me").json()["id"]
     assert admin.post(f"/api/admin/users/{sam_id}/reset-link").status_code == 200
     users = {u["id"]: u for u in admin.get("/api/admin/users").json()["users"]}
-    assert set(users[sam_id]["reset_link"]) == {"id", "created_by", "created_at", "expires_at"}
+    assert set(users[sam_id]["reset_link"]) == {"id", "created_by", "created_at", "expires_at", "via"}
+    assert users[sam_id]["reset_link"]["via"] == "link" and users[sam_id]["email_confirmed"] is False
     assert users[1]["reset_link"] is None
     assert admin.request("DELETE", f"/api/admin/users/{sam_id}/reset-link").status_code == 204
     assert sam.request("DELETE", f"/api/admin/users/{sam_id}/reset-link").status_code == 403  # admins only

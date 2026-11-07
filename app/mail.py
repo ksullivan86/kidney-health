@@ -41,6 +41,7 @@ _LOCAL = re.compile(r"^[a-z0-9!#$%&'*+/=?^_`{|}~-]+(\.[a-z0-9!#$%&'*+/=?^_`{|}~-
 _DOMAIN = re.compile(r"^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]([a-z0-9-]{0,61}[a-z0-9])?$")
 
 ADDRESS_HELP = "Enter an email address such as name@example.org."
+ADDRESS_TOO_LONG = "That address is too long. Use at most 320 characters."
 
 
 class AddressRejected(ValueError):
@@ -53,9 +54,9 @@ def check_address(raw: str | None) -> str:
     if not text:
         raise AddressRejected(ADDRESS_HELP)
     if len(text) > MAX_ADDRESS:
-        raise AddressRejected("That address is too long. Use at most 320 characters.")
+        raise AddressRejected(ADDRESS_TOO_LONG)
     local, at, domain = text.rpartition("@")
-    if not at or not local or len(local) > 64 or not _LOCAL.match(local) or not _DOMAIN.match(domain):
+    if not at or not local or len(local) > 64 or not _LOCAL.fullmatch(local) or not _DOMAIN.fullmatch(domain):
         raise AddressRejected(ADDRESS_HELP)
     return text
 
