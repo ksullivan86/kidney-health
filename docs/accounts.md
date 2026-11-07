@@ -429,7 +429,7 @@ cookies are not separated by port.
 
 ## Lost passwords and locked accounts
 
-There is no e-mail. An admin opens Users, picks the person and chooses **Reset link** (valid 24
+An admin opens Users, picks the person and chooses **Reset link** (valid 24
 hours, single use); completing it signs the person out everywhere and unlocks the account. The
 person sees "Your password was reset with a link from an admin" at their next password sign-in, so a
 reset cannot happen silently. The page the link opens shows the account's username (an account an
@@ -441,9 +441,45 @@ flagged in your own row. A link stops working when the account's password change
 when the account is disabled, and when its creator stops being an admin: demoting, disabling or
 deleting an admin deletes every unused invite and reset or setup link they created.
 
+With [password reset by email](#password-reset-by-email) on, a person with a confirmed email can also get a link
+themselves.
+
 The only admin locked out: `python -m app.admin reset-password mum` prints a link (set `PUBLIC_URL`
 for a full address), or `printf '%s\n' "$NEW" | python -m app.admin reset-password mum --stdin` sets
 it directly. `python -m app.admin list-users` shows every account.
+
+## Password reset by email
+
+Off by default. When you set up a mail server, people can add an email in **Settings → Account → Email for password resets**,
+confirm it with the link it gets (24 hours), and then use **Forgot your password?** on the sign-in page. The link they get works
+once, for 1 hour, and works like an admin's reset link: it signs them out everywhere, removes their passkeys and keeps two-step
+sign-in. Design note: [`dev/research/34-password-reset-by-email.md`](dev/research/34-password-reset-by-email.md).
+
+```sh
+EMAIL_ENABLED=true
+PUBLIC_URL=https://kidney.example.org          # required: the links use it
+SMTP_HOST=smtp.example.org
+SMTP_PORT=587                                  # 465 with SMTP_SECURITY=tls
+SMTP_SECURITY=starttls                         # starttls | tls | none (none: only a mail server on this machine)
+SMTP_USERNAME=kidney@example.org
+SMTP_PASSWORD_FILE=/run/secrets/smtp_password  # SMTP_PASSWORD is refused
+SMTP_FROM="Kidney Health <kidney@example.org>"
+```
+
+It needs `AUTH_MODE=local`. With `OIDC_ONLY` nobody signs in with a password, so the sign-in page does not offer it. Test
+accounts cannot have an email. Then check it: add and confirm your own email in Settings, and use **Server administration →
+About this server → Send a test email**.
+
+What people and admins see:
+
+* "Forgot your password?" always answers "If that account has a confirmed email, a link is on its way. It works for 1 hour.",
+  for any user name, so it does not reveal who has an account. At most 3 emails an hour go to one account, and one address may
+  ask 10 times an hour.
+* An address that is not confirmed gets no reset email. Removing an address needs no email.
+* Admins never see the address: **People** shows only **Email confirmed**, and a link the person asked for shows as "asked for
+  by email". The person's own export holds it.
+* The log says only "email sent" or "email failed: <reason>": never an address, a link or the password.
+* The server sends mail only to `SMTP_HOST`, with a checked certificate. See [`network-allowlist.md`](network-allowlist.md).
 
 ## Proxy mode
 

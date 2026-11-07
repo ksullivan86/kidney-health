@@ -738,7 +738,7 @@ link however they like.
 
 **Password reset.** No self-service (no SMTP in v0.3). Admin → `POST /api/admin/users/{id}/reset-link`
 (24 h, single use, fragment token) or CLI `python -m app.admin reset-password <username>`. Completing a
-reset revokes all of that user's sessions and clears a `locked` status.
+reset revokes all of that user's sessions and clears a `locked` status. (Later: an optional email reset, note 34.)
 
 **Proxy mode.** For each request, if `scope["state"]["peer"]` (note 01) is in `TRUSTED_PROXIES` and
 the header is present: normalise (strip, NFC, ≤ 255 chars), look up `users(auth_source='proxy',
@@ -1336,7 +1336,7 @@ green.
 
 **Later (v0.4)**
 
-- [ ] OIDC (decide Authlib 1.8.0 + itsdangerous vs own PKCE code), passkeys (webauthn 3.0.1) as a second factor or passwordless, optional SMTP for self-service reset, read-only sharing with a caregiver or dietitian (`shares(owner_user_id, grantee_user_id, scope, created_at, revoked_at)` and a `Principal(user, acting_for)` dependency), import of `export.json`.
+- [ ] OIDC (decide Authlib 1.8.0 + itsdangerous vs own PKCE code), passkeys (webauthn 3.0.1) as a second factor or passwordless, optional SMTP for self-service reset (built: note 34, `34-password-reset-by-email.md`), read-only sharing with a caregiver or dietitian (`shares(owner_user_id, grantee_user_id, scope, created_at, revoked_at)` and a `Principal(user, acting_for)` dependency), import of `export.json`.
 
 ---
 

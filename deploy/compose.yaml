@@ -153,6 +153,16 @@ services:
       # INSTACART_API_KEY_FILE: /run/secrets/instacart_api_key   # and add instacart_api_key below
       INSTACART_ENABLED: ${INSTACART_ENABLED:-}
       INSTACART_BASE_URL: ${INSTACART_BASE_URL:-}
+      # Password reset by email (docs/accounts.md#password-reset-by-email). Needs PUBLIC_URL. The mail server's password is a
+      # file secret only (SMTP_PASSWORD is refused):
+      # SMTP_PASSWORD_FILE: /run/secrets/smtp_password   # and add smtp_password below
+      EMAIL_ENABLED: ${EMAIL_ENABLED:-}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-}
+      SMTP_SECURITY: ${SMTP_SECURITY:-}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      SMTP_TIMEOUT_S: ${SMTP_TIMEOUT_S:-}
       HANDBOOK_PUBLIC_URL: ${HANDBOOK_PUBLIC_URL:-}
       PASSWORD_BREACH_CHECK: ${PASSWORD_BREACH_CHECK:-}
       # Sign in with Authentik, Google or another OpenID Connect provider (docs/accounts.md). Off unless OIDC_ENABLED=true;
@@ -254,6 +264,9 @@ secrets:
   #   x-podman.relabel: Z
   # instacart_api_key:                  # only for Instacart (INSTACART_ENABLED; docs/instacart.md)
   #   file: ./secrets/instacart_api_key
+  #   x-podman.relabel: Z
+  # smtp_password:                      # only for password reset by email (EMAIL_ENABLED; docs/accounts.md)
+  #   file: ./secrets/smtp_password
   #   x-podman.relabel: Z
   # test_account_password:              # only for test accounts (TEST_ACCOUNT_ENABLED; docs/test-the-full-app.md)
   #   file: ./secrets/test_account_password

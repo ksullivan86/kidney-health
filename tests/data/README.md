@@ -246,6 +246,27 @@ What a replayer must get right:
 * A date with a time and a zone becomes the day in the device's own zone, so the cases pass `tzOffsetMinutes` (minutes east of UTC) to make the answer the same on every machine. A date with no time is used as written.
 * Result rows come out newest first, with `value`, `unit`, `text` and `display`. `problems` and `summary` are sentences shown to people.
 
+## email_vectors.json
+
+How the server checks an email address for password resets, and the fixed sentences the demo repeats (design note 34).
+
+* Server: `app/mail.py` (`check_address`) and `app/auth/email_api.py`.
+* Browser twin: the demo routes in `app/static/js/mock/auth.js` (`emailAddress`, `EMAIL_TEXTS`).
+* Made by `tests/data/gen_email_vectors.py`.
+
+Top-level keys:
+
+* `about`: where the file comes from.
+* `address_cases`: `[{input, ok, value | detail}]`. `value` is the stored form (trimmed, lower case); `detail` is the sentence for
+  a refused address.
+* `texts`: `{forgot, confirm_invalid, address_help, address_long, admin_no_email, already}`, the sentences word for word.
+
+What a replayer must get right:
+
+* Only plain ASCII is accepted: no spaces, line breaks or letters with accents, at most 64 characters before the `@` and 320 in
+  all.
+* The answer to "Forgot your password?" is the same sentence for every user name.
+
 ## entry_version_vectors.json
 
 The version of a logged entry, the `If-Match` rule, and the `PUT` and `DELETE` routes that use them to stop one device overwriting another's edit.

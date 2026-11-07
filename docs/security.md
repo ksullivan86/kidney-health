@@ -194,7 +194,7 @@ Tick every line before you put real health data in the app.
 ## 6. Secrets, the `SECRET_KEY` and backups
 
 * **Every secret is a file.** The app reads `SECRET_KEY_FILE`, `USDA_API_KEY_FILE`,
-  `ADMIN_PASSWORD_FILE`, `TRUSTED_PROXY_SECRET_FILE` and the AI keys' `*_FILE` variants. Setting both
+  `ADMIN_PASSWORD_FILE`, `TRUSTED_PROXY_SECRET_FILE`, `SMTP_PASSWORD_FILE` and the AI keys' `*_FILE` variants. Setting both
   `NAME` and `NAME_FILE` is a start-up error; an empty file means "unset"; trailing newlines are
   stripped.
 * **Keys you set on the server are locked.** The UI shows them as "set by server"; nobody can read or
@@ -248,6 +248,7 @@ The app makes **no** outbound request until you turn a feature on. The full list
 | Sign-in with a provider (Authentik, Google) | Yes (`OIDC_ENABLED=false`) | The server asks the provider for its configuration and keys, and sends it the one-time code with the client ID and secret. The browser goes to the provider to sign in. Nothing about a person's health data. |
 | A person's own list app (Grocy, KitchenOwl, Mealie) | Yes (`LIST_SYNC_ENABLED=false`) | The person's key in a header, and the names and amounts of the foods they tick. Home addresses only through the env-only `LIST_SYNC_ALLOWED_HOSTS`; plain http only to those; no redirects ([list-sync.md](list-sync.md)). |
 | Instacart | Yes (`INSTACART_ENABLED=false`, and it needs the server's own key in `INSTACART_API_KEY_FILE`) | The server's key in a header, the title "Shopping list", and the name, amount and grams of each food the person ticks, each time they confirm. Private and metadata addresses are always refused; no redirects; the link that comes back must be on Instacart's own domains ([instacart.md](instacart.md)). |
+| Password reset by email | Yes (`EMAIL_ENABLED=false`) | To your own mail server (`SMTP_HOST`) only: a confirmation email when a person adds an address, a reset link when they use "Forgot your password?", and an admin's test email. Each holds a user name and a link, no health data. The certificate is checked; plain SMTP only to this machine. The password only as a file (`SMTP_PASSWORD_FILE`). "Forgot your password?" answers the same for every user name ([accounts.md](accounts.md#password-reset-by-email)). |
 | Recipe pages | Yes (`RECIPE_IMPORT_ENABLED=false`) | A plain request for the one page a person pastes, from the server, with no cookie and nothing about the person. Private and metadata addresses are always refused; up to 3 redirects, each checked again ([recipe-import.md](recipe-import.md)). |
 
 AI base URLs pass an SSRF filter: private, loopback and link-local addresses are reachable only

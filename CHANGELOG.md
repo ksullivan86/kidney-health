@@ -5,6 +5,24 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## Unreleased
+
+### Upgrading
+
+* Schema step 34 adds an optional email address to each account. Every account starts without one. Nothing else changes until
+  you turn email on.
+
+### Added
+
+* **Password reset by email**, off by default. Set `EMAIL_ENABLED=true`, `PUBLIC_URL`, `SMTP_HOST` and `SMTP_FROM` (and
+  `SMTP_USERNAME` with `SMTP_PASSWORD_FILE` if your mail server asks for them). People can then add an email in Settings →
+  Account and confirm it with the link it gets. After that, **Forgot your password?** on the sign-in page emails them a reset
+  link that works once, for 1 hour. The answer is the same for every user name, so it does not show who has an account. Admins
+  see only whether a person has a confirmed email, never the address. Server administration → About this server has **Send a
+  test email**. See [accounts.md](docs/accounts.md#password-reset-by-email).
+* `SMTP_PASSWORD` given inline stops the start, as for the other secrets. `SMTP_SECURITY=none` works only with a mail server on
+  the same machine.
+
 ## 0.22.3 — 2026-11-06
 
 ### Upgrading from 0.22.2
