@@ -29,7 +29,7 @@ from fastapi.responses import JSONResponse
 from .. import mail
 from ..audit import audit
 from ..db import get_db, utcnow
-from . import clock, tokens
+from . import clock, housekeeping, tokens
 from .context import AuthContext, auth_context, public_base, request_ip
 from .deps import CurrentUser, RecentAdmin, RecentUser, current_user, ensure_setup_done, require_admin
 from .errors import ApiProblem, too_many
@@ -54,6 +54,16 @@ RESET_NOTE = "email"  # auth_tokens.note of a reset link sent by email (the rese
 register_limit("forgot_ip", 10, 3600, "Too many password reset requests from this address. Try again later.")
 register_limit("forgot_account", 3, 3600)  # never answered with a 429: the same 202 for every name
 register_limit("email_confirm", 5, 3600, "Too many confirmation emails. Try again later.")
+
+
+def purge_old_links(conn: sqlite3.Connection) -> int:
+    """Delete confirmation links that are used or out of date (daily housekeeping)."""
+    cur = conn.execute("DELETE FROM email_tokens WHERE used_at IS NOT NULL OR expires_at <= ?", (clock.now_iso(),))
+    conn.commit()
+    return int(cur.rowcount or 0)
+
+
+housekeeping.register_daily("email_tokens", lambda conn, ctx: purge_old_links(conn))
 
 
 # --------------------------------------------------------------------------- #

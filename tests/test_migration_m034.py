@@ -50,3 +50,20 @@ def test_a_new_database_has_the_columns_and_table():
     assert "email" in columns and "email_confirmed_at" in columns
     assert conn.execute("SELECT name FROM sqlite_master WHERE name = 'email_tokens'").fetchone() is not None
     conn.close()
+
+
+def test_old_confirmation_links_are_purged():
+    from app.auth.email_api import purge_old_links
+
+    conn = db.connect(":memory:")
+    db.migrate(conn)
+    insert_users(conn, [(1, "admin")])
+    rows = [("used", "2026-11-07T10:00:00Z", "2999-01-01T00:00:00Z"), ("old", None, "2000-01-01T00:00:00Z"),
+            ("open", None, "2999-01-01T00:00:00Z")]
+    for token_id, used, expires in rows:
+        conn.execute("INSERT INTO email_tokens (id, user_id, email, verifier_hash, created_at, expires_at, used_at) "
+                     "VALUES (?, 1, 'a@example.org', x'00', '2026-11-07T10:00:00Z', ?, ?)", (token_id, expires, used))
+    assert purge_old_links(conn) == 2
+    assert [r[0] for r in conn.execute("SELECT id FROM email_tokens")] == ["open"]
+    conn.close()
+
