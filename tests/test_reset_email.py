@@ -497,3 +497,30 @@ def test_a_slow_mail_server_is_given_up_on() -> None:
             mailer.send(mail.test_letter(SAM_MAIL, "admin", "Home"))
         assert time.monotonic() - start < 2.5
         assert caught.value.message == "The mail server did not answer in time."
+
+
+def test_a_link_confirms_only_its_own_account_and_goes_with_it(pair: tuple[TestClient, TestClient], smtp: FakeSmtp) -> None:
+    # email_tokens (schema step 34) in the isolation matrix: one person's link never touches another's account.
+    admin, sam = pair
+    assert admin.put("/api/me/email", json={"email": "admin@example.org"}).status_code == 200
+    assert sam.put("/api/me/email", json={"email": SAM_MAIL}).status_code == 200
+    by_to = {m["rcpt"][0]: m for m in smtp.wait(2)}
+    anon = TestClient(sam.app, base_url=HTTPS_URL)
+    assert anon.post("/api/auth/email/confirm", json={"token": token_in(by_to[SAM_MAIL], "confirm-email")}).status_code == 200
+    assert sam.get("/api/me/email").json()["confirmed"] is True
+    assert admin.get("/api/me/email").json()["confirmed"] is False  # sam's link did nothing to the admin's address
+    assert SAM_MAIL not in admin.get("/api/me/email").text
+    sam_id = sam.get("/api/me").json()["id"]
+    conn = db(admin)
+    open_links = "SELECT COUNT(*) FROM email_tokens WHERE user_id = ? AND used_at IS NULL"
+    assert conn.execute(open_links, (sam_id,)).fetchone()[0] == 0  # the used link works no more
+    assert sam.put("/api/me/email", json={"email": "sam2@example.org"}).status_code == 200
+    assert conn.execute(open_links, (sam_id,)).fetchone()[0] == 1
+    conn.close()
+    from conftest import USER_PASSWORD
+
+    assert sam.request("DELETE", "/api/me", json={"password": USER_PASSWORD, "confirm": "DELETE"}).status_code == 204
+    conn = db(admin)
+    assert conn.execute("SELECT COUNT(*) FROM email_tokens WHERE user_id = ?", (sam_id,)).fetchone()[0] == 0
+    assert conn.execute("SELECT COUNT(*) FROM email_tokens WHERE used_at IS NULL").fetchone()[0] == 1  # the admin's own stays
+    conn.close()
