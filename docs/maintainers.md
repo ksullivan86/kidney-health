@@ -258,6 +258,8 @@ A repository variable (Settings → Secrets and variables → Actions → Variab
 * **v0.16.0: not held.** The release runs schema step 29 at start without an automatic copy (it only adds two tables), adds
   the `tzdata` dependency and moves the shipped files from `:0.15` to `:0.16`. A host that tracks `:0.15` stays on 0.15.x.
   CHANGELOG.md, "Upgrading from 0.15", says to take a backup first.
+* **v0.23.0: not held.** Schema step 34 adds `users.email` and `users.email_confirmed_at` (password reset by email, off by
+  default). The release moves the shipped files from `:0.22` to `:0.23`. A host that tracks `:0.22` stays on 0.22.x.
 * **v0.22.3: not held.** A patch: fifteen audit fixes and new base images. `:0.22` and `:latest` move.
 * **v0.22.2: not held.** A patch: the sharing and passkey choices, a layout fix at 200 % text. `:0.22` and `:latest` move.
 * **v0.22.1: not held.** A patch: fixes for late replies on five screens and new base images. `:0.22` and `:latest` move.

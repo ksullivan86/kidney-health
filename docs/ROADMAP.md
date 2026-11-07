@@ -3,7 +3,7 @@
 One line per item, with the specification that defers it (the design notes are in
 [`docs/dev/research/`](dev/research/)). Items leave this list when they ship (move them to
 [CHANGELOG.md](../CHANGELOG.md)) or when the owner drops them. Each feature owner appends to its own
-section. Last reviewed for the v0.22.3 release (2026-11-01).
+section. Last reviewed for the v0.23.0 release (2026-11-07).
 
 ## First: daily logging you can trust (the owner, 2026-10-29)
 
@@ -30,27 +30,21 @@ recovery trustworthy before more AI or native-app features.
    [`maintainers.md`](maintainers.md#release-process) is a gate (iPhone offline, large text, keyboard only, VoiceOver, TalkBack),
    and the release pull request says who checked each line on what device.
 
-## Next (the owner, 2026-10-22)
+## Next (reviewed 2026-11-07)
 
-The next build is the **native iOS app as a Health sync companion** (option A of [note 15](dev/research/15-native-ios-app.md)): a small
-SwiftUI app that reads weight and blood pressure from Apple Health in the background and sends them to `POST /push/v1/body` with a device
-token. The Home Screen web app stays the place for every other screen. In this order:
+The owner's order from 2026-10-31 has shipped (0.16 to 0.22), and so have the reliability and audit passes (0.22.1 to 0.22.3)
+and password reset by email (0.23.0). Candidates, for the owner to choose:
 
-1. **Done (2026-10-28): the shared Swift package `KidneyHealthCore` and its vector tests, run on Linux.** `ios/KidneyHealthCore` holds the
-   rules that must equal the server's (ranges, the time-of-day context, the watch test, `source_key`, kilogram rounding, batches of 50)
-   and checks each row as `POST /push/v1/body` does. CI replays `tests/data/body_vectors.json`, `apple_health_vectors.json` and
-   `push_vectors.json` on a pinned Swift toolchain.
-2. **Done (2026-10-28): the app target, built and unit-tested on GitHub's macOS runner** (in the simulator). `ios/KidneyHealthSync`:
-   the server address and token, the Health permission for exactly three read types, background sync, and the status line. **Test
-   connection** checks the token with `GET /push/v1/check` and sends nothing else.
-3. **Signing, TestFlight and the owner's tests on a real iPhone**, once the owner has an Apple Developer Program membership (USD 99 a year).
+* **Reminders by phone notification** (Web Push, opt-in, never for lows): "Installable app" below. Medium.
+* **Reading a lab PDF's own text** instead of drawing each page as a photo: "Lab results from a PDF report" below. Medium.
+* **A name detector on top of the privacy filter** (adds packages and a model to the image; the owner's choice): "Privacy
+  tiers" below. Small to medium.
+* **Clinician accounts with notes**: "Ideas from the owner" below. Large.
+* **Kroger next to Instacart**, if its API allows it: "The shopping list outside the app" below.
 
-Decided 2026-10-22: option A first, and the Swift package first (decisions 1 and 2 of
-[note 15 §7](dev/research/15-native-ios-app.md#7-decisions-for-the-owner)). Still open: when to enrol and add the signing secrets (decision
-3, needed for step 3), and whether the app pairs by QR code or by pasting the token (decision 4; the QR code is an optional fourth step of about 1M
-tokens in note 15 §6, and the route to test a token is built). Cost, from note 15 §6: about 4–6M tokens for option A, against 6–10M for the
-full web-view shell (option B), which stays a later choice. Out of scope: an App Store listing, Android, and anything that reads glucose,
-insulin or medicines.
+Waiting on the owner: an Instacart key; an Apple Developer membership for the iPhone app's step 3 (signing, TestFlight and
+tests on a real iPhone; steps 1 and 2 are built, [note 15](dev/research/15-native-ios-app.md)); runs with real files (list
+apps, a Health export, lab PDFs on the local model); the clinician review below.
 
 ## Clinical review (before the draft banners can go)
 
@@ -61,7 +55,7 @@ insulin or medicines.
 
 * ~~OIDC sign-in (Authelia, Authentik, Keycloak, Kanidm, Pocket ID)~~ — built, not yet released ([note 24](dev/research/24-oidc-sign-in.md), [`accounts.md`](accounts.md#sign-in-with-authentik-google-or-another-provider)): one provider per server (setup steps for Authentik and Google; tested with a fake provider, not yet with a real one), the project's own PKCE and ID token code on `cryptography` (no new dependency), off until the admin sets it. Still later: several providers at once, hiding the password form (`OIDC_ONLY`), signing out at the provider too, and asking the provider for a second factor (`amr`/`acr`) — note 24 §12.
 * A second factor for local sign-in: one-time codes (TOTP) shipped in 0.9.0 ([note 17](dev/research/17-two-step-sign-in.md)), and so did requiring them for admins. Passkeys shipped in 0.9.0 as an extra way in, with the password kept ([note 18](dev/research/18-passkeys.md)). Using a passkey instead of retyping the password is built too. Still later: accounts with passkeys only; with a second factor the 8-character password minimum becomes acceptable — note 07 §3.1, §6 "Later (v0.4)" and §8 risk R3.
-* ~~Optional SMTP for self-service password resets~~ — built, not yet released ([note 34](dev/research/34-password-reset-by-email.md), [`accounts.md`](accounts.md#password-reset-by-email), schema step 34): a person adds and confirms an email in Settings → Account, then "Forgot your password?" on the sign-in page emails a reset link for 1 hour. Off until the admin sets `EMAIL_ENABLED` and the mail server. An admin's reset link still works as before.
+* ~~Optional SMTP for self-service password resets~~ — shipped in 0.23.0 ([note 34](dev/research/34-password-reset-by-email.md), [`accounts.md`](accounts.md#password-reset-by-email), schema step 34): a person adds and confirms an email in Settings → Account, then "Forgot your password?" on the sign-in page emails a reset link for 1 hour. Off until the admin sets `EMAIL_ENABLED` and the mail server. An admin's reset link still works as before.
 * ~~Read-only sharing with a caregiver or dietitian~~ — shipped in 0.10.0 ([note 19](dev/research/19-sharing.md), [`accounts.md`](accounts.md#sharing-with-a-caregiver)): share links, four areas, the Visit prep page read-only, off until the admin turns it on. An end date for a share and shared Trends charts are built too (schema step 25).
 * ~~Care team: invite by user name, and a Care helper who plans meals~~ — built ([note 25](dev/research/25-care-team.md), [`accounts.md`](accounts.md#care-team), schema step 27). The rest is built too: per-person switches, a Caregiver who logs eaten food, saved meals for helpers and meal suggestions ([note 29](dev/research/29-full-care-team.md), schema step 31). Still later: the person approving each change before it lands, notes from a clinician, suggestions sent to several people at once.
 * ~~Set the server up by code~~ — shipped in 0.10.0 ([note 20](dev/research/20-setup-by-code.md), [`deployment.md`](deployment.md#set-it-up-by-code)): a variable for every server setting, and `SETTINGS_INITIAL_ONLY` for first values an admin can change in the app later.

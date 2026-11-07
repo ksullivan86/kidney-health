@@ -5,9 +5,11 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
-## Unreleased
+## 0.23.0 — 2026-11-07
 
-### Upgrading
+### Upgrading from 0.22 (read this first)
+
+* Back up first. Change the image tag to `:0.23`; the shipped deployment files already say `:0.23`.
 
 * Schema step 34 adds an optional email address to each account. Every account starts without one. Nothing else changes until
   you turn email on.
@@ -22,6 +24,12 @@ the API. Security fixes are released as patch versions of the newest minor versi
   test email**. See [accounts.md](docs/accounts.md#password-reset-by-email).
 * `SMTP_PASSWORD` given inline stops the start, as for the other secrets. `SMTP_SECURITY=none` works only with a mail server on
   the same machine.
+
+### Fixed
+
+* Ask: a retried save that raced its first try now reports that save. Before, with trusted saving off, it could offer a card
+  for food that was already being saved.
+* A device sign-in that finishes late now uses the same session time limits as every other check.
 
 ## 0.22.3 — 2026-11-06
 

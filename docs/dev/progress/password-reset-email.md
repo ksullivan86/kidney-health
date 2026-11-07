@@ -1,6 +1,6 @@
 # Progress: password reset by email (role: password-reset-email)
 
-Status: in progress (code, docs and walk done; waiting for the full suite)
+Status: complete (merged into 0.23.0 by the integrator)
 
 Branch: worktree-agent-a2f49c0ffcd44efdb (origin/main + origin/claude/adoring-sagan-th5swr, fast-forwarded). Do not push, no PR,
 no version bump.
