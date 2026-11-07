@@ -28,7 +28,6 @@ import secrets
 import sqlite3
 import threading
 from dataclasses import dataclass
-from datetime import timedelta
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Path, Query, Request
@@ -227,10 +226,7 @@ def _person_still_current(request: Request, conn: sqlite3.Connection, user: User
     info = sessions.lookup(conn, sessions.read_token(request))
     if info is None or info.user_id != user.id or hashlib.sha256(info.id.encode()).digest() != flow.session_hash:
         return False
-    now = clock.now()
-    expires, seen = clock.parse(info.expires_at), clock.parse(info.last_seen_at)
-    return (expires is not None and seen is not None and now < expires
-            and now < seen + timedelta(days=settings.session_idle_days))
+    return sessions.is_live(info, idle_days=settings.session_idle_days)
 
 
 def _flows(request: Request) -> FlowStore:
