@@ -18,7 +18,7 @@ from fastapi import Depends, FastAPI
 from fastapi.exceptions import RequestValidationError
 
 from . import brand
-from . import auth, crypto, foods, log as log_router, meals, profile, pwa, security
+from . import auth, crypto, foods, log as log_router, mail, meals, profile, pwa, security
 from . import labs  # M2 targets: /api/labs
 from . import symptoms  # schema step 15: /api/symptoms
 from . import body  # schema step 18: /api/body (weight and blood pressure)
@@ -143,6 +143,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.list_sync_net = ListSyncNet(HostAllowlist.parse(settings.list_sync_allowed_hosts))
     app.state.recipe_fetcher = RecipeFetcher()
     app.state.instacart = instacart_api.InstacartClient(settings.instacart.base_url)
+    app.state.mailer = mail.Mailer(settings.email, ehlo_name=settings.public_host)  # design note 34 (tests point it at a fake server)
     app.add_exception_handler(RequestValidationError, security.validation_error_handler)
     auth_ctx = auth.install(app, settings, store)  # /api/auth, /api/me, /api/admin + error handler
 

@@ -28,6 +28,8 @@ PUBLIC = {
     ("get", "/api/auth/oidc/callback"),
     ("get", "/api/auth/oidc/callback/{name}"),  # a named provider's way back (note 24 §13)
     ("post", "/api/auth/oidc/invite"),
+    ("post", "/api/auth/forgot"),  # password reset by email (note 34): 404 while email is off
+    ("post", "/api/auth/email/confirm"),
 }
 METHODS = ("get", "post", "put", "patch", "delete")
 

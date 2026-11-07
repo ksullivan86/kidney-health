@@ -8,6 +8,8 @@
   :mod:`app.auth.totp_api` (``/api/me/totp``, two-step sign-in; the codes are :mod:`app.auth.totp`).
   :mod:`app.auth.passkeys_api` (``/api/me/passkeys``, ``/api/auth/passkey``; the checks are :mod:`app.auth.webauthn`).
   :mod:`app.auth.oidc_api` (``/api/auth/oidc``, ``/api/me/oidc``: sign-in with a provider; the client is :mod:`app.auth.oidc`).
+  :mod:`app.auth.email_api` (``/api/me/email``, ``/api/auth/forgot``, ``/api/auth/email/confirm``, ``/api/admin/email/test``:
+  password reset by email; the emails are :mod:`app.mail`).
 * :mod:`app.auth.passwords`, :mod:`app.auth.policy`, :mod:`app.auth.sessions`,
   :mod:`app.auth.throttle`, :mod:`app.auth.proxy`, :mod:`app.auth.tokens`,
   :mod:`app.auth.ratelimit`, :mod:`app.auth.bootstrap`.
@@ -30,7 +32,7 @@ if TYPE_CHECKING:  # pragma: no cover
 
 
 def install(app: "FastAPI", settings: "Settings", store: "SettingsStore") -> AuthContext:
-    from . import admin_api, api_tokens, me, oidc, oidc_api, passkeys_api, routes, totp_api
+    from . import admin_api, api_tokens, email_api, me, oidc, oidc_api, passkeys_api, routes, totp_api
 
     ctx = AuthContext(settings=settings, store=store)
     app.state.auth = ctx
@@ -52,6 +54,9 @@ def install(app: "FastAPI", settings: "Settings", store: "SettingsStore") -> Aut
     app.include_router(oidc_api.me_router)
     app.include_router(api_tokens.router)
     app.include_router(admin_api.router)
+    app.include_router(email_api.me_router)  # password reset by email (design note 34)
+    app.include_router(email_api.auth_router)
+    app.include_router(email_api.admin_router)
     return ctx
 
 

@@ -229,4 +229,5 @@ def user_admin_dict(row: sqlite3.Row) -> dict[str, Any]:
         "created_at": row["created_at"],
         "last_login_at": row["last_login_at"],
         "test_account": bool(row["is_test_account"]) if "is_test_account" in row.keys() else False,
+        "email_confirmed": bool(row["email_confirmed"]) if "email_confirmed" in row.keys() else False,  # design note 34: never the address
     }

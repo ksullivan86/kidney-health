@@ -54,6 +54,18 @@ class LinkInfoBody(_Body):
     token: SecretStr = Field(min_length=1, max_length=200)
 
 
+class ForgotBody(_Body):
+    """``POST /api/auth/forgot`` (design note 34): the user name only; the answer is the same for every name."""
+
+    username: str = Field(min_length=1, max_length=USERNAME_MAX)
+
+
+class EmailBody(_Body):
+    """``PUT /api/me/email`` (design note 34). Checked by :func:`app.mail.check_address`."""
+
+    email: str = Field(min_length=1, max_length=400)
+
+
 class ReauthBody(_Body):
     password: SecretStr = Field(min_length=1, max_length=PASSWORD_FIELD_MAX)
 

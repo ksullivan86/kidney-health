@@ -257,7 +257,8 @@ def export_data(conn: sqlite3.Connection, user_id: int, *, app_version: str) -> 
     from .profile import get_profile
 
     uid = int(user_id)
-    user = conn.execute("SELECT username, display_name, created_at FROM users WHERE id = ?", (uid,)).fetchone()
+    user = conn.execute("SELECT username, display_name, created_at, email, email_confirmed_at FROM users WHERE id = ?",
+                        (uid,)).fetchone()
     settings = {
         r["key"]: json.loads(r["value_json"])
         for r in conn.execute("SELECT key, value_json FROM user_settings WHERE user_id = ? ORDER BY key", (uid,))
@@ -269,7 +270,9 @@ def export_data(conn: sqlite3.Connection, user_id: int, *, app_version: str) -> 
         "version": EXPORT_VERSION,
         "exported_at": utcnow(),
         "app_version": app_version,
-        "user": {"username": user["username"], "display_name": user["display_name"] or "", "created_at": user["created_at"]},
+        # The email for password resets is the person's own (design note 34); the import never sets it.
+        "user": {"username": user["username"], "display_name": user["display_name"] or "", "created_at": user["created_at"],
+                 "email": user["email"], "email_confirmed_at": user["email_confirmed_at"]},
         "profile": get_profile(conn, uid),
         "settings": settings,
         "log_entries": [entry_fields(r) for r in fetch_entries(conn, uid)],  # no "version": derived, not data
