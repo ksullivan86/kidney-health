@@ -38,13 +38,13 @@ example), and nothing else: no open ports, and the name only has to resolve on y
 obtains a Let's Encrypt **wildcard** certificate through the DNS API and renews it by itself.
 
 The stock Caddy image has no DNS modules, so build one with the Cloudflare module
-([`deploy/caddy/Containerfile`](../deploy/caddy/Containerfile), Caddy 2.11.7 with
+([`deploy/caddy/Containerfile`](../deploy/caddy/Containerfile), Caddy 2.11.9 with
 `caddy-dns/cloudflare` v0.2.4, both base images pinned by digest):
 
 ```Dockerfile
-FROM docker.io/library/caddy:2.11.7-builder@sha256:… AS build
-RUN xcaddy build v2.11.7 --with github.com/caddy-dns/cloudflare@v0.2.4
-FROM docker.io/library/caddy:2.11.7@sha256:…
+FROM docker.io/library/caddy:2.11.9-builder@sha256:… AS build
+RUN xcaddy build v2.11.9 --with github.com/caddy-dns/cloudflare@v0.2.4
+FROM docker.io/library/caddy:2.11.9@sha256:…
 COPY --from=build /usr/bin/caddy /usr/bin/caddy
 ```
 

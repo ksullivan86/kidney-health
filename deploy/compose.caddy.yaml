@@ -25,7 +25,7 @@ services:
     build:
       context: ./caddy
       dockerfile: Containerfile
-    image: localhost/kidney-health-caddy:2.11.7
+    image: localhost/kidney-health-caddy:2.11.9
     container_name: kidney-health-caddy
     restart: always
     # Root inside the container but without a single capability (it listens on 8443). On Podman
