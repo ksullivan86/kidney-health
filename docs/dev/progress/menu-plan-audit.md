@@ -1,9 +1,10 @@
-Status: in progress
+Status: fix published; full CI verification pending
 
 # Menu-plan sheet audit
 
 Branch: `audit/menu-plan-editor-lifecycle`, main `01f5298`.
 Worktree: `/workspace/work/menu-plan-audit-src`.
+PR: https://github.com/ksullivan86/kidney-health/pull/176 (draft; do not merge).
 
 - Resumed the remaining menu-plan lead in the durable handoff (PR #168).
 - Read repository instructions, architecture's menu-day section, design note 08 and existing menu tests/harness.
@@ -22,8 +23,12 @@ Worktree: `/workspace/work/menu-plan-audit-src`.
   in `/workspace/work/menu-plan-browser-last/report.json`.
 - The browser harness initially removed its route handler before fulfilling the held
   route, causing `Route is already handled`; corrected the order. This was a harness failure.
-- Ruff, whitespace, JS parity, OpenAPI, generated handbook and strict MkDocs checks pass. The existing full menu-plan
-  browser walk is running; CI's full suite will be checked on the published PR. Logs are `/workspace/work/menu-plan-*.log`.
+- Ruff, whitespace, JS parity, OpenAPI, generated handbook and strict MkDocs checks pass.
+- Existing menu-plan browser walk: **43 pass, 0 fail** with `SHARING_ENABLED=true`, including signed-out, tampered-link,
+  demo and batch-dedup behavior (`/workspace/work/menu-plan-existing-enabled/report.json`). With the default sharing-off
+  configuration, 41 passed and two strict console checks failed on the documented `/api/shared` 404; no app behavior
+  was changed or console filter weakened to make the enabled run pass.
+- Full CI verification is pending; do not call its full suite green yet. Logs are `/workspace/work/menu-plan-*.log`.
 
 ## Reproduce
 
@@ -31,6 +36,7 @@ Worktree: `/workspace/work/menu-plan-audit-src`.
 node tests/js/menu_plan_lifecycle.test.mjs
 TMPDIR=/workspace/work/pytest-scratch /workspace/kidney-health/.venv/bin/python -m pytest tests/test_menu_plan.py tests/test_menu_plan_lifecycle.py tests/test_e2e_tools.py -o addopts='' -q
 python tools/e2e/menu_plan_late_replies.py --out /tmp/kh-menu-late
+SHARING_ENABLED=true python tools/e2e/menuplan.py --out /tmp/kh-menu-plan
 ```
 
 Unchanged comparison tree: `/workspace/work/menu-plan-baseline-src` (detached `01f5298` with only the new Node file copied).
