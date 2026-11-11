@@ -1,9 +1,10 @@
-Status: in progress
+Status: fix published; full-suite verification in progress
 
 # Password reset email audit
 
 Branch: `audit/password-reset-review`, based on main `01f5298` (0.23.0 plus container updates).
 Worktree: `/workspace/work/password-reset-audit-src`.
+PR: https://github.com/ksullivan86/kidney-health/pull/175 (draft; do not merge).
 
 ## Checked
 
@@ -25,7 +26,11 @@ Worktree: `/workspace/work/password-reset-audit-src`.
 - **58 focused checks pass**, including all 7 new overlap cases, existing email routes/UI checks,
   Ask trust lifecycle regressions and the shared session-time rule. Ruff, JS parity, OpenAPI and
   generated handbook checks pass. The docs and changelog explain revocation of in-progress requests.
-- Expanded auth/isolation checks, strict handbook build and a full local pytest run are in progress.
+- **754 expanded auth/isolation/export/migration/handbook checks pass**, with two existing citation warnings.
+  Strict handbook build passes. Combined with the focused run, 812 checks pass.
+- Full local pytest is still running (`exec` session 28444, log below). CI run
+  https://github.com/ksullivan86/kidney-health/actions/runs/43101071193 has all three Python suites still in progress;
+  lint, parity, handbook, Swift, iOS and workflow-security jobs passed at the last check. Do not call full verification green yet.
   Logs: `/workspace/work/password-reset-{baseline,focused,expanded,full,parity,handbook}.log`.
 
 ## Reproduce
@@ -44,3 +49,5 @@ The full suite is running from this worktree with `python -m pytest -o addopts='
 - Use `/workspace/kidney-health/.venv/bin/python` and `TMPDIR=/workspace/work/pytest-scratch`.
 - Git/network and local socket tests need an approved command outside this environment's sandbox.
 - Latest documentation handoff is PR #168; check its live state before changing it.
+- The separate resumed menu-plan fix is PR #176, branch `audit/menu-plan-editor-lifecycle`, worktree
+  `/workspace/work/menu-plan-audit-src`. Its own progress note records verification; do not combine the branches.
