@@ -413,6 +413,14 @@ main sources, days over a daily limit (and "Mostly at the weekend."), one meal g
 potassium or sodium, carb consistency per meal, repeated low treatments ("Your diabetes team may want to
 know."), additive foods, change against the previous period, and "stayed within your limit".
 
+## Adding a handbook menu day
+
+The handbook's **Add this day to my plan** link opens a confirmation sheet. Only **Add to plan** writes its
+ticked foods as planned entries. During that write the submitted date and tick boxes freeze; Close still works.
+A newly opened menu remains editable while its Add button waits for the earlier write. That write's reply leaves
+the new draft and page in place, and an earlier failure is announced without filling the new draft's error box.
+Retries of the same draft keep the original client IDs. See the [menu-day contract](../ARCHITECTURE.md#menu-days-in-the-app-add-this-day-to-my-plan-v04).
+
 ## Settings
 
 | Key | Scope | Default | Meaning |

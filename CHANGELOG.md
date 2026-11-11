@@ -7,6 +7,12 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+### Fixed
+
+* Opening another handbook menu while its foods are being added keeps the new draft. The earlier reply no longer
+  clears its foods, closes it, changes the page or puts an old error on it. Add waits for that save to finish; the
+  submitted date and choices stay as sent, and Close remains available.
+
 ### Security
 
 * New Chainguard base images for the builder and the runtime (Python 3.15.2 built 2026-11-06), and Caddy 2.11.9 for the

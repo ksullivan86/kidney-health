@@ -3583,6 +3583,10 @@ routes.
    through the normal request wrapper (`X-Requested-With`, session cookie, re-authentication prompt). One `client_id`
    per food is made when the sheet opens, so a second press or a retry after a lost answer adds nothing twice (the
    batch answers 200 with every item `existing`).
+   While the batch is pending, its date and tick boxes freeze. Close stays available. Reopening a menu keeps its new
+   choices editable, but Add waits for the earlier write to finish. Only the opening that submitted may close, clear
+   its rows or navigate on success; an earlier failure is said without putting its error on a new draft. Closing also
+   cancels pending opening/day reads, so an old reply cannot reopen the sheet or fill its totals.
 4. **Signed out:** the link is taken out of the address bar into a variable in memory at page load (`takeLink()`), never
    into any storage, so the sign-in screens, which rewrite the address, do not lose it and the list does not stay in the
    history. `main.js start()` (first start after sign-in) and `auth.js enterApp` (signing in again on an open page) call

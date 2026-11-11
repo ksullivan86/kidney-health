@@ -201,6 +201,10 @@ setup_required`. So:
 * `upgrade.py` prints `PASS` / `FAIL` lines per starting point; `<out>/report.json`; the old versions' sources,
   data directories and server logs stay in `<out>` for a look after a failure.
 
+`python tools/e2e/menu_plan_late_replies.py --out /tmp/kh-menu-late` checks held menu-plan batch replies at
+375 light and 1280 dark: submitted controls freeze, reopened drafts stay editable while Add waits, stale replies
+leave new rows and navigation alone, a lost reply is announced, one server write remains, and current success opens Plan.
+
 When you write or change a harness: Playwright's route handlers (the fake camera, the recorded answers) run
 only while Python is inside a Playwright call, so wait with `page.wait_for_timeout` or `wait_js`, never
 `time.sleep`, while a route must answer. Under heavy parallel load (several harnesses and Chromium workers on

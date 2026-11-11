@@ -303,6 +303,10 @@ is saved until you press **Add to plan**, and the link only names foods from the
 servings: the app works out every number itself. If the link does not open your app, for example on another
 device, use the steps below.
 
+While the foods are being added, the date and tick boxes stay as submitted. You can still close the sheet. If you
+open another menu before that save finishes, you can choose its date and foods; **Add to plan** becomes available
+when the earlier save finishes. Its reply leaves your new choices in place.
+
 To put a menu day into your plan by hand:
 
 - [ ] Open the menu for your stage, for example [Stage 3](../eat/menus/g3.md).
