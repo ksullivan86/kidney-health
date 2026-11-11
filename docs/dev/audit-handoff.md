@@ -2,7 +2,7 @@
 
 Status: this audit batch is verified and published; open follow-ups are recorded for continued auditing.
 
-Snapshot: 2026-11-06. The user asked to continue auditing bugs and improvements, create PRs, and **leave every PR unmerged** for another session. An earlier message asked to keep auditing until "tomorrow at 3pm PST"; its original message timestamp is not recorded here, so do not infer a new absolute deadline from this snapshot date. No scheduled or unattended runner was installed.
+Original snapshot: 2026-11-06; follow-ups refreshed 2026-11-11. The user asked to continue auditing bugs and improvements, create PRs, and **leave every PR unmerged** for another session. An earlier message asked to keep auditing until "tomorrow at 3pm PST"; its original message timestamp is not recorded here, so do not infer a new absolute deadline from this snapshot date. No scheduled or unattended runner was installed.
 
 This is the durable index. Per-fix progress notes are linked to saved commits so they remain readable if branches are updated or progress files are pruned during a release. Refresh the PR status before acting: this is a checkpoint, not a live dashboard.
 
@@ -11,7 +11,7 @@ This is the durable index. Per-fix progress notes are linked to saved commits so
 1. Read `AGENTS.md`, `CLAUDE.md`, the relevant parts of `ARCHITECTURE.md`, and the design notes before editing.
 2. Review the completed checkpoints and unresolved follow-ups below, then open the relevant PR and saved progress note. The source and regression tests are pushed.
 3. Reuse the indicated worktree when present. `/workspace/kidney-health` is an older device-fix checkout, **not the current audit branch**.
-4. Verification for this batch is complete. Inspect current main before continuing: another session has integrated #153–167. The two user-reported follow-ups below remain open. Keep any new PR unmerged.
+4. Verification for the original batch is complete. Another session integrated #153–167, then fixed both user-reported follow-ups in #170 (0.23.0). The resumed audit starts at main `01f5298`; see #175 and its progress note below. Keep every new PR unmerged.
 5. Continue auditing from the recorded leads only after checking what is already covered. Commit only your own paths.
 
 These branches started from main `cea3c944f5fb80c4110ce60a512b874e6da79d7e` (release 0.22.2). No release, version bump or deployment was made. Earlier fixes #144, #145, #146, #148 and #149 were integrated by another session through releases #151/#152.
@@ -118,10 +118,12 @@ The user's other session handled integration of #153–167. Refresh main before 
 
 ## Coverage and leads
 
-Two user-reported follow-ups remain **not fixed** in this batch:
+Both user-reported follow-ups were fixed by another session in [#170](https://github.com/ksullivan86/kidney-health/pull/170), released as 0.23.0:
 
-- **Ask retry while a save is in progress:** rarely, a retried save can show a confirmation card for food that the original request is already saving. This is separate from #159's completed-save retry and stored-trust checks. Reproduce with overlapping requests for the same save key; check the in-progress state before offering confirmation. Verify that the original save still completes once and that legitimate unsaved actions still require confirmation. Do not mark this resolved based on #159 alone.
-- **Device session-check duplication:** #160 revalidates the session before storing device credentials, but copies some session rules in `app/devices/api.py::_person_still_current`. A future rule change could miss this copy. Consider a shared, read-only session/owner validation helper, with local/proxy/no-login and expired/revoked/disabled/password-change cases. Preserve the write transaction: ordinary session validation can touch rows and commit, so it cannot simply replace the read-only check under the callback's write lock. This is a maintenance follow-up, not a newly reproduced authorization bypass.
+- **Ask retry while a save is in progress:** `app/ai/chat_save.py` checks the earlier save again under the write lock before offering confirmation. This is the follow-up to #159, not part of its original fix. The new cases in `tests/test_ask_trust_lifecycle.py` pass in the resumed audit.
+- **Device session-check duplication:** the read-only `sessions.is_live` helper now supplies the time-limit rule to session validation and device sign-in. `tests/test_session_is_live.py` passes in the resumed audit.
+
+The resumed audit found a new email reset race, fixed in [#175](https://github.com/ksullivan86/kidney-health/pull/175) (leave unmerged). A forgot request could read an address, then issue a live link after a concurrent request removed/changed it or revoked earlier links. Account deletion could cause a 500. The fix reads the target and creates the link in one write transaction; SMTP starts after commit. See [the resumable progress note](https://github.com/ksullivan86/kidney-health/blob/audit/password-reset-review/docs/dev/progress/password-reset-audit.md) for baseline failures, current verification and commands. Full verification was still running when this link was added; use that note and CI for final results.
 
 - Every fix has a per-branch note with its reproduction and verification. Do not repeat completed baseline runs merely to recover context.
 - Remaining lead: menu-plan submission also awaits a write before closing its dialog. It has not yet been reproduced or fixed; inspect its opening/busy behavior before declaring a bug.
