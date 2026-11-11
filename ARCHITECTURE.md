@@ -5404,6 +5404,9 @@ Built 2026-11-07, not yet released. Schema step 34. A person adds an email in Se
   `POST /api/admin/email/test` (the M1 API tables above). Reset links sent by email are ordinary `auth_tokens` reset rows with
   `note = "email"`, so `POST /api/auth/reset` and `reset/info` work unchanged; `reset` records `via: email_link`. Changing or removing
   the address voids the reset links sent to it. `tokens.open_reset_links` adds `via` (`email` or `link`).
+  Forgot takes a write lock before reading the account and confirmed address, and keeps it through link creation and audit.
+  Overlapping address changes/removal, password changes and account disable/deletion cannot leave a link outside their
+  revocation. The no-target path rolls back; SMTP is scheduled only after the transaction commits.
 * **Audit**: `email.set` (`changed`, `again`), `email.confirmed`, `email.removed`, all in `USER_VISIBLE_ACTIONS`; never the address.
 * **Export**: `export.json` `user` gains `email` and `email_confirmed_at`; the import skips `user`.
 * **Frontend**: the sign-in page's **Forgot your password?** (shown when `email_reset`) opens the `forgot` screen (`#/forgot`);

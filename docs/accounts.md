@@ -475,7 +475,9 @@ What people and admins see:
 * "Forgot your password?" always answers "If that account has a confirmed email, a link is on its way. It works for 1 hour.",
   for any user name, so it does not reveal who has an account. At most 3 emails an hour go to one account, and one address may
   ask 10 times an hour.
-* An address that is not confirmed gets no reset email. Removing an address needs no email.
+* An address that is not confirmed gets no reset email. Removing an address needs no email. Changing or removing it
+  invalidates reset links already requested for it, including a request still being processed. An email already on its way
+  may arrive, but its link no longer works.
 * Admins never see the address: **People** shows only **Email confirmed**, and a link the person asked for shows as "asked for
   by email". The person's own export holds it.
 * The log says only "email sent" or "email failed: <reason>": never an address, a link or the password.

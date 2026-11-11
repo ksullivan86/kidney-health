@@ -132,6 +132,8 @@ other devices and removes your passkeys. Two-step sign-in still asks for your co
 
 - Nobody else sees your address. Your admin sees only that you have a confirmed email.
 - **Change** or **Remove** it at any time. Removing it needs no email. Without one, your admin can still make you a reset link.
+  Changing or removing it also ends reset links already requested for that address. An email may still arrive, but its link
+  no longer works.
 - The email holds your user name and the link. It holds no health data.
 - An email you did not ask for? Ignore it. Your password stays the same. If it happens often, tell your admin.
 
