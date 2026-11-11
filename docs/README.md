@@ -75,6 +75,7 @@ using the app; the pages below are for the people who run, maintain and check it
 * [The HTTP API document](api/README.md): `docs/api/openapi.json`, the checked-in OpenAPI document (regenerate it with
   `python scripts/gen_openapi.py`), the API-version rule, and what clients such as the iOS app generate from.
 * [Progress notes](dev/progress/README.md): how build agents record interrupted work (condensed and removed at each release).
+* [Current audit handoff](dev/audit-handoff.md): published fixes, test evidence, pending verification and steps for another session to resume.
 * [End-to-end harnesses](../tools/e2e/README.md): the browser checks run by hand before a release.
 * [Vendored files](../app/static/vendor/README.md): the barcode decoder and the PDF reader (pdf.js) the browser uses, their licences
   and SHA-256 pins, and how to update it.
