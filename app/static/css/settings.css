@@ -180,3 +180,9 @@
 .device-consent { padding: 10px 12px; border-radius: var(--radius-sm); background: var(--over-tint); color: var(--text); margin-top: 8px; }
 .device-consent h4 { margin: 0 0 6px; font-size: 1rem; }
 .device-consent .check { display: flex; gap: 8px; align-items: flex-start; margin: 8px 0; }
+
+/* Settings → Reminders (js/views/reminders.js, design note 35) */
+.reminder-days { border: 0; padding: 0; margin: 0.5rem 0; }
+.reminder-days legend { padding: 0; font-weight: 600; }
+.reminder-day-list { display: flex; flex-wrap: wrap; gap: 0 14px; }
+.reminder-check { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; }

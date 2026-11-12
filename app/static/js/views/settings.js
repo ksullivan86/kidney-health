@@ -116,6 +116,7 @@
       : /Safari\//.test(u) ? 'Safari' : /curl|python|httpx/i.test(u) ? 'A script' : 'Browser';
     return os ? `${br} on ${os}` : br;
   }
+  KH.deviceName = deviceName; // Settings → Reminders names devices the same way (js/views/reminders.js)
   const ROLE_LABEL = { admin: 'Admin', user: 'Member' };
   const STATUS_LABEL = { active: 'Active', disabled: 'Disabled', locked: 'Locked', pending_setup: 'Waiting for a password' };
 
@@ -874,6 +875,8 @@
     'list_sync.set_up': 'Shopping list app set up', 'list_sync.removed': 'Shopping list app removed', 'list_sync.sent': 'Shopping list sent',
     'instacart.sent': 'Shopping list sent to Instacart',
     'email.set': 'Email for password resets saved', 'email.confirmed': 'Email for password resets confirmed', 'email.removed': 'Email for password resets removed',
+    'reminder.set': 'Reminder saved', 'reminder.removed': 'Reminder removed', 'reminder.device_added': 'Notifications turned on for a device',
+    'reminder.device_removed': 'Notifications turned off for a device',
     'test_accounts.created': 'Test account made', 'test_accounts.enabled': 'Test account turned on', 'test_accounts.disabled': 'Test account turned off',
     'test_accounts.reset': 'Test accounts reset',
   };
@@ -941,6 +944,7 @@
     if (ev.action === 'login.failed' && d.via === 'oidc') return 'with the sign-in provider';
     if (ev.action === 'login.succeeded' && d.via === 'oidc') return 'with the sign-in provider';
     if (ev.action === 'device.connected') return DEVICE_NAME[d.provider] || d.provider || '';
+    if (ev.action === 'reminder.device_removed') return { push_service: 'the device stopped taking them', other_account: 'another account turned them on there', person: '' }[d.via] || '';
     if (ev.action === 'instacart.sent' && d.items != null) return `${d.items} ${d.items === 1 ? 'item' : 'items'}`;
     if (ev.action.startsWith('list_sync.')) {
       const app = { grocy: 'Grocy', kitchenowl: 'KitchenOwl', mealie: 'Mealie' }[d.app] || d.app || '';
@@ -2484,6 +2488,17 @@
     sec.hidden = !show;
     renderNav();
   }
+  // Settings → Reminders (js/views/reminders.js, design note 35): shown only while the server has it on.
+  let remindersDraw = 0;
+  async function renderReminders() {
+    const sec = $('#set-reminders');
+    if (!sec || !KH.reminders) return;
+    const ticket = ++remindersDraw;
+    const show = await KH.reminders.render($('#set-reminders-body'));
+    if (ticket !== remindersDraw || sec.hidden === !show) return;
+    sec.hidden = !show;
+    renderNav();
+  }
   // Settings → Shopping list app (js/views/list_sync.js, design note 30): shown only while the server has it on.
   let listsDraw = 0;
   async function renderLists() {
@@ -2554,6 +2569,7 @@
     renderAssistant().catch((err) => console.warn('Assistant access:', err));
     renderConnected().catch((err) => console.warn('Connected devices:', err));
     renderLists().catch((err) => console.warn('Shopping list app:', err));
+    renderReminders().catch((err) => console.warn('Reminders:', err));
     renderAbout();
     cache.myKeys = null;
     renderFood();

@@ -14,7 +14,7 @@ dependency changes. Design note: `docs/dev/research/35-reminders.md`.
    `tests/test_reminders.py` 54 pass; isolation/export/import/audit/auth-coverage pass.
 
 ## Next
-4. Service worker push handler, Settings → Reminders (`js/views/reminders.js`), demo twin (`js/mock/reminders.js`).
+4. DONE: sw.js push + notificationclick; Settings → Reminders (`js/views/reminders.js`, section #set-reminders); demo twin (`js/mock/reminders.js`, `tests/js/reminders_demo.mjs`); `tests/test_reminders_ui.py`; OpenAPI regenerated (schema names prefixed Reminder/Push to avoid collisions).
 5. Docs, deploy templates, handbook, OpenAPI, Chromium walk `tools/e2e/reminders.py`.
 6. Full suite.
 

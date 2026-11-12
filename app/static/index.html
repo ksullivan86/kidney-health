@@ -1282,6 +1282,12 @@
       <div id="set-assistant-body" class="settings-body"></div>
     </section>
 
+    <!-- Reminders by phone notification (design note 35; js/views/reminders.js): shown only while the server has it on. -->
+    <section class="card settings-section" id="set-reminders" data-title="Reminders" aria-labelledby="set-reminders-h" hidden>
+      <h2 class="card-title" id="set-reminders-h">Reminders</h2>
+      <div id="set-reminders-body" class="settings-body" role="region" aria-labelledby="set-reminders-h"></div>
+    </section>
+
     <section class="card settings-section" id="set-device" data-title="This device" aria-labelledby="set-device-h">
       <h2 class="card-title" id="set-device-h">This device</h2>
       <div id="set-device-body" class="settings-body"></div>
@@ -2534,6 +2540,7 @@
 <script src="js/mock/devices.js"></script>
 <script src="js/mock/activity.js"></script>
 <script src="js/mock/lists.js"></script>
+<script src="js/mock/reminders.js"></script>
 <script src="js/mock/handbook.js"></script>
 <script src="js/mock/meta.js"></script>
 <script src="js/mock/ai.js"></script>
@@ -2566,6 +2573,7 @@
 <script src="js/views/devices.js"></script>
 <script src="js/views/list_sync.js"></script>
 <script src="js/views/instacart.js"></script>
+<script src="js/views/reminders.js"></script>
 <script src="js/views/recipe_import.js"></script>
 <script src="js/views/ai.js"></script>
 <script src="js/views/ai_routing.js"></script>

@@ -198,7 +198,8 @@ def test_add_a_device_twice_and_remove_it(on: TestClient) -> None:
     again = on.post("/api/reminders/subscriptions", json=b.subscription())
     assert again.status_code == 200 and again.json()["id"] == first.json()["id"]
     devices = on.get("/api/reminders").json()["devices"]
-    assert len(devices) == 1 and set(devices[0]) == {"id", "user_agent", "created_at", "last_ok_at", "last_error"}
+    assert len(devices) == 1 and set(devices[0]) == {"id", "endpoint_hash", "user_agent", "created_at", "last_ok_at", "last_error"}
+    assert devices[0]["endpoint_hash"] == reminders.endpoint_hash(b.endpoint)
     assert b.endpoint not in json.dumps(on.get("/api/reminders").json())  # never the endpoint or keys
     assert on.delete(f"/api/reminders/subscriptions/{first.json()['id']}").status_code == 204
     assert on.get("/api/reminders").json()["devices"] == []
@@ -269,7 +270,7 @@ def test_send_a_test(on: TestClient, fake: FakePush) -> None:
     b = Browser()
     subscribe(on, b)
     r = on.post("/api/reminders/test")
-    assert r.status_code == 200 and r.json() == {"devices": 1, "sent": 1, "failed": 0, "removed": 0}
+    assert r.status_code == 200 and r.json() == {"devices": 1, "sent": 1, "failed": 0, "removed": 0, "demo": False}
     (req,) = fake.calls
     msg = b.read(req)
     assert msg == {"web_push": 8030, "notification": {"title": "Food log", "body": reminders.TEST_BODY,
@@ -297,7 +298,7 @@ def test_a_gone_device_is_deleted(on: TestClient, fake: FakePush, status: int) -
     subscribe(on, Browser())
     fake.status = status
     r = on.post("/api/reminders/test")
-    assert r.json() == {"devices": 1, "sent": 0, "failed": 0, "removed": 1}
+    assert r.json() == {"devices": 1, "sent": 0, "failed": 0, "removed": 1, "demo": False}
     assert on.get("/api/reminders").json()["devices"] == []
     events = on.get("/api/me/activity?limit=5").json()
     rows = events["events"] if isinstance(events, dict) else events

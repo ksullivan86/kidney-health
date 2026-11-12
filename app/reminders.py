@@ -18,6 +18,7 @@ alerts are what to rely on for low blood sugar.**
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import logging
 import re
 import sqlite3
@@ -116,51 +117,53 @@ class ReminderOut(BaseModel):
     last_sent_on: str | None
 
 
-class KeysIn(BaseModel):
+class PushKeysIn(BaseModel):
     model_config = ConfigDict(extra="ignore")
     p256dh: str = Field(max_length=200)
     auth: str = Field(max_length=100)
 
 
-class SubscriptionIn(BaseModel):
+class PushSubscriptionIn(BaseModel):
     """``PushSubscription.toJSON()``; ``expirationTime`` and anything else is ignored."""
 
     model_config = ConfigDict(extra="ignore")
     endpoint: str = Field(max_length=webpush.MAX_ENDPOINT_CHARS + 100)
-    keys: KeysIn
+    keys: PushKeysIn
 
 
-class DeviceOut(BaseModel):
+class ReminderDeviceOut(BaseModel):
     id: int
+    endpoint_hash: str  # the first 32 hex digits of SHA-256(endpoint): the page finds "this device" without the endpoint
     user_agent: str | None
     created_at: str
     last_ok_at: str | None
     last_error: str | None
 
 
-class KindOut(BaseModel):
+class ReminderKindOut(BaseModel):
     kind: str
     label: str
     meals: list[str]
 
 
-class StatusOut(BaseModel):
+class RemindersStatusOut(BaseModel):
     enabled: bool
     can_use: bool
     public_key: str | None
     max_reminders: int
     max_devices: int
     safety: str
-    kinds: list[KindOut]
+    kinds: list[ReminderKindOut]
     reminders: list[ReminderOut]
-    devices: list[DeviceOut]
+    devices: list[ReminderDeviceOut]
 
 
-class TestOut(BaseModel):
+class ReminderTestOut(BaseModel):
     devices: int
     sent: int
     failed: int
     removed: int
+    demo: bool = False
 
 
 # --------------------------------------------------------------------------- #
@@ -193,8 +196,12 @@ def reminder_view(row: sqlite3.Row) -> dict[str, Any]:
             "last_sent_on": row["last_sent_on"]}
 
 
+def endpoint_hash(endpoint: str) -> str:
+    return hashlib.sha256(endpoint.encode("utf-8")).hexdigest()[:32]
+
+
 def device_view(row: sqlite3.Row) -> dict[str, Any]:
-    return {"id": row["id"], "user_agent": row["user_agent"], "created_at": row["created_at"], "last_ok_at": row["last_ok_at"],
+    return {"id": row["id"], "endpoint_hash": endpoint_hash(row["endpoint"]), "user_agent": row["user_agent"], "created_at": row["created_at"], "last_ok_at": row["last_ok_at"],
             "last_error": row["last_error"]}
 
 
@@ -288,7 +295,7 @@ def deliver(conn: sqlite3.Connection, push: webpush.Sender, user_id: int, device
 # --------------------------------------------------------------------------- #
 
 
-@router.get("", response_model=StatusOut)
+@router.get("", response_model=RemindersStatusOut)
 def get_reminders(request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     kinds = [{"kind": k, "label": KIND_LABELS[k], "meals": list(MEALS) if k == "log_meal" else []} for k in KINDS]
     base = {"max_reminders": MAX_REMINDERS, "max_devices": MAX_DEVICES, "safety": SAFETY, "kinds": kinds}
@@ -347,8 +354,8 @@ def remove_reminder(reminder_id: int, request: Request, user: CurrentUser, conn:
     return Response(status_code=204)
 
 
-@router.post("/subscriptions", response_model=DeviceOut, status_code=201)
-def add_device(body: SubscriptionIn, request: Request, response: Response, user: CurrentUser,
+@router.post("/subscriptions", response_model=ReminderDeviceOut, status_code=201)
+def add_device(body: PushSubscriptionIn, request: Request, response: Response, user: CurrentUser,
                conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     _require_user(request, user)
     endpoint = webpush.check_endpoint(body.endpoint)
@@ -389,7 +396,7 @@ def remove_device(device_id: int, request: Request, user: CurrentUser, conn: sql
     return Response(status_code=204)
 
 
-@router.post("/test", response_model=TestOut)
+@router.post("/test", response_model=ReminderTestOut)
 def send_test(request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     _require_user(request, user)
     devices = devices_of(conn, user.id)
@@ -399,7 +406,7 @@ def send_test(request: Request, user: CurrentUser, conn: sqlite3.Connection = De
     settings = request.app.state.settings
     payload = webpush.message(title_of(conn, auth_context(request).store), TEST_BODY, f"{settings.public_url.rstrip('/')}/#settings")
     out = deliver(conn, sender(request), user.id, devices, payload)
-    return {"devices": len(devices), "sent": out.sent, "failed": out.failed, "removed": out.removed}
+    return {"devices": len(devices), "sent": out.sent, "failed": out.failed, "removed": out.removed, "demo": False}
 
 
 # --------------------------------------------------------------------------- #

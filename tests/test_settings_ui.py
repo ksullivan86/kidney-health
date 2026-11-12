@@ -335,13 +335,18 @@ def test_the_ui_promises_no_unbuilt_feature() -> None:
     assert 'id="set-units"' not in INDEX
 
 
-def test_the_ui_never_mentions_reminders_before_they_exist() -> None:
-    """Reminders (Web Push) are v0.4 (note 02 R8, docs/ROADMAP.md "Installable app"); This device once said
-    "Offline use, camera scanning and reminders need HTTPS". No view may name a feature the app does not have."""
+def test_only_the_reminders_block_talks_about_reminders() -> None:
+    """Reminders (design note 35) live in Settings → Reminders only. This device once said "Offline use, camera scanning and
+    reminders need HTTPS" before they existed; no other view may promise them."""
+    allowed = {STATIC / "index.html", STATIC / "js" / "views" / "reminders.js", STATIC / "js" / "mock" / "reminders.js",
+               STATIC / "js" / "views" / "settings.js", STATIC / "js" / "mock" / "auth.js", STATIC / "js" / "mock" / "export.js",
+               STATIC / "js" / "mock" / "import.js"}
     for path in [STATIC / "index.html", *(STATIC / "js").rglob("*.js")]:
+        if path in allowed:
+            continue
         for line in path.read_text(encoding="utf-8").splitlines():
             if line.strip().startswith("//"):
-                continue  # comments may say what a later version adds
+                continue
             assert not re.search(r"\b(reminders?|push notifications?)\b", line, re.I), f"{path.relative_to(ROOT)}: {line.strip()}"
 
 
