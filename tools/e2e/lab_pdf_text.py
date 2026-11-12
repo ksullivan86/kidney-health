@@ -27,6 +27,8 @@ one more row (an albumin that is not on the page); for a picture it answers one 
   line of the report's text;
 * the browser asked no other host and nothing outside the app's own files and the two pdf.js files; no CSP or Trusted Types violation,
   console error, dialog or sideways scroll.
+* the demo on this server (``?mock=1``, 375x812): the card says it is the demo, offers the text only, and answers with the demo's fixed
+  example and its line that nothing was sent; the page without text is left out; nothing reaches the fake AI or any ``/api/`` route.
 
 What it cannot show: a real lab's PDF and a real model reading its text (``scripts/ai_eval.py --lab-text`` measures a model on made-up
 pages), a real phone's file picker, Safari. Those stay in the manual device matrix (docs/maintainers.md).
@@ -205,6 +207,40 @@ def walk(hx: Harness, ai: TextAi, provider_id: int, tag: str, width: int, height
         ctx.close()
 
 
+DEMO = "This is the demo: nothing was sent to an AI. These rows are a fixed example, not read from your file."
+
+
+def demo_walk(hx: Harness, ai: TextAi) -> None:
+    """The demo on this server (``?mock=1``): the card offers a PDF's text only, and the answer is the demo's fixed example."""
+    tag = "demo"
+    ctx, watch = hx.context(width=375, height=812, signed_in=False, init=SPY)
+    page: Page = ctx.new_page()
+    rec = Recorder(ctx, page)
+    ai.reset()
+    try:
+        page.goto(f"{hx.base}/?mock=1#labs")
+        wait_js(page, "!!document.querySelector('#lab-photo') && !document.querySelector('#lab-photo').hidden && !document.querySelector('#lab-photo-controls').hidden")
+        check(f"[{tag}] the card says this is the demo", page.is_visible("#lab-photo-demo") and "nothing is sent to an AI" in text_of(page, "#lab-photo-demo"))
+        pick(page, "lab-report.pdf", REPORT)
+        wait_js(page, "document.querySelectorAll('#lab-photo-pages input[type=checkbox]').length === 2")
+        check(f"[{tag}] only 'Read the text' is offered", page.is_checked("#lab-photo-mode-text") and page.locator("#lab-photo-mode-picture").count() == 0)
+        page.click("#lab-photo-read")
+        wait_js(page, "!!document.querySelector('#lab-photo-results .lab-photo-list')", 30000)
+        results = text_of(page, "#lab-photo-results")
+        rows = rows_of(page)
+        check(f"[{tag}] the fixed example is shown with the line that nothing was sent", DEMO in results and len(rows) == 3
+              and all("read from its text" in r for r in rows), results[:400])
+        check(f"[{tag}] page 2 (no text) is left out, not drawn", "Page 2 has no text to read" in results, results[:600])
+        check(f"[{tag}] nothing reached the fake AI or the server's AI routes", not ai.text_requests and not ai.picture_requests
+              and not [r for r in rec.requests if r[1].startswith("/api/")], str([r for r in rec.requests if r[1].startswith("/api/")][:5]))
+        card_shot(hx, page, f"results-{tag}")
+    finally:
+        problems = watch.take()
+        check(f"[{tag}] no CSP or Trusted Types violation, console or page error, failed request or request to another host", not problems,
+              "; ".join(problems[:6]))
+        ctx.close()
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     ap.add_argument("--port", type=int, default=PORT, help=f"uvicorn port (default {PORT})")
@@ -243,6 +279,11 @@ def main(argv: list[str] | None = None) -> int:
                         except Exception as exc:  # report and go on with the next screen
                             check(f"[{tag}] the walk finished", False, f"{type(exc).__name__}: {exc}")
                             traceback.print_exc()
+                    try:
+                        demo_walk(hx, ai)
+                    except Exception as exc:  # report and fail
+                        check("[demo] the walk finished", False, f"{type(exc).__name__}: {exc}")
+                        traceback.print_exc()
                 finally:
                     browser.close()
             admin.close()

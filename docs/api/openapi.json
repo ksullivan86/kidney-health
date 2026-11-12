@@ -5361,6 +5361,36 @@
         "title": "LabResult",
         "type": "object"
       },
+      "LabTextBody": {
+        "additionalProperties": false,
+        "description": "One page's text, as the browser rebuilt it from the PDF's own text (lines separated by line breaks).",
+        "properties": {
+          "page": {
+            "anyOf": [
+              {
+                "maximum": 50.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Page"
+          },
+          "text": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "LabTextBody",
+        "type": "object"
+      },
       "LearnedItem": {
         "additionalProperties": false,
         "properties": {
@@ -16319,6 +16349,75 @@
           }
         ],
         "summary": "Read Lab Report",
+        "tags": [
+          "vision"
+        ]
+      }
+    },
+    "/api/ai/read-lab-report-text": {
+      "post": {
+        "description": "Read the results in the text of one page of a lab report PDF: ``{rows, dropped, provider, ...}`` of proposed rows, as for a\nphoto (never saved). A row whose value is not written in ``text`` is dropped (``dropped.not_in_text``).\n\nOrder: switches and the local AI (503) → consent for ``labs`` (409) → the person's and a server AI slot (429) → the call.\nA text that does not fit the local AI's prompt budget is 413 ``too_long_for_ai`` (read that page as a picture instead).",
+        "operationId": "vision_read_lab_report_text",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "dry_run",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Dry Run",
+              "type": "boolean"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LabTextBody"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Vision Read Lab Report Text",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Read Lab Report Text",
         "tags": [
           "vision"
         ]

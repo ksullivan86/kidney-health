@@ -252,9 +252,10 @@
     if (!section) return;
     let st = null;
     try { st = await KH.ai.status(); } catch (e) { st = null; }
-    const demo = !!(st && st.demo);
+    // The demo on a server (?mock=1) offers the text of a PDF; the static preview builds do not (they carry no pdf.js: scripts/build_preview.py)
+    const demo = !!(st && st.demo) && !(KH.flags && KH.flags.PREVIEW);
     if (demoNote) demoNote.hidden = !demo;
-    if (demo) { // the demo and the preview: only a PDF's text, answered by a fixed example (js/mock/ai.js); nothing is sent to an AI
+    if (demo) { // the demo: only a PDF's text, answered by a fixed example (js/mock/ai.js); nothing is sent to an AI
       Object.assign(offer, { pictures: false, text: true, demo: true });
       section.hidden = false;
       controls.hidden = false;

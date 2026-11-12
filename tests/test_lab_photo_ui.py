@@ -489,3 +489,4 @@ def test_the_demo_reads_a_pdfs_text_with_a_fixed_example_and_nothing_else(page):
     assert tx["demoScan"] == "This PDF has no text to read. In the demo only a PDF with text can be tried."
     assert tx["demoPhoto"] == {"error": "In the demo you can try the text of a PDF only. Photos are read by AI in the installed app.", "uploads": 0}
     assert tx["demoNoteAfter"] is True
+    assert tx["previewHidden"] is True  # the static preview builds carry no pdf.js, so the card stays hidden there

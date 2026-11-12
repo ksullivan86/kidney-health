@@ -698,6 +698,9 @@ const resetText = async () => {
   tx.demoPhoto = { error: text(errorBox), uploads: log.uploads.length };
   status = textStatus({ lab_report: true }); await LP.show();
   tx.demoNoteAfter = $('#lab-photo-demo').hidden;
+  // the static preview builds carry no pdf.js: the card stays hidden there, as before
+  KH.flags.PREVIEW = true; status = { enabled: false, demo: true }; await LP.show();
+  tx.previewHidden = $('#lab-photo').hidden; KH.flags.PREVIEW = false;
   pdfState.texts = null;
 }
 
