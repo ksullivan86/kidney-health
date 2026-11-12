@@ -1,6 +1,8 @@
+Status: complete
+
 # Progress: reading a lab PDF's own text layer (lab-pdf-text)
 
-Status: in progress
+Status: complete
 
 Branch `lab-pdf-text` from origin/main (fed556c). No schema step. Do not touch Web Push (step 35, app/reminders*).
 
@@ -43,7 +45,7 @@ Branch `lab-pdf-text` from origin/main (fed556c). No schema step. Do not touch W
 * Demo: card shows only in the server demo (?mock=1), not in static preview builds (no pdf.js there).
 
 ## Next
-* Full pytest suite (running at the end), then mark complete.
+* Done: full pytest suite (7651 tests) exit 0 after adding lab_report_text to test_ai_routing status test.
 
 ## Decisions
 * Reuses routing feature `labs` and consent purpose `labs` (same switch, same local-only rule); no new route setting, no schema step.
