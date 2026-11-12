@@ -1,0 +1,37 @@
+{
+  "id": "lab-text-a-date-not-in-the-text-is-left-for-the-person",
+  "category": "lab_report_text",
+  "feature": "lab_report_text",
+  "fixture": {
+    "text": "Harbor Valley Clinical Laboratory\nCollected: 2026-10-07 08:15 Reported: 2026-10-07 14:02\nTest Result Flag Units Reference Interval\nPotassium, Serum 5.4 High mmol/L 3.5-5.1\nPhosphorus 4.1 mg/dL 2.5-4.5\nCreatinine 1.62 High mg/dL 0.57-1.00\neGFR 38 Low mL/min/1.73m2 >59\nHemoglobin A1c 7.2 High % 4.8-5.6\nMicroalbumin/Creatinine Ratio 1,250 High mg/g creat 0-29\nSodium 139 mmol/L 134-144\nGlucose 112 High mg/dL 70-99"
+  },
+  "model_outputs": [
+    "{\"status\": \"ok\", \"rows\": [{\"analyte\": \"potassium\", \"value\": 5.4, \"unit\": \"mmol/L\", \"taken_on\": \"10/07/2026\"}, {\"analyte\": \"phosphate\", \"value\": 4.1, \"unit\": \"mg/dL\", \"taken_on\": \"2026-10-07\"}]}"
+  ],
+  "expect": {
+    "status": "ok",
+    "dropped": {
+      "unknown_analyte": 0,
+      "unknown_unit": 0,
+      "out_of_range": 0,
+      "not_in_text": 0
+    },
+    "rows": [
+      [
+        "potassium",
+        5.4,
+        "mmol/L",
+        null
+      ],
+      [
+        "phosphate",
+        4.1,
+        "mg/dL",
+        "2026-10-07"
+      ]
+    ],
+    "response_excludes": [
+      "10/07/2026"
+    ]
+  }
+}

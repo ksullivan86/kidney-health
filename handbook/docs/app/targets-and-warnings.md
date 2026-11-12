@@ -149,7 +149,7 @@ If two imports arrive together, the same test, date and shown value is still kep
 If you have a photo or a screenshot of a lab report instead, or the PDF from your lab's website, **Lab results → Read a lab report
 photo or PDF** can copy the printed results for you to check, but only when your admin has an AI on your own network
 ([Optional AI](ai.md#read-a-lab-report-from-a-photo-or-a-pdf)): every row starts unticked and only the rows you tick are saved. A PDF
-is opened on your device; only the pages you tick are sent, as pictures.
+is opened on your device; only the pages you tick are sent, as text when the page has text, otherwise as pictures.
 If you use an iPhone and linked your health system in the Health app, **Lab results → Import from Apple Health (clinical
 records)** can read those results from the Health export, on your phone ([steps below](#import-lab-results-from-the-iphone-health-app)).
 If your patient portal (MyChart or another) can download your health summary as a file, **Lab results → Import from a patient portal

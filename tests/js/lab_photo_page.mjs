@@ -63,14 +63,15 @@ const find = (el, pred, out = []) => { if (el.nodeType === 1) { if (pred(el)) ou
 
 page.stubs['#lab-photo-progress'] = new SayEl('p');
 const TODAY = '2026-10-15';
-const log = { consent: [], uploads: [], saved: [], shown: [], toasts: [], signals: [], notices: [] };
+const log = { consent: [], uploads: [], saved: [], shown: [], toasts: [], signals: [], notices: [], texts: [] };
 let status = { enabled: true, opted_in: true, features: { lab_report: true }, routes: { labs: { available: true, text: 'Runs on your local AI (ollama.lan:11434).' } } };
 let answer = null;
 let existing = [];
 // PDF stand-ins: what the file's pages are, what the AI says about each drawn page (by its picture's name), how consent goes.
 const abortError = () => Object.assign(new Error('Aborted'), { name: 'AbortError' });
-const pdfLog = { opens: [], closes: 0, opened: 0, renders: [] };
-const pdfState = { supported: true, pages: 4, openError: null, renderErrors: new Map(), rules: new Map(), consent: 'send', holdFor: new Set() };
+const pdfLog = { opens: [], closes: 0, opened: 0, renders: [], texts: [] };
+const pdfState = { supported: true, pages: 4, openError: null, renderErrors: new Map(), rules: new Map(), consent: 'send', holdFor: new Set(),
+  texts: null, textRules: new Map(), textDry: null };
 const KH = {
   h, $, clear, toast: (m, k) => log.toasts.push([k, m]),
   flags: { MOCK: false },
@@ -109,6 +110,15 @@ const KH = {
       return answer;
     },
     showSent: async (dry) => { log.shown.push(dry); return true; },
+    // the text of a PDF page (design note 36): what was sent, and the answer pdfState.textRules gives for that page
+    readLabText: async (sent, pageNumber, dry, signal) => {
+      log.texts.push([sent, pageNumber, dry, !!signal]);
+      if (dry) return pdfState.textDry || { dry_run: true, feature: 'read_lab_report_text' };
+      const rule = pdfState.textRules.get(pageNumber);
+      if (rule instanceof Error) throw rule;
+      if (typeof rule === 'function') return rule();
+      return rule || answer;
+    },
   },
   labs: { load: async () => ({ labs: existing }) },
   pdfPages: {
@@ -127,6 +137,7 @@ const KH = {
           return { name: `page-${n}.jpg`, type: 'image/jpeg' };
         },
         close: () => { if (!closed) { closed = true; pdfLog.closes += 1; } },
+        ...(pdfState.texts ? { text: async (n) => { pdfLog.texts.push(n); return pdfState.texts[n] || []; } } : {}),
       };
     },
   },
@@ -244,7 +255,7 @@ const byText = (root, label) => buttons(root).find((b) => text(b).startsWith(lab
   section.hidden = true; controls.hidden = true; why.hidden = true;
   const state = () => ({ section: section.hidden, controls: controls.hidden, why: why.hidden, whyText: why.textContent });
   await LP.show(); out.offered = state();
-  status = { enabled: false, demo: true }; await LP.show(); out.aiOff = state();
+  status = { enabled: false }; await LP.show(); out.aiOff = state();
   status = { enabled: true, opted_in: true, features: { lab_report: false }, routes: { labs: { available: false, text: 'Needs a local AI on your own network, which is not set up on this server, so it is off.' } } };
   await LP.show(); out.noLocalAi = state();
   status = { enabled: true, opted_in: false, features: { lab_report: false }, routes: { labs: { available: false, text: 'x' } } };
@@ -552,6 +563,145 @@ const pdfOut = out.pdf;
   const merged = LP2.mergePages([{ page: 1, rows: [a, c] }, { page: 2, rows: [{ ...a }, b, { ...c }] }, { page: 3, rows: [] }]);
   pdfOut.merge = { rows: merged.rows.map((r) => [r.analyte, r.value, r.taken_on, r.page]), duplicates: merged.duplicates };
   pdfOut.exported = { messages: Object.keys(LP2).sort(), noticeLine: LP2.PDF_SEND_LINE, notice: LP2.PDF_NOTICE, max: LP2.MAX_TICKED, def: LP2.DEFAULT_TICKED };
+}
+
+// ---------------------------------------------------------------------------
+// 9. Reading a page's own text (design note 36), with the real js/engine/pdf_text.js
+// ---------------------------------------------------------------------------
+vm.runInContext(read('js', 'engine', 'pdf_text.js'), context, { filename: 'js/engine/pdf_text.js' });
+const tx = {};
+out.text = tx;
+const item = (str, x, y) => ({ str, transform: [10, 0, 0, 10, x, y], width: str.length * 5, height: 10 });
+const TEXT_PAGE_1 = [item('Harbor Valley Clinical Laboratory', 72, 760), item('Patient: Jane Example', 72, 740), item('DOB: 01/02/1961', 300, 740),
+  item('Collected: 2026-10-07', 72, 720), item('Potassium', 72, 700), item('5.4', 220, 700), item('mmol/L', 260, 700),
+  item('Phosphate', 72, 680), item('1.2', 220, 680), item('mmol/L', 260, 680)];
+const TEXT_PAGE_3 = [item('Albumin', 72, 700), item('38', 220, 700), item('g/L', 260, 700), item('Collected: 2026-10-07', 72, 680),
+  item('Reference ranges vary by laboratory and method 2026', 72, 660)];
+const radios = () => find(pagesBox, (e) => e.tag === 'input' && e.attrs.type === 'radio');
+const sendLineText = () => text(find(pagesBox, (e) => e.attrs.id === 'lab-photo-send-line')[0] || new El('p'));
+const textStatus = (features) => ({ enabled: true, opted_in: true, features, routes: { labs: { available: true, text: '' } } });
+const resetText = async () => {
+  await resetPdf();
+  pdfState.texts = { 1: TEXT_PAGE_1, 3: TEXT_PAGE_3 }; // page 2 is a scan: no text
+  pdfState.textRules.clear(); pdfState.textDry = null; log.texts.length = 0; pdfLog.texts.length = 0;
+};
+
+// 9.1 A PDF with text on pages 1 and 3: "Read the text" is chosen, page 2 goes as a picture; rows say where they came from.
+{
+  status = textStatus({ lab_report: true, lab_report_text: true }); await LP.show();
+  await resetText();
+  pdfState.textRules.set(1, answerOk([POTASSIUM, PHOSPHATE]));
+  pdfState.textRules.set(3, answerOk([ALBUMIN]));
+  pdfState.rules.set('jpeg:page-2.jpg', answerOk([{ ...POTASSIUM, value: 4.1, display: '4.1 mmol/L' }]));
+  await pickPdf(pdfFile('text.pdf'), 3);
+  tx.pick = { texts: [...pdfLog.texts], radios: radios().map((r) => [r.attrs.value, r.checked]), labels: find(pagesBox, (e) => e.tag === 'label').map(text),
+    sendLine: sendLineText(), legends: find(pagesBox, (e) => e.tag === 'legend').map(text) };
+  await readButton.fire('click');
+  tx.read = {
+    sent: log.texts.map(([t, n, dry, signal]) => ({ n, dry, signal, lines: t.split('\n') })), uploads: log.uploads.map((u) => [u[1], u[2]]),
+    renders: [...pdfLog.renders], pages: find(resultsBox, (e) => e.attrs.class === 'lab-row-page').map(text),
+    notice: text(find(resultsBox, (e) => e.attrs.role === 'note')[0]), lines: hintLines(resultsBox), consent: log.consent.map((c) => [...c]),
+  };
+}
+
+// 9.2 "Read pictures of the pages" sends every ticked page as a picture.
+{
+  await resetText();
+  pdfState.rules.set('jpeg:page-1.jpg', answerOk([POTASSIUM]));
+  await pickPdf(pdfFile('pictures.pdf'), 3);
+  const pictures = radios().find((r) => r.attrs.value === 'picture');
+  pictures.checked = true; await pictures.fire('change');
+  tx.pictures = { sendLine: sendLineText() };
+  await readButton.fire('click');
+  Object.assign(tx.pictures, { texts: log.texts.length, uploads: log.uploads.map((u) => u[1]), pages: find(resultsBox, (e) => e.attrs.class === 'lab-row-page').map(text) });
+}
+
+// 9.3 A server that reads text only (no vision model): no picture choice, a scanned page is left out, a photo is refused.
+{
+  status = textStatus({ lab_report: false, lab_report_text: true }); await LP.show();
+  await resetText();
+  pdfState.textRules.set(1, answerOk([POTASSIUM]));
+  pdfState.textRules.set(3, answerOk([ALBUMIN]));
+  await pickPdf(pdfFile('textonly.pdf'), 3);
+  tx.textOnly = { radios: radios().map((r) => r.attrs.value), sendLine: sendLineText(), controls: $('#lab-photo-controls').hidden };
+  await readButton.fire('click');
+  Object.assign(tx.textOnly, { uploads: log.uploads.length, renders: pdfLog.renders.length, sent: log.texts.map((t) => t[1]), lines: hintLines(resultsBox),
+    warned: find(resultsBox, (e) => e.attrs.class === 'hint warn').map(text) });
+  // a scan-only PDF cannot be read here at all
+  await resetText();
+  pdfState.texts = {};
+  await pickPdf(pdfFile('scan.pdf'), 2);
+  tx.textOnlyScan = { error: text(errorBox), list: pagesBox.hidden ? 'hidden' : 'shown', input: fileInput.value };
+  // a photo is refused with the reason, nothing is sent
+  await resetText();
+  fileInput.files = [{ name: 'photo.jpg', type: 'image/jpeg' }]; await fileInput.fire('change');
+  await readButton.fire('click');
+  tx.textOnlyPhoto = { error: text(errorBox), uploads: log.uploads.length };
+}
+
+// 9.4 More text than the local AI takes: that page is read as a picture.
+{
+  status = textStatus({ lab_report: true, lab_report_text: true }); await LP.show();
+  await resetText();
+  pdfState.textRules.set(1, Object.assign(new Error('too long'), { status: 413, detail: 'too long', data: { reason: 'too_long_for_ai' } }));
+  pdfState.textRules.set(3, answerOk([ALBUMIN]));
+  pdfState.rules.set('jpeg:page-1.jpg', answerOk([POTASSIUM]));
+  pdfState.rules.set('jpeg:page-2.jpg', answerOk([PHOSPHATE]));
+  await pickPdf(pdfFile('long.pdf'), 3);
+  await readButton.fire('click');
+  tx.tooLong = { sent: log.texts.map((t) => t[1]), uploads: log.uploads.map((u) => u[1]), lines: hintLines(resultsBox),
+    pages: find(resultsBox, (e) => e.attrs.class === 'lab-row-page').map(text) };
+}
+
+// 9.5 The first text request's 409 gets the line about text before the consent sheet is drawn; "What will be sent?" shows the text.
+{
+  await resetText();
+  let asked = 0;
+  pdfState.textRules.set(1, () => {
+    asked += 1;
+    if (asked === 1) throw Object.assign(new Error('consent'), { status: 409, data: { consent_required: true, consent: { purpose: 'labs', notice: ['Your report goes to ollama.lan.'] } } });
+    return answerOk([POTASSIUM]);
+  });
+  pdfState.consent = 'ask';
+  await pickPdf(pdfFile('consent-text.pdf'), 1);
+  await readButton.fire('click');
+  tx.consent = log.notices.map((n) => [...n]);
+  await resetText();
+  await pickPdf(pdfFile('what-text.pdf'), 3);
+  await $('#lab-photo-what').fire('click');
+  tx.what = { sent: log.texts.map(([t, n, dry]) => [n, dry, t.includes('Potassium 5.4 mmol/L'), t.includes('Jane')]), shown: log.shown.length, uploads: log.uploads.length };
+}
+
+// 9.6 The demo: the card is shown with its note, a PDF's text gets the demo's fixed answer and its notice, a photo or a scan is refused.
+{
+  status = { enabled: false, demo: true }; await LP.show();
+  tx.demoCard = { section: $('#lab-photo').hidden, controls: $('#lab-photo-controls').hidden, note: $('#lab-photo-demo').hidden };
+  await resetText();
+  const DEMO = 'This is the demo: nothing was sent to an AI. These rows are a fixed example, not read from your file.';
+  pdfState.textRules.set(1, answerOk([POTASSIUM], { notice: DEMO, demo: true }));
+  pdfState.textRules.set(3, answerOk([POTASSIUM], { notice: DEMO, demo: true }));
+  await pickPdf(pdfFile('demo.pdf'), 3);
+  tx.demo = { radios: radios().map((r) => r.attrs.value) };
+  await readButton.fire('click');
+  Object.assign(tx.demo, { notice: text(find(resultsBox, (e) => e.attrs.role === 'note')[0]), uploads: log.uploads.length, renders: pdfLog.renders.length,
+    lines: hintLines(resultsBox) });
+  pdfState.textDry = { dry_run: true, demo: true, message: DEMO };
+  await $('#lab-photo-what').fire('click');
+  tx.demo.what = text(resultsBox);
+  await resetText();
+  pdfState.texts = {};
+  await pickPdf(pdfFile('demo-scan.pdf'), 1);
+  tx.demoScan = text(errorBox);
+  await resetText();
+  fileInput.files = [{ name: 'photo.jpg', type: 'image/jpeg' }]; await fileInput.fire('change');
+  await readButton.fire('click');
+  tx.demoPhoto = { error: text(errorBox), uploads: log.uploads.length };
+  status = textStatus({ lab_report: true }); await LP.show();
+  tx.demoNoteAfter = $('#lab-photo-demo').hidden;
+  // the static preview builds carry no pdf.js: the card stays hidden there, as before
+  KH.flags.PREVIEW = true; status = { enabled: false, demo: true }; await LP.show();
+  tx.previewHidden = $('#lab-photo').hidden; KH.flags.PREVIEW = false;
+  pdfState.texts = null;
 }
 
 console.log(JSON.stringify(out));

@@ -19,10 +19,14 @@ and the judge) and a **judge** step (pure: turns the model's answer into the res
 * :func:`prepare_read_lab_report` (``POST /api/ai/read-lab-report``): the printed result lines of a lab report photo,
   copied; :mod:`app.ai.lab_report` keeps only the app's own tests, units and plausible values, as *proposed* rows. It
   runs only on the local AI, keeps no content in the AI activity row and never saves.
+* :func:`prepare_read_lab_report_text` (``POST /api/ai/read-lab-report-text``, design note 36): the same for the text of one page
+  of a lab report PDF, read in the browser; a value must be written in that text to be kept. Local AI only, no vision model
+  needed; the activity row keeps neither the text nor the answer.
 """
 from __future__ import annotations
 
 import base64
+import hashlib
 import json
 import re
 import sqlite3
@@ -156,6 +160,9 @@ class Prepared:
     notes: list[str] = field(default_factory=list)  # fixed sentences shown under the answer
     keep_response: bool = True  # False: the AI activity row keeps no copy of the model's answer (a lab report is health data)
     local_only: bool = False  # True: the call must be pinned to the private network (checked again before it is built)
+    # The text of a lab report page (design note 36): the AI activity row keeps this description (page, line and character counts,
+    # SHA-256) in place of the data block, whatever the retention setting, as a photo is kept as its fingerprint.
+    hidden_text: dict[str, Any] | None = None
     # Privacy tiers, tier 3 (route ``local_then_cloud``): the same request prepared for the cloud AI, i.e. exactly what route ``cloud``
     # would send. :func:`app.ai.routes.run_call` sends it only if the call above gets an answer that fails the schema or the app's
     # rules (:func:`judge_rejected`), and only for a person who agreed to send this purpose to that host. None on every other route.
@@ -177,6 +184,10 @@ class Prepared:
         images = iter(self.images)
         for message in body.get("messages", []):
             content = message.get("content")
+            if self.hidden_text is not None and message.get("role") == "user" and isinstance(content, str):
+                message["content"] = content.split("<data>", 1)[0] + "<data>[not kept]</data>"
+                message["lab_text"] = dict(self.hidden_text)
+                continue
             if isinstance(content, list):
                 for i, part in enumerate(content):
                     if isinstance(part, dict) and part.get("type") == "image_url":
@@ -565,6 +576,43 @@ def prepare_read_lab_report(cfg: ProviderConfig, image: CheckedImage) -> Prepare
     body = _vision_body(cfg, "lab_report", schema, "lab_report", image)
     return Prepared(feature="read_lab_report", cfg=cfg, body=body, validator=schemas.model_validator_for(schemas.LabReportAnswer),
                     judge=lab_report.judge, purpose="labs", vision=True, images=[image], keep_response=False, local_only=True)
+
+
+def lab_text_lines(text: str) -> list[str]:
+    """The lines of a PDF page's text as they are sent: each line's spaces collapsed, control and invisible characters removed by
+    :func:`app.textclean.clean_text`, empty lines dropped."""
+    lines = []
+    for raw in text.splitlines():
+        line = clean_text(raw, max_len=lab_report.MAX_TEXT_CHARS)
+        if line:
+            lines.append(line)
+    return lines
+
+
+def prepare_read_lab_report_text(cfg: ProviderConfig, text: str, *, page: int | None = None) -> Prepared:
+    """The text of one page of a lab report PDF, read in the browser (design note 36): the result lines of the app's own tests,
+    copied by the model and checked in code, first against the text itself (:func:`app.ai.lab_report.judge_text`: a value that
+    is not written in the text is dropped).
+
+    The same rules as a lab report photo: ``cfg`` must be the local AI pinned to the private network, nothing the model says is
+    kept in the AI activity row, and neither is the text (its length and SHA-256 only). Raises :class:`ContextTooSmall` when
+    the text does not fit the local AI's prompt budget. ``page`` is not sent; it only names the page in the activity row."""
+    if not cfg.local_only:
+        raise LocalOnlyRequired("the text of a lab report is read only by the local AI")
+    lines = lab_text_lines(text)
+    sent = "\n".join(lines)
+    schema = schemas.lab_report_schema()
+    body = build_body(cfg, system=prompts.TASK_SYSTEM_PROMPT,
+                      user_text=prompts.user_message("lab_report_text", {"lines": lines}, mode=cfg.structured, schema=schema),
+                      schema=schema, schema_name="lab_report", mode=cfg.structured)
+    if cfg.preset_def.temperature is not None:
+        body["temperature"] = 0.0  # copying, as for a photo
+    if not _fits(cfg, body):
+        raise ContextTooSmall("the page's text does not fit AI_CONTEXT_TOKENS")
+    digest = hashlib.sha256(sent.encode("utf-8")).hexdigest()
+    return Prepared(feature="read_lab_report_text", cfg=cfg, body=body, validator=schemas.model_validator_for(schemas.LabReportAnswer),
+                    judge=lambda answer: lab_report.judge_text(answer, sent), purpose="labs", keep_response=False, local_only=True,
+                    hidden_text={"page": page, "lines": len(lines), "characters": len(sent), "text_sha256": digest})
 
 
 def prepare_plate(cfg: ProviderConfig, image: CheckedImage, *, search: Callable[[str], list[dict[str, Any]]]) -> Prepared:

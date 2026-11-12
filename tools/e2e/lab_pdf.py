@@ -14,8 +14,9 @@ was sent). The PDFs are written by a tiny PDF writer in this file (no library): 
 security handler whose password check never passes), a damaged one, a 51-page one and a 21 MB one. Then, on 375x812 light (no
 service worker) and 1280x800 dark (service worker allowed, so the module, the worker and their cache take the installed app's path):
 
-* the card says a PDF works too and the file input accepts it; choosing the report lists "Page 1" and "Page 2", both ticked, with the
-  line that each page is drawn here and sent as a picture; nothing is sent by choosing it;
+* the card says a PDF works too and the file input accepts it; choosing the report lists "Page 1" and "Page 2", both ticked; the report
+  has text, so "Read the text" is chosen first and this walk picks "Read pictures of the pages" (the text path is
+  ``tools/e2e/lab_pdf_text.py``); the list then says each page is drawn here and sent as a picture; nothing is sent by choosing it;
 * "Read the report" opens the consent sheet (withdrawn first, so it shows), which says the same line; "Agree and send" reads page by page
   ("Reading page 2 of 2…"); the fake AI got exactly two requests, each one JPEG of a page (no EXIF, within 2048 px, drawn: dark pixels
   in it, the two different), the browser sent nothing but those JPEGs (no body starts with %PDF-), and the server never saw a PDF;
@@ -196,7 +197,7 @@ class LabAi(FakeAi):
 
     def answer(self, body: dict[str, Any]) -> dict[str, Any]:
         text, images = self.texts(body)
-        if not text.startswith("TASK: read_lab_report"):
+        if not text.startswith("TASK: read_lab_report."):  # a lab report photo (the text of a page is tools/e2e/lab_pdf_text.py's)
             return super().answer(body)
         pictures = [base64.b64decode(url.split(",", 1)[1]) for url in images]
         with self._lock:
@@ -339,6 +340,10 @@ def walk(hx: Harness, ai: LabAi, provider_id: int, tag: str, width: int, height:
         before = len(rec.lab_posts())
         pick(page, "lab-report.pdf", REPORT)
         wait_js(page, "document.querySelectorAll('#lab-photo-pages input[type=checkbox]').length === 2")
+        # this PDF has text, so "Read the text" is chosen first (design note 36, tools/e2e/lab_pdf_text.py); this walk reads pictures
+        check(f"[{tag}] a PDF with text offers both ways of reading, text first", page.is_checked("#lab-photo-mode-text")
+              and not page.is_checked("#lab-photo-mode-picture"))
+        page.check("#lab-photo-mode-picture")
         listed = text_of(page, "#lab-photo-pages")
         ticks = page.evaluate("[...document.querySelectorAll('#lab-photo-pages input[type=checkbox]')].map((c) => c.checked)")
         check(f"[{tag}] choosing the PDF lists Page 1 and Page 2, both ticked", ticks == [True, True] and "Page 1" in listed and "Page 2" in listed
@@ -417,6 +422,7 @@ def walk(hx: Harness, ai: LabAi, provider_id: int, tag: str, width: int, height:
         ai.reset(PAGE_ONE, PAGE_TWO, delays={1: 6})
         pick(page, "lab-report.pdf", REPORT)
         wait_js(page, "document.querySelectorAll('#lab-photo-pages input[type=checkbox]').length === 2")
+        page.check("#lab-photo-mode-picture")
         page.click("#lab-photo-read")
         wait_js(page, "document.querySelector('#lab-photo-progress').textContent.startsWith('Reading page 2 of 2')", 40000)
         deadline = time.monotonic() + 15

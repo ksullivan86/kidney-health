@@ -689,7 +689,7 @@ def test_the_ai_summary_and_routes_do_not_write_labs_or_import_anything(lab):
     from app.main import create_app as _  # noqa: F401 - the routes below are listed from the real app
 
     writers = [path for path, ops in lab.client.app.openapi()["paths"].items() if "post" in ops and ("/labs" in path or "lab-report" in path)]
-    assert sorted(writers) == ["/api/ai/read-lab-report", "/api/labs", "/api/labs/import"]
+    assert sorted(writers) == ["/api/ai/read-lab-report", "/api/ai/read-lab-report-text", "/api/labs", "/api/labs/import"]
     run(lab, GOOD)
     assert lab_rows(lab.client) == 0
 

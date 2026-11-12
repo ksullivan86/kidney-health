@@ -91,7 +91,7 @@ default at once ([design note 32][NOTE32]).
 | Split "describe a meal" text into search words; you pick each match | Save anything on its own, unless you chose to trust it in **Ask** (below): you tap **Add to plan** or **Save** and the normal rules run again |
 | Copy printed numbers from a label photo into a draft food you check, marked "from photo" | Estimate nutrients from a plate photo: it gives food **names** and a rough weight; the numbers come from your food list |
 | Name foods it sees on a plate photo | Give doses, answer medical questions, or tell you what your lab results mean |
-| Copy the printed results from a photo of a lab report into rows you check, on the AI at home only | Say whether a result is normal, high or low, save a result on its own, or read a report on a company's AI |
+| Copy the printed results from a photo of a lab report, or the text of its PDF, into rows you check, on the AI at home only | Say whether a result is normal, high or low, save a result on its own, or read a report on a company's AI |
 | In **Ask**, answer a short question after looking up your own numbers in the app | Make up a number: the app checks every number in an answer before you see it |
 | Put together a recipe from foods the rules allowed ([Recipes from AI](planning-and-menus.md#recipes-from-ai-optional)) | Set the numbers or the title: the app works them out and fits the recipe to your targets |
 
@@ -136,7 +136,7 @@ default at once ([design note 32][NOTE32]).
 | The foods and food groups **you** marked *More like this*, *Less often* or *Not for me*, by name, to meal ideas and **Ask** only | What the app learned from your log; anything for describe a meal, photos or lab report photos |
 | Age in 10-year bands and sex, **only if you tick "share age and sex"** | |
 | A label or plate photo (photo features only), with location and camera data removed | |
-| A photo of a lab report, **only to the AI at home** and only after you agree to it separately. The report may show your name, date of birth and record numbers, which the app cannot remove from a photo: crop it to the results table if you can | |
+| A photo of a lab report, or the text of its PDF pages, **only to the AI at home** and only after you agree to it separately. The report may show your name, date of birth and record numbers, which the app cannot remove from a photo: crop it to the results table if you can | |
 | Your messages in an **Ask** conversation, and the numbers the assistant looks up for it (your targets, today's totals, food names and nutrients), **only after you agree to it separately** | |
 
 Before anything is sent the first time, a consent sheet shows the **provider**, the **server address**
@@ -195,7 +195,7 @@ The request you already sent may still count as an AI call.
 
 On the **Lab results** screen, below "Import from a spreadsheet", **Read a lab report photo or PDF** copies the printed results
 from a photo or a screenshot of your report, or from the PDF your lab's website gives you. It appears only when your admin has an AI at
-home that can read photos and you have turned on AI ideas; otherwise the card says why, for example "Needs a local AI on
+home and you have turned on AI ideas; otherwise the card says why, for example "Needs a local AI on
 your own network, which is not set up on this server, so it is off."
 
 1. Take a photo, or choose a screenshot, and crop it to the results table if you can. A report can show your name, your
@@ -229,6 +229,21 @@ Most lab websites give you the report as a PDF. Choose that file in the same car
   screenshot of each page instead). A scanned report made of pictures in a few rare formats can come out blank: use a screenshot.
 * Everything else is the same as for a photo: the consent sheet, **What will be sent?**, the unticked rows, the dates you type, and
   **Save** for the rows you tick.
+
+### Reading the text of a PDF
+
+Many lab websites make the PDF from text, not from a scan. Then the app can send the text of a page instead of a picture of it. This
+is faster and copies the exact numbers.
+
+* When you choose the PDF, the list says which pages have text: "Page 1 (has text)", "Page 2 (picture only)". **Read the text** is
+  chosen for you; you can pick **Read pictures of the pages** instead. Pages without text are still sent as pictures.
+* Before a page's text is sent, your browser leaves out lines that may say who you are, such as your name, date of birth, record
+  number, address or phone number. The results say how many lines were left out. The text still goes **only to the AI at home**,
+  like a photo.
+* The app keeps a number only if it is written in the page's text. If the AI gives a number that is not there, the row is left out
+  and a line says so. A date that is not in the text is left for you to type.
+* Each row says where it came from, for example "page 1 of your PDF, read from its text". Every row still starts unticked: check it
+  against the report before you tick it.
 
 ## Turn it on
 

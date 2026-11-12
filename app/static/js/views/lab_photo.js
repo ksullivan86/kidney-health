@@ -41,7 +41,19 @@
   const NOTICE = 'Read by AI from your photo. Check each value against the report before you tick it.';
   const PDF_NOTICE = 'Read by AI from the pages of your PDF that you ticked. Check each value against the report before you tick it.';
   const PDF_SEND_LINE = 'Each page you tick is drawn on this device and sent as a picture; the PDF file itself is not sent.';
+  const PDF_TEXT_NOTICE = 'Read by AI from the pages of your PDF that you ticked, from their text where they have it. Check each value against the report before you tick it.';
   const PDF_TIP = 'Reading a page takes a while on your own AI; choose the pages with results.';
+  // Reading a page's own text (design note 36)
+  const TEXT_SEND_LINE = 'Pages with text are sent as text, without the lines that may show your name, date of birth or record numbers. '
+    + 'Other pages are drawn on this device and sent as pictures. The PDF file itself is not sent.';
+  const TEXT_ONLY_SEND_LINE = 'Pages with text are sent as text, without the lines that may show your name, date of birth or record numbers. '
+    + 'The PDF file itself is not sent.';
+  const MODE_TEXT = 'Read the text (faster, copies the exact numbers)';
+  const MODE_PICTURES = 'Read pictures of the pages';
+  const NO_PICTURES = 'The AI on this server can read the text of a PDF, but not a photo. Choose the PDF from your lab\'s website instead.';
+  const DEMO_NO_PICTURES = 'In the demo you can try the text of a PDF only. Photos are read by AI in the installed app.';
+  const NO_TEXT_NO_PICTURES = 'This PDF has no text to read, and the AI on this server cannot read pictures. Try the PDF from your lab\'s website, which usually has text.';
+  const DEMO_NO_TEXT = 'This PDF has no text to read. In the demo only a PDF with text can be tried.';
   const MAX_RESULTS = 1000; // as the CSV import: POST /api/labs/import takes 1 to 1,000 results
   const DEFAULT_TICKED = 6; // pages ticked when a PDF is chosen
   const MAX_TICKED = 10; // pages that can be ticked at once
@@ -81,7 +93,12 @@
   const shown = { source: 'your photo' }; // what the table on screen was read from (the saved headline says "saved from your PDF")
   // The chosen PDF: the file (the input holds it), the open pdf.js document while pages are being drawn, the ticked page numbers.
   // `pick` counts picks and releases, so a slow answer from an earlier file is recognised and dropped.
-  const pdf = { file: null, doc: null, numPages: 0, ticked: new Set(), boxes: [], count: null, control: null, busy: false, pick: 0 };
+  const pdf = { file: null, doc: null, numPages: 0, ticked: new Set(), boxes: [], count: null, control: null, busy: false, pick: 0,
+    texts: [], mode: 'picture', sendLine: null };
+  // What the server offers (GET /api/ai/status → features): pictures (lab_report: a local AI with a vision model), text (lab_report_text: a
+  // local AI) and whether this is the demo (text only, answered by a fixed example).
+  const offer = { pictures: false, text: false, demo: false };
+  const demoNote = $('#lab-photo-demo');
 
   // ---------------------------------------------------------------------------
   // The review table (also what the Node page test drives)
@@ -128,8 +145,9 @@
       r.cb = cb;
       r.when = h('span', { class: 'lab-row-date' }, r.taken_on ? fmtDay(r.taken_on) : 'Date needed');
       r.tag = h('span', { class: 'lab-import-saved' });
+      const from = r.via === 'text' ? ', read from its text' : (r.via === 'picture' ? ', read from a picture of it' : '');
       const li = h('li', { class: 'lab-row' }, cb, h('label', { for: id }, r.when, h('span', { class: 'lab-row-value' }, `${r.label} ${r.display}`),
-        r.page ? h('span', { class: 'lab-row-page' }, `page ${r.page} of your PDF`) : null, r.tag));
+        r.page ? h('span', { class: 'lab-row-page' }, `page ${r.page} of your PDF${from}`) : null, r.tag));
       if (!r.taken_on) {
         const dateId = `${id}-date`;
         const date = h('input', { type: 'date', id: dateId, min: '1900-01-01', max: KH.util.addDays(today, 1) });
@@ -204,7 +222,7 @@
         const key = [r.analyte, r.value, r.unit, r.taken_on || ''].join('|');
         if (seen.has(key)) { duplicates += 1; continue; }
         seen.add(key);
-        rows.push({ ...r, page: entry.page });
+        rows.push({ ...r, page: entry.page, ...(entry.via ? { via: entry.via } : {}) });
       }
     }
     return { rows, duplicates };
@@ -234,9 +252,21 @@
     if (!section) return;
     let st = null;
     try { st = await KH.ai.status(); } catch (e) { st = null; }
-    if (!st || !st.enabled) { section.hidden = true; return; } // AI is off here (or this is the demo): nothing to offer or explain
+    // The demo on a server (?mock=1) offers the text of a PDF; the static preview builds do not (they carry no pdf.js: scripts/build_preview.py)
+    const demo = !!(st && st.demo) && !(KH.flags && KH.flags.PREVIEW);
+    if (demoNote) demoNote.hidden = !demo;
+    if (demo) { // the demo: only a PDF's text, answered by a fixed example (js/mock/ai.js); nothing is sent to an AI
+      Object.assign(offer, { pictures: false, text: true, demo: true });
+      section.hidden = false;
+      controls.hidden = false;
+      why.hidden = true;
+      return;
+    }
+    if (!st || !st.enabled) { section.hidden = true; return; } // AI is off here: nothing to offer or explain
     section.hidden = false;
-    if (st.features && st.features.lab_report) {
+    const features = st.features || {};
+    Object.assign(offer, { pictures: !!features.lab_report, text: !!features.lab_report_text, demo: false });
+    if (offer.pictures || offer.text) {
       controls.hidden = false;
       why.hidden = true;
       return;
@@ -266,6 +296,7 @@
     if (pdf.file) { await readPdf(btn); return; }
     showError(null);
     clear(results);
+    if (photo.file && !offer.pictures) { showError(offer.demo ? DEMO_NO_PICTURES : NO_PICTURES); return; }
     btn.disabled = true;
     btn.textContent = 'Reading…';
     results.setAttribute('aria-busy', 'true');
@@ -325,14 +356,31 @@
     pdf.boxes = [];
     pdf.count = null;
     pdf.busy = false;
+    pdf.texts = [];
+    pdf.mode = 'picture';
+    pdf.sendLine = null;
+    pdf.radios = [];
     if (pagesBox) { clear(pagesBox); pagesBox.hidden = true; }
     if (cancelBtn) cancelBtn.hidden = true;
     if (progress) say('');
   }
 
+  // The text of page n as KH.pdfText.pageText gave it, or null (no text layer read, or this browser has no KH.pdfText).
+  const textOf = (n) => pdf.texts[n] || null;
+  const anyText = () => pdf.texts.some((t) => t && t.hasText);
+  // Page n goes as text when the person chose text, the page has text that is not too long, and the server reads text.
+  const viaText = (n) => pdf.mode === 'text' && offer.text && !!textOf(n) && textOf(n).hasText && !textOf(n).tooLong;
+  // The line under the page list and in the consent sheet: what leaves this device in the chosen way of reading.
+  function sendLine() {
+    if (pdf.mode !== 'text') return PDF_SEND_LINE;
+    return offer.pictures ? TEXT_SEND_LINE : TEXT_ONLY_SEND_LINE;
+  }
+
   function syncPages() {
     const n = pdf.ticked.size;
     pdf.boxes.forEach((cb, i) => { cb.disabled = pdf.busy || (!pdf.ticked.has(i + 1) && n >= MAX_TICKED); });
+    (pdf.radios || []).forEach((radio) => { radio.disabled = pdf.busy; });
+    if (pdf.sendLine) pdf.sendLine.textContent = sendLine();
     if (!pdf.count) return;
     if (n === 0) pdf.count.textContent = 'No page is ticked.';
     else if (n >= MAX_TICKED) pdf.count.textContent = `${plural(n, 'page is', 'pages are')} ticked, the most at a time. Untick one to choose another.`;
@@ -351,14 +399,48 @@
         syncPages();
       });
       pdf.boxes.push(cb);
-      list.append(h('li', { class: 'lab-photo-page' }, cb, h('label', { for: id }, `Page ${n}`)));
+      const t = textOf(n);
+      const kind = !anyText() ? null : (t && t.hasText && !t.tooLong ? 'has text' : 'picture only');
+      list.append(h('li', { class: 'lab-photo-page' }, cb, h('label', { for: id }, `Page ${n}`, kind ? h('span', { class: 'muted small' }, ` (${kind})`) : null)));
     }
     pdf.count = h('p', { class: 'hint', role: 'status' });
+    pdf.sendLine = h('p', { class: 'hint', id: 'lab-photo-send-line' });
+    pdf.radios = [];
+    let modes = null;
+    if (offer.text && anyText()) {
+      const radio = (value, label) => {
+        const input = h('input', { type: 'radio', name: 'lab-photo-mode', id: `lab-photo-mode-${value}`, value });
+        input.checked = pdf.mode === value;
+        input.addEventListener('change', () => { if (input.checked) { pdf.mode = value; syncPages(); } });
+        pdf.radios.push(input);
+        return h('li', { class: 'lab-photo-page' }, input, h('label', { for: input.id }, label));
+      };
+      const choices = [radio('text', MODE_TEXT)];
+      if (offer.pictures) choices.push(radio('picture', MODE_PICTURES));
+      modes = h('fieldset', { class: 'lab-photo-fieldset', id: 'lab-photo-modes' }, h('legend', {}, 'How to read the pages'),
+        h('ul', { class: 'list lab-photo-page-list' }, ...choices));
+    }
     pagesBox.append(h('fieldset', { class: 'lab-photo-fieldset' },
       h('legend', {}, `Pages to read (this PDF has ${plural(pdf.numPages, 'page', 'pages')})`),
-      h('p', { class: 'hint' }, PDF_TIP), list, pdf.count, h('p', { class: 'hint' }, PDF_SEND_LINE)));
+      h('p', { class: 'hint' }, PDF_TIP), list, pdf.count, pdf.sendLine));
+    if (modes) pagesBox.append(modes);
     pagesBox.hidden = false;
     syncPages();
+  }
+
+  // The text of every page, read here with pdf.js (nothing leaves the device). A page whose text cannot be read counts as one without.
+  async function readTexts(doc, signal) {
+    const texts = [];
+    if (!offer.text || !KH.pdfText || typeof doc.text !== 'function') return texts;
+    for (let n = 1; n <= doc.numPages; n += 1) {
+      try {
+        texts[n] = KH.pdfText.pageText(await doc.text(n, { signal }));
+      } catch (e) {
+        if (isAbort(e) || signal.aborted) throw e;
+        texts[n] = null;
+      }
+    }
+    return texts;
   }
 
   // A PDF was chosen: open it here (nothing leaves the device) and list its pages.
@@ -373,6 +455,15 @@
       const doc = await KH.pdfPages.open(file, { signal: control.signal });
       if (mine !== pdf.pick) { doc.close(); return; } // another file was chosen meanwhile
       pdf.doc = doc;
+      const texts = await readTexts(doc, control.signal);
+      if (mine !== pdf.pick) return; // released meanwhile (the release closed the document)
+      pdf.texts = texts;
+      if (!offer.pictures && !anyText()) { // nothing this server (or the demo) can read
+        forget();
+        showError(offer.demo ? DEMO_NO_TEXT : NO_TEXT_NO_PICTURES);
+        return;
+      }
+      pdf.mode = offer.text && anyText() ? 'text' : 'picture';
       pdf.numPages = doc.numPages;
       pdf.ticked = new Set(Array.from({ length: Math.min(DEFAULT_TICKED, doc.numPages) }, (_, i) => i + 1));
       pdf.control = null;
@@ -417,6 +508,8 @@
     const got = []; // [{page, rows}] of the pages the AI answered `ok` for
     const lines = []; // [{text, warn}] one per page that failed or had nothing, and the reason a run ended early
     let ended = null; // 'cancelled' | 'declined' | 'stopped' (a refusal that would repeat) | 'browser' | 'file'
+    let stripped = 0; // lines left out of the pages sent as text (they may say who the person is)
+    let demoNotice = null; // the demo's own notice: nothing was sent, the rows are an example
     try {
       const doc = await ensureDoc(signal);
       for (let i = 0; i < pages.length; i += 1) {
@@ -425,13 +518,35 @@
         say(`Reading page ${i + 1} of ${pages.length}…${n === i + 1 ? '' : ` (page ${n} of your PDF)`}`);
         let step = 'draw';
         try {
-          const drawn = await doc.render(n, { signal });
-          const picture = await KH.ai.prepareJpeg(drawn);
-          step = 'read';
-          const answer = await KH.ai.withConsent('labs', () => sendPage(picture, signal), () => upload(picture, true, signal), btn, 'labs');
+          let answer = null;
+          let via = viaText(n) ? 'text' : 'picture';
+          if (via === 'text') {
+            step = 'read';
+            const t = textOf(n);
+            try {
+              answer = await KH.ai.withConsent('labs', () => sendText(t.text, n, signal), () => KH.ai.readLabText(t.text, n, true, signal), btn, 'labs');
+              if (answer) stripped += t.removed; // (declined: nothing was sent)
+            } catch (e) {
+              // more text than the local AI's prompt takes: this page goes as a picture when the server reads pictures
+              if (!(e && e.status === 413 && e.data && e.data.reason === 'too_long_for_ai' && offer.pictures)) throw e;
+              lines.push({ text: `Page ${n} has more text than the local AI can take at once, so it was read as a picture.` });
+              via = 'picture';
+              step = 'draw';
+            }
+          } else if (!offer.pictures) {
+            lines.push({ text: `Page ${n} has no text to read, and the AI here cannot read pictures, so it was left out.`, warn: true });
+            continue;
+          }
+          if (via === 'picture') {
+            const drawn = await doc.render(n, { signal });
+            const picture = await KH.ai.prepareJpeg(drawn);
+            step = 'read';
+            answer = await KH.ai.withConsent('labs', () => sendPage(picture, signal), () => upload(picture, true, signal), btn, 'labs');
+          }
           if (!answer) { ended = 'declined'; break; } // the person declined the consent sheet or the request
+          if (answer.demo && answer.notice) demoNotice = answer.notice;
           if (answer.status === 'ok') {
-            got.push({ page: n, rows: answer.rows || [] });
+            got.push({ page: n, rows: answer.rows || [], via: anyText() ? via : null });
           } else {
             lines.push({ text: `Page ${n}: ${answer.message || 'No result could be read from this page.'}` });
           }
@@ -471,8 +586,14 @@
     } else if (ended === 'stopped') {
       lines.push({ text: 'Reading stopped here; the pages after it were not sent.', warn: true });
     }
+    if (stripped && !demoNotice) { // (the demo sent nothing)
+      lines.push({ text: `Before sending, ${plural(stripped, 'line', 'lines')} that may show your name, date of birth or record numbers `
+        + `${stripped === 1 ? 'was' : 'were'} left out.` });
+    }
     const merged = mergePages(got);
     if (merged.duplicates) lines.push({ text: `${plural(merged.duplicates, 'result was', 'results were')} the same as one already shown, so it is shown once.` });
+    const viaTextToo = got.some((g) => g.via === 'text');
+    const notice = demoNotice || (viaTextToo ? PDF_TEXT_NOTICE : PDF_NOTICE);
     if (!merged.rows.length) {
       const stopped = ended === 'declined' || ended === 'cancelled'; // the first line then says so: it becomes the headline
       nothing(results, { message: stopped ? lines.shift().text : 'No result could be read from the pages you ticked.' }, lines);
@@ -482,20 +603,32 @@
     try { existing = (await KH.labs.load()).labs; } catch (e) { /* the table still works; "already saved" is just not shown */ }
     if (run !== pdf.pick) return;
     shown.source = 'your PDF';
-    review(results, { rows: merged.rows, dropped_notes: [], notice: PDF_NOTICE }, { existing, source: 'PDF', notes: lines, onSave, onDiscard });
+    review(results, { rows: merged.rows, dropped_notes: [], notice }, { existing, source: 'PDF', notes: lines, onSave, onDiscard });
     const first = $('#lab-photo-row-0');
     if (first && !first.disabled && first.focus) first.focus();
   }
 
   // The first page's request meets the consent sheet; the notice the server sends with its 409 gets the line about the PDF before the
   // sheet is drawn (the sheet shows the notice as it is).
+  function withSendLine(e) {
+    const consent = e && e.status === 409 && e.data && e.data.consent;
+    const line = sendLine();
+    if (consent && Array.isArray(consent.notice) && !consent.notice.includes(line)) consent.notice = [...consent.notice, line];
+    return e;
+  }
   async function sendPage(picture, signal) {
     try {
       return await upload(picture, false, signal);
     } catch (e) {
-      const consent = e && e.status === 409 && e.data && e.data.consent;
-      if (consent && Array.isArray(consent.notice) && !consent.notice.includes(PDF_SEND_LINE)) consent.notice = [...consent.notice, PDF_SEND_LINE];
-      throw e;
+      throw withSendLine(e);
+    }
+  }
+  // A page's text (design note 36): the same consent sheet, with the line about text.
+  async function sendText(text, page, signal) {
+    try {
+      return await KH.ai.readLabText(text, page, false, signal);
+    } catch (e) {
+      throw withSendLine(e);
     }
   }
 
@@ -504,15 +637,24 @@
     const pages = tickedPages();
     if (!pages.length) { showError('Tick at least one page to read.'); return; }
     if (pdf.busy) return;
+    const first = pages[0];
+    const asText = viaText(first);
+    if (!asText && !offer.pictures) { showError(`Page ${first} has no text to read, and the AI here cannot read pictures.`); return; }
     const run = pdf.pick;
     const control = new AbortController();
     pdf.control = control;
     pdf.busy = true;
     syncPages();
-    say(`Drawing page ${pages[0]}…`);
+    say(asText ? `Reading the text of page ${first}…` : `Drawing page ${first}…`);
     try {
+      if (asText) {
+        const dry = await KH.ai.readLabText(textOf(first).text, first, true, control.signal);
+        if (dry && dry.demo) { clear(results); results.append(h('p', { class: 'hint', role: 'status' }, dry.message)); }
+        else await KH.ai.showSent(dry, { trigger: whatBtn });
+        return;
+      }
       const doc = await ensureDoc(control.signal);
-      const picture = await KH.ai.prepareJpeg(await doc.render(pages[0], { signal: control.signal }));
+      const picture = await KH.ai.prepareJpeg(await doc.render(first, { signal: control.signal }));
       await KH.ai.showSent(await upload(picture, true, control.signal), { trigger: whatBtn });
     } catch (e) {
       if (!isAbort(e) && !e.handled && run === pdf.pick) showError(e.code ? pdfMessage(e) : e);
@@ -551,5 +693,5 @@
     });
   }
 
-  KH.labPhoto = { show, review, nothing, whyOff, mergePages, pdfMessage, NOTICE, PDF_NOTICE, PDF_SEND_LINE, MAX_RESULTS, MAX_TICKED, DEFAULT_TICKED };
+  KH.labPhoto = { show, review, nothing, whyOff, mergePages, pdfMessage, NOTICE, PDF_NOTICE, PDF_SEND_LINE, PDF_TEXT_NOTICE, TEXT_SEND_LINE, TEXT_ONLY_SEND_LINE, MAX_RESULTS, MAX_TICKED, DEFAULT_TICKED };
 })();

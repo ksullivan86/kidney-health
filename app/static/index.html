@@ -1049,12 +1049,14 @@
     <!-- Read a lab report photo or PDF (js/views/lab_photo.js): shown only when the server's AI status says the local AI can read one.
          The photo goes to the local AI on the admin's own network (never to a cloud AI); every row it reads starts unticked. A PDF is opened
          on this device (js/engine/pdf_pages.js, the vendored pdf.js): the person ticks pages, each is drawn here and sent as a picture, and the
-         PDF file itself is never sent. -->
+         PDF file itself is never sent. A page with its own text can be sent as text instead (js/engine/pdf_text.js, design note 36), to the
+         same local AI. In the demo only that text reading is offered, and it answers with a fixed example. -->
     <section class="card" id="lab-photo" aria-labelledby="lab-photo-h" hidden>
       <h2 class="card-title" id="lab-photo-h">Read a lab report photo or PDF</h2>
       <p id="lab-photo-why" class="muted small" hidden></p>
       <div id="lab-photo-controls" hidden>
-        <p class="muted small">Take a photo or a screenshot of your lab report, or choose the PDF from your lab's website. The AI on your own network copies the printed results; nothing is saved until you check each one against the report, tick it and press Save. The report may show your name and date of birth, so crop the photo to the results table if you can. A PDF stays on this device: you choose the pages, and only those pages are drawn here and sent as pictures.</p>
+        <p class="muted small">Take a photo or a screenshot of your lab report, or choose the PDF from your lab's website. The AI on your own network copies the printed results; nothing is saved until you check each one against the report, tick it and press Save. The report may show your name and date of birth, so crop the photo to the results table if you can. A PDF stays on this device: you choose the pages. A page with its own text is read as text, which is faster and copies the exact numbers; other pages are drawn here and sent as pictures.</p>
+        <p id="lab-photo-demo" class="muted small" hidden>This is the demo. Choose a PDF to try reading its text: nothing is sent to an AI, and the results shown are a fixed example.</p>
         <div class="field">
           <label for="lab-photo-file">Photo, screenshot or PDF of the report</label>
           <input id="lab-photo-file" class="ai-file" type="file" accept="image/*,application/pdf,.pdf" aria-describedby="lab-photo-hint">
@@ -2496,6 +2498,7 @@
 <script src="js/engine/fhir_labs.js"></script>
 <script src="js/engine/ccda_labs.js"></script>
 <script src="js/engine/pdf_pages.js"></script>
+<script src="js/engine/pdf_text.js"></script>
 <script src="js/engine/menu_link.js"></script>
 <script src="js/engine/symptoms.js"></script>
 <script src="js/engine/body.js"></script>

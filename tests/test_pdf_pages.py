@@ -92,7 +92,9 @@ def test_the_port_is_set_before_getdocument_and_the_options_are_exactly_the_audi
 
 def test_the_render_call_draws_a_white_page_without_annotations():
     assert "page.render({ canvas, viewport, background: '#ffffff', annotationMode: lib.AnnotationMode.DISABLE })" in CODE
-    assert "getTextContent" not in CODE and "TextLayer" not in CODE and "getAnnotations" not in CODE  # no text layer, no annotation layer
+    assert "TextLayer" not in CODE and "getAnnotations" not in CODE  # no text layer drawn, no annotation layer
+    # the page's own text is read once, with pdf.js's default options (design note 36), never drawn
+    assert CODE.count("getTextContent(") == 1 and "page.getTextContent()" in CODE
     assert "canvasToJpeg" in CODE and "'image/jpeg'" in CODE and "JPEG_QUALITY: 0.9" in CODE
     assert "page.cleanup()" in CODE and "canvas.width = 0" in CODE and "workerPort = null" in CODE and "worker.terminate()" in CODE
 
@@ -259,3 +261,15 @@ def test_a_page_that_cannot_be_drawn_leaves_the_document_usable(ran):
 def test_pages_of_different_shapes_come_out_inside_the_limits(ran):
     assert ran["shapes"] == [[1582, 2048], [1448, 2048], [578, 2048], [40, 40], [2048, 1582]]
     assert all(w <= 2048 and h <= 2048 and w * h <= 4_000_000 for w, h in ran["shapes"])
+
+
+def test_a_pages_own_text_comes_back_as_plain_items(ran):
+    """``text(n)`` (design note 36): the items' str, transform, width and height only; default options; the page is cleaned up; a
+    page whose text cannot be read is ``damaged``, a pdf.js without ``getTextContent`` gives nothing, a page that is not there is a
+    RangeError, Cancel is an AbortError and a closed document refuses."""
+    assert ran["textItems"] == [{"str": "Potassium", "transform": [10, 0, 0, 10, 72, 700], "width": 45, "height": 10},
+                                {"str": "5.4", "transform": [10, 0, 0, 10, 220, 700], "width": 15, "height": 10}]
+    assert ran["textEmpty"] == [] and ran["textCalls"] == [[], []]
+    assert ran["textCleanups"] == ["text:1", "cleanup:1", "text:2", "cleanup:2"]
+    assert ran["textFails"]["error"] == "damaged" and ran["textMissing"] == []
+    assert ran["textBadPage"] == "RangeError" and ran["textAborted"] == "AbortError" and ran["textClosed"] == "damaged"

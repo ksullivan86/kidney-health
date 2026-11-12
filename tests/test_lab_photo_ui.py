@@ -1,7 +1,7 @@
 """The browser side of "Read a lab report photo or PDF" (``app/static/js/views/lab_photo.js``, its card in ``index.html``, the shared save
 in ``labs.js``, the hooks in ``ai.js`` and ``ai_routing.js``, ``css/labs.css``): the file is in the shell and the service worker,
 nothing in it is an inline script, handler, style or HTML string, it reaches the server only through the app's own AI client, the
-demo never offers it, and its behaviour (offered only when the server says so and why not, every row unticked, a row without a
+demo offers only a PDF's text (answered by a fixed example), and its behaviour (offered only when the server says so and why not, every row unticked, a row without a
 date cannot be ticked, only ticked rows are saved through the CSV import's own save) is checked by running the file against a
 fake page in Node (``tests/js/lab_photo_page.mjs``).
 
@@ -71,19 +71,24 @@ def test_the_card_is_hidden_until_the_server_says_the_local_ai_can_read_a_report
     assert 'id="lab-photo-file"' in card and 'accept="image/*,application/pdf,.pdf"' in card
     assert "Read a lab report photo or PDF" in card and "crop the photo to the results table" in card.lower()
     assert "choose the PDF from your lab's website" in card  # the card says a PDF works too
-    assert "A PDF stays on this device" in card and "only those pages are drawn here and sent as pictures" in card
+    assert "A PDF stays on this device" in card and "other pages are drawn here and sent as pictures" in card
+    assert "A page with its own text is read as text" in card  # design note 36
+    assert re.search(r'<p id="lab-photo-demo" class="muted small" hidden>This is the demo\.', card)
     # the page list is built by the view into this container, with its own progress line and Cancel button (hidden until a PDF is read)
     assert re.search(r'<div id="lab-photo-pages" class="lab-photo-pages" hidden></div>', card)
     assert re.search(r'<button class="btn secondary" type="button" id="lab-photo-cancel" hidden>Cancel</button>', card)
     assert re.search(r'<p id="lab-photo-progress" class="hint" role="status" aria-live="polite" hidden></p>', card)
-    assert "features.lab_report" in PHOTO_JS and "st.features.lab_report" in PHOTO_JS
-    assert "section.hidden = true; return; }" in PHOTO_JS  # AI off on the server (and the demo): nothing is offered
+    assert "pictures: !!features.lab_report, text: !!features.lab_report_text" in PHOTO_JS
+    assert "section.hidden = true; return; }" in PHOTO_JS  # AI off on the server: nothing is offered
 
 
-def test_the_demo_never_offers_it():
+def test_the_demo_never_reads_a_photo_and_answers_a_pdfs_text_with_a_fixed_example():
     assert "r'^\\/api\\/(?:ai|vision)\\/'" not in MOCK_AI  # (a JS regex literal, checked below)
     pattern = re.search(r"route\('\*', (/.+?/), function", MOCK_AI).group(1)
     assert re.match(pattern[1:-1].replace("\\/", "/"), "/api/ai/read-lab-report")  # answered 404, like every other AI route there
+    # design note 36 §4.4: the text route is the one exception, registered before the catch-all, with a fixed example
+    assert MOCK_AI.index("route('POST', '/api/ai/read-lab-report-text'") < MOCK_AI.index("route('*', /^")
+    assert "nothing was sent to an AI. These rows are a fixed example, not read from your file." in MOCK_AI
     assert "if (MOCK) return { enabled: false, demo: true };" in AI_JS or "if (MOCK) return { enabled: false, demo: true }" in AI_JS
     assert "Photos are read by AI only in the installed app." in AI_JS
 
@@ -165,7 +170,7 @@ def test_messages_instead_of_a_table(page):
 
 def test_the_card_is_offered_only_when_the_server_says_so_and_says_why_when_it_is_not(page):
     assert page["offered"] == {"section": False, "controls": False, "why": True, "whyText": ""}
-    assert page["aiOff"]["section"] is True  # AI is off on this server (or this is the demo): the card is not there at all
+    assert page["aiOff"]["section"] is True  # AI is off on this server: the card is not there at all
     assert page["noLocalAi"] == {"section": False, "controls": True, "why": False,
                                  "whyText": "Needs a local AI on your own network, which is not set up on this server, so it is off."}
     assert "Turn on AI features in Settings" in page["notOptedIn"]["whyText"] and page["notOptedIn"]["controls"] is True
@@ -409,3 +414,79 @@ def test_the_merge_keeps_the_first_page_of_a_repeated_row_and_collapses_rows_wit
     assert merge["duplicates"] == 2
     exported = pdf(page)["exported"]
     assert exported["max"] == 10 and exported["def"] == 6 and "mergePages" in exported["messages"] and "pdfMessage" in exported["messages"]
+
+
+# --------------------------------------------------------------------------- #
+# Reading a page's own text (design note 36)
+# --------------------------------------------------------------------------- #
+
+TEXT_LINE = ("Pages with text are sent as text, without the lines that may show your name, date of birth or record numbers. "
+             "Other pages are drawn on this device and sent as pictures. The PDF file itself is not sent.")
+TEXT_ONLY_LINE = ("Pages with text are sent as text, without the lines that may show your name, date of birth or record numbers. "
+                  "The PDF file itself is not sent.")
+DEMO = "This is the demo: nothing was sent to an AI. These rows are a fixed example, not read from your file."
+
+
+def test_pages_with_text_are_read_as_text_by_default_and_say_so(page):
+    tx = page["text"]
+    pick = tx["pick"]
+    assert pick["texts"] == [1, 2, 3]  # every page's text is read on the device when the PDF is chosen
+    assert pick["radios"] == [["text", True], ["picture", False]]
+    assert pick["labels"][:3] == ["Page 1 (has text)", "Page 2 (picture only)", "Page 3 (has text)"]
+    assert pick["labels"][3:] == ["Read the text (faster, copies the exact numbers)", "Read pictures of the pages"]
+    assert pick["sendLine"] == TEXT_LINE and pick["legends"] == ["Pages to read (this PDF has 3 pages)", "How to read the pages"]
+    read = tx["read"]
+    # pages 1 and 3 as text, with the line that names the person left out; page 2 (a scan) drawn and sent as a picture
+    assert [(x["n"], x["dry"], x["signal"]) for x in read["sent"]] == [(1, False, True), (3, False, True)]
+    assert read["sent"][0]["lines"] == ["Harbor Valley Clinical Laboratory", "Collected: 2026-10-07", "Potassium 5.4 mmol/L", "Phosphate 1.2 mmol/L"]
+    assert not any("Jane" in line or "1961" in line for x in read["sent"] for line in x["lines"])
+    assert read["uploads"] == [["jpeg:page-2.jpg", False]] and read["renders"] == [2]
+    assert read["pages"] == ["page 1 of your PDF, read from its text", "page 1 of your PDF, read from its text",
+                             "page 2 of your PDF, read from a picture of it", "page 3 of your PDF, read from its text"]
+    assert read["notice"].startswith("Read by AI from the pages of your PDF that you ticked, from their text where they have it.")
+    assert "Before sending, 1 line that may show your name, date of birth or record numbers was left out." in read["lines"]
+    assert read["consent"] == [["labs", "labs"]] * 3  # the same consent as a lab report photo, every page
+
+
+def test_the_person_can_choose_pictures_for_every_page(page):
+    pictures = page["text"]["pictures"]
+    assert pictures["sendLine"] == "Each page you tick is drawn on this device and sent as a picture; the PDF file itself is not sent."
+    assert pictures["texts"] == 0 and pictures["uploads"] == ["jpeg:page-1.jpg", "jpeg:page-2.jpg", "jpeg:page-3.jpg"]
+    assert all(p.endswith("read from a picture of it") for p in pictures["pages"])
+
+
+def test_a_server_that_reads_text_only_never_sends_a_picture(page):
+    only = page["text"]["textOnly"]
+    assert only["radios"] == ["text"] and only["sendLine"] == TEXT_ONLY_LINE and only["controls"] is False
+    assert only["uploads"] == 0 and only["renders"] == 0 and only["sent"] == [1, 3]
+    assert "Page 2 has no text to read, and the AI here cannot read pictures, so it was left out." in only["warned"]
+    assert page["text"]["textOnlyScan"] == {"error": "This PDF has no text to read, and the AI on this server cannot read pictures. Try the PDF "
+                                                     "from your lab's website, which usually has text.", "list": "hidden", "input": ""}
+    assert page["text"]["textOnlyPhoto"] == {"error": "The AI on this server can read the text of a PDF, but not a photo. Choose the PDF from "
+                                                      "your lab's website instead.", "uploads": 0}
+
+
+def test_a_page_too_long_for_the_local_ai_is_read_as_a_picture(page):
+    long = page["text"]["tooLong"]
+    assert long["sent"] == [1, 3] and long["uploads"] == ["jpeg:page-1.jpg", "jpeg:page-2.jpg"]
+    assert long["lines"][0] == "Page 1 has more text than the local AI can take at once, so it was read as a picture."
+    assert long["pages"] == ["page 1 of your PDF, read from a picture of it", "page 2 of your PDF, read from a picture of it",
+                             "page 3 of your PDF, read from its text"]
+
+
+def test_the_consent_sheet_and_what_will_be_sent_for_text(page):
+    assert page["text"]["consent"] == [["Your report goes to ollama.lan.", TEXT_LINE]]
+    assert page["text"]["what"] == {"sent": [[1, True, True, False]], "shown": 1, "uploads": 0}  # the dry run of the first page's text
+
+
+def test_the_demo_reads_a_pdfs_text_with_a_fixed_example_and_nothing_else(page):
+    tx = page["text"]
+    assert tx["demoCard"] == {"section": False, "controls": False, "note": False}
+    demo = tx["demo"]
+    assert demo["radios"] == ["text"] and demo["notice"] == DEMO and demo["uploads"] == 0 and demo["renders"] == 0
+    assert not any(line.startswith("Before sending") for line in demo["lines"])  # the demo sent nothing
+    assert demo["what"] == DEMO
+    assert tx["demoScan"] == "This PDF has no text to read. In the demo only a PDF with text can be tried."
+    assert tx["demoPhoto"] == {"error": "In the demo you can try the text of a PDF only. Photos are read by AI in the installed app.", "uploads": 0}
+    assert tx["demoNoteAfter"] is True
+    assert tx["previewHidden"] is True  # the static preview builds carry no pdf.js, so the card stays hidden there

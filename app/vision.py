@@ -9,6 +9,10 @@ runs **only on the local AI** (the shared provider holding the role ``local``, p
 provider and the cloud are never used, whatever is set); it has its own consent purpose ``labs``; and the AI activity row
 keeps no content (the photo's SHA-256 only). It returns *proposed* rows and writes nothing.
 
+``POST /api/ai/read-lab-report-text`` (design note 36) is the same for the text of one page of a lab report PDF, read in the browser: a
+JSON body (at most 20,000 characters), the same ``labs`` route, consent and local-only rule, no vision model needed, and a check that
+each value the model returns is written in the text. The activity row keeps a fingerprint of the text, never the text.
+
 * Registered with the AI routes and like them **404 while ``ai.enabled`` is off**; a signed-in person
   only. ``503`` (with ``reason``) when no vision model is set (``vision_not_configured``), plate photos
   are off (``plate_disabled``, the default), or the provider is a Hermes agent and
@@ -37,9 +41,10 @@ from __future__ import annotations
 
 import asyncio
 import sqlite3
-from typing import Any
+from typing import Annotated, Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, Query, Request
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 from starlette.concurrency import run_in_threadpool
 
 from .ai import features as F
@@ -232,4 +237,58 @@ async def read_lab_report(request: Request, user: CurrentUser, background: Backg
     _upstream_error(result)
     result.setdefault("rows", [])
     result.setdefault("dropped", {key: 0 for key in LR.DROPPED_KEYS})
+    return result
+
+
+# --------------------------------------------------------------------------- #
+# The text of a lab report PDF page (design note 36; local AI only)
+# --------------------------------------------------------------------------- #
+
+MAX_PDF_PAGES = 50  # the browser opens a PDF of at most 50 pages (js/engine/pdf_pages.js LIMITS.MAX_PAGES)
+
+
+class LabTextBody(BaseModel):
+    """One page's text, as the browser rebuilt it from the PDF's own text (lines separated by line breaks)."""
+
+    model_config = ConfigDict(extra="forbid")
+    text: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1, max_length=LR.MAX_TEXT_CHARS)]
+    page: Annotated[int, Field(ge=1, le=MAX_PDF_PAGES)] | None = None
+
+
+def _lab_text_config(request: Request, conn: sqlite3.Connection, user: User):  # noqa: ANN202 - ProviderConfig
+    """The local AI for the text of a lab report, or the reason there is none (503). The same route, rules and consent as a lab
+    report photo (feature ``labs``), but no vision model is needed."""
+    resolved = _resolve(request, conn, user, "labs")
+    if not resolved.ok:
+        raise unavailable(resolved.reason or "not_configured")
+    cfg = resolved.cfg
+    assert cfg is not None
+    if resolved.role != "local" or not cfg.local_only:  # routing guarantees this; a lab report is never sent anywhere else
+        raise unavailable("local_not_private")
+    return cfg
+
+
+@lab_router.post("/read-lab-report-text")
+async def read_lab_report_text(body: LabTextBody, request: Request, user: CurrentUser, background: BackgroundTasks,
+                               dry_run: bool = Query(False), conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    """Read the results in the text of one page of a lab report PDF: ``{rows, dropped, provider, ...}`` of proposed rows, as for a
+    photo (never saved). A row whose value is not written in ``text`` is dropped (``dropped.not_in_text``).
+
+    Order: switches and the local AI (503) → consent for ``labs`` (409) → the person's and a server AI slot (429) → the call.
+    A text that does not fit the local AI's prompt budget is 413 ``too_long_for_ai`` (read that page as a picture instead)."""
+    cfg = await run_in_threadpool(_lab_text_config, request, conn, user)
+    if not dry_run:
+        await run_in_threadpool(check_consent, conn, user, cfg, "labs")
+    try:
+        prep = F.prepare_read_lab_report_text(cfg, body.text, page=body.page)
+    except F.ContextTooSmall:
+        raise ApiProblem(413, "This page has more text than the local AI can take at once. Read it as a picture instead.",
+                         reason="too_long_for_ai") from None
+    if dry_run:
+        return prep.dry_run(request.app.version)
+    result = await run_call(request, conn, user, prep, background)
+    _upstream_error(result)
+    result.setdefault("rows", [])
+    result.setdefault("dropped", {**{key: 0 for key in LR.DROPPED_KEYS}, "not_in_text": 0})
+    result["page"] = body.page
     return result
