@@ -245,6 +245,12 @@ weight in grams. Nothing else: no name, account, dates, targets or readings. Ins
 browser opens on Instacart's own site, where Instacart's terms and privacy policy apply. The server keeps neither the list nor the
 link. The activity list records each send with the number of items.
 
+If the admin turns on reminders and a person turns on notifications on a device ([reminders.md](reminders.md)), the server keeps
+that browser's push address and keys, the browser's description (such as "Safari on iPhone") and the person's reminders (what,
+when, which days, their time zone). At a reminder's time the server sends that device's push service (Apple, Google, Mozilla or
+Microsoft) an encrypted message such as "Time to log lunch.". The push service learns when a message is sent and that it came from
+this server, nothing more. The reminders are in the person's export; the push address and keys are not. Both go with the account.
+
 If the admin turns on recipe pages and a person imports a recipe from a link ([recipe-import.md](recipe-import.md)), the
 server opens that one page, reads its recipe data and forgets the page; only the link is kept, with the recipe. The site sees a
 request from the server, not from the person's phone, with no cookie and nothing about the person. Pasted ingredients never

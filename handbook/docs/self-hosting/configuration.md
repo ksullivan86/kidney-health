@@ -7,9 +7,9 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-11-07
+last_checked: 2026-11-12
 fact_checked: 2026-10-05
-sources: [NOTE01, NOTE03, NOTE04, NOTE06, NOTE07, NOTE08, NOTE12, NOTE17, NOTE27, NOTE28, WHOOP-API, NOTE30, NOTE33, NOTE34, NOTE20, DEPLOY, SECDOC, NIST-63B4, FDC-API, OFF-API]
+sources: [NOTE01, NOTE03, NOTE04, NOTE06, NOTE07, NOTE08, NOTE12, NOTE17, NOTE27, NOTE28, WHOOP-API, NOTE30, NOTE33, NOTE34, NOTE35, NOTE20, DEPLOY, SECDOC, NIST-63B4, FDC-API, OFF-API]
 ---
 
 # Configuration
@@ -93,6 +93,22 @@ before. The server sends mail only to the mail server you set here.
 | `SMTP_TIMEOUT_S` | 15 | Seconds to wait at each step. A send stops after twice this. |
 
 Check it with **Server administration → About this server → Send a test email**. It goes to your own confirmed email.
+
+## Reminders by phone notification {#reminders}
+
+Off by default. When on, people can turn on notifications on their phone or computer in **Settings → Reminders** and get a
+reminder at a time they choose to log a meal, plan tomorrow or log their weight ([design note 35][NOTE35]). The server then sends
+to the push services of Apple, Google, Mozilla and Microsoft ([Network allowlist](network-allowlist.md)). Reminders are a
+convenience, never a safety alert: the app tells people to rely on their CGM's alerts for lows.
+
+| Variable | Default | Purpose |
+|---|---|---|
+| `REMINDERS_ENABLED` | `false` | Turns it on. Its own switch: `PUSH_ENABLED` is phone shortcuts. Needs `PUBLIC_URL` with `https://` and sign-in, or the server does not start. |
+| `VAPID_SUBJECT` | unset | How the push services can reach you: `mailto:you@example.org` or an `https://` address. Required when on. |
+| `VAPID_PRIVATE_KEY_FILE` | `DATA_DIR/vapid_private.pem` | The server's push key. Made once, mode 0600, when it does not exist in the data folder. `VAPID_PRIVATE_KEY` is refused: use the file. If the key changes, people turn notifications on again. |
+| `REMINDERS_TIMEOUT_S` | 10 | Seconds to wait for a push service. A send stops after twice this. |
+
+On iPhone, notifications work only in the app added to the Home Screen, on iOS 16.4 or later.
 
 ## Proxy sign-in (`AUTH_MODE=proxy`)
 
@@ -254,5 +270,6 @@ Environment=AUTH_MODE=local
 - [Design note 12][NOTE12] §4.4: the `PUSH_ENABLED` switch.
 - [Design note 20][NOTE20]: first values from the environment.
 - [Design note 34][NOTE34]: password reset by email.
+- [Design note 35][NOTE35]: reminders by phone notification.
 - [Deployment guide][DEPLOY]; [operator security guide][SECDOC].
 - [NIST SP 800-63B-4][NIST-63B4]; [USDA FoodData Central API guide][FDC-API]; [Open Food Facts API][OFF-API].

@@ -7,9 +7,9 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-11-01
+last_checked: 2026-11-12
 fact_checked: 2026-10-05
-sources: [ALLOWLIST, NOTE01, NOTE03, NOTE04, NOTE08, NOTE30, NOTE33, SECDOC, K8S-NETPOL, OFF-API, FDC-API]
+sources: [ALLOWLIST, NOTE01, NOTE03, NOTE04, NOTE08, NOTE30, NOTE33, NOTE35, SECDOC, K8S-NETPOL, OFF-API, FDC-API]
 ---
 
 # Network allowlist
@@ -37,6 +37,7 @@ built offline and loads nothing from the internet either, no fonts, no scripts, 
 | `api.pwnedpasswords.com` | 443 | `PASSWORD_BREACH_CHECK=true` | off |
 | each person's own Grocy, KitchenOwl or Mealie | its port | `LIST_SYNC_ENABLED` and a person set one up; only food names and amounts are sent. A home address only when listed in `LIST_SYNC_ALLOWED_HOSTS` ([design note 30][NOTE30]) | off |
 | `connect.instacart.com` (`connect.dev.instacart.tools` for a development key) | 443 | `INSTACART_ENABLED`, the server's own key, and a person sends the shopping list; only each food's name and amount are sent ([design note 33][NOTE33]) | off |
+| `*.push.apple.com`, `fcm.googleapis.com`, `updates.push.services.mozilla.com`, `*.notify.windows.com` | 443 | `REMINDERS_ENABLED` and a person turned on notifications on a device; at each reminder the server sends that device's push service one encrypted message with plain words such as "Time to log lunch." ([design note 35][NOTE35]) | off |
 | any public recipe site a person pastes a link for | 80, 443 | `RECIPE_IMPORT_ENABLED` and a person imports a recipe page; private addresses are always refused. A strict firewall blocks this: leave it off, and pasting ingredients still works | off |
 
 Not needed: `images.openfoodfacts.org` (the app shows no product images), telemetry, update checks or
