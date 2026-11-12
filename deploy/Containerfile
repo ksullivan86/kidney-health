@@ -22,7 +22,7 @@
 # Base images: literal `FROM image:tag@sha256:` lines so Dependabot (docker ecosystem, directory
 # /deploy, group "base-images") bumps them in one pull request. Chainguard's free tier publishes only
 # :latest and :latest-dev, so the digest is what pins the Python version: builder and runtime are
-# Python 3.15 (moved to 3.15 on 2026-10-15, last resolved on 2026-11-09; the 3.14 digests no longer
+# Python 3.15 (moved to 3.15 on 2026-10-15, last resolved on 2026-11-12; the 3.14 digests no longer
 # get security updates). The handbook stage is the one exception, see its comment. Re-resolve by hand with:
 #   crane digest cgr.dev/chainguard/python:latest-dev ; crane digest cgr.dev/chainguard/python:latest
 # The Debian fallback (deploy/Containerfile.debian) is built by CI on pull requests but not published.
@@ -30,7 +30,11 @@
 # ---------------------------------------------------------------------------------------------------
 # Stage 1: builder. A venv without pip; the builder's own pip installs into it (pip >= 22.3 --python).
 # ---------------------------------------------------------------------------------------------------
-FROM cgr.dev/chainguard/python:latest-dev@sha256:6b7c43c25f9446e8b1cf850797826a3d40b7cccdc6370c6e1b31cb28adae0a18 AS builder
+# The handbook stage's base (see Stage 2, TEMPORARY SPLIT). It is a build argument, not a literal FROM line, so that
+# Dependabot (which updates only literal FROM lines) leaves this pin alone instead of proposing a 3.15 digest that fails.
+ARG HANDBOOK_BASE=cgr.dev/chainguard/python:latest-dev@sha256:630df1be3733f7b38d1b535872904248adfe23fbea4befcb08da47cb7436ddb2
+
+FROM cgr.dev/chainguard/python:latest-dev@sha256:62c16c709c48c8e66647c843b5aceeac81d4523134c742bc017a46f5a86ba5dd AS builder
 # Root only in this throw-away stage (it creates /opt/venv); the runtime stage ends as 10001.
 # hadolint ignore=DL3002
 USER 0
@@ -69,11 +73,11 @@ RUN /opt/venv/bin/python -m compileall -q -j 0 /opt/venv /opt/app/app \
 # handbook/requirements.lock, installed wheels only) and PyYAML publishes no cp315 wheel yet, so on 3.15
 # the install fails and nothing may be built from source. The stage outputs static HTML only, so its
 # Python version never reaches the runtime image. When a PyYAML release ships a cp315 wheel, regenerate
-# handbook/requirements.lock (scripts/lock.sh) and make this FROM line identical to the builder's again.
-# Dependabot will keep proposing to bump this line to the 3.15 digest; until then that bump fails the
-# image build at the handbook stage, so do not merge it (tests/test_deploy.py checks this comment stays).
+# handbook/requirements.lock (scripts/lock.sh), delete HANDBOOK_BASE and make this FROM line identical to the
+# builder's again. The pin lives in the HANDBOOK_BASE build argument at the top of this file so that Dependabot does not
+# keep proposing the 3.15 digest (tests/test_deploy.py checks this comment stays while the split does).
 # ---------------------------------------------------------------------------------------------------
-FROM cgr.dev/chainguard/python:latest-dev@sha256:630df1be3733f7b38d1b535872904248adfe23fbea4befcb08da47cb7436ddb2 AS handbook
+FROM ${HANDBOOK_BASE} AS handbook
 # Root only in this throw-away stage (it creates /opt/hb and /out/learn).
 # hadolint ignore=DL3002
 USER 0
@@ -107,7 +111,7 @@ RUN /opt/hb/bin/mkdocs build --strict -d /out/learn \
 # ---------------------------------------------------------------------------------------------------
 # Stage 3: runtime. Chainguard python:latest: no shell, no pip, no apk; glibc (manylinux wheels).
 # ---------------------------------------------------------------------------------------------------
-FROM cgr.dev/chainguard/python:latest@sha256:a57ac9d33d8ca6eb2946d1d7e93a5600153d02e0c7c1fa3a322fc343f89451f5
+FROM cgr.dev/chainguard/python:latest@sha256:c932048a3f1db1fecefbd589d4fb90bf1d364b4c1ebd9aa8c866f29bb93e88cc
 
 # OCI annotations. CI (docker/metadata-action) adds version, revision and created. The licences are
 # SPDX ids: the code's LICENSE, PolyForm Noncommercial 1.0.0 (personal and noncommercial use only),

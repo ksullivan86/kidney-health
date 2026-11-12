@@ -9,6 +9,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### Fixed
 
+* The menu plan sheet uses the same words as every other sheet when an earlier save fails after you closed it.
+
 * Opening another handbook menu while its foods are being added keeps the new draft. The earlier reply no longer
   clears its foods, closes it, changes the page or puts an old error on it. Add waits for that save to finish; the
   submitted date and choices stay as sent, and Close remains available.
@@ -20,6 +22,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
   no longer makes the reset request fail with a server error.
 * New Chainguard base images for the builder and the runtime (Python 3.15.2 built 2026-11-06), and Caddy 2.11.9 for the
   optional HTTPS front end in `deploy/caddy`.
+* Newer builder and runtime images again (2026-11-12). Dependabot no longer proposes moving the handbook build or the
+  Debian fallback to Python 3.15, which cannot work until PyYAML ships a 3.15 wheel.
 
 ## 0.23.0 — 2026-11-07
 

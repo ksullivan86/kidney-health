@@ -49,7 +49,7 @@ for (const outcome of ['success', 'error', 'handled']) {
     assert.equal(s.$('#menuplan-error').hidden, true);
     assert.deepEqual(s.views, []);
     assert.equal(s.$('#menuplan-save').disabled, false);
-    if (outcome === 'error') assert.equal(s.toasts.at(-1)[1], 'error');
+    if (outcome === 'error') assert.deepEqual(s.toasts.at(-1), ['An earlier save did not go through. Check it and try again.', 'error']);
   });
 }
 test('reopening cannot send a second batch while the original write is pending', async () => {

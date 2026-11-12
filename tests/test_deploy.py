@@ -382,7 +382,10 @@ def test_hash_locks_are_refreshed_weekly_with_a_cooldown_by_pull_request():
 @pytest.mark.parametrize("path", CONTAINERFILES, ids=lambda p: p.name)
 def test_containerfile_bases_are_digest_pinned_and_move_together(path):
     text = path.read_text(encoding="utf-8")
-    froms = re.findall(r"^FROM\s+(\S+)", text, re.M)
+    args = dict(re.findall(r"^ARG\s+(\w+)=(\S+)", text, re.M))
+    # The handbook stage may name its base through a build argument (HANDBOOK_BASE) that Dependabot does not touch.
+    froms = [re.sub(r"^\$\{(\w+)\}$", lambda m: args.get(m.group(1), m.group(0)), ref)
+             for ref in re.findall(r"^FROM\s+(\S+)", text, re.M)]
     assert len(froms) == 3, froms  # builder, handbook, runtime
     for ref in froms:
         assert DIGEST.search(ref), f"{path.name}: FROM without @sha256 digest: {ref}"
