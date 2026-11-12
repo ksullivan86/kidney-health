@@ -89,7 +89,7 @@ def walk(browser: Any, server: Server, api: Any, out: Path, width: int, scheme: 
             rows = api.json("GET", "/api/log", params={"date": target})["entries"]
             check(len(rows) == 1 and rows[0]["status"] == "planned", "one server write on submitted date")
             if outcome == "error":
-                check("earlier plan" in page.locator("#toast").inner_text().lower(), "late failure is said")
+                check("an earlier save did not go through" in page.locator("#toast").inner_text().lower(), "late failure is said")
             page.screenshot(path=str(out / f"{width}-{outcome}.png"))
             close()
         open_menu(links[0])
