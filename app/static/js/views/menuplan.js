@@ -280,7 +280,7 @@
     } catch (err) {
       if (!err.handled) {
         if (token === S.token) setProblem(err.detail || err.message || 'The foods could not be added. Try again.');
-        else toast('An earlier plan could not be added. Check it and try again.', 'error');
+        else toast('An earlier save did not go through. Check it and try again.', 'error'); // the same words as every sheet (0.22.3)
       }
     } finally {
       S.busy = false;
