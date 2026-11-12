@@ -59,6 +59,7 @@ const SHELL_URLS = [
   '/js/engine/fhir_labs.js',
   '/js/engine/ccda_labs.js',
   '/js/engine/pdf_pages.js',
+  '/js/engine/pdf_text.js',
   '/js/engine/menu_link.js',
   '/js/engine/symptoms.js',
   '/js/engine/body.js',

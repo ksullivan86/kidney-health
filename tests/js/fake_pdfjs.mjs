@@ -9,6 +9,9 @@ export const control = {
       mode: 'ok', // ok | password | damaged | hang | noport (pdf.js ignores the port and sets up a fake worker of its own)
       renderMode: 'ok', // ok | fail | hang
       getPageHang: false,
+      texts: {}, // page number -> text items getTextContent() gives (none: no items); textMode: ok | fail | missing
+      textMode: 'ok',
+      textCalls: [], // the arguments of each getTextContent call
       pages: [[612, 792], [595.28, 841.89]], // points
       events: [], // the order things happened in
       getDocumentCalls: [], // the options object of each getDocument call
@@ -54,6 +57,14 @@ function makePage(number) {
       };
     },
     cleanup() { control.events.push(`cleanup:${number}`); },
+    ...(control.textMode === 'missing' ? {} : {
+      async getTextContent(...args) {
+        control.textCalls.push(args);
+        control.events.push(`text:${number}`);
+        if (control.textMode === 'fail') throw new Error('bad font');
+        return { items: control.texts[number] || [], styles: {}, lang: null };
+      },
+    }),
   };
 }
 

@@ -338,4 +338,27 @@ await refused('fakeWorker', {}, new FakeFile(pdfBytes()), {}, () => { fake.contr
   doc.close();
 }
 
+// 10. A page's own text (design note 36): plain items, default options, cleanup, a failing or missing getTextContent, a bad page number.
+{
+  reset();
+  fake.control.texts = { 1: [{ str: 'Potassium', transform: [10, 0, 0, 10, 72, 700], width: 45, height: 10, dir: 'ltr', fontName: 'g_d0_f1', hasEOL: false },
+    { type: 'beginMarkedContent', id: 'mc0' }, { str: '5.4', transform: [10, 0, 0, 10, 220, 700, 99], width: 15, height: 10 }] };
+  const e = makeEnv();
+  const doc = await e.KH.pdfPages.open(new FakeFile(pdfBytes()));
+  out.textItems = await doc.text(1);
+  out.textEmpty = await doc.text(2);
+  out.textCalls = [...fake.control.textCalls];
+  out.textCleanups = events().filter((x) => x.startsWith('cleanup') || x.startsWith('text'));
+  fake.control.textMode = 'fail';
+  out.textFails = await outcome(doc.text(1));
+  fake.control.textMode = 'missing';
+  out.textMissing = await doc.text(1);
+  fake.control.textMode = 'ok';
+  out.textBadPage = (await outcome(doc.text(3))).name;
+  const aborted = new AbortController(); aborted.abort();
+  out.textAborted = (await outcome(doc.text(1, { signal: aborted.signal }))).name;
+  doc.close();
+  out.textClosed = (await outcome(doc.text(1))).error;
+}
+
 console.log(JSON.stringify(out));

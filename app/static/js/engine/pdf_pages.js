@@ -11,7 +11,10 @@
                                    (pdf.js's legacy build still calls Promise.withResolvers natively: Safari 17.4, Chrome 119, Firefox 121.
                                    Module workers are older than that in every browser, so this one check covers them too.)
      open(file, {maxBytes, maxPages, signal})
-                                   → Promise<{numPages, render(pageNumber, {signal}) → Promise<Blob image/jpeg>, close()}>
+                                   → Promise<{numPages, render(pageNumber, {signal}) → Promise<Blob image/jpeg>,
+                                              text(pageNumber, {signal}) → Promise<[{str, transform, width, height}]>, close()}>
+                                   text() is the page's own text items (page.getTextContent(), default options), for
+                                   js/engine/pdf_text.js and the "Read the text" path (design note 36); [] when there is none.
      planScale(width, height)      → {scale, width, height}: the size a page of width × height points is drawn at (pure; the tests use it)
      LIMITS, PDFJS_URL, WORKER_URL, ERROR_CODES
 
@@ -47,7 +50,7 @@
        drawn), `enableScripting` (not a getDocument option: scripting runs only in the pdf.js viewer, which is not here), `password`
        and `onPassword` (the app never asks for a PDF password: a protected file is refused).
      * page.render({canvas, viewport, background: '#ffffff', annotationMode: AnnotationMode.DISABLE}): a white page (a JPEG has no
-       transparency), no form fields and no annotation layer, no text layer, no optional-content changes. 6.4 takes `canvas` (the old
+       transparency), no form fields and no annotation layer, no text layer drawn, no optional-content changes. 6.4 takes `canvas` (the old
        `canvasContext` still works but is deprecated).
      * Afterwards page.cleanup(), canvas set to 0 × 0 (Safari keeps big canvases alive otherwise).
      * close() destroys the pdf.js task (document, fonts, caches) AND terminates the worker (with a port pdf.js does not), and clears
@@ -238,6 +241,7 @@
       handle = {
         numPages: doc.numPages,
         render: (pageNumber, ropts) => renderPage(lib, doc, worker, pageNumber, ropts || {}, () => closed),
+        text: (pageNumber, ropts) => pageItems(doc, pageNumber, ropts || {}, () => closed),
         close,
       };
       active = handle;
@@ -294,6 +298,33 @@
       throw fail('damaged');
     } finally {
       if (canvas) { canvas.width = 0; canvas.height = 0; }
+      if (page && typeof page.cleanup === 'function') { try { page.cleanup(); } catch (e) { /* the document was closed meanwhile */ } }
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // text (design note 36)
+  // ---------------------------------------------------------------------------
+  /* The page's own text items, as plain objects {str, transform, width, height} (js/engine/pdf_text.js turns them into lines). The
+     default getTextContent() options: no marked content, nothing fetched. A pdf.js without getTextContent gives [] (the page is then
+     read as a picture). Errors are `damaged` (that page only), as for render(). */
+  async function pageItems(doc, pageNumber, ropts, isClosed) {
+    const signal = ropts.signal || null;
+    if (isClosed()) throw fail('damaged');
+    if (!Number.isInteger(pageNumber) || pageNumber < 1 || pageNumber > doc.numPages) throw new RangeError(`page ${pageNumber} is not in this document`);
+    throwIfAborted(signal);
+    let page = null;
+    try {
+      page = await raceAbort(doc.getPage(pageNumber), signal);
+      if (typeof page.getTextContent !== 'function') return [];
+      const content = await raceAbort(page.getTextContent(), signal);
+      const items = content && Array.isArray(content.items) ? content.items : [];
+      return items.filter((it) => it && typeof it.str === 'string')
+        .map((it) => ({ str: it.str, transform: Array.isArray(it.transform) ? it.transform.slice(0, 6) : [], width: it.width, height: it.height }));
+    } catch (e) {
+      if (isAbort(e) || e instanceof RangeError) throw e;
+      throw fail('damaged');
+    } finally {
       if (page && typeof page.cleanup === 'function') { try { page.cleanup(); } catch (e) { /* the document was closed meanwhile */ } }
     }
   }

@@ -24,6 +24,19 @@ Branch `lab-pdf-text` from origin/main (fed556c). No schema step. Do not touch W
 * tests/test_lab_text.py (37 pass), snapshot tests/fixtures/ai/lab_report_text_request.txt; test_lab_photo writers list updated.
   Verified: `scratchpad/pt.sh tests/test_lab_text.py tests/test_lab_photo.py tests/test_ai_prompts.py`.
 
+* Browser: `app/static/js/engine/pdf_text.js` (KH.pdfText: buildLines, hasText, stripIdentity, pageText) in index.html + sw.js;
+  `pdf_pages.js` handle gets `text(n)`; `views/ai.js` `readLabText(text, page, dry, signal)`; `views/lab_photo.js` reads every page's
+  text at pick, "How to read the pages" radios (text default), per-page "(has text)/(picture only)", rows say "read from its text /
+  a picture of it", 413 too_long_for_ai → picture, text-only server skips scans/refuses photos, demo mode; `mock/ai.js` demo route
+  with a fixed example; index.html card copy + `#lab-photo-demo`.
+* Tests: tests/js/pdf_text.test.mjs (+ tests/test_pdf_text.py), pdf_pages text() in fake_pdfjs/pdf_pages_page.mjs/test_pdf_pages.py,
+  lab_photo_page.mjs §9 + test_lab_photo_ui.py, tests/test_lab_text_demo.py (demo rows == server judge).
+
+## Next
+* Golden cases (tests/ai_golden/lab-text-*.json + test_ai_golden feature lab_report_text) and scripts/ai_eval.py --lab-text.
+* Chromium walk tools/e2e/lab_pdf_text.py (+ test_e2e_tools.py, tools/e2e/README.md); update tools/e2e/lab_pdf.py to choose pictures.
+* OpenAPI regen, settings vectors, docs (ARCHITECTURE, docs/ai.md, handbook, CHANGELOG, ROADMAP), full suite.
+
 ## Decisions
 * Reuses routing feature `labs` and consent purpose `labs` (same switch, same local-only rule); no new route setting, no schema step.
 * One page per request (like pictures); 10-page limit is the browser's (MAX_TICKED), server caps page number 1..50.
