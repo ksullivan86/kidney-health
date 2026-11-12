@@ -5,7 +5,8 @@
 
 Each feature's own harness turns on only that feature. This one starts the real app (``instacart_app:app``: Instacart answered
 by a fake inside the process) with the Care team, connected devices (Withings, with a placeholder client), list sync, recipe
-import, Instacart, test accounts and the per-person AI choice all switched on, the way a family server might run. Two people:
+import, Instacart, test accounts, the per-person AI choice, reminders and Care team notes all switched on, the way a family
+server might run. Two people:
 ``mum`` (the admin, with a planned week) and ``dad`` (her Caregiver, every switch on). For each of 375x812 and 1280x800, light and
 dark, both people open every screen they can reach, and mum opens the shopping list and the Instacart sheet. Each page must load
 with no console error, no failed request (4xx or 5xx), no CSP violation, no browser dialog, no sideways scroll and no other host.
@@ -118,7 +119,8 @@ def main(argv: list[str] | None = None) -> int:
            "INSTACART_BASE_URL": "https://connect.dev.instacart.tools",
            "DEVICES_ENABLED": "true", "WITHINGS_ENABLED": "true", "WITHINGS_CLIENT_ID": "kh-e2e-client",
            "WITHINGS_CLIENT_SECRET_FILE": str(secrets / "withings"),
-           "TEST_ACCOUNT_ENABLED": "true", "AI_PERSON_ROUTE_CHOICE_ENABLED": "true", "PUBLIC_URL": f"http://127.0.0.1:{args.port}"}
+           "TEST_ACCOUNT_ENABLED": "true", "AI_PERSON_ROUTE_CHOICE_ENABLED": "true", "PUBLIC_URL": f"http://127.0.0.1:{args.port}",
+           "REMINDERS_ENABLED": "true", "VAPID_SUBJECT": "mailto:admin@example.org", "CARE_NOTES_ENABLED": "true"}
     server = Server(args.port, out / "data", log_path=out / "server.log", env=env, app_spec="instacart_app:app")
     try:
         server.start()
