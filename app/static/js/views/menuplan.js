@@ -36,6 +36,14 @@
 
   // What the open sheet shows: rows = [{ meal, fdc_id, servings, food, on, client_id }].
   const S = { rows: [], date: '', day: null, dayFor: null, dayReq: 0, busy: false, token: 0 };
+  let writeToken = null;
+  let loadStartedClosed = false;
+  dlg.addEventListener('close', () => {
+    // Chrome queues close events: an event from the previous sheet may arrive after
+    // a new link starts loading. It must not cancel that deliberate new opening.
+    if (dlg.open || loadStartedClosed) return;
+    S.token++; S.dayReq++;
+  });
   let pending = null; // the link text waiting for a signed-in person (memory only)
 
   const uid = () => {
@@ -125,6 +133,9 @@
     const on = ticked();
     $('#menuplan-count').textContent = `${on.length} of ${S.rows.length} ${S.rows.length === 1 ? 'food' : 'foods'}`;
     $('#menuplan-save').disabled = S.busy || !on.length || !DATE_RE.test(S.date);
+    const frozen = S.busy && writeToken === S.token;
+    $('#menuplan-date').disabled = frozen;
+    for (const box of $('#menuplan-groups').querySelectorAll('input')) box.disabled = frozen;
     const key = clear($('#menuplan-key'));
     const lines = clear($('#menuplan-lines'));
     const box = clear($('#menuplan-warnings'));
@@ -196,8 +207,9 @@
 
   async function openLink(raw) {
     const token = ++S.token;
+    loadStartedClosed = !dlg.open;
+    S.dayReq++;
     S.rows = [];
-    S.busy = false;
     S.day = null;
     S.dayFor = null;
     const parsed = M.parse(raw);
@@ -231,6 +243,7 @@
     renderGroups();
     renderSkipped(skipped);
     renderTotals();
+    loadStartedClosed = false;
     sheets.open(dlg, null, problem ? $('#menuplan-close') : $('#menuplan-save'));
     if (!problem) loadDay();
   }
@@ -247,7 +260,9 @@
     const on = ticked();
     if (!on.length || !DATE_RE.test(S.date)) return;
     const date = S.date;
+    const token = S.token;
     S.busy = true;
+    writeToken = token;
     renderTotals();
     setProblem('');
     try {
@@ -255,16 +270,21 @@
       const res = await KH.request('POST', '/api/log/batch', { entries });
       const created = ((res && res.results) || []).filter((r) => r.result === 'created').length;
       const count = res && res.results ? created : entries.length;
-      S.rows = [];
-      dlg.close();
       toast(count ? `Added ${count} ${count === 1 ? 'food' : 'foods'} to ${fmtDateLong(date)} as planned` : `These foods were already in your plan for ${fmtDateLong(date)}`, 'ok');
       state.dayLoadedFor = null; state.trends = null; state.summary = null;
+      if (token !== S.token) return;
+      S.rows = [];
+      dlg.close();
       state.planStart = weekStartOf(date, state.profile && state.profile.week_start === 'sunday' ? 'sunday' : 'monday');
       router.show('plan');
     } catch (err) {
-      if (!err.handled) setProblem(err.detail || err.message || 'The foods could not be added. Try again.');
+      if (!err.handled) {
+        if (token === S.token) setProblem(err.detail || err.message || 'The foods could not be added. Try again.');
+        else toast('An earlier plan could not be added. Check it and try again.', 'error');
+      }
     } finally {
       S.busy = false;
+      writeToken = null;
       if (dlg.open) renderTotals();
     }
   });
