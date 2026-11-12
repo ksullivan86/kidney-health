@@ -30,6 +30,8 @@ the Web Push reminders helper's; do not touch app/reminders*, app/ai lab feature
   care vectors (gen_care_vectors.py: care_notes section), run_vectors.mjs careVectors replays it; settings + import vectors regenerated.
   Checked: pytest sharing/care/export/isolation/import/settings sets pass; node tests/js/run_vectors.mjs all pass.
 
+- Step 6: tools/e2e/clinician_notes.py (port 8118): 26 passed, 0 failed (2026-11-12). In HARNESSES and tools/e2e/README.md.
+
 ## Decisions
 - Step 35 is held by an empty `m035_reserved.py` because the runner refuses gaps. INTEGRATOR: delete it when merging
   `m035_reminders.py` (discover() refuses two step-35 files, so it cannot slip through). Step 36 does not touch step 35's tables;
