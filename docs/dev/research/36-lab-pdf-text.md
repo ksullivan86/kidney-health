@@ -107,6 +107,8 @@ was sent and that the rows are an example, not read from the file. Pictures stay
 
 * A page whose text is out of reading order (two columns, a table drawn cell by cell in odd order) may give lines that mix two
   results. The model then copies less, or the verbatim check drops a value; it cannot make up a value.
+* The check is on the page, not the line: a wrong value that happens to be written somewhere else on the page (a reference range,
+  a time, a page number) passes it. The other checks still apply, and the person checks each row against the report before ticking it.
 * Values printed as `<5` or `>90` are left out, as for photos.
 * A scanned page, or a page in a font pdf.js cannot read as text, goes as a picture.
 
