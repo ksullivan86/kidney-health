@@ -525,7 +525,7 @@
             const t = textOf(n);
             try {
               answer = await KH.ai.withConsent('labs', () => sendText(t.text, n, signal), () => KH.ai.readLabText(t.text, n, true, signal), btn, 'labs');
-              stripped += t.removed;
+              if (answer) stripped += t.removed; // (declined: nothing was sent)
             } catch (e) {
               // more text than the local AI's prompt takes: this page goes as a picture when the server reads pictures
               if (!(e && e.status === 413 && e.data && e.data.reason === 'too_long_for_ai' && offer.pictures)) throw e;
