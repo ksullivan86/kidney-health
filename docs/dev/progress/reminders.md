@@ -1,6 +1,6 @@
 # Progress: reminders by phone notification (role: reminders)
 
-Status: in progress
+Status: complete
 
 Branch `reminders` (from origin/main 01f5298) in worktree agent-a57dfd0f60ce89724. Do not push, no PR, no version bump, no
 dependency changes. Design note: `docs/dev/research/35-reminders.md`.
@@ -17,7 +17,7 @@ dependency changes. Design note: `docs/dev/research/35-reminders.md`.
 4. DONE: sw.js push + notificationclick; Settings → Reminders (`js/views/reminders.js`, section #set-reminders); demo twin (`js/mock/reminders.js`, `tests/js/reminders_demo.mjs`); `tests/test_reminders_ui.py`; OpenAPI regenerated (schema names prefixed Reminder/Push to avoid collisions).
 5. DONE: Chromium walk `tools/e2e/reminders.py` (+ `reminders_app.py`; port 8118): 29 PASS (`cd tools/e2e && $PY reminders.py --out <scratch>/e2e-rem`).
 6. DONE: docs/reminders.md, push.md note, deployment, network-allowlist, privacy, security, README index, deploy templates (.env, compose, quadlet, k8s deployment/secret, cilium), handbook (settings-and-keys #reminders, configuration, network-allowlist, NOTE35 source), CHANGELOG Unreleased, ROADMAP, ARCHITECTURE (egress list, step 35, ownership, section at the end). test_egress client list gains webpush.py.
-7. NEXT: full suite in the background, fix what it finds.
+7. DONE: full suite: 4 failures, 3 fixed (export key lists in tests/js/demo_local_storage.mjs and tools/e2e/demo_local.py; js/views/reminders.js omitted from the preview build, which must not mention serviceWorker). The 4th, test_ai_routing::test_the_status_says_where_each_feature_runs, saw a `lab_report_text` feature that exists only in another agent's worktree (agent-aa7dfc179da56c1ae); it passes alone here.
 
 ## Decisions
 - Each reminder stores the browser's IANA time zone (`time_zone` column): the app has no profile time zone and containers run
