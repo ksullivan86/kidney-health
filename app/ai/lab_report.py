@@ -147,8 +147,9 @@ def dropped_notes(dropped: Mapping[str, int]) -> list[str]:
     return out
 
 
-def judge(answer: schemas.LabReportAnswer) -> dict[str, Any]:
-    """Turn the model's copied lines into proposed rows (nothing is saved here)."""
+def judge(answer: schemas.LabReportAnswer, *, date_notes: Mapping[str, str] = DATE_PROBLEMS) -> dict[str, Any]:
+    """Turn the model's copied lines into proposed rows (nothing is saved here). ``date_notes`` are the sentences about a date
+    the person must type (the text version says "from the page's text" instead of "from the photo")."""
     dropped = {key: 0 for key in DROPPED_KEYS}
     if answer.status == "not_a_lab_report":
         return {"status": "not_a_lab_report", "message": NOT_A_REPORT, "rows": [], "dropped": dropped, "dropped_notes": []}
@@ -189,9 +190,75 @@ def judge(answer: schemas.LabReportAnswer) -> dict[str, Any]:
             "taken_on": iso,
             "printed_date": clean_printed_date(line.taken_on),
             "date_problem": problem,
-            "date_note": DATE_PROBLEMS.get(problem) if problem else None,  # what to tell the person about the date, in the app's words
+            "date_note": date_notes.get(problem) if problem else None,  # what to tell the person about the date, in the app's words
         })
     notes = dropped_notes(dropped)
     if not rows:
         return {"status": "no_results", "message": NO_RESULTS, "rows": [], "dropped": dropped, "dropped_notes": notes}
     return {"status": "ok", "rows": rows, "dropped": dropped, "dropped_notes": notes, "notice": NOTICE}
+
+
+# --------------------------------------------------------------------------- #
+# The text of a PDF page (design note 36)
+# --------------------------------------------------------------------------- #
+
+MAX_TEXT_CHARS = 20_000  # one page's text, as the browser sends it
+TEXT_NOTICE = "Read by AI from the text of your PDF. Check each value against the report before you tick it."
+TEXT_UNREADABLE = "The text of this page could not be read as a lab report. Try reading it as a picture."
+TEXT_NO_RESULTS = "No result the app knows was found in this page's text."
+TEXT_DATE_PROBLEMS: Mapping[str, str] = {key: text.replace("from the photo", "from the page's text") for key, text in DATE_PROBLEMS.items()}
+NOT_IN_TEXT = "left out because its number is not written in the page's text."
+# A number as written: 5.4, 0.9, 88, 1,250 (thousands) or 1,2 (a decimal comma); never the middle of a longer number.
+_NUMBER = re.compile(r"(?<![\d.,])\d+(?:[.,]\d+)*(?!\d)")
+_SPACES = re.compile(r"\s+")
+
+
+def numbers_in(text: str) -> set[float]:
+    """Every number written in ``text``, read each way it can be read: ``1,250`` is 1250 (and 1.25 with a decimal comma), ``1,2``
+    is 1.2 (and 12), ``5.4`` is 5.4. A row's value must be one of these to be kept (:func:`judge_text`)."""
+    out: set[float] = set()
+    for token in _NUMBER.findall(text):
+        readings = [token.replace(",", "")]
+        if token.count(",") == 1 and "." not in token:
+            readings.append(token.replace(",", "."))
+        for reading in readings:
+            if reading.count(".") <= 1:
+                out.add(float(reading))
+    return out
+
+
+def _fold(text: str) -> str:
+    return _SPACES.sub(" ", text).strip().casefold()
+
+
+def judge_text(answer: schemas.LabReportAnswer, text: str) -> dict[str, Any]:
+    """The lines the model copied from the text of a PDF page, checked against that text first (design note 36 §4.3).
+
+    * a row whose value is not a number written in ``text`` is dropped and counted as ``not_in_text``: the model may copy, never
+      invent, compute or round;
+    * a row whose date is not written in ``text`` (spaces and case aside) loses its date, so the person types it;
+    * then the photo's own checks (:func:`judge`): the app's tests and units, the checks of ``POST /api/labs``, dates that cannot
+      mean two days."""
+    written = numbers_in(text)
+    folded = _fold(text)
+    kept: list[schemas.LabReportRow] = []
+    not_in_text = 0
+    for line in answer.rows:
+        value = float(line.value)
+        if not any(abs(value - n) <= 1e-9 * max(1.0, abs(n)) for n in written):
+            not_in_text += 1
+            continue
+        if line.taken_on is not None and _fold(line.taken_on) not in folded:
+            line = line.model_copy(update={"taken_on": None})
+        kept.append(line)
+    verdict = judge(answer.model_copy(update={"rows": kept}), date_notes=TEXT_DATE_PROBLEMS)
+    verdict["dropped"] = {**verdict["dropped"], "not_in_text": not_in_text}
+    if not_in_text:
+        verdict["dropped_notes"] = [*verdict["dropped_notes"], f"{plural(not_in_text, 'line was', 'lines were')} {NOT_IN_TEXT}"]
+    if verdict["status"] == "unreadable":
+        verdict["message"] = TEXT_UNREADABLE
+    elif verdict["status"] == "no_results":
+        verdict["message"] = TEXT_NO_RESULTS
+    elif verdict["status"] == "ok":
+        verdict["notice"] = TEXT_NOTICE
+    return verdict
