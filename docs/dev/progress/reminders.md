@@ -15,7 +15,7 @@ dependency changes. Design note: `docs/dev/research/35-reminders.md`.
 
 ## Next
 4. DONE: sw.js push + notificationclick; Settings → Reminders (`js/views/reminders.js`, section #set-reminders); demo twin (`js/mock/reminders.js`, `tests/js/reminders_demo.mjs`); `tests/test_reminders_ui.py`; OpenAPI regenerated (schema names prefixed Reminder/Push to avoid collisions).
-5. Docs, deploy templates, handbook, OpenAPI, Chromium walk `tools/e2e/reminders.py`.
+5. DONE: Chromium walk `tools/e2e/reminders.py` (+ `reminders_app.py`; port 8118): 29 PASS (`cd tools/e2e && $PY reminders.py --out <scratch>/e2e-rem`). NEXT: docs, deploy templates, handbook, CHANGELOG, ROADMAP, ARCHITECTURE.
 6. Full suite.
 
 ## Decisions

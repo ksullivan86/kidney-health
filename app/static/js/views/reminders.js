@@ -235,10 +235,10 @@
       const what = whatOf(r)[1];
       const edit = h('button', { class: 'btn secondary', type: 'button', 'aria-label': `Change ${what} at ${timeText(r.time)}` }, 'Change');
       const rm = h('button', { class: 'btn secondary', type: 'button', 'aria-label': `Remove ${what} at ${timeText(r.time)}` }, 'Remove');
-      const li = h('li', { class: 'device' },
+      const li = h('li', { class: 'device reminder-row' },
         h('div', { class: 'device-main' },
-          h('span', { class: 'row-title' }, `${timeText(r.time)} · ${what}`, r.enabled ? null : h('span', { class: 'badge' }, 'Off')),
-          h('span', { class: 'row-sub' }, daysText(r.days))),
+          h('span', { class: 'row-title' }, what, r.enabled ? null : h('span', { class: 'badge' }, 'Off')),
+          h('span', { class: 'row-sub' }, `${timeText(r.time)} · ${daysText(r.days)}`)),
         h('div', { class: 'settings-actions' }, edit, rm));
       edit.addEventListener('click', () => { li.after(form(body, res, r)); edit.disabled = true; const f = $('#set-reminder-what'); if (f) f.focus(); });
       rm.addEventListener('click', async () => {
