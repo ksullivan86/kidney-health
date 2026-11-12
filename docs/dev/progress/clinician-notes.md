@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # Clinician accounts with notes, phase 1 (design note 37)
 
@@ -36,6 +36,15 @@ the Web Push reminders helper's; do not touch app/reminders*, app/ai lab feature
   the Care team"), docs/accounts.md, docs/privacy.md, docs/deployment.md + deploy/.env.example + compose.yaml (CARE_NOTES_ENABLED),
   docs/test-the-full-app.md, handbook settings-and-keys + reports-for-your-team + sources.yml NOTE37 (build_handbook regenerated),
   CHANGELOG Unreleased, ROADMAP (phase 1 built, phases 2a-2d), note 37 status. OpenAPI regenerated (+ openapi_doc CONFLICT/RATE_LIMITED).
+
+- Step 8: full suite 2026-11-12: 7614 passed, 2 skipped, 3 failed (demo_local_storage export keys, handbook front-matter NOTE37,
+  tests/data/README care_notes key); all three fixed and rerun (740 passed in the affected files). ruff, gen_openapi --check,
+  build_handbook --check, every gen_*.py --check, run_vectors.mjs and every tests/js/*.test.mjs pass.
+
+## Left
+- Integrator: delete app/migrations/m035_reserved.py when merging m035_reminders.py; merge shared lists (audit, ARCHITECTURE, CHANGELOG,
+  settings registry, sources.yml NOTE35/NOTE37, test_isolation_v03, test_e2e_tools).
+- Phase 2 (replies, email, Web Push, attachments) not built.
 
 ## Decisions
 - Step 35 is held by an empty `m035_reserved.py` because the runner refuses gaps. INTEGRATOR: delete it when merging

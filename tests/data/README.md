@@ -212,8 +212,11 @@ Top-level keys:
 * `constants`: `switches`, `roles`, `presets` (`{role: {switch: bool}}`), `areas`, `suggest_days`, `max_open_per_share`, `max_per_day`,
   `max_note`, `max_items`, `banned_pattern` (the source of `messages.BANNED_PATTERN`) and `texts` (each fixed sentence, for a person
   named Ana).
-* `role_cases`: `{switches: object, role: string}`, every mix of the four switches.
+* `role_cases`: `{switches: object, role: string}`, every mix of the five switches.
 * `note_cases`: `{note: string | null, problem: string | null}`.
+* `care_notes`: notes from the Care team (design note 37, `app/care_notes.py`): `constants` (`max_body`, `max_per_day`, `max_kept`,
+  `max_page`, `max_days_back`, `dosing_pattern` and `texts`), `text_cases` (`{text, clean, problem}`) and `day_cases`
+  (`{today, date, problem}`).
 
 What a replayer must get right:
 
