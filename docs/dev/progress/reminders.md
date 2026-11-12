@@ -7,10 +7,13 @@ dependency changes. Design note: `docs/dev/research/35-reminders.md`.
 
 ## Done
 1. Design note 35.
+2. `app/webpush.py` (VAPID JWT, RFC 8291 encryption, host allowlist, sender); `tests/test_webpush.py` (RFC 8291 App. A exact).
+3. Config `RemindersEnv` (+ `Settings.vapid_key_path`), m035 + `tests/test_migration_m035.py`, `app/reminders.py` (routes,
+   `run_due`, `loop`), audit actions, export `reminders` (import skips it: SKIPPED_SECTIONS, NOT_IMPORTED, mock + settings.js
+   IMPORT_NEVER_SENT, import vectors regenerated), main.py wiring, brand.USER_AGENT_PUSH, isolation matrix.
+   `tests/test_reminders.py` 54 pass; isolation/export/import/audit/auth-coverage pass.
 
 ## Next
-2. `app/webpush.py` (VAPID JWT, RFC 8291 encryption, host allowlist, sender) + tests against RFC 8291 Appendix A.
-3. Config (`RemindersEnv`), migration m035, `app/reminders.py` (routes, loop), audit, export, main.py wiring.
 4. Service worker push handler, Settings → Reminders (`js/views/reminders.js`), demo twin (`js/mock/reminders.js`).
 5. Docs, deploy templates, handbook, OpenAPI, Chromium walk `tools/e2e/reminders.py`.
 6. Full suite.
