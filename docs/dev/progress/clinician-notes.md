@@ -21,6 +21,11 @@ the Web Push reminders helper's; do not touch app/reminders*, app/ai lab feature
   `notes` flag in GET /api/me/shares and /api/shared), app/care_notes.py (8 routes, export_rows), settings `care_notes.enabled`
   (CARE_NOTES_ENABLED; registry + js/engine/settings.js + admin group), audit actions (USER_VISIBLE), export key, import skip.
 - Step 3: tests/test_care_notes.py (33 pass); isolation matrix entry; WRITE_CHECKS/READ_CHECKS in test_care_team.py.
+- Step 4 (screens): js/views/notes.js (Notes view #notes, Today card, Visit line, #sheet-note, noteButton), index.html, core.js VIEWS,
+  sw.js, visit.js + trends.js (Write a note; may_note kept on openShared), today.js (todayCard), sharing.js (Clinician role and
+  hint, "Write notes for me" switch, Notes button on Care teams you are on, "Notes from your Care team" button, lastLooked area,
+  invite question), settings.js activity labels, css/visit.css. Node: tests/js/notes_ui.test.mjs, tests/js/care_notes_demo.test.mjs;
+  pytest wrapper tests/test_care_notes_ui.py.
 - Step 5 (part): js/mock/care.js (Dee the Clinician with one unread note; Ana's share has may_note; every note route; KH.mock.care.notes),
   care vectors (gen_care_vectors.py: care_notes section), run_vectors.mjs careVectors replays it; settings + import vectors regenerated.
   Checked: pytest sharing/care/export/isolation/import/settings sets pass; node tests/js/run_vectors.mjs all pass.

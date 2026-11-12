@@ -15,6 +15,9 @@
      to, with the handbook's words as the Today card shows them (KH.body.flagBlock). The sums are js/engine/visitprep.js bodyPage;
    * the person's own questions, and the handbook's checklist as boxes to tick.
 
+   On screen only, the person's own page also says how many notes from their Care team came in the period (js/views/notes.js);
+   notes are never printed, and on a shared page a Clinician gets a Write a note button.
+
    Nothing leaves the device: the only requests are the reads above (the app's own API); printing is window.print()
    (called here, no inline handler). The questions and the ticks live in this page's memory only: they are not written to
    localStorage, sessionStorage, IndexedDB or the server, are never sent to the AI and are gone on reload and on sign-out.
@@ -301,6 +304,8 @@
     $('#visit-foot').textContent = shared
       ? `This page lists what ${name} recorded in the app. It does not say what a result or a symptom means: their care team does.`
       : 'This page lists what you recorded in the app. It does not say what a result or a symptom means: your care team does.';
+    // Write a note (design note 37; js/views/notes.js): about the day card's day and the food log when it is shared.
+    if (KH.notes) KH.notes.noteButton('visit-note-actions', 'visit-write-note', S.source, () => (sharedHas('food') ? { area: 'food', date: S.dayDate } : {}));
   }
   const notShared = (what) => note(`${S.source.name} has not shared ${what} with you.`);
   function loadDay() {
@@ -317,6 +322,7 @@
     const req = ++S.req;
     const range = V.periodRange(todayStr(), S.days, addDays);
     renderHead(range);
+    if (KH.notes) KH.notes.visitLine(range, !!S.source).catch(() => {}); // on screen only: notes are never printed (design note 37)
     for (const id of ['#visit-avg-body', '#visit-labs-body', '#visit-sym-body', '#visit-body-body']) clear($(id)).append(note('Loading…', 'muted'));
     $('#visit-avg-sub').textContent = '';
     loadDay(); // change the shared day immediately, even if another part of the summary is slow
@@ -372,7 +378,8 @@
 
   /** Show what someone shares with the signed-in person: `person` is an item of GET /api/shared with `reads` added. */
   function openShared(person) {
-    S.pendingSource = { id: person.id, name: person.name, areas: person.areas || [], reads: person.reads }; // name: theirs, as the server gives it
+    // name: theirs, as the server gives it; may_note: they let you write notes (design note 37), and notes are on
+    S.pendingSource = { id: person.id, name: person.name, areas: person.areas || [], reads: person.reads, may_note: !!person.may_note };
     router.show('visit');
   }
 
