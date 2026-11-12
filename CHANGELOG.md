@@ -9,6 +9,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### Security
 
+* Password reset by email: a request that overlaps changing or removing an address can no longer leave a working reset
+  link for the old address. Overlapping password changes and account disabling also invalidate the link; account deletion
+  no longer makes the reset request fail with a server error.
 * New Chainguard base images for the builder and the runtime (Python 3.15.2 built 2026-11-06), and Caddy 2.11.9 for the
   optional HTTPS front end in `deploy/caddy`.
 

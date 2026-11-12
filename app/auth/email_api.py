@@ -30,6 +30,7 @@ from .. import mail
 from ..audit import audit
 from ..db import get_db, utcnow
 from . import clock, housekeeping, tokens
+from .accounts import begin_immediate
 from .context import AuthContext, auth_context, public_base, request_ip
 from .deps import CurrentUser, RecentAdmin, RecentUser, current_user, ensure_setup_done, require_admin
 from .errors import ApiProblem, too_many
@@ -291,8 +292,13 @@ def forgot_password(body: ForgotBody, request: Request, conn: sqlite3.Connection
     # Counted per typed name, whether or not it is an account, so the count reveals nothing either.
     if ctx.limits.window("forgot_account").hit(ctx.throttle.name_mac(norm).hex()):
         return answer
+    # Read the current account/address and issue its link under one write lock. Otherwise
+    # removing an address (or disabling/deleting the account) can finish after this read
+    # and before the insert, leaving a new link that escaped that request's revocation.
+    begin_immediate(conn)
     found = _forgot_target(conn, body.username)
     if found is None:
+        conn.rollback()
         return answer
     row, address = found
     user_id = int(row["id"])
