@@ -153,3 +153,32 @@
   #view-visit .visit-blank-lines li { height: 18pt; border-bottom: 1px solid #000; }
   #view-visit .visit-blank-lines li::marker { color: #000; }
 }
+
+/* ---------- notes from the Care team (design note 37; js/views/notes.js) ----------
+   The Notes view, the Today card, the Visit prep line and the Write a note buttons. Notes are never printed. */
+.notes-head { display: flex; flex-direction: column; gap: 2px; }
+.notes-head p { margin: 0; }
+.notes-back { align-self: flex-start; padding-left: 0; }
+.notes-title { font-size: 1.3rem; }
+.notes-title:focus { outline: none; }
+.notes-title:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; border-radius: 4px; }
+.notes-list { display: flex; flex-direction: column; gap: 10px; margin-top: 12px; min-width: 0; }
+.note-card { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.note-card.note-new { border-left: 4px solid var(--accent); }
+.note-card-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 2px 12px; }
+.note-from { font-weight: 700; overflow-wrap: anywhere; }
+.note-about { margin: 0; }
+.note-about .link-btn { padding-left: 0; text-align: left; }
+.note-body { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.note-under { margin: 0; }
+.note-card-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.note-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0 0; }
+.visit-notes-line { margin: 6px 0 0; }
+.visit-notes-line .link-btn { padding: 0; }
+.today-notes { margin: 0 0 12px; }
+.today-notes-card { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; border-left: 4px solid var(--accent); }
+.today-notes-text { font-weight: 600; overflow-wrap: anywhere; }
+#sheet-note textarea { width: 100%; min-height: 8rem; resize: vertical; }
+@media print {
+  .note-actions, .visit-notes-line, .today-notes, #view-notes { display: none !important; }
+}

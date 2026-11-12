@@ -50,7 +50,7 @@ SECTIONS = ("keep", "export", "stop", "tabs", "private", "newer")
 # app/account.py export_data, in its order (tests/test_demo_local_ui.py keeps this list equal to the server's)
 EXPORT_KEYS = ["format", "version", "exported_at", "app_version", "user", "profile", "settings", "log_entries", "custom_foods", "linked_foods",
                "meal_templates", "lab_results", "symptoms", "weights", "blood_pressures", "ai_audit", "activity", "food_preferences", "ai_usage",
-               "ai_consents", "ai_provider", "builtin_foods", "care_suggestions"]
+               "ai_consents", "ai_provider", "builtin_foods", "care_suggestions", "reminders", "care_notes"]
 # Whoop's keys come from a helper spread into the export (app/account.py _activity), so they are not in the list above.
 SPREAD_KEYS = ("activity_days", "activity_workouts", "activity_extra")
 ENTRY = "Oat bar for the test"

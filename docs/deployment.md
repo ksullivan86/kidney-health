@@ -30,8 +30,8 @@ Contents:
 | Fact | Value |
 |---|---|
 | Image | `ghcr.io/ksullivan86/kidney-health` (linux/amd64 + linux/arm64), based on Chainguard Python (no shell, no pip, no package manager). Pulls need no login once the GHCR package is public; if a pull asks for credentials (`401`, `denied`), the package is private: its owner sets it public under the package's *Package settings* (a repository's visibility does not carry over to its packages). |
-| Tags | `0.23` = the current 0.23.x release (**track this**); `0.23.0` = one release; `latest` = the newest release; `edge` and `sha-<short>` = every push to `main` (testing only) |
-| Verify | `scripts/verify-image.sh 0.23.0` checks the signature and attestations and prints the digest to pin ([`SECURITY.md`](../SECURITY.md)) |
+| Tags | `0.24` = the current 0.24.x release (**track this**); `0.24.0` = one release; `latest` = the newest release; `edge` and `sha-<short>` = every push to `main` (testing only) |
+| Verify | `scripts/verify-image.sh 0.24.0` checks the signature and attestations and prints the digest to pin ([`SECURITY.md`](../SECURITY.md)) |
 | Listens on | TCP **8000**, plain HTTP: put HTTPS on a reverse proxy ([`https.md`](https.md)) |
 | Runs as | UID **10001**, GID 10001 (works with any UID whose GID is 0, too); no capabilities |
 | Writes | only `/data` (`kidney.db`, its `-wal`/`-shm` files) and `/tmp`; the root filesystem can be read-only |
@@ -158,12 +158,14 @@ NetworkPolicy and the compose, Quadlet and `.env.example` comments name the same
 | `TOKENS_ALLOW_NEVER_EXPIRING` | `true` | Whether a person may choose "Never (until you remove it)" when making a token for an outside AI app or a phone shortcut. Off: every new token expires after 30, 90 or 365 days; tokens made before keep working until they are removed. Also in Server administration → Server settings. |
 | `PUSH_ENABLED` | `false` | Phone shortcuts: each person may make device tokens (Settings → Phone shortcuts) that an iPhone Shortcut uses to add weights and blood pressure readings to that person's own log at `POST /push/v1/body`. A token can only add: it reads nothing. Also in Server administration → Server settings. The phone must reach the server (home network or your VPN); a reverse proxy that lists paths needs `/push/v1/`. Nothing leaves the server for it. See [push.md](push.md). |
 | `SHARING_ENABLED` | `false` | The Care team: each person may add family, a caregiver or a dietitian with an account on this server, by user name or with a link. A Viewer reads the parts that were ticked (food log, lab results, weight and blood pressure, symptoms, activity and recovery) and never changes anything; a Care helper can also plan meals and use the shopping list. Either side can stop it at any time. Also in Server administration → Server settings → Care team. Nothing leaves the server for it. See [accounts.md](accounts.md#care-team). |
+| `CARE_NOTES_ENABLED` | `false` | Notes from the Care team. Needs `SHARING_ENABLED`. A person can make someone on their Care team a Clinician, or turn on **Write notes for me**, and that person can write short notes the person reads in their own app. Only the two of them see a note. Notes never change any data, and the app does not check who someone is. Also in Server administration → Server settings → Care team. See [accounts.md](accounts.md#care-team). |
 | `DEVICES_ENABLED`, `DEVICES_SYNC_HOURS` | `false`, `4` | Connected devices: each person may connect their own Withings scale or blood pressure monitor, or their Whoop strap, in Settings → Connected devices, and the server fetches their data every `DEVICES_SYNC_HOURS` hours (1 to 24). Nothing about the person is sent to either company. Also in Server administration → Server settings → Connected devices. Needs Withings or Whoop set up (next rows). See [devices.md](devices.md). |
 | `WITHINGS_ENABLED`, `WITHINGS_CLIENT_ID`, `WITHINGS_CLIENT_SECRET_FILE` | off | Your free Withings developer app ([setup](devices.md#set-it-up-server-owner)). Needs `PUBLIC_URL`; the app's return address is `<PUBLIC_URL>/api/devices/withings/callback`. The client secret **only as a file** (`WITHINGS_CLIENT_SECRET` stops the start). Env only, never changed in the app. The server then talks to `wbsapi.withings.net`. |
 | `WHOOP_ENABLED`, `WHOOP_CLIENT_ID`, `WHOOP_CLIENT_SECRET_FILE` | off | Your Whoop developer app ([setup](devices.md#whoop)); up to 10 Whoop members without Whoop's approval. Needs `PUBLIC_URL`; the app's return address is `<PUBLIC_URL>/api/devices/whoop/callback`. The client secret **only as a file** (`WHOOP_CLIENT_SECRET` stops the start). Env only, never changed in the app. The server then talks to `api.prod.whoop.com`. |
 | `LIST_SYNC_ENABLED`, `LIST_SYNC_ALLOWED_HOSTS` | `false`, empty | Your own list app: each person may send the Plan's shopping list to their own Grocy, KitchenOwl or Mealie, with its address and their key in Settings → Shopping list app. Only the foods' names and amounts are sent. A list app on a home address (`192.168.x.x`, `grocy.lan`, a container name) is refused unless `LIST_SYNC_ALLOWED_HOSTS` lists its host name, address or network (comma list; env only); plain `http` only to such an address. The switch is also in Server administration → Server settings. See [list-sync.md](list-sync.md). |
 | `INSTACART_ENABLED`, `INSTACART_API_KEY_FILE`, `INSTACART_BASE_URL` | `false`, unset, `https://connect.instacart.com` | Open the shopping list at Instacart: Plan → Shopping list → **Open in Instacart** shows the exact lines, and on the person's OK the server sends Instacart each food's name and amount and opens the page it makes. Needs the server's own Instacart Developer Platform key, as a file only (`INSTACART_API_KEY` is refused). `INSTACART_BASE_URL=https://connect.dev.instacart.tools` with a development key while Instacart reviews your production key. The switch is also in Server administration → Server settings. See [instacart.md](instacart.md). |
 | `EMAIL_ENABLED`, `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURITY`, `SMTP_USERNAME`, `SMTP_PASSWORD_FILE`, `SMTP_FROM`, `SMTP_TIMEOUT_S` | `false`, unset, `587`, `starttls`, unset, unset, unset, `15` | Password reset by email: people add and confirm an email in Settings → Account, then use **Forgot your password?** on the sign-in page (a link for 1 hour). Needs `AUTH_MODE=local`, `PUBLIC_URL`, `SMTP_HOST` and `SMTP_FROM`, or the server does not start. `SMTP_SECURITY` is `starttls`, `tls` or `none` (`none` only to a mail server on this machine). The password **only as a file** (`SMTP_PASSWORD` stops the start). Env only. The server then talks to your mail server. See [accounts.md](accounts.md#password-reset-by-email). |
+| `REMINDERS_ENABLED`, `VAPID_SUBJECT`, `VAPID_PRIVATE_KEY_FILE`, `REMINDERS_TIMEOUT_S` | `false`, unset, `$DATA_DIR/vapid_private.pem`, `10` | Reminders by phone notification: people turn on notifications on their phone or computer in Settings → Reminders and choose times to log a meal, plan tomorrow or log their weight. Its own switch (`PUSH_ENABLED` is phone shortcuts). Needs `PUBLIC_URL` with https (http only for localhost), `VAPID_SUBJECT` (`mailto:` or `https:`) and a sign-in mode other than `none`, or the server does not start. The push key is made once, mode 0600, in `DATA_DIR`; give your own **only as a file** (`VAPID_PRIVATE_KEY` stops the start). Env only. The server then sends to the push services of Apple, Google, Mozilla and Microsoft. See [reminders.md](reminders.md). |
 | `RECIPE_IMPORT_ENABLED` | `false` | Recipe pages: a person may paste a recipe page's link in Plan → Import a recipe, and the server opens that page from the internet (never a private address; 2 MiB, 15 seconds, 3 redirects) and reads its recipe data. Pasting the ingredients works without it. Also in Server administration → Server settings. See [recipe-import.md](recipe-import.md). |
 | `TEST_ACCOUNT_ENABLED`, `TEST_ACCOUNT_PASSWORD_FILE`, `TEST_ACCOUNT_AI` | `false`, unset, `false` | Two accounts for people who test the app on your server: `tester` (the sample person Sam, with a month of food, lab results and weights) and `tester-helper` (a Care helper on Sam's Care team). Their one password **only as a file** (`TEST_ACCOUNT_PASSWORD` stops the start); a missing or weak file makes nothing and says why in the log and in Server administration → Test accounts. They are never admins, are on a Care team only with each other, and the server's AI is off for them unless `TEST_ACCOUNT_AI=true`. Turned off, they are disabled and signed out. Needs `AUTH_MODE=local` and HTTPS. Also in Server administration → Server settings → Test accounts. Reset puts both back to the start. See [test-the-full-app.md](test-the-full-app.md). |
 | `OIDC_ENABLED`, `OIDC_ISSUER`, `OIDC_CLIENT_ID`, `OIDC_CLIENT_SECRET_FILE` | off | Sign in with Authentik, Google or another OpenID Connect provider ([setup](#sign-in-with-a-provider-authentik-or-google)). Needs `AUTH_MODE=local` and `PUBLIC_URL`. The issuer exactly as the provider names it; the client secret **only as a file** (`OIDC_CLIENT_SECRET` stops the start; leave it out for a public client). The provider's return address is `<PUBLIC_URL>/api/auth/oidc/callback`. Env only, never changed in the app. |
@@ -263,14 +265,14 @@ $EDITOR ~/.config/containers/systemd/kidney-health.container     # Image= (see b
 systemctl --user daemon-reload
 systemctl --user start kidney-health
 sudo loginctl enable-linger "$USER"
-systemctl --user enable --now podman-auto-update.timer               # daily pulls of the :0.23 tag
+systemctl --user enable --now podman-auto-update.timer               # daily pulls of the :0.24 tag
 ```
 
 **Which image to run.** Each GitHub release's notes carry the multi-arch index digest of that
-release. For a host managed from git (GitOps), pin it: `Image=ghcr.io/ksullivan86/kidney-health:0.23.0@sha256:<index digest>`
+release. For a host managed from git (GitOps), pin it: `Image=ghcr.io/ksullivan86/kidney-health:0.24.0@sha256:<index digest>`
 and drop `AutoUpdate=registry`; Renovate or Dependabot then open a change that bumps tag and digest
-together, which you review and apply, and `scripts/verify-image.sh 0.23.0` checks the signature and
-attestations of exactly that digest. The shipped unit instead tracks `:0.23` with `AutoUpdate=registry`
+together, which you review and apply, and `scripts/verify-image.sh 0.24.0` checks the signature and
+attestations of exactly that digest. The shipped unit instead tracks `:0.24` with `AutoUpdate=registry`
 (patch releases arrive on their own, breaking changes never do): simpler, with the pull happening
 outside your review.
 
@@ -401,7 +403,7 @@ the overlay's patches in your repository:
 ```yaml
 # kustomization.yaml in your GitOps repository
 resources:
-  - https://github.com/ksullivan86/kidney-health//deploy/k8s?ref=v0.23.0
+  - https://github.com/ksullivan86/kidney-health//deploy/k8s?ref=v0.24.0
   - httproute.yaml
 patches:
   - path: deployment-env.yaml
@@ -483,8 +485,8 @@ an `AI_PRIVATE_HOSTS` entry.
 
 ```bash
 kubectl label --dry-run=server --overwrite ns kidney-health pod-security.kubernetes.io/enforce=restricted   # no warnings
-scripts/verify-image.sh 0.23.0                 # prints the verified digest (also in the release notes)
-cd deploy/k8s-overlays/home && kustomize edit set image ghcr.io/ksullivan86/kidney-health=ghcr.io/ksullivan86/kidney-health:0.23.0@sha256:<digest>
+scripts/verify-image.sh 0.24.0                 # prints the verified digest (also in the release notes)
+cd deploy/k8s-overlays/home && kustomize edit set image ghcr.io/ksullivan86/kidney-health=ghcr.io/ksullivan86/kidney-health:0.24.0@sha256:<digest>
 ```
 
 `imagePullPolicy: IfNotPresent` plus a digest means a node never pulls something you did not verify.
@@ -663,18 +665,18 @@ podman run --rm --user 10001:10001 --entrypoint python \
   --secret kidney-secret-key,type=mount,target=secret_key,uid=10001,mode=0400 \
   -e SECRET_KEY_FILE=/run/secrets/secret_key \
   -v "$PWD/kidney-2026-10-01.db:/restore/kidney.db:ro,Z" \
-  ghcr.io/ksullivan86/kidney-health:0.23 -m app.admin restore-check /restore/kidney.db
+  ghcr.io/ksullivan86/kidney-health:0.24 -m app.admin restore-check /restore/kidney.db
 
 # 2. Stop the app, then copy the backup INTO the volume through SQLite (handles the WAL files).
 systemctl --user stop kidney-health          # compose: podman-compose -f deploy/compose.yaml stop
 podman run --rm --user 10001:10001 --entrypoint python \
   -v systemd-kidney-health:/data \
   -v "$PWD/kidney-2026-10-01.db:/restore/kidney.db:ro,Z" \
-  ghcr.io/ksullivan86/kidney-health:0.23 -c "import sqlite3; s=sqlite3.connect('file:/restore/kidney.db?mode=ro&immutable=1', uri=True); d=sqlite3.connect('/data/kidney.db'); s.backup(d); d.close(); s.close()"
+  ghcr.io/ksullivan86/kidney-health:0.24 -c "import sqlite3; s=sqlite3.connect('file:/restore/kidney.db?mode=ro&immutable=1', uri=True); d=sqlite3.connect('/data/kidney.db'); s.backup(d); d.close(); s.close()"
 
 # 3. Optional: sign everybody out of the restored copy (sessions in the backup become valid again).
 podman run --rm --user 10001:10001 --entrypoint python -v systemd-kidney-health:/data \
-  ghcr.io/ksullivan86/kidney-health:0.23 -m app.admin revoke-sessions --all
+  ghcr.io/ksullivan86/kidney-health:0.24 -m app.admin revoke-sessions --all
 systemctl --user start kidney-health
 ```
 
@@ -708,15 +710,29 @@ older one.
 
 ## Upgrades
 
-* **Pin the release digest** (`Image=...:0.23.0@sha256:<index digest>` from the release notes,
+* **Pin the release digest** (`Image=...:0.24.0@sha256:<index digest>` from the release notes,
   checked with `scripts/verify-image.sh`) and let Renovate or Dependabot propose the next one, or
-  **track `:0.23`** (patch releases, no breaking changes) with Quadlet `AutoUpdate=registry` and
+  **track `:0.24`** (patch releases, no breaking changes) with Quadlet `AutoUpdate=registry` and
   `podman-auto-update.timer`. Do not track `:latest` or `:edge` on a machine you care about: `:edge`
   follows every merge to `main`.
-* Before a minor upgrade (for example 0.22 → 0.23): take a backup, read the release notes, then change the tag. The minor
-  tag does not move to the next minor on its own: a host that tracks `:0.22` stays on 0.22.x until you change it to `:0.23`.
-  The steps are in [From v0.22 to v0.23](#from-v022-to-v023), [From v0.21 to v0.22](#from-v021-to-v022), [From v0.20 to v0.21](#from-v020-to-v021), [From v0.19 to v0.20](#from-v019-to-v020), [From v0.18 to v0.19](#from-v018-to-v019), [From v0.17 to v0.18](#from-v017-to-v018), [From v0.16 to v0.17](#from-v016-to-v017), [From v0.15 to v0.16](#from-v015-to-v016), [From v0.14 to v0.15](#from-v014-to-v015), [From v0.13 to v0.14](#from-v013-to-v014), [From v0.12 to v0.13](#from-v012-to-v013), [From v0.11 to v0.12](#from-v011-to-v012), [From v0.10 to v0.11](#from-v010-to-v011), [From v0.9 to v0.10](#from-v09-to-v010), [From v0.8 to v0.9](#from-v08-to-v09), [From v0.7 to v0.8](#from-v07-to-v08), [From v0.6 to v0.7](#from-v06-to-v07), [From v0.5 to v0.6](#from-v05-to-v06), [From v0.4 to v0.5](#from-v04-to-v05) and [From v0.3 to v0.4](#from-v03-to-v04).
+* Before a minor upgrade (for example 0.23 → 0.24): take a backup, read the release notes, then change the tag. The minor
+  tag does not move to the next minor on its own: a host that tracks `:0.23` stays on 0.23.x until you change it to `:0.24`.
+  The steps are in [From v0.23 to v0.24](#from-v023-to-v024), [From v0.22 to v0.23](#from-v022-to-v023), [From v0.21 to v0.22](#from-v021-to-v022), [From v0.20 to v0.21](#from-v020-to-v021), [From v0.19 to v0.20](#from-v019-to-v020), [From v0.18 to v0.19](#from-v018-to-v019), [From v0.17 to v0.18](#from-v017-to-v018), [From v0.16 to v0.17](#from-v016-to-v017), [From v0.15 to v0.16](#from-v015-to-v016), [From v0.14 to v0.15](#from-v014-to-v015), [From v0.13 to v0.14](#from-v013-to-v014), [From v0.12 to v0.13](#from-v012-to-v013), [From v0.11 to v0.12](#from-v011-to-v012), [From v0.10 to v0.11](#from-v010-to-v011), [From v0.9 to v0.10](#from-v09-to-v010), [From v0.8 to v0.9](#from-v08-to-v09), [From v0.7 to v0.8](#from-v07-to-v08), [From v0.6 to v0.7](#from-v06-to-v07), [From v0.5 to v0.6](#from-v05-to-v06), [From v0.4 to v0.5](#from-v04-to-v05) and [From v0.3 to v0.4](#from-v03-to-v04).
 * Never mount the Podman or Docker socket into an "updater" container ([`security.md` §7](security.md#7-never-mount-the-container-engines-socket)).
+
+### From v0.23 to v0.24
+
+Read **Upgrading from 0.23** in [CHANGELOG.md](../CHANGELOG.md#0240--2026-11-12) first.
+
+1. **Back up first** (`podman exec kidney-health python -m app.admin backup /data/before-0.24.0.db`, or your backup tool).
+   Schema steps 35 and 36 run at the first start. They add empty tables for reminders and Care team notes, and a notes switch
+   on each Care team share that starts off.
+2. **Change the tag** from `:0.23` to `:0.24` (or a digest from the 0.24.0 release notes, checked with
+   `scripts/verify-image.sh 0.24.0`). The shipped files already say `:0.24`.
+3. **Nothing new is switched on.** Reminders start only after you set `REMINDERS_ENABLED`, `VAPID_SUBJECT` and an `https://`
+   `PUBLIC_URL` ([reminders.md](reminders.md)); a strict firewall must then allow the push services listed there. Care team notes
+   start only after you set `CARE_NOTES_ENABLED`. Reading the text of a lab PDF uses the existing lab switch and the local AI.
+4. **Coming from 0.22 or older**, also follow [From v0.22 to v0.23](#from-v022-to-v023) and the sections after it.
 
 ### From v0.22 to v0.23
 

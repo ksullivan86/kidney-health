@@ -57,6 +57,7 @@ For each account, on the server's disk in one SQLite database (`kidney.db`):
   number of 120 or more, shows the handbook's own words from its Get help now page and a link to it; that is computed on the server from the
   numbers alone and sends nothing anywhere ([the design](body.md));
 * **Visit prep** (Trends → Get ready for a visit) stores nothing and sends nothing: it is drawn in the browser from the summary, lab results and symptoms the person already has, with the person's own questions kept in the open page's memory only (not in the browser's storage, not on the server, never sent to an AI); it is printed or saved as a PDF by the browser. The code that builds requests to an AI provider or an assistant does not read it ([Reports for your care team](../handbook/docs/app/reports-for-your-team.md));
+* **Notes from the Care team** ([accounts.md](accounts.md#care-team), design note 37) are plain text a Care team member writes for the person, kept on the server in `care_notes`. Only the person and the writer can read a note; no admin route shows one, and the code that builds requests to an AI provider or an assistant never reads the table (a test checks that). Activity rows about notes hold no text. The person can delete any note; notes are in their export and not in the writer's; Visit prep does not print them;
 * **Lab results from Apple Health clinical records** (Labs → Import from Apple Health, [Personalised targets and labs](targets-and-labs.md))
   are read **in the browser, on the device, and nothing is uploaded**. The person chooses the Health app's `export.zip` (or, if it was
   already unzipped in the Files app, the `clinical-records` JSON files); the page opens the zip itself with the browser's own
@@ -186,6 +187,10 @@ row and press Save, and then it is stored like any lab result they typed (in the
 forms, nothing fetched). **The PDF file is never sent to the server or anywhere else**; only the pages the person ticks (at most 10) are drawn
 in the browser and sent, each as a JPEG, through the same route, local AI, consent and checks as a photo, and the drawn pages and the PDF are let
 go when the person saves, discards, picks another file or cancels. A password-protected PDF is refused (the app never asks for the password).
+When a page has its own text, the browser can send that text instead of a picture (design note 36). It first leaves out lines that may name
+the person (patient, name, date of birth, record numbers, address, phone, insurance, email). The text goes the same way as a photo: the local
+AI only, the same consent, no fallback. The AI activity row keeps the page number, the line and character counts and a fingerprint of the
+text, never the text or what the AI copied.
 
 When the assistant in Ask saves food or a recipe, what it saves is stored like anything else the person logs (their own
 entries and saved meals, in their export and deleted with their account). By default it only saves when the person presses
@@ -244,6 +249,12 @@ Instacart**, the server sends Instacart the title "Shopping list" and the lines 
 weight in grams. Nothing else: no name, account, dates, targets or readings. Instacart answers with a link, which the person's
 browser opens on Instacart's own site, where Instacart's terms and privacy policy apply. The server keeps neither the list nor the
 link. The activity list records each send with the number of items.
+
+If the admin turns on reminders and a person turns on notifications on a device ([reminders.md](reminders.md)), the server keeps
+that browser's push address and keys, the browser's description (such as "Safari on iPhone") and the person's reminders (what,
+when, which days, their time zone). At a reminder's time the server sends that device's push service (Apple, Google, Mozilla or
+Microsoft) an encrypted message such as "Time to log lunch.". The push service learns when a message is sent and that it came from
+this server, nothing more. The reminders are in the person's export; the push address and keys are not. Both go with the account.
 
 If the admin turns on recipe pages and a person imports a recipe from a link ([recipe-import.md](recipe-import.md)), the
 server opens that one page, reads its recipe data and forgets the page; only the link is kept, with the recipe. The site sees a

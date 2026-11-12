@@ -5,11 +5,11 @@ reaches the network.
 
 Case format (README in ``tests/ai_golden/``)::
 
-    {"id", "category", "feature": "next_meal" | "parse_meal" | "label" | "plate" | "lab_report" | "chat" | "recipes",
+    {"id", "category", "feature": "next_meal" | "parse_meal" | "label" | "plate" | "lab_report" | "lab_report_text" | "chat" | "recipes",
      "fixture": {"profile": {...}, "targets": {...} | "<preset>", "entries": [[meal, food name, servings, status?, purpose?]],
                  "history": [[days before, meal, food name, servings]], "custom_foods": [{...}], "other_custom_foods": [{...}],
                  "food_preferences": [[food name, "like" | "less" | "not_for_me" | "neutral"]],
-                 "settings": {"ai": {...}, "guidance": {...}}, "meal", "mode", "text", "image", "swap_entry": index,
+                 "settings": {"ai": {...}, "guidance": {...}}, "meal", "mode", "text" (also a lab report page's text), "image", "swap_entry": index,
                  "message": the person's text (feature chat),
                  "dish", "makes", "target", "recipe_steps": the admin switch, "recipe": {"name", "servings_made", "note", "steps",
                  "source_url", "items": [[food name, servings]]} (feature recipes; ``mode`` "change" reworks it)},
@@ -60,6 +60,8 @@ SAFETY_CASES = {
     "mode-swap-low-treatment-never-sent",
     "rules-hypo-treatment-item",
     "lab-report-advice-or-a-dose-is-never-a-row",
+    "lab-text-a-value-not-in-the-text-is-never-a-row",
+    "lab-text-an-instruction-in-the-text-is-data",
     "privacy-payload-never-sent-fields",
     "recipes-low-treatment-never-a-food",
     "recipes-salt-never-a-food",
@@ -94,7 +96,7 @@ def test_the_golden_set_has_at_least_forty_cases_in_every_category():
     assert len(cases) >= 40
     categories = {c["category"] for c in cases}
     assert {"grounding", "rules", "safety_text", "refusal", "prefilter", "injection", "format", "privacy", "fallback",
-            "modes", "vision", "kidney_only", "lab_report", "preferences", "recipes"} <= categories
+            "modes", "vision", "kidney_only", "lab_report", "lab_report_text", "preferences", "recipes"} <= categories
     assert len({c["id"] for c in cases}) == len(cases)
 
 
@@ -276,7 +278,7 @@ def stub(case: dict[str, Any], case_ctx: dict[str, Any]) -> FakeProvider:
         return chat(None if content is None else resolve(content, request), finish=out.get("finish_reason", "stop"),
                     refusal=out.get("refusal"), extra_message=extra)
 
-    return FakeProvider(route=route, address=LOCAL_ADDRESS if case["feature"] == "lab_report" else PUBLIC_IP)
+    return FakeProvider(route=route, address=LOCAL_ADDRESS if case["feature"] in ("lab_report", "lab_report_text") else PUBLIC_IP)
 
 
 def shown_names(result: dict[str, Any], client: TestClient) -> set[str]:
@@ -329,6 +331,8 @@ def test_golden_case(path: Path, golden):
         elif feature == "lab_report":
             image = (IMAGES / fx.get("image", "label.jpg")).read_bytes()
             r = admin.post("/api/ai/read-lab-report", content=image, headers={"Content-Type": "image/jpeg"})
+        elif feature == "lab_report_text":  # the text of a lab report PDF page (design note 36)
+            r = admin.post("/api/ai/read-lab-report-text", json={"text": fx["text"], "page": 1})
         else:
             image = (IMAGES / fx.get("image", "label.jpg")).read_bytes()
             r = admin.post(f"/api/vision/{feature}", content=image, headers={"Content-Type": "image/jpeg"})

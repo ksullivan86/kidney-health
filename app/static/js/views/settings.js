@@ -26,7 +26,7 @@
   const REG = KH.settings;
 
   // Kept equal to APP_VERSION in app/main.py (tests/test_settings_ui.py).
-  const APP_VERSION = '0.23.0';
+  const APP_VERSION = '0.24.0';
 
   const A = {
     sessions: () => request('GET', '/api/me/sessions'),
@@ -116,6 +116,7 @@
       : /Safari\//.test(u) ? 'Safari' : /curl|python|httpx/i.test(u) ? 'A script' : 'Browser';
     return os ? `${br} on ${os}` : br;
   }
+  KH.deviceName = deviceName; // Settings → Reminders names devices the same way (js/views/reminders.js)
   const ROLE_LABEL = { admin: 'Admin', user: 'Member' };
   const STATUS_LABEL = { active: 'Active', disabled: 'Disabled', locked: 'Locked', pending_setup: 'Waiting for a password' };
 
@@ -637,7 +638,7 @@
     browser: 'This browser cannot open a .zip here. Open the .zip on your device and choose the export.json inside it.',
   };
   // Parts of an export the import never reads (AI activity, sign-in activity, the account itself): not even sent.
-  const IMPORT_NEVER_SENT = ['user', 'ai_audit', 'activity', 'ai_usage', 'ai_consents', 'ai_provider', 'activity_days', 'activity_workouts', 'activity_extra', 'care_suggestions'];
+  const IMPORT_NEVER_SENT = ['user', 'ai_audit', 'activity', 'ai_usage', 'ai_consents', 'ai_provider', 'activity_days', 'activity_workouts', 'activity_extra', 'care_suggestions', 'reminders', 'care_notes'];
   const IMPORT_KINDS = [
     ['log_entries', 'log entry', 'log entries'],
     ['custom_foods', 'food of yours', 'foods of yours'],
@@ -868,12 +869,16 @@
     'care.switches_changed': 'Care team switches changed', 'care.food_logged': 'Someone on your Care team logged food you ate',
     'suggestion.sent': 'A meal suggestion from your Care team', 'suggestion.accepted': 'You added a suggestion to your plan',
     'suggestion.declined': 'You said no thanks to a suggestion', 'suggestion.expired': 'A suggestion expired after 14 days',
+    'care_note.written': 'A note from your Care team', 'care_note.edited': 'A note from your Care team was changed before you read it',
+    'care_note.withdrawn': 'A note from your Care team was taken back before you read it', 'care_note.deleted': 'You deleted a note from your Care team',
     'oidc.linked': 'Sign-in provider linked', 'oidc.unlinked': 'Sign-in provider link removed',
     'device.connected': 'Device connected', 'device.disconnected': 'Device disconnected', 'device.sync_failed': 'Device sync stopped working',
     'activity.extra_on': 'Active-day calories turned on', 'activity.extra_off': 'Active-day calories turned off',
     'list_sync.set_up': 'Shopping list app set up', 'list_sync.removed': 'Shopping list app removed', 'list_sync.sent': 'Shopping list sent',
     'instacart.sent': 'Shopping list sent to Instacart',
     'email.set': 'Email for password resets saved', 'email.confirmed': 'Email for password resets confirmed', 'email.removed': 'Email for password resets removed',
+    'reminder.set': 'Reminder saved', 'reminder.removed': 'Reminder removed', 'reminder.device_added': 'Notifications turned on for a device',
+    'reminder.device_removed': 'Notifications turned off for a device',
     'test_accounts.created': 'Test account made', 'test_accounts.enabled': 'Test account turned on', 'test_accounts.disabled': 'Test account turned off',
     'test_accounts.reset': 'Test accounts reset',
   };
@@ -941,6 +946,7 @@
     if (ev.action === 'login.failed' && d.via === 'oidc') return 'with the sign-in provider';
     if (ev.action === 'login.succeeded' && d.via === 'oidc') return 'with the sign-in provider';
     if (ev.action === 'device.connected') return DEVICE_NAME[d.provider] || d.provider || '';
+    if (ev.action === 'reminder.device_removed') return { push_service: 'the device stopped taking them', other_account: 'another account turned them on there', person: '' }[d.via] || '';
     if (ev.action === 'instacart.sent' && d.items != null) return `${d.items} ${d.items === 1 ? 'item' : 'items'}`;
     if (ev.action.startsWith('list_sync.')) {
       const app = { grocy: 'Grocy', kitchenowl: 'KitchenOwl', mealie: 'Mealie' }[d.app] || d.app || '';
@@ -964,6 +970,8 @@
     if (ev.action === 'care.switches_changed' && KH.sharing) {
       return [d.role === 'custom' ? 'now a custom set of switches' : `now a ${KH.sharing.roleText(d.role)}`, d.food_added ? 'food log shared' : null].filter(Boolean).join(', ');
     }
+    if (ev.action === 'share.viewed' && d.area && KH.sharing) return `looked at ${KH.sharing.areasText([d.area])}`;
+    if (ev.action.startsWith('care_note.') && d.area && KH.sharing) return `about ${KH.sharing.areasText([d.area])}`;
     if (ev.action === 'suggestion.accepted' && d.skipped) return `${d.skipped} ${d.skipped === 1 ? 'food was' : 'foods were'} left out`;
     if (d.links_revoked) return d.links_revoked === 1 ? '1 open link revoked' : `${d.links_revoked} open links revoked`;
     return '';
@@ -2073,7 +2081,7 @@
       'ai.route.recipes', 'ai.route.local_provider', 'ai.route.cloud_provider']],
     ['Phone shortcuts', ['push.enabled']],
     ['Tokens for outside apps and phone shortcuts', ['tokens.allow_never_expiring']],
-    ['Care team', ['sharing.enabled']],
+    ['Care team', ['sharing.enabled', 'care_notes.enabled']],
     ['Connected devices', ['devices.enabled', 'devices.sync_hours']],
     ['Shopping list app and recipe import', ['lists.sync_enabled', 'recipes.import_enabled']],
     ['Instacart', ['lists.instacart_enabled']],
@@ -2471,7 +2479,7 @@
     const sec = $('#set-care');
     if (!sec) return;
     sec.hidden = authMode() === 'none' || !KH.sharing;
-    if (!sec.hidden) clear($('#set-care-body')).append(KH.sharing.block());
+    if (!sec.hidden) clear($('#set-care-section')).append(KH.sharing.block());
   }
   // Settings → Connected devices (js/views/devices.js, design note 27): shown only while the server has it on.
   let devicesDraw = 0;
@@ -2481,6 +2489,17 @@
     const ticket = ++devicesDraw;
     const show = await KH.devices.render($('#set-devices-body'));
     if (ticket !== devicesDraw || sec.hidden === !show) return;
+    sec.hidden = !show;
+    renderNav();
+  }
+  // Settings → Reminders (js/views/reminders.js, design note 35): shown only while the server has it on.
+  let remindersDraw = 0;
+  async function renderReminders() {
+    const sec = $('#set-reminders');
+    if (!sec || !KH.reminders) return;
+    const ticket = ++remindersDraw;
+    const show = await KH.reminders.render($('#set-reminders-body'));
+    if (ticket !== remindersDraw || sec.hidden === !show) return;
     sec.hidden = !show;
     renderNav();
   }
@@ -2554,6 +2573,7 @@
     renderAssistant().catch((err) => console.warn('Assistant access:', err));
     renderConnected().catch((err) => console.warn('Connected devices:', err));
     renderLists().catch((err) => console.warn('Shopping list app:', err));
+    renderReminders().catch((err) => console.warn('Reminders:', err));
     renderAbout();
     cache.myKeys = null;
     renderFood();

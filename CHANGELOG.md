@@ -5,9 +5,49 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
-## Unreleased
+## 0.24.0 — 2026-11-12
+
+### Upgrading from 0.23 (read this first)
+
+* Change the image tag to `:0.24`; the shipped deployment files already say `:0.24`.
+
+* Back up first. Schema step 35 adds two empty tables for reminders, and step 36 adds a
+  switch to Care team shares (off for every existing one) and an empty table for notes. Nothing changes until you turn reminders on.
+
+### Added
+
+* **Reminders by phone notification**, off by default. Set `REMINDERS_ENABLED=true`, `VAPID_SUBJECT` (`mailto:` with your
+  address) and an `https://` `PUBLIC_URL`. People can then turn on notifications on each phone or computer in Settings →
+  Reminders, and pick times to log a meal, plan tomorrow or log their weight. On iPhone it works in the app added to the Home
+  Screen. A meal reminder is skipped when that meal is already logged. The words are plain ("Time to log lunch.") and hold no
+  health data. Reminders are a convenience: do not rely on them for low blood sugar; use your CGM's alerts. The server makes its
+  push key once in the data folder and sends only to the push services of Apple, Google, Mozilla and Microsoft. See
+  [reminders.md](docs/reminders.md). Not yet tried on a real iPhone or Android phone.
+* `VAPID_PRIVATE_KEY` given inline stops the start, as for the other secrets.
+* **Read the text of a lab PDF.** When a page of the PDF from your lab's website has its own text, Labs → Read a lab report can send
+  that text instead of a picture of the page. It is faster, copies the exact numbers and works with a local AI that cannot read
+  pictures. **Read the text** is chosen when a page has text; scanned pages still go as pictures, and you can choose pictures for
+  every page. Lines that may show your name, date of birth or record numbers are left out in your browser first. The text goes
+  only to the local AI, under the same consent as lab report photos, never to a cloud AI. The app keeps a value only if it is
+  written in the page's text. Every row still starts unticked. New route `POST /api/ai/read-lab-report-text` on the same `labs`
+  switch; no new setting and no schema step. [Design note 36](docs/dev/research/36-lab-pdf-text.md).
+* `scripts/ai_eval.py --lab-text` measures a local model on made-up report pages.
+* **Notes from the Care team.** A person can make someone on their Care team a **Clinician**: a Viewer who may also write short
+  notes for them. Or they can turn on **Write notes for me** for anyone on their Care team. The writer finds **Write a note** on
+  the person's summary and Trends. The person sees new notes on Today, reads them under **Notes from your Care team**, and can
+  delete any note. The writer sees whether a note was read, and can change or withdraw it only before then.
+  * Notes are plain text, at most 1,000 characters. A note about lows, insulin or doses is refused. A note never changes any data.
+  * Only the person and the writer see a note. Admins, other Care team members and the AI never do. Visit prep shows how many
+    notes came in the period, on screen only; notes are never printed.
+  * For a share with notes on, the person's activity shows each part looked at, once an hour.
+  * Notes are in the person's export; the import leaves them out.
+  * Off by default. Turn it on with `CARE_NOTES_ENABLED=true` or in Server administration → Server settings → Care team. It
+    needs the Care team (`SHARING_ENABLED`) too. The app does not check who someone is: "Clinician" is the person's word.
+  * Schema step 36 adds the switch to Care team shares and invites (off for every existing one) and a `care_notes` table.
 
 ### Fixed
+
+* Settings → Care team: the invite form's weight and blood pressure box no longer shares its id with the section around it.
 
 * The menu plan sheet uses the same words as every other sheet when an earlier save fails after you closed it.
 

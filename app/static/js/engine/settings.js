@@ -149,6 +149,11 @@
       ],
       label: 'My weight-gain alarm (from my care team)',
       help: 'amount_kg (0.2–10, or null for none), over (between_sessions, on hemodialysis, or days) and days (1–7). The app never suggests a number: enter the one your team gave you.' },
+    // Notes from the Care team (design note 37; app/care_notes.py).
+    { key: 'care_notes.enabled', type: 'bool', default: false, scope: 'instance', env: 'CARE_NOTES_ENABLED',
+      label: 'Let someone on a Care team write notes for the person',
+      help: 'Off by default, and needs the Care team on. When on, a person can make someone on their Care team a Clinician, or turn on Write notes for me, and that person can write short notes they read in their own app. '
+        + 'Notes never change any data, and the app does not check who someone is. Only the person and the writer see a note. While off, no note can be written or read; turned on again, the notes are there again.' },
     // Connected devices (design notes 27 and 28; app/devices/). The provider apps (WITHINGS_*, WHOOP_*) are env only, never settings.
     { key: 'devices.enabled', type: 'bool', default: false, scope: 'instance', env: 'DEVICES_ENABLED',
       label: 'Let people connect a Withings scale, a blood pressure monitor or a Whoop strap',

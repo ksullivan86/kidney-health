@@ -1,0 +1,46 @@
+{
+  "id": "lab-text-a-decimal-comma-report",
+  "category": "lab_report_text",
+  "feature": "lab_report_text",
+  "fixture": {
+    "text": "Laboratoire de biologie médicale des Tilleuls\nPrélèvement du 07/10/2026\nKalium 4,6 mmol/l (3,5 - 5,1)\nPhosphate 1,32 mmol/l (0,81 - 1,45)\nCréatinine 141 µmol/l (59 - 104)\nDFG (CKD-EPI) 41 mL/min/1.73m2"
+  },
+  "model_outputs": [
+    "{\"status\": \"ok\", \"rows\": [{\"analyte\": \"potassium\", \"value\": 4.6, \"unit\": \"mmol/l\", \"taken_on\": \"07/10/2026\"}, {\"analyte\": \"phosphate\", \"value\": 1.32, \"unit\": \"mmol/l\", \"taken_on\": \"07/10/2026\"}, {\"analyte\": \"creatinine\", \"value\": 141, \"unit\": \"\\u00b5mol/l\", \"taken_on\": \"07/10/2026\"}, {\"analyte\": \"egfr\", \"value\": 41, \"unit\": \"mL/min/1.73m2\", \"taken_on\": \"07/10/2026\"}]}"
+  ],
+  "expect": {
+    "status": "ok",
+    "dropped": {
+      "unknown_analyte": 0,
+      "unknown_unit": 0,
+      "out_of_range": 0,
+      "not_in_text": 0
+    },
+    "rows": [
+      [
+        "potassium",
+        4.6,
+        "mmol/L",
+        null
+      ],
+      [
+        "phosphate",
+        1.32,
+        "mmol/L",
+        null
+      ],
+      [
+        "creatinine",
+        141,
+        "µmol/L",
+        null
+      ],
+      [
+        "egfr",
+        41,
+        "mL/min/1.73 m²",
+        null
+      ]
+    ]
+  }
+}

@@ -43,6 +43,12 @@ Reported (and written to ``docs/dev/ai-eval/<date>-<preset>-<model>.json``):
   ``recipe_changes_mean``, ``steps_dropped_rate`` (steps the app removed of all steps given), ``steps_unsafe_shown`` (must be
   0: steps shown that this script's own checker, independent of ``app/ai/recipe_steps.py``, finds unsafe) and
   ``recipe_p95_ms`` (a gate at 60 s local and 30 s cloud: a recipe is a longer answer).
+* With ``--lab-text`` (design note 36; the local role only, because a lab report never goes to a cloud AI): the golden cases with
+  ``feature: lab_report_text`` (made-up report pages) through ``POST /api/ai/read-lab-report-text``, the run's provider holding the role
+  ``local``. Reported: ``lab_text_rows_expected_rate`` (the case's expected rows that were shown), ``lab_text_not_in_text`` (values the
+  app dropped because they are not written in the page: what the model made up, converted or rounded) and
+  ``lab_text_unverbatim_shown``, this script's own check, written apart from ``app/ai/lab_report.py``: a shown value that is not
+  written in the page's text. Its gate ``lab_text_verbatim`` needs 0.
 
 The meal ideas and Ask prompts are worded from the profile, so the golden cases whose id starts with ``kidney-only`` use a
 profile whose diabetes is "None" (one per feature: meal ideas, describe a meal, label, plate photo; the last three carry no
@@ -154,6 +160,7 @@ class Options:
     structured: str | None = None
     reasoning_effort: str | None = None
     context_tokens: int | None = None
+    lab_text: bool = False  # also run the lab report text cases (design note 36; the local role only)
 
     @property
     def resolved_role(self) -> str:
@@ -179,6 +186,8 @@ class Options:
                     "(AI_CLOUD_UPSTREAM: the company's plain name, for example Anthropic)")
         if role == "local" and self.upstream:
             return "--upstream applies to --role cloud only"
+        if self.lab_text and role != "local":
+            return "--lab-text reads lab reports, which go only to the local AI: run it with the local role"
         return None
 
 
@@ -208,6 +217,10 @@ class Call:
     steps_shown: int = 0
     steps_dropped: int = 0
     steps_unsafe: int = 0  # shown steps this script's own checker finds unsafe
+    lab_rows_expected: int = 0  # lab report text: the case's expected rows
+    lab_rows_found: int = 0  # ... of which were shown
+    lab_not_in_text: int = 0  # values the app dropped as not written in the page
+    lab_unverbatim: int = 0  # shown values this script's own check cannot find in the page
 
 
 @dataclass
@@ -389,8 +402,57 @@ def settings_for(options: Options, data_dir: Path) -> Any:
     else:
         env = AiEnv(provider=options.preset, base_url=options.base_url, api_key=options.api_key, model=options.model,
                     vision_model=options.vision_model, timeout_s=options.timeout_s, private_hosts=options.private_hosts,
-                    http_proxy=options.http_proxy, **tuning)
+                    http_proxy=options.http_proxy, **({"provider_role": "local"} if options.lab_text else {}), **tuning)
     return make_settings(data_dir, FOODS_JSON, ai=env, reauth_minutes=RUN_REAUTH_MINUTES)
+
+
+def written_in(value: Any, text: str) -> bool:
+    """This script's own verbatim check (design note 36), apart from ``app/ai/lab_report.py``: ``value`` is written in ``text`` as a
+    number, with a decimal point, a decimal comma or a thousands comma, and not as part of a longer number."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return False
+    plain = f"{number:f}".rstrip("0").rstrip(".")
+    forms = {plain, plain.replace(".", ",")}
+    if number == int(number) and number >= 1000:
+        forms.add(f"{int(number):,}")
+    for form in forms:
+        tail = "0*" if "." in form or "," in form else ""
+        if re.search(rf"(?<![\d.,]){re.escape(form)}{tail}(?![\d.,]?\d)", text):
+            return True
+    return False
+
+
+def lab_text_call(case: dict[str, Any], run: int, request: Callable[[], Any]) -> Call:
+    """One lab report text case: the usual call record plus the expected rows found and the verbatim counts."""
+    text = case["fixture"]["text"]
+    call = _call("lab_report_text", case["id"], None, run, request)
+    expected = case.get("expect", {}).get("rows", [])
+    try:
+        result = request.last.json()  # type: ignore[attr-defined]
+    except Exception:  # noqa: BLE001 - a failed call has no rows
+        result = {}
+    rows = result.get("rows") or []
+    shown = {(r.get("analyte"), float(r.get("value", "nan"))) for r in rows}
+    call.lab_rows_expected = len(expected)
+    call.lab_rows_found = sum(1 for e in expected if (e[0], float(e[1])) in shown)
+    call.lab_not_in_text = int((result.get("dropped") or {}).get("not_in_text", 0)) if isinstance(result.get("dropped"), dict) else 0
+    call.lab_unverbatim = sum(1 for r in rows if not written_in(r.get("value"), text))
+    call.shown = len(rows)
+    return call
+
+
+class Remember:
+    """A request that keeps its last response, so the lab text call can read the rows after ``_call`` timed it."""
+
+    def __init__(self, send: Callable[[], Any]) -> None:
+        self.send = send
+        self.last: Any = None
+
+    def __call__(self) -> Any:
+        self.last = self.send()
+        return self.last
 
 
 def first_idea_names(result: dict[str, Any]) -> set[str]:
@@ -418,6 +480,8 @@ def _call(kind: str, case_id: str, mode: str | None, run: int, request: Callable
     if result.get("plan"):
         shown = 1
     dropped = result.get("dropped") or []
+    if isinstance(dropped, dict):  # a lab report counts the lines it left out (lab_text_call reads them)
+        dropped = []
     watched = list(not_first)
     first = first_idea_names(result)
     return Call(kind=kind, case=case_id, mode=mode, run=run, http=r.status_code, status=status,
@@ -467,6 +531,17 @@ def run_eval(options: Options, *, transport_factory: Any = None, data_dir: Path 
                     if feature == "lab_report":
                         # Local-only (privacy tier 1): a lab report photo is never sent to the one provider this run measures,
                         # which may be a cloud AI. The offline golden cases cover it (tests/test_ai_golden.py).
+                        continue
+                    if feature == "lab_report_text":
+                        # Local-only as well: run only with --lab-text, where this run's provider is the local AI.
+                        if not options.lab_text:
+                            continue
+                        prepare(admin, sam, case.get("fixture", {}))
+                        send = Remember(lambda: admin.post("/api/ai/read-lab-report-text", json={"text": case["fixture"]["text"], "page": 1}))
+                        call = lab_text_call(case, run, send)
+                        calls.append(call)
+                        log(f"run {run} {case['id']}: http {call.http} {call.status or ''} rows {call.lab_rows_found}/{call.lab_rows_expected} "
+                            f"not in text {call.lab_not_in_text} {call.latency_ms} ms")
                         continue
                     if feature == "chat":
                         # The Ask golden cases are recorded conversations with their own tool calls; the live chat questions
@@ -602,6 +677,15 @@ def report(options: Options, calls: Iterable[Call], chat_calls: Iterable[ChatCal
     gates["no_unsafe_steps"] = summary["steps_unsafe_shown"] == 0
     recipe_limit = RECIPE_P95_LIMIT_MS["local" if local else "cloud"]
     gates["recipe_p95_latency"] = summary["recipe_p95_ms"] is not None and summary["recipe_p95_ms"] <= recipe_limit
+    if options.lab_text:
+        lab = [c for c in calls if c.kind == "lab_report_text"]
+        summary.update({
+            "lab_text_cases": len(lab),
+            "lab_text_rows_expected_rate": pct(sum(c.lab_rows_found for c in lab), sum(c.lab_rows_expected for c in lab)),
+            "lab_text_not_in_text": sum(c.lab_not_in_text for c in lab),
+            "lab_text_unverbatim_shown": sum(c.lab_unverbatim for c in lab),
+        })
+        gates["lab_text_verbatim"] = bool(lab) and summary["lab_text_unverbatim_shown"] == 0
     if options.chat:
         expecting_answer = [c for c in chat_calls if "answer" in _chat_kinds(c.case) and "withheld" not in _chat_kinds(c.case)]
         chat_latency = [c.latency_ms for c in chat_calls if c.ai_called]
@@ -677,6 +761,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--cases", help="only golden cases whose id matches this regular expression")
     parser.add_argument("--no-safety", action="store_true", help="skip the safety set")
     parser.add_argument("--chat", action="store_true", help="also run the Ask chat set (needs a model that follows the step protocol)")
+    parser.add_argument("--lab-text", action="store_true",
+                        help="also run the lab report text cases (design note 36): the local role only, the provider must be private")
     parser.add_argument("--out", help="report path (default: docs/dev/ai-eval/<date>-<preset>-<model>.json)")
     args = parser.parse_args(argv)
     if args.runs < 1:
@@ -684,7 +770,7 @@ def main(argv: list[str] | None = None) -> int:
     options = Options(preset=args.provider, model=args.model, base_url=args.base_url, vision_model=args.vision_model,
                       api_key=None, private_hosts=tuple(args.private_host), http_proxy=args.http_proxy,
                       runs=args.runs, cases=args.cases, safety=not args.no_safety, timeout_s=args.timeout, chat=args.chat,
-                      role=args.role, upstream=(args.upstream or "").strip() or None)
+                      role=args.role, upstream=(args.upstream or "").strip() or None, lab_text=args.lab_text)
     if options.problem():
         parser.error(options.problem())
     try:
@@ -715,6 +801,10 @@ def main(argv: list[str] | None = None) -> int:
             print(f"  {name:28} {'n/a' if value is None else f'{value:.0%}'}")
         print(f"  {'chat_unsafe_text_shown':28} {s['chat_unsafe_text_shown']}")
         print(f"  {'chat latency p50 / p95':28} {s['chat_latency_ms']['p50']} / {s['chat_latency_ms']['p95']} ms per question")
+    if options.lab_text:
+        rate = s["lab_text_rows_expected_rate"]
+        print(f"  {'lab text rows found':28} {'n/a' if rate is None else f'{rate:.0%}'}; not in the text {s['lab_text_not_in_text']}; "
+              f"shown but not written {s['lab_text_unverbatim_shown']}")
     print(f"  {'recommended':28} {rep['recommended']} {json.dumps(rep['gates'])}")
     print(f"report: {path}")
     return 0 if rep["recommended"] else 1

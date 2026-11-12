@@ -549,3 +549,62 @@ def test_the_live_runner_sends_the_kidney_only_wording_for_those_cases_and_type_
     for s in kidney_only:  # the PERSON block of the chat names the profile's own value ("diabetes": "none"); the rules assume none
         assert "type 1 diabetes" not in s and "type 2 diabetes" not in s
         assert "Low blood glucose is handled by the app" in s or "Low blood sugar and emergencies are handled by the app" in s
+
+
+# --------------------------------------------------------------------------- #
+# --lab-text (design note 36): the lab report text cases, on the local role only
+# --------------------------------------------------------------------------- #
+
+
+def lab_text_model(request: Any) -> Any:
+    """Copies the potassium line it is given, and makes one value up (the app drops it; the script's own check never sees it)."""
+    body = json.loads(request.content)
+    text = body["messages"][1]["content"]
+    assert text.startswith("TASK: read_lab_report_text"), text[:60]
+    lines = json.loads(text.split("<data>\n", 1)[1].split("\n</data>", 1)[0])["lines"]
+    rows = []
+    for line in lines:
+        found = re.match(r"(?:Potassium|Kalium)\D*?(\d+(?:[.,]\d+)?)[^\d]*?(mmol/[lL])", line)
+        if found:
+            rows.append({"analyte": "potassium", "value": float(found.group(1).replace(",", ".")), "unit": found.group(2), "taken_on": None})
+    rows.append({"analyte": "albumin", "value": 4.0, "unit": "g/dL", "taken_on": None})  # made up
+    return chat({"status": "ok" if len(rows) > 1 else "not_a_lab_report", "rows": rows if len(rows) > 1 else []})
+
+
+def lab_options(**extra: Any) -> Any:
+    return ai_eval.Options(preset="ollama", model="gemma", base_url="http://ollama.lan:11434/v1", private_hosts=("ollama.lan:11434",),
+                           cases=r"^lab-text-", safety=False, include_vision=False, lab_text=True, **extra)
+
+
+def test_lab_text_runs_the_text_cases_on_the_local_role_and_counts_what_is_not_written(tmp_path):
+    provider = FakeProvider(route=lab_text_model, address="10.0.0.5")
+    rep = ai_eval.run_eval(lab_options(), transport_factory=provider.factory, data_dir=tmp_path, log=lambda line: None)
+    lab = [c for c in rep["calls"] if c["kind"] == "lab_report_text"]
+    assert len(lab) == 7 and all(c["http"] == 200 for c in lab), [(c["case"], c["http"], c["reason"]) for c in lab]
+    s = rep["summary"]
+    assert s["lab_text_cases"] == 7 and s["lab_text_unverbatim_shown"] == 0
+    # the made-up albumin of every case that has results, except the page that happens to say "4 units" (a number written on the page)
+    assert s["lab_text_not_in_text"] == 5
+    assert 0 < s["lab_text_rows_expected_rate"] < 1  # the model copies only potassium
+    assert rep["gates"]["lab_text_verbatim"] is True
+    sent = [json.loads(r.content) for r in provider.chat_requests]
+    assert sent and all("image_url" not in json.dumps(b) for b in sent)
+
+
+def test_without_lab_text_the_cases_are_skipped_and_the_cloud_role_is_refused(tmp_path):
+    provider = FakeProvider(route=scripted_model)
+    rep = ai_eval.run_eval(ai_eval.Options(preset="openai", model="gpt-6-luna", api_key=KEY, cases=r"^lab-text-", safety=False),
+                           transport_factory=provider.factory, data_dir=tmp_path, log=lambda line: None)
+    assert rep["calls"] == [] and "lab_text_cases" not in rep["summary"] and provider.requests == []
+    refused = ai_eval.Options(preset="openai", model="gpt-6-luna", lab_text=True).problem()
+    assert refused == "--lab-text reads lab reports, which go only to the local AI: run it with the local role"
+
+
+@pytest.mark.parametrize("value, text, written", [
+    (5.4, "Potassium 5.4 mmol/L", True), (5.4, "Potassium 5.40 mmol/L", True), (4.6, "Kalium 4,6 mmol/l", True),
+    (1250, "UACR 1,250 mg/g", True), (1250, "UACR 1250 mg/g", True), (38, "eGFR 38 mL/min/1.73m2", True),
+    (38, "eGFR 380", False), (38, "eGFR 3.8", False), (8, "Ref 38", False), (1.73, "1.73m2", True), (4.0, "Albumin 4.1 g/dL", False),
+    ("x", "x", False),
+])
+def test_the_scripts_own_verbatim_check(value, text, written):
+    assert ai_eval.written_in(value, text) is written

@@ -45,6 +45,7 @@ app/meta.py                 GET /api/meta: versions, what the signed-in person c
 app/brand.py                the brand strings in one place: names, cookie names, token prefixes, CSRF value, DB filename, export format, user agents, HKDF labels ("Brand strings")
 app/sharing.py              the Care team: share links, user name invites, roles and switches, /api/me/shares, /api/shared, the reads and the helpers' planned and eaten food and saved meals ("Sharing", "Care team")
 app/care_suggestions.py     meal suggestions from the Care team: /api/shared/{id}/suggestions, /api/me/suggestions ("Care team", note 29)
+app/care_notes.py           notes from the Care team: /api/shared/{id}/notes, /api/me/notes ("Notes from the Care team", note 37)
 app/pairing.py              the iPhone app's pairing link in the QR code of a new device token: link() and the reference parse() ("Pairing the iPhone app")
 scripts/gen_openapi.py      writes / --check docs/api/openapi.json, the checked-in OpenAPI document (docs/api/README.md)
 app/config.py               settings from env and *_FILE secrets (v0.3: the full list is at its top; deploy/.env.example)
@@ -869,6 +870,8 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 31 | `m031_care_team_full.py` | the full Care team (note 29 §6) | `shares` and `care_invites` each gain four switches, `INTEGER NOT NULL DEFAULT 0 CHECK (… IN (0, 1))`: `may_plan`, `may_log`, `may_use_saved_meals`, `may_suggest`. When the columns are first added, a `care_helper` row gets `may_plan = 1`, so every share keeps its meaning. The `role` column of step 27 stays with its `CHECK`; the app writes it `care_helper` exactly when `may_plan` is on. New table `care_suggestions` (`share_id` `ON DELETE CASCADE`, `owner_user_id` and `from_user_id` `ON DELETE CASCADE`, never the same; `date`, `meal`, `items_json` a JSON list of 1 to 30, `note` at most 280 characters, `created_at`, `expires_at`, `answered_at`, `answer` (`accepted`, `declined`, `expired`, `ended`)). |
 | 33 | `m033_ai_route_choice.py` | a person may choose the server's local or cloud AI (note 32) | `users.can_choose_ai` (`INTEGER NOT NULL DEFAULT 0 CHECK (… IN (0, 1))`): an admin's tick in Server administration → Users. Every existing account starts without it. The person's choices are the personal setting `ai.route_choice`, not a column. |
 | 34 | `m034_reset_email.py` | password reset by email (note 34) | `users.email` (TEXT, NULL, at most 320 characters, stored lower case) and `users.email_confirmed_at`; unique index `users_email_confirmed` on `email` for confirmed addresses only (an address typed but not confirmed blocks nobody); `email_tokens` (id, user_id `ON DELETE CASCADE`, the address it was sent to, SHA-256 of the verifier, 24 h, single use): the confirmation links, in their own table because `auth_tokens.purpose` has a CHECK. Every existing account starts without an address. |
+| 35 | `m035_reminders.py` | reminders by phone notification (note 35) | two new tables, both `user_id` `ON DELETE CASCADE`: `push_subscriptions` (`endpoint` UNIQUE, `p256dh`, `auth` (base64url), `user_agent`, `created_at`, `last_ok_at`, `last_error`) and `reminders` (`kind` CHECK `log_meal`, `plan_tomorrow` or `weigh_in`; `meal` CHECK the four meals or NULL; `time_local` `HH:MM`; `days` bitmask 1–127, bit 0 Monday; `time_zone` (IANA, `''` = the server's time); `enabled`; `created_at`; `last_sent_on`). Nothing else changes. |
+| 36 | `m036_care_notes.py` | notes from the Care team (note 37 §8) | `shares` and `care_invites` each gain `may_note` (`INTEGER NOT NULL DEFAULT 0 CHECK (… IN (0, 1))`); every existing share starts with it off and the `role` column stays (a Clinician is stored `viewer`). `shares.view_hours` (TEXT, JSON `{hour, areas, last}`): the hourly look rows of a share with notes on (note 37 §6), a counter like `helper_changes`. New table `care_notes` (`owner_user_id` `ON DELETE CASCADE`; `author_user_id` and `share_id` `ON DELETE SET NULL`, so the person keeps a note when the author's account goes; `author_name`; `area` one of the five or NULL; `about_date`; `body` 1 to 1,000 characters; `version`, `created_at`, `edited_at`, `read_at`; never the same person on both sides; an edit never after the read). Indexes on the owner, the share and the author. It does not use step 35's tables, so it runs the same after 34 or 35. |
 | 23 | `m023_passkeys.py` | passkeys (note 18) | `passkeys` (one row per passkey: `credential_id` BLOB, unique, 1 to 1,023 bytes; `public_key`, the COSE key as sent; `alg`; `user_handle`, 32 random bytes shared by one person's passkeys; `sign_count`; `name`; `backed_up`; `created_at`; `last_used_at`). `ON DELETE CASCADE`. Nothing is sealed: a public key is not a secret. Nobody has a passkey after the upgrade. |
 
 ## Backend file ownership
@@ -893,10 +896,12 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | iPhone app pairing (design note 15 §4.3) | `app/pairing.py`, `pair_url` in `create_my_token` (`app/auth/api_tokens.py`), `brand.PAIRING_SCHEME`, `pushPairBox` in `js/views/settings.js` with `KH.twoStep.qrSvg`, `ios/KidneyHealthCore/Sources/KidneyHealthCore/Pairing.swift`, `ios/KidneyHealthSync-Info.plist`, `.onOpenURL` and the pairing alert in `ios/KidneyHealthSync/ContentView.swift`; tests `tests/test_pairing.py`, `tests/data/pairing_vectors.json`, `PairingVectorTests.swift` |
 | Read-only sharing (design note 19) | `app/sharing.py` (`/api/me/shares`, `/api/shared`, the `shared_owner(area)` check), `app/migrations/m024_shares.py`, `app/migrations/m025_share_time_limit.py`, `sharing.enabled` (`app/settings_registry.py`, `js/engine/settings.js`), the `share.*` audit actions, `shares` and `DELETE /api/admin/users/{id}/shares` in `app/auth/admin_api.py`; screens: `js/views/sharing.js` (Settings block, the `#/share/<code>` sheet, `KH.sharing.reads`), the shared mode of `js/views/visit.js`, the People badge and End sharing in `js/views/settings.js`, the demo's answers in `js/mock/auth.js`; tests `tests/test_sharing.py`, `tests/test_migration_m024.py`, `tests/test_migration_m025.py`, `tests/test_sharing_ui.py`, `tools/e2e/sharing.py` |
 | The full Care team (design note 29) | `app/sharing.py` (switches, `PRESETS`, `role_of`, `PUT /api/me/shares/{id}/switches`, the `care_*` checks, eaten food, saved meals), `app/care_suggestions.py`, `app/migrations/m031_care_team_full.py`, `meals.apply_template`, export key `care_suggestions`; screens: the switches in `js/views/sharing.js`, `js/views/careplan.js`, `js/views/suggestions.js` (`#plan-suggestions`); demo `js/mock/care.js`; tests `tests/test_care_team_full.py`, `tests/test_migration_m031.py`, `tests/data/care_vectors.json` (`gen_care_vectors.py`), `tests/js/care_demo.mjs`, `tools/e2e/sharing.py` |
+| Notes from the Care team (design note 37) | `app/care_notes.py`, `app/sharing.py` (`may_note`, the `clinician` preset, `care_noter`, `notes_enabled`, hourly looks), `app/migrations/m036_care_notes.py`, setting `care_notes.enabled`, export key `care_notes`; screens: `js/views/notes.js` (`#notes`, the Today card, the Visit prep line, `#sheet-note`), the Clinician role and switch in `js/views/sharing.js`; demo `js/mock/care.js`; tests `tests/test_care_notes.py`, `tests/test_care_notes_ui.py`, `tests/js/notes_ui.test.mjs`, `tests/js/care_notes_demo.test.mjs`, `tests/data/care_vectors.json` (`care_notes`), `tools/e2e/clinician_notes.py` |
 | The Care team (design note 25) | `app/sharing.py` (`role`, `POST /api/me/shares/invite`, `DELETE /api/me/shares/invites/{id}`, `PUT /api/me/shares/{id}/role`, `POST /api/shared/invites/{id}/accept\|decline`, the `care_helper` check and the Care helper routes), `app/migrations/m027_care_team.py`, `added_by` in `app/log.py` and `Entry`, the `care.*` audit actions; screens: Settings → Care team (`#set-care`, `js/views/sharing.js`), Profile → Open Care team, "Added by" in `js/views/today.js`, Planning for on the Plan tab (`js/views/careplan.js`), the demo's sample Care team in `js/mock/care.js`; tests `tests/test_care_team.py`, `tests/test_care_team_ui.py`, `tests/js/care_demo.mjs`, `tools/e2e/sharing.py` |
 | Two-step sign-in (design note 17) | `app/auth/totp.py` (RFC 6238, recovery codes, storage), `app/auth/totp_api.py` (`/api/me/totp*`), `_second_step` and the reset-link rule in `app/auth/routes.py`, `LoginBody.code` and `TotpCodeBody` in `app/auth/schemas.py`, `DELETE /api/admin/users/{id}/totp` and `two_step` in `app/auth/admin_api.py`, `remove-two-step` in `app/admin.py`, the `totp.*` audit actions, `totp_factors.secret_enc` in `crypto.ENCRYPTED_COLUMNS`, `app/migrations/m022_totp.py`; screens: `js/views/two_step.js` (Settings block, QR code from the vendored `qrcode-generator`), the code field of `#form-login` and the totp_required answers in `js/views/auth.js`, the People badge and removal in `js/views/settings.js`, the demo's answers in `js/mock/auth.js`; tests `tests/test_totp.py`, `tests/test_migration_m022.py`, `tests/test_two_step_ui.py`, `tools/e2e/two_step.py` |
 | Passkeys (design note 18) | `app/auth/webauthn.py` (the WebAuthn checks for a Relying Party, a CBOR reader and COSE keys, on `cryptography` only), `app/auth/passkeys.py` (storage, the in-memory challenges), `app/auth/passkeys_api.py` (`/api/me/passkeys*`, `/api/auth/passkey*`), `passkey_challenges` in `app/auth/context.py`, `passkeys` in `GET /api/auth/status`, `DELETE /api/admin/users/{id}/passkeys` and `passkeys` in `app/auth/admin_api.py`, `remove-passkeys` in `app/admin.py`, the `passkey.*` audit actions, `app/migrations/m023_passkeys.py`; screens: `js/views/passkeys.js` (Settings block, `KH.passkeys.signIn`), the passkey button of `#form-login` in `index.html` and `js/views/auth.js`, the People badge and removal in `js/views/settings.js`, the demo's answers in `js/mock/auth.js`; tests `tests/test_webauthn.py` (with `tests/data/webauthn_w3c_vectors.json`), `tests/webauthn_support.py`, `tests/test_passkeys.py`, `tests/test_migration_m023.py`, `tests/test_passkeys_ui.py`, `tools/e2e/passkeys.py` |
 | Sign-in with a provider (design note 24) | `app/auth/oidc.py` (discovery, the JWKS cache, PKCE, the token exchange through `app/egress.py`, the JWS and claim checks on `cryptography` only, the in-memory `FlowStore`), `app/auth/oidc_api.py` (`/api/auth/oidc/*`, `/api/auth/reauth/oidc`, `/api/me/oidc*`, the account rules, `status_view`, `about_view`), `OidcEnv` in `app/config.py`, the `auth.oidc.*` keys (`app/settings_registry.py`, `js/engine/settings.js`), `app/migrations/m026_oidc.py`, `signed_in_with` in `app/auth/sessions.py`, the OIDC exemption in `deps.two_step_required`, `security.PROVIDER_RETURN_RE`, `brand.OIDC_COOKIE*` and `USER_AGENT_OIDC`, `DELETE /api/admin/users/{id}/oidc`, `oidc_links` and `oidc` in `app/auth/admin_api.py`, the `oidc.*` audit actions; screens: `js/views/oidc.js` (`KH.oidc`: the buttons, Settings → Linked sign-in, the result sentences), the `#login-oidc`, `#register-oidc` and `#reauth-oidc` blocks of `index.html`, the People badge and removal and About lines in `js/views/settings.js`, the demo's answers in `js/mock/auth.js`; tests `tests/oidc_support.py` (a fake provider), `tests/test_oidc.py`, `tests/test_oidc_providers.py` (two providers at once, `OIDC_ONLY`), `tests/test_oidc_ui.py`, `tests/test_migration_m026.py`, `tools/e2e/oidc.py` |
+| Reminders (design note 35) | `app/webpush.py` (VAPID, RFC 8291 encryption, the push-host list, `Sender`), `app/reminders.py` (`/api/reminders`, the loop), `app/migrations/m035_reminders.py`, `RemindersEnv` in `app/config.py`, `brand.USER_AGENT_PUSH`, the `push` and `notificationclick` handlers in `app/static/sw.js`, `js/views/reminders.js`, `js/mock/reminders.js`, `#set-reminders` in `index.html`, `docs/reminders.md`, `tests/test_webpush.py`, `tests/test_reminders*.py`, `tests/test_migration_m035.py`, `tools/e2e/reminders*.py` |
 | API document and meta (design note 14, changes 2 and 4) | `app/openapi_doc.py` (operation ids, errors, security schemes; wired in `app/main.py` with `generate_unique_id_function` and `openapi_doc.install`), `app/api_version.py`, `app/meta.py` (`GET /api/meta`) with `status_view` in `app/ai/routes.py` and `providers_available` in `app/barcode.py`, `scripts/gen_openapi.py`, `docs/api/**`, `js/mock/meta.js`, `tests/test_openapi_snapshot.py`, `tests/test_meta.py`, `tests/data/gen_meta_vectors.py`, `tests/data/meta_vectors.json`, the meta section of `tools/e2e/parity.py` |
 | Brand strings (design note 14, change 3) | `app/brand.py` and the modules that import it (every one that names a cookie, a token prefix, the CSRF value, the database file, the export format, a User-Agent, an HKDF label or a logger), `js/engine/brand.js` (`KH.brand`; registered in `index.html` and `sw.js`) and the scripts that read it, `tests/test_brand.py` |
 | Assistant step 2 | `app/ai/chat.py`, `ChatStep` in `app/ai/schemas.py`, the chat prompt in `app/ai/prompts.py`, `guard.MEDICINE_NAMES`, `POST /api/ai/chat` in `app/ai/routes.py`, `app/migrations/m012_*`, the `ai.chat_enabled` key, `js/views/ask.js`, `css/ask.css`, the Ask tab and view in `index.html`, `scripts/ai_eval.py --chat`, `docs/dev/plans/assistant-step2.md`, `tests/test_ai_chat.py`, `tests/test_ai_chat_checks.py`, `tests/test_migration_m012.py`, `tests/test_ask_ui.py`; part C (saving from the chat): `app/ai/chat_save.py`, `app/migrations/m013_*`, the `ai.allow_trusted_saves` key and `trust` in the person's `ai` setting, the `Asker` identity in `app/mcp/tools.py`, `ask_key_hash` in `app/mcp/request_keys.py`, `ai.trust_changed` in `app/audit.py`, the trust choice and warning sheet in `js/views/ai.js`, the cards in `js/views/ask.js`, `tests/test_ai_chat_save.py`, `tests/test_migration_m013.py` |
@@ -1107,7 +1112,11 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
 
-**Status (2026-11-07): v0.23.0 is prepared.** Password reset by email (note 34, schema step 34), off until `EMAIL_ENABLED`;
+**Unreleased (2026-11-12):** reminders by phone notification (note 35, schema step 35), off until `REMINDERS_ENABLED`.
+
+**Status (2026-11-12): v0.24.0 is prepared.** Reminders by phone notification (note 35, schema step 35, `REMINDERS_ENABLED`),
+reading the text of a lab PDF on the local AI (note 36, no schema step), and Care team notes, phase 1 (note 37, schema step 36,
+`CARE_NOTES_ENABLED`); all off by default. **v0.23.0**: password reset by email (note 34, schema step 34), off until `EMAIL_ENABLED`;
 an Ask retry that races its first save reports that save; device sign-in shares `sessions.is_live`. **v0.22.3**: fifteen audit fixes: writes recheck access and trust inside their write lock
 (assistant and phone tokens, Ask, device sign-in, provider account actions), imports and daily limits are serialised, and every
 sheet keeps late replies with the opening that sent them while still saying when an earlier save failed. **v0.22.2**: the owner's four choices from the sharing and passkey review (a reset link removes
@@ -1301,7 +1310,7 @@ optional HIBP check (`PASSWORD_BREACH_CHECK`, off by default; the k-anonymity ra
 | `GET /api/me/oidc` | user | → `{available, enabled, label, providers: [{id, label, linked}], links: [{id, provider (the issuer's host), provider_id, name, email, created_at, last_used_at, current}], can_link, has_password, passkeys}` (`provider_id` and `name` are null, and `current` false, for a provider no longer in use; `can_link`: a provider in use is not linked yet) (never a subject or a token); works while sign-in with a provider is off, for a link left from before |
 | `POST /api/me/oidc/link` | user (local) *(re-auth)* | `?provider=` as for the start → `{url}` (and the flow cookie); the callback links only when this same session comes back and that provider account is not linked to someone else (`taken`); audit `oidc.linked` (`via: settings`). Linking and re-auth callbacks expire if a password change is required before completion. 409 when already linked to this issuer; 404 unless it is on |
 | `DELETE /api/me/oidc/{id}` | user (local) *(re-auth)* | → 204; audit `oidc.unlinked` (`via: self`). 409 when it is the last way in (no password, no passkey, no other link); 404 if not yours |
-| `GET /api/me/shares` | user | → `{enabled, areas, roles, max: 10, sharing: [{id, name, username, areas, since, until, last_viewed_at, active, role, may_plan, may_log, may_use_saved_meals, may_suggest, helper_changes}], codes: [{id, areas, days, created_at, expires_at, role}], invites: [{id, username, areas, role, days, created_at, expires_at}]}` (never a link); `enabled` false while `sharing.enabled` is off; 404 in `AUTH_MODE=none` |
+| `GET /api/me/shares` | user | → `{enabled, notes, areas, roles, max: 10, sharing: [{id, name, username, areas, since, until, last_viewed_at, last_viewed_area, active, role, may_plan, may_log, may_use_saved_meals, may_suggest, may_note, helper_changes}], codes: [{id, areas, days, created_at, expires_at, role}], invites: [{id, username, areas, role, days, created_at, expires_at}]}` (never a link); `enabled` false while `sharing.enabled` is off; 404 in `AUTH_MODE=none` |
 | `POST /api/me/shares` | user *(re-auth)* | `{areas, days?, role?}` (`role` `viewer` by default; `care_helper` adds `food`) (1 to 5 of `food`, `labs`, `body`, `symptoms`, `activity` (step 30); `days` 1 to 365 makes the share end that long after it is accepted, absent or null: until stopped) → 201 `{code, link}`: `/#/share/<id>.<verifier>`, shown only here, works once for 7 days; 409 at 5 unused links or 10 shares; audit `share.code_created` |
 | `DELETE /api/me/shares/{id}` | user | → 204: stops a share (audit `share.ended`, `by: owner`) or cancels a link (`share.code_cancelled`); 404 if not yours or already ended |
 | `POST /api/me/shares/invite` | user *(re-auth)* | `{username, areas, days?, role?}` → 201 `{id, username, areas, role, days, created_at, expires_at}`, the **same answer whether or not the name is an active account** (note 25 §3); a second invite to the same name replaces the first; 400 your own name; 409 at 5 waiting invites or 10 shares; 20 tries an hour per account and address (`care_invite`); audit `care.invited` (no name) |
@@ -1311,6 +1320,9 @@ optional HIBP check (`PASSWORD_BREACH_CHECK`, off by default; the k-anonymity ra
 | `GET /api/me/suggestions` | user | → `{enabled, suggestions: [{id, share_id, from_name, date, meal, items: [{food_id, name, serving_desc, servings, available}], note, created_at, expires_at, answer, answered_at, fit: {totals, unknown, day_status}}]}`, the open ones, oldest day first; `enabled: false` and `[]` while sharing is off (never 404, so the Plan tab never fails a request) |
 | `POST /api/me/suggestions/{id}/accept` | user | → `{entries, skipped}`: one planned entry of the person's own per food they can still use; 409 when none is left; audit `suggestion.accepted`; 404 if not yours or not open |
 | `POST /api/me/suggestions/{id}/decline` | user | → 204; audit `suggestion.declined`; 404 if not yours or not open |
+| `GET /api/me/notes?before=&limit=` | user | → `{enabled, unread, notes: [{id, from: {name, removed}, area, date, body, version, created_at, edited_at, read_at}]}`: notes from your Care team, newest first, at most 50 a page (`before`: the last `id` you have); `enabled: false`, `unread: 0` and `[]` while notes or sharing are off and in `AUTH_MODE=none` (never 404, so Today never fails a request) |
+| `POST /api/me/notes/{id}/read` | user | `If-Match: "<version>"` (428 without) → 204; already read is 204; a version that is not the note's now is 412 `{detail, current}`; no audit row |
+| `DELETE /api/me/notes/{id}` | user | → 204, read or not; gone for the author too; audit `care_note.deleted` (target the note, no text); 404 if not yours |
 | `GET /api/me/sessions` | user | → `{sessions: [{id, created_at, last_seen_at, expires_at, user_agent, ip_prefix, current}]}` |
 | `DELETE /api/me/sessions/{id}` | user | → 204 (404 if not one of yours) |
 | `POST /api/me/sessions/revoke-others` | user *(re-auth)* | → `{revoked: n}` |
@@ -2375,7 +2387,8 @@ and pinning is its job. `read_capped` counts decoded bytes. Every outbound clien
 `app/foods.py`, Open Food Facts `app/off.py`, the breached-password check `app/auth/policy.py`, sign-in providers
 `app/auth/oidc.py`, Withings `app/devices/withings.py`, Whoop `app/devices/whoop.py`, a person's list app
 `app/list_sync/apps.py` (its `ListTransport` subclass allows the private hosts of `LIST_SYNC_ALLOWED_HOSTS` and keeps plain
-`http` on them), recipe pages `app/recipe_import/fetch.py`, Instacart `app/instacart.py`) or, for AI,
+`http` on them), recipe pages `app/recipe_import/fetch.py`, Instacart `app/instacart.py`, push services for reminders
+`app/webpush.py`) or, for AI,
 `app/ai/transport.py`'s `PinnedTransport`; `tests/test_egress.py` fails on any other client.
 
 Email (note 34) is SMTP, not HTTP, so it is outside this rule: `app/mail.py` connects with `smtplib` only to `SMTP_HOST`, which
@@ -2590,7 +2603,7 @@ query takes `user.id`; another person's provider, consent or AI activity is neve
 
 | Method and path | Body / query → response |
 |---|---|
-| `GET /api/ai/status` | → `{enabled, opted_in, available, reason, message, provider: {id, label, host, model, vision_model, scope, kind, policy} \| null, consent: {text, photos, chat, labs, voice?}, routing: {mode: "routed" \| "as_before"}, routes: {photos, meal_ideas, describe, chat, labs, recipes: {feature, label, purpose, route, role: "local" \| "cloud" \| "own" \| null, available, reason, message, text, runs_on: {id, label, host, model, vision_model, scope, kind, policy} \| null, consent}}, policy_version, daily_limit, remaining_today, features: {next_meal, parse_meal, label, plate, chat, voice, lab_report, recipes, recipe_steps}, voice: {host, model, max_seconds, max_bytes, remaining_today, consent, request} \| null, trust: {setting, allowed, effective}, prompt_version}`; `provider` and the `reason` are those of the first feature that resolves (meal ideas, describe, photos, chat); `consent.text` is meal ideas'; `features.voice` (and `voice`, and `consent.voice`) only with the chat available (the chat route resolves and is not `off`), `ai.voice_enabled` on and `STT_BASE_URL` set; `features.chat` is true only with the person set up for AI, a provider for the chat route **and** `ai.chat_enabled` on; `features.lab_report` is true only with the person opted in and the `labs` route resolving to the local AI (role `local`, pinned to the private network) with a vision model ("Lab report photos" below); `routes.labs.text` says why not ("Needs a local AI on your own network, which is not set up on this server, so it is off."); `trust.setting` is the person's choice, `allowed` the admin switch `ai.allow_trusted_saves`, `effective` the choice when allowed and `ask` when not |
+| `GET /api/ai/status` | → `{enabled, opted_in, available, reason, message, provider: {id, label, host, model, vision_model, scope, kind, policy} \| null, consent: {text, photos, chat, labs, voice?}, routing: {mode: "routed" \| "as_before"}, routes: {photos, meal_ideas, describe, chat, labs, recipes: {feature, label, purpose, route, role: "local" \| "cloud" \| "own" \| null, available, reason, message, text, runs_on: {id, label, host, model, vision_model, scope, kind, policy} \| null, consent}}, policy_version, daily_limit, remaining_today, features: {next_meal, parse_meal, label, plate, chat, voice, lab_report, lab_report_text, recipes, recipe_steps}, voice: {host, model, max_seconds, max_bytes, remaining_today, consent, request} \| null, trust: {setting, allowed, effective}, prompt_version}`; `provider` and the `reason` are those of the first feature that resolves (meal ideas, describe, photos, chat); `consent.text` is meal ideas'; `features.voice` (and `voice`, and `consent.voice`) only with the chat available (the chat route resolves and is not `off`), `ai.voice_enabled` on and `STT_BASE_URL` set; `features.chat` is true only with the person set up for AI, a provider for the chat route **and** `ai.chat_enabled` on; `features.lab_report` is true only with the person opted in and the `labs` route resolving to the local AI (role `local`, pinned to the private network) with a vision model ("Lab report photos" below); `features.lab_report_text` the same without the vision model (the text of a PDF page, "Text from a PDF" there); `routes.labs.text` says why not ("Needs a local AI on your own network, which is not set up on this server, so it is off."); `trust.setting` is the person's choice, `allowed` the admin switch `ai.allow_trusted_saves`, `effective` the choice when allowed and `ask` when not |
 | `POST /api/ai/next-meal` | `{meal, date?, mode: "ideas" \| "rerank" \| "swap" \| "plan", entry_id? \| food_id? + servings?, exclude_food_ids? (ideas only, ≤ 60: the foods of ideas already shown, left out of the candidates for **Other ideas**; 400 in another mode)}` (`?dry_run=true`) → `AiAnswer` |
 | `POST /api/ai/recipes` | `{mode: "suggest" \| "change", target?: "meal" \| "day" ("meal"), meal?, date?, dish? (suggest: one of the fixed dishes), makes? (1, 2, 4 or 6; suggest), meal_id? (change), exclude_food_ids? (≤ 60: foods of recipes already shown, left out of the candidates for **Other recipes** unless flagged `ingredient`)}` (`?dry_run=true`) → `AiAnswer` with `recipes: [{title, dish, theme, reason_codes, why, makes, fit: {status, before, after, changes, still_over}, fitted, items, per_serving, unknown, steps, steps_label, steps_note, steps_dropped, differences, body}]` (≤ 2; 1 for `change`), `steps_dropped`, `claims_corrected`, `dropped`, `portions_lowered: [{index, reason: "share_too_large", changes: [{food_id, from_servings, to_servings}]}]`; `body` is the exact `POST /api/meals` body. A recipe with more than 3 servings of a food in one serving goes through `fit_recipe` like any other and, when the fit makes it pass, its card carries `portion_note` ("The app changed a food…" when a food was swapped out) and its `portions_lowered` (servings of the food in one serving; 0 when the fit swapped it out); every other drop reason is checked first and still drops it. AI recipes (note 16 §8, docs/ai.md "Recipes that fit"): route `recipes`, consent `text`; a recipe with a low-treatment food answers `{status: "not_sent", ai_called: false}`; 404 for another person's `meal_id`; never saves |
 | `POST /api/ai/parse-meal` | `{text (1–300), meal?, date?}` (`?dry_run=true`) → `AiAnswer` with `items: [{text, search, amount, unit, matches: [{food, servings \| null}] (≤ 3)}]`, or the pre-filter answer |
@@ -2602,6 +2615,7 @@ query takes `user.id`; another person's provider, consent or AI activity is neve
 | `DELETE /api/ai/audit` | → 204 ("Delete my AI history"; usage counts stay) |
 | `POST /api/vision/label` | raw `image/jpeg` body (`?dry_run=true`) → `AiAnswer` with `{draft: FoodCreate-shaped (flags empty), from_photo (fields the AI read, the serving included), estimated (from % Daily Value or salt, or the 100 g / 100 mL serving of a per-100 label), needs, checks, notice}` or `{status: "not_a_label" \| "unreadable", draft: null}`; never saves |
 | `POST /api/vision/plate` | raw `image/jpeg` body (`?dry_run=true`) → `AiAnswer` with `{items: [{name, search, grams_estimate, portion_text, confidence, ticked, candidates: [{food, servings}] (≤ 3)}], banner, notice}`; off unless `ai.vision_plate_enabled` |
+| `POST /api/ai/read-lab-report-text` | `{text, page}` (one page of a lab report PDF as text, at most 20,000 characters; `?dry_run=true`) → the same answer as the photo route, with `dropped.not_in_text` and `page`. **Local AI only**, purpose `labs`, no vision model needed; `413 too_long_for_ai` over the prompt budget; never saves ("Text from a PDF" under "Lab report photos") |
 | `POST /api/ai/read-lab-report` | raw `image/jpeg` body (`?dry_run=true`) → `{status: "ok" \| "no_results" \| "not_a_lab_report" \| "unreadable", rows: [{analyte, label, value, unit, display, taken_on \| null, printed_date \| null, date_problem \| null, date_note \| null}], dropped: {unknown_analyte, unknown_unit, out_of_range}, dropped_notes: [text], message?, notice, provider: {id, label, model, host}, …}` (the `AiAnswer` fields). **Local AI only** and its own consent purpose `labs`; never saves ("Lab report photos" below) |
 | `GET /api/me/ai` | → `{enabled, settings, chat_enabled, trusted_saves_allowed, user_keys_allowed, allow_user_base_url, own: Provider \| null, shared: [{id, label, host, kind, policy, photos, usable}], routing: {mode, features: [{feature, label, role, route, available, reason, text, runs_on}]} \| null, presets, consents, daily_limit, remaining_today}` |
 | `PATCH /api/me/ai` | any of `{opt_in, provider, share_age_sex, preferences, trust}` → the view above; a change of `trust` writes one `ai.trust_changed` activity row (so does `PATCH /api/me/settings` with an `ai` object) |
@@ -3017,9 +3031,9 @@ browser `js/views/lab_photo.js` (`KH.labPhoto`), `js/engine/pdf_pages.js` (`KH.p
 * **Nothing is written by this route.** A saved result is the person's tick and the ordinary `POST /api/labs/import`
   (`LabImport`, each row checked again like `POST /api/labs`, duplicates skipped, the potassium alert returned as for a CSV file).
 * **Browser.** The card `#lab-photo` ("Read a lab report photo or PDF") in the Labs view (below "Import from a spreadsheet") is hidden unless `GET /api/ai/status`
-  says `features.lab_report`; with AI on but the feature unavailable it shows only the server's sentence (`routes.labs.text`; the
-  person not opted in; a local AI without a vision model); with AI off, and in the demo and preview, it is not there at all
-  (`js/mock/ai.js` answers every `/api/ai/*` route `404`). The photo is redrawn on the device (`KH.ai.prepareJpeg`), sent through
+  says `features.lab_report` or `features.lab_report_text`; with AI on but the feature unavailable it shows only the server's sentence
+  (`routes.labs.text`; the person not opted in); with AI off and in the static preview builds it is not there at all (`js/mock/ai.js`
+  answers every other `/api/ai/*` route `404`; the demo on a server offers a PDF's text: "Text from a PDF" below). The photo is redrawn on the device (`KH.ai.prepareJpeg`), sent through
   `KH.ai.withConsent('labs', …, 'labs')` and `KH.ai.uploadPhoto('lab-report', …)`; "What will be sent?" is the dry run. The result is
   drawn with the CSV import's table (same classes, `lab-photo-list` besides), **every checkbox unchecked**, the notice line and
   the dropped counts above it; a row without a date shows a date input and its checkbox is disabled until a valid date
@@ -3075,6 +3089,38 @@ browser `js/views/lab_photo.js` (`KH.labPhoto`), `js/engine/pdf_pages.js` (`KH.p
     for a file that cannot be used are fixed sentences in `lab_photo.js`. The pdf.js document and its worker are closed as soon as a run ends (the
     chosen file stays chosen), and the PDF, its pages and the document are let go on Discard, Save and a new pick; nothing is stored, and the browser
     asks no other host (`tools/e2e/lab_pdf.py` checks the requests, the Worker, the CSP report and the service worker's cache).
+* **Text from a PDF (design note 36; `POST /api/ai/read-lab-report-text`, `js/engine/pdf_text.js` = `KH.pdfText`).** Many portal PDFs
+  are made of text. For each page, `KH.pdfPages` hands over the page's own text items (`text(n)`: `page.getTextContent()` with its default
+  options, plain `{str, transform, width, height}`), and `KH.pdfText.pageText` rebuilds the lines: items sorted by baseline (top first), then x,
+  then their index; an item joins a line when its baseline is within max(2, half the smaller height) of the line's first item; within a line,
+  items are joined with one space when the gap is over max(0.5, 0.15 × height) points; at most 400 lines. A page **has text** with at least 50
+  letters and digits and 2 lines with a digit. Lines that name a patient, a name, a date of birth, a record, account or member number, a social
+  security number, an address, a phone or fax number, insurance, a guarantor or an email address are left out before sending (a courtesy, not
+  the guarantee). A page over 20,000 characters goes as a picture.
+  * *The screen.* The page list says "Page 1 (has text)" or "Page 2 (picture only)" and, when a page has text and the server offers it
+    (`features.lab_report_text`), "How to read the pages": **Read the text** (chosen first) or **Read pictures of the pages** (only when
+    `features.lab_report` is on too). With text, each page with text is one `KH.ai.readLabText(text, page, dry, signal)` (JSON, its own
+    `AbortSignal` for Cancel) through `KH.ai.withConsent('labs', …)`, and the line under the list and in the consent sheet says that pages with
+    text are sent as text without those lines. A page without text goes as a picture, or, on a server whose local AI has no vision model, is
+    left out with a line. A `413 too_long_for_ai` reads that page as a picture. Each row says "page 2 of your PDF, read from its text" or
+    "… read from a picture of it", and a line counts the identity lines left out. A photo on a server that reads text only is refused with a
+    sentence.
+  * *The server.* `prepare_read_lab_report_text` (feature `read_lab_report_text`) runs under the routed feature `labs` exactly like a photo
+    (`local` or `off`, purpose `labs`, `LocalOnlyRequired`, `local_only` checked again in `run_call`, no fallback, never a person's own
+    provider or choice) but needs no vision model: `features.lab_report_text` is the person opted in and `labs` resolving to the local AI. The
+    body is `{text: 1 to 20,000 characters, page: 1 to 50 or null}` (`extra` refused; `400` otherwise). Each line is cleaned with
+    `textclean.clean_text` and sent as `{"lines": [...]}` in the data block under `TASK_LINES["lab_report_text"]` with the photo's schema,
+    temperature 0. A body that does not fit the provider's prompt budget is `413 too_long_for_ai`. `lab_report.judge_text` runs first: a row
+    whose value is not a number written in the sent text (`numbers_in`: `5.4`, `1,250` and `1,2` read both ways) is dropped and counted in
+    `dropped.not_in_text`; a date not written in the text is cleared (the person types it, with "No date was read from the page's text.");
+    then `lab_report.judge`. The answer is the photo's with `notice` "Read by AI from the text of your PDF. …" and `page`. The AI activity
+    row (`read_lab_report_text`) keeps neither the text nor the answer: the data block becomes `<data>[not kept]</data>` with `lab_text:
+    {page, lines, characters, text_sha256}` (`Prepared.hidden_text`), whatever `ai.audit_retention_days` says. Same slot, quota and dry run
+    rules as the photo route.
+  * *The demo.* `js/mock/ai.js` answers this one AI route (every other is `404`): the body is checked like the server's and the answer is a
+    fixed example of three rows with "This is the demo: nothing was sent to an AI. These rows are a fixed example, not read from your file."
+    (`tests/test_lab_text_demo.py` runs the server's judge on the same lines and compares). The card shows in the demo on a server
+    (`?mock=1`) with a note; the static preview builds carry no pdf.js, so the card stays hidden there.
 * **Tests.** `tests/test_lab_photo.py` (routing, consent, filters and counts, "same validation as POST /api/labs", dates, nothing
   written, nothing kept, two people), `tests/test_migration_m016.py`, `tests/test_lab_photo_ui.py`, the golden category `lab_report`
   (`tests/ai_golden/lab-report-*.json`; `scripts/ai_eval.py` skips them: they are local-only). For a PDF: `tests/test_pdf_pages.py` (the module in
@@ -3082,6 +3128,10 @@ browser `js/views/lab_photo.js` (`KH.labPhoto`), `js/engine/pdf_pages.js` (`KH.p
   scale for Letter, A4, a receipt and a tiny page, every error code, `close()`, Cancel), `tests/test_lab_photo_ui.py` with
   `tests/js/lab_photo_page.mjs` (the page list, one request a page, the merge, failures, messages, release), `tests/test_vendor.py`, and the
   browser walk `tools/e2e/lab_pdf.py` (a two-page PDF from a tiny PDF writer, through the server with a fake local AI, real Chromium).
+  For a PDF's text: `tests/test_lab_text.py` (local only, also for a person who chose the cloud, the verbatim check, limits, gates, the
+  activity row, the prompt snapshot `tests/fixtures/ai/lab_report_text_request.txt`), `tests/test_pdf_text.py` with
+  `tests/js/pdf_text.test.mjs` (the line builder), `tests/test_lab_text_demo.py`, the golden category `lab_report_text`
+  (`tests/ai_golden/lab-text-*.json`; `scripts/ai_eval.py --lab-text` runs them on a local AI) and `tools/e2e/lab_pdf_text.py`.
 
 ### Ask chat (assistant step 2, parts A and C)
 
@@ -4591,6 +4641,56 @@ the helper checks the current plan before generating another preview. No automat
   has all four switches on with one saved meal. `KH.mock.care` is checked against `tests/data/care_vectors.json` (roles, limits,
   sentences and the note check).
 
+### Notes from the Care team (`app/care_notes.py`, `app/sharing.py`, design note 37 phase 1)
+
+Someone on a person's Care team can write short notes for them when the share has `may_note` on. The **Clinician** preset is a
+Viewer plus `may_note` (`sharing.PRESETS["clinician"]`); `may_note` with any other switch is Custom. `may_note` does not add the
+food log (a note may be about lab results only): `sharing.FOOD_SWITCHES` are the four that need it. It is a switch on the share,
+never an account role: it does not touch `users.role` and grants nothing outside the share. The screens say "Clinician" with
+"The app does not check who someone is". Notes need the Care team on and their own instance switch, `care_notes.enabled`
+(default **off**, env `CARE_NOTES_ENABLED`); choosing Clinician or `may_note` while it is off is 400
+`"Notes are turned off on this server. Your admin can turn them on."`. `GET /api/me/shares` and `GET /api/shared` say `notes`.
+
+| Method and path | Needs | Body → response |
+|---|---|---|
+| `POST /api/shared/{id}/notes` | `may_note` | `{body, area?, date?}` (`extra="forbid"`) → 201 `{id, area, date, body, version, created_at, edited_at, read_at}`. 400: empty, over 1,000 characters after trimming, the text check, an area the person does not share with you now, a day more than 365 days back or after tomorrow (UTC). 429 at 10 notes in 24 hours by this author for this person (counted from `care_note.written`, so withdrawn notes count); 409 at 500 kept for the person. Audit `care_note.written` |
+| `GET /api/shared/{id}/notes` | `may_note` | → `{notes: [...]}`: what you wrote for this person through any share, newest first, with `read_at` |
+| `PUT /api/shared/{id}/notes/{note_id}` | `may_note`, the author | `If-Match` (428 without, 412 changed) `{body?, area?, date?}` → the note, `version` + 1 and `edited_at` when something changed; read is 409 `"<name> has read this note. Write a new one instead."`; audit `care_note.edited` |
+| `DELETE /api/shared/{id}/notes/{note_id}` | `may_note`, the author | optional `If-Match`; unread only → 204, read is 409; the row is deleted; audit `care_note.withdrawn` |
+
+* **One check.** `sharing.care_noter` answers 404 while notes are off, then runs `_check_share` with `may_note` and no area, on
+  every request. A note is looked up `WHERE id = ? AND owner_user_id = <the share's owner> AND author_user_id = <signed-in person>`;
+  anything else is the one 404 `"Not shared with you."`. Writes run under `BEGIN IMMEDIATE`. `tests/test_care_team.py` lists the
+  four routes with `care_noter` and checks each goes through it.
+* **Who sees a note.** The person and its author only: no other Care team member, no admin route, no AI. `app/ai`, `app/mcp` and
+  `app/guidance` never name `care_notes` (`tests/test_care_notes.py` reads their sources). When the share ends, the author reaches
+  none of it; the person keeps the note. Deleting the author's account keeps the note with `author_name` (`from.removed: true`,
+  shown "account removed"); deleting the person's account deletes their notes.
+* **Read and edit.** The author edits or withdraws a note only while it is unread, so a note the person read is always the note
+  they read and no history is kept. Marking read takes the version shown, so `read_at` belongs to the text the person saw.
+* **Text check.** `care_notes.note_problem`: `hypo.mentions_low` and `DOSING_PATTERN` (insulin, bolus, basal, units, dose, dosing,
+  correction, ratio, pump) on `guard.fold` text, refused with `"Notes cannot be about lows, insulin or doses. Talk to <name> directly
+  about those."`. Narrower than the suggestion check on purpose: "lab results", "supplements" and "safe" are words a dietitian needs.
+  Plain text only, shown with `textContent`.
+* **Looks.** A share with `may_note` on writes `share.viewed` at the first read of each area in each UTC hour, with `{area}`
+  (`shares.view_hours` keeps the hour and its areas); a read with no area (the profile, the notes) counts once a day as before.
+  The person's list shows `last_viewed_area` ("last looked today 14:05 at lab results"). Shares without notes keep one row a day.
+* **Activity.** `care_note.written`, `care_note.edited` and `care_note.withdrawn` target the person (written by the author, no
+  `ip_prefix`); `care_note.deleted` is the person's own. All are in `USER_VISIBLE_ACTIONS`; none holds the text. Reading writes no
+  row. `care.switches_changed` and `care.role_changed` name `may_note`.
+* **Export.** `care_notes` in the person's `export.json` (`date, area, from, body, created_at, edited_at, read_at`); the author's
+  export has none; `data_import.SKIPPED_SECTIONS` and the demo skip it.
+* **Screens.** `js/views/notes.js`: `#notes` (no tab) lists the person's notes with who, when, what it is about (a link to the day
+  or to Labs), the text and Delete; showing a note marks it read, and a 412 loads the list again. The Today card (`#today-notes`,
+  under the day's alerts) shows "1 new note from Dee" with Read while there are unread notes. Visit prep shows a screen-only line,
+  "2 notes from your Care team in this period"; notes are never printed. For the author, Open (Visit prep) and Trends have
+  **Write a note** (`#sheet-note`, the day and area in view filled in, 1,000 characters with a counter), and Settings → Care team
+  → Care teams you are on has **Notes** (what you wrote, "Read on …" or "Not read yet", Edit and Withdraw while unread).
+  Settings → Care team offers the Clinician role and **Write notes for me** while notes are on.
+* **Demo.** `js/mock/care.js`: Dee, a Clinician, has written you one unread note about your food two days ago; Ana's share lets
+  you write notes. Every route above is answered. The limits, sentences, the text check and the day check are in
+  `tests/data/care_vectors.json` (`care_notes`) and replayed by `node tests/js/run_vectors.mjs`.
+
 ### Test accounts and Send feedback (`app/test_accounts.py`, `app/feedback.py`, design note 26)
 
 `test_accounts.enabled` (`TEST_ACCOUNT_ENABLED`, off) makes two accounts, `tester` (display name Sam, seeded with the demo's
@@ -5096,7 +5196,7 @@ Signed in only (`current_user`; an anonymous caller gets the generic `401`, so a
 (`no-store` like every `/api` answer). The answer:
 
 ```json
-{"app_version": "0.23.0", "api_version": 1,
+{"app_version": "0.24.0", "api_version": 1,
  "capabilities": {"ai": false, "ai_next_meal": false, "ai_parse_meal": false, "ai_label": false, "ai_plate": false, "ai_lab_report": false,
                   "chat": false, "voice": false, "assistant": false, "push": false,
                   "barcode": false, "barcode_off": false, "barcode_usda": false, "handbook": false},
@@ -5424,3 +5524,72 @@ Built 2026-11-07, not yet released. Schema step 34. A person adds an email in Se
   `node tests/js/run_vectors.mjs` against `KH.mock.emailAddress` and `EMAIL_TEXTS`.
 * **Tests**: `tests/test_reset_email.py` (a small SMTP server in `tests/fake_smtp.py` on 127.0.0.1; TLS checked at the `smtplib`
   seam), `tests/test_reset_email_ui.py`, `tests/test_migration_m034.py`.
+
+## Reminders by phone notification (design note 35)
+
+Built 2026-11-12, not yet released. Schema step 35. A person turns on notifications on each phone or computer in Settings →
+Reminders and sets times to log a meal, plan tomorrow or log their weight. Off unless the operator sets `REMINDERS_ENABLED`.
+**Reminders are a convenience. Do not rely on them for low blood sugar; use your CGM's alerts.** There is no kind about lows,
+insulin, medicines or glucose (a CHECK on `reminders.kind`), never dosing, and the words are generic.
+
+* **Config** (env only, `app/config.py` `RemindersEnv`, `Settings.reminders`): `REMINDERS_ENABLED` [false], `VAPID_SUBJECT`
+  (`mailto:` with an `@`, or `https://` with a host; required when on), `VAPID_PRIVATE_KEY_FILE` [`$DATA_DIR/vapid_private.pem`,
+  `Settings.vapid_key_path`; only as a file: `VAPID_PRIVATE_KEY` is a `ConfigError`; a missing file outside `DATA_DIR` is a
+  `ConfigError`], `REMINDERS_TIMEOUT_S` [10, 1–60]. On needs `PUBLIC_URL` with `https` (or `http` on `localhost`, `127.0.0.1`,
+  `::1`) and `AUTH_MODE` other than `none`. Not in the settings registry. Its own switch: `PUSH_ENABLED` is phone shortcuts.
+* **Web Push** (`app/webpush.py`, no new dependency, on `cryptography`): `load_or_create_key` reads the P-256 PEM key, or makes it
+  once with `O_EXCL` and mode 0600 inside `DATA_DIR`; the PEM is registered with the log redaction. `Vapid` signs ES256 JWTs
+  (`aud` the push service's origin, `exp` now + 12 h, `sub`), reused for up to 1 hour per `aud`; `Authorization: vapid t=…, k=…`.
+  `encrypt` is RFC 8291 `aes128gcm` (one record, rs 4096, a new key and salt per message, at most 3,993 bytes of payload);
+  `decrypt` is the browser's side, for tests and the e2e fake. `check_endpoint`: `https`, port 443, no user info or fragment, at
+  most 1,024 characters, host `fcm.googleapis.com`, `updates.push.services.mozilla.com`, or a name under `.push.apple.com` or
+  `.notify.windows.com`. `check_keys`: a P-256 point and a 16-byte secret. `Sender` (`app.state.webpush`; tests set `resolver`,
+  `direct`, `use_env_proxy`) posts through `egress.CheckedTransport(allow_private=False)`, no redirects, 16 KiB, with
+  `TTL: 3600`, `Urgency: normal`, `User-Agent: reminders` (`brand.USER_AGENT_PUSH`), within `2 × REMINDERS_TIMEOUT_S`
+  (`egress.run_with_deadline("webpush", …)`). Results: `None` (2xx), `gone` (404, 410: the caller deletes the device), `auth`,
+  `busy`, `rejected`, `bad_answer`, `blocked`, `timeout`, `unreachable`.
+* **The message**: Declarative Web Push `{"web_push": 8030, "notification": {title, body, navigate, lang: "en"}}`. `title` is the
+  instance name when the admin changed it, else "Food log" (the default "Kidney Health" names a condition). `body`: "Time to log
+  breakfast." / lunch / dinner / "Time to log a snack.", "Time to plan tomorrow's meals.", "Time to log your weight.", the test
+  "This is a test. Your reminders will look like this.". `navigate`: `<PUBLIC_URL>/#add`, `#plan`, `#today`, `#settings`.
+* **The loop** (`app/reminders.py` `loop`, started in the lifespan only when on): 20 s after start, then at each minute. `run_due`
+  finds enabled reminders of active, non-test people who have a device; `is_due`: the reminder's day bit in its time zone, and the
+  local time from `time_local` to 5 minutes after; not already `last_sent_on` today. It claims the day with a conditional
+  `UPDATE … SET last_sent_on` (at most once a day, also with two workers), skips a `log_meal` reminder when the person has an
+  `eaten` entry for that meal on that local date, then sends to each device and records `last_ok_at` / `last_error`.
+
+| Method and path | Auth | Body → response |
+|---|---|---|
+| `GET /api/reminders` | signed in | `{enabled, can_use, public_key, max_reminders: 10, max_devices: 5, safety, kinds: [{kind, label, meals}], reminders: [Reminder], devices: [{id, endpoint_hash, user_agent, created_at, last_ok_at, last_error}]}`. Always 200; while off `enabled: false` and empty lists. `endpoint_hash` is the first 32 hex digits of SHA-256(endpoint): the page finds "this device" without the endpoint; the endpoint and keys are never returned |
+| `POST /api/reminders` | signed in | `{kind, meal?, time "HH:MM", days 1–127 (127), time_zone? (IANA, ""), enabled? (true)}` → 201 Reminder `{id, kind, meal, time, days, time_zone, enabled, created_at, last_sent_on}`. 400 with a sentence and `field` (meal needed or not allowed, time, days, time zone); 409 at 10; 403 test account; 404 while off |
+| `PATCH /api/reminders/{id}` | signed in | any of the fields → Reminder. A new time, days or zone clears `last_sent_on`. 404 not yours |
+| `DELETE /api/reminders/{id}` | signed in | 204. 404 not yours |
+| `POST /api/reminders/subscriptions` | signed in | `PushSubscription.toJSON()` (`{endpoint, keys: {p256dh, auth}}`, other keys ignored) → 201 device, or 200 with the same device for an endpoint already this person's (the keys are updated). 400 an endpoint off the list or bad keys; 409 at 5 devices; 403 test account. An endpoint another account had moves here (one browser profile has one subscription per site; that account's activity gets `reminder.device_removed` `via: other_account`). `User-Agent` is kept, cut to 300 characters |
+| `DELETE /api/reminders/subscriptions/{id}` | signed in | 204. 404 not yours |
+| `POST /api/reminders/test` | signed in | → `{devices, sent, failed, removed, demo: false}`: one test to each of the person's devices. 409 no device; 429 after 5 an hour (`reminders_test`); 403 test account |
+
+* **Audit** (all in `USER_VISIBLE_ACTIONS`): `reminder.set` (`kind`, `new`), `reminder.removed` (`kind`),
+  `reminder.device_added`, `reminder.device_removed` (`via`: `person`, `push_service` on 404/410, `other_account`). Never the
+  words or the endpoint.
+* **Export**: `export.json` has `reminders` (the Reminder shape); never the devices or their keys. The import skips it
+  (`SKIPPED_SECTIONS`). Deleting an account deletes both tables (cascade).
+* **Service worker** (`app/static/sw.js`): `push` parses the same JSON and always calls `showNotification` (title at most 80,
+  body at most 200, icon, `tag: kh-reminder`), so a browser without Declarative Web Push shows the same thing and Safari never
+  sees a silent push; `notificationclick` focuses an open window of this origin and navigates it, or opens one, and only ever to
+  a page of this origin with path `/` (`ownPage`).
+* **Screens** (`js/views/reminders.js`, `KH.reminders.render`, section `#set-reminders` before This device, hidden while off):
+  the safety words; **This device** (Turn on notifications on this device: `Notification.requestPermission()` only from that tap,
+  then `pushManager.subscribe({userVisibleOnly: true, applicationServerKey})` and `POST /subscriptions`; Send a test; Turn off on
+  this device: `DELETE` then `unsubscribe()`); on iOS outside `display-mode: standalone` a Home Screen how-to instead of the
+  button; **Your reminders** (what, time, days, On; up to 10; the browser's `Intl` time zone is saved with each); **Devices with
+  notifications on** (`KH.deviceName`, This device, the last error in words, Remove). Activity labels for the four actions.
+* **Parity**: `js/mock/reminders.js` answers every route like a server with it on, keeps the reminders for the export, never
+  sends (`/test` answers `demo: true`, the page says "Demo: no notification was sent.") and the page never asks the browser for
+  a subscription in the demo. No JS twin of the loop, so no vectors. `tests/js/reminders_demo.mjs` with
+  `tests/test_reminders_ui.py` checks the words and shapes against `app/reminders.py`.
+* **Tests**: `tests/test_webpush.py` (RFC 8291 Appendix A byte for byte, round trips, the JWT claims and reuse, the host list,
+  the key file, a fake push service behind the real transport, private addresses, the deadline), `tests/test_reminders.py`
+  (routes, isolation, the loop at a fixed time in a time zone, the meal skip, 404/410, start-up refusals, the key never in an
+  answer or the log), `tests/test_reminders_ui.py`, `tests/test_migration_m035.py`; the Chromium walk `tools/e2e/reminders.py`
+  (`reminders_app.py`: a fake push service in the app process). Guide: `docs/reminders.md`. Not yet tried on a real iPhone or
+  Android phone (ROADMAP).

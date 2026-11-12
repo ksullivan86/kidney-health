@@ -52,6 +52,8 @@ using the app; the pages below are for the people who run, maintain and check it
 * [Your own list app](list-sync.md): send the Plan's shopping list to your own Grocy, KitchenOwl or Mealie; the address rules and `LIST_SYNC_ALLOWED_HOSTS`
 * [Open the list at Instacart](instacart.md): send the Plan's shopping list to Instacart and open the page it makes; the server's own key, the development host and what is sent
 * [Import a recipe](recipe-import.md): from a recipe page (the server reads its schema.org data) or pasted ingredients; every match checked by the person
+* [Reminders by phone notification](reminders.md): Web Push to a person's phone or computer at times they choose; the switch, the
+  push key, the push hosts, what is sent, and why not to rely on it for lows
 * [Phone shortcuts](push.md): device tokens that let an iPhone Shortcut add weights and blood pressure readings to your own log
   (`POST /push/v1/body`): turning it on, the limits, what a leaked token can do. Add-only; it reads nothing.
 * [The online demo](demo.md): the Pages demo, and **Keep my data in this browser** (IndexedDB, off until you choose it): what is

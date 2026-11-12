@@ -336,7 +336,7 @@ def test_while_the_switch_is_off_everything_is_404_and_shares_come_back(people):
     ana, sam, _ = people
     sid = share(ana, sam)
     switch(ana, False)
-    assert ana.get("/api/me/shares").json() == {"enabled": False, "areas": list(sharing.AREAS), "roles": list(sharing.ROLES),
+    assert ana.get("/api/me/shares").json() == {"enabled": False, "notes": False, "areas": list(sharing.AREAS), "roles": list(sharing.ROLES),
                                                "max": sharing.MAX_SHARES, "sharing": [], "codes": [], "invites": []}
     for r in (ana.post("/api/me/shares", json={"areas": ["food"]}), sam.get("/api/shared"), sam.get(f"/api/shared/{sid}/labs"),
               sam.post("/api/shared/info", json={"code": "x"}), sam.delete(f"/api/shared/{sid}"),

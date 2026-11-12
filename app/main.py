@@ -33,6 +33,7 @@ from . import mcp as assistant_mcp  # assistant step 1: POST /mcp, the MCP serve
 from . import data_import  # POST /api/me/import: the person's own export.json (own body limit, MAX_IMPORT_BYTES)
 from . import meta  # design note 14 change 4: GET /api/meta (versions, capabilities, the nutrient registry)
 from . import care_suggestions  # schema step 31: suggestions from the Care team (/api/shared/{id}/suggestions, /api/me/suggestions)
+from . import care_notes  # schema step 36: notes from the Care team (/api/shared/{id}/notes, /api/me/notes)
 from . import sharing  # schema step 24: read-only sharing with a caregiver or dietitian (/api/me/shares, /api/shared)
 from . import feedback, test_accounts  # schema step 28: test accounts, Send feedback (/api/feedback, /api/admin/feedback)
 from . import activity as activity_api  # schema step 30: Whoop days, workouts, the active-day calorie extra (/api/activity)
@@ -42,6 +43,7 @@ from .list_sync.apps import HostAllowlist, Net as ListSyncNet
 from .recipe_import import api as recipe_import_api  # design note 30: a recipe from a web page or pasted ingredients
 from .recipe_import.fetch import RecipeFetcher
 from . import instacart as instacart_api  # design note 33: open the shopping list at Instacart (/api/instacart)
+from . import reminders, webpush  # schema step 35: reminders by phone notification (/api/reminders, design note 35)
 from . import openapi_doc  # design note 14 change 2: stable operation ids, honest errors and security schemes in the OpenAPI document
 from .auth import bootstrap as auth_bootstrap
 from .config import DEFAULT_STATIC_DIR, ConfigError, Settings, load_settings
@@ -50,7 +52,7 @@ from .settings_store import SettingsStore, default_store
 
 logger = logging.getLogger(brand.LOGGER_NAME)
 
-APP_VERSION = "0.23.0"
+APP_VERSION = "0.24.0"
 STATIC_DIR = DEFAULT_STATIC_DIR
 
 
@@ -91,6 +93,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             logger.warning("configuration: %s", warning)
         settings.ensure_data_dir()
         app.state.keyring = crypto.load_keyring(settings)
+        if settings.reminders.enabled and app.state.webpush.vapid is None:  # design note 35: read or make the push key
+            key = webpush.load_or_create_key(settings.vapid_key_path, settings.data_dir)
+            app.state.webpush.vapid = webpush.Vapid(key, settings.reminders.subject or "")
         applied = init_db(settings.db_path)
         if applied:
             logger.info("database schema migrated to version %d (steps %s)", applied[-1], applied)
@@ -117,12 +122,17 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         logger.info("database %s ready; builtin foods: %s", settings.db_path, result.get("status"))
         # Design note 27: fetch from connected devices every few hours, in a worker thread (it does nothing while off).
         devices_task = asyncio.create_task(devices_sync.loop(app))
+        # Design note 35: send reminders once a minute, only while REMINDERS_ENABLED is on.
+        reminders_task = asyncio.create_task(reminders.loop(app)) if settings.reminders.enabled else None
         try:
             yield
         finally:
-            devices_task.cancel()
-            with contextlib.suppress(asyncio.CancelledError, Exception):
-                await devices_task
+            for task in (devices_task, reminders_task):
+                if task is None:
+                    continue
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await task
 
     docs = settings.docs_enabled
     app = FastAPI(
@@ -143,6 +153,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.list_sync_net = ListSyncNet(HostAllowlist.parse(settings.list_sync_allowed_hosts))
     app.state.recipe_fetcher = RecipeFetcher()
     app.state.instacart = instacart_api.InstacartClient(settings.instacart.base_url)
+    app.state.webpush = webpush.Sender(None, timeout_s=settings.reminders.timeout_s)  # design note 35 (tests swap in a fake push service)
     app.state.mailer = mail.Mailer(settings.email, ehlo_name=settings.public_host)  # design note 34 (tests point it at a fake server)
     app.add_exception_handler(RequestValidationError, security.validation_error_handler)
     auth_ctx = auth.install(app, settings, store)  # /api/auth, /api/me, /api/admin + error handler
@@ -177,6 +188,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(sharing.shared_router)
     app.include_router(care_suggestions.shared_router)  # schema step 31: suggestions from the Care team (note 29 §5)
     app.include_router(care_suggestions.me_router)
+    app.include_router(care_notes.shared_router)  # schema step 36: notes from the Care team (note 37)
+    app.include_router(care_notes.me_router)
     app.include_router(feedback.router)
     app.include_router(feedback.admin_router)
     app.include_router(devices_api.router)
@@ -184,6 +197,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(list_sync_api.router)
     app.include_router(recipe_import_api.router)
     app.include_router(instacart_api.router)
+    app.include_router(reminders.router)
 
     @app.get("/healthz")
     def healthz(conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:

@@ -49,7 +49,7 @@ def test_settings_shows_the_block_outside_no_sign_in_mode_and_the_admin_can_end_
     assert "sec.hidden = authMode() === 'none' || !KH.sharing;" in settings and "KH.sharing.block()" in settings
     assert "endUserShares: (id) => request('DELETE', `/api/admin/users/${id}/shares`)" in settings
     assert "if (u.shares)" in settings and "'End Care team'" in settings
-    assert "['Care team', ['sharing.enabled']]," in settings
+    assert "['Care team', ['sharing.enabled', 'care_notes.enabled']]," in settings
 
 
 def test_the_form_offers_how_long_a_share_lasts():
@@ -94,7 +94,7 @@ def test_trends_show_a_share_read_only():
     assert "KH.symptoms.trends(start, end, src)" in trends and "KH.bodyTrends.show(start, end, src)" in trends
     assert "await (source ? source.reads : api).symptoms(start, end)" in symptoms
     assert "const reads = source ? source.reads : api;" in body and "clear($('#body-trends-actions')).hidden = true;" in body
-    assert "button('Trends', 'secondary', () => openTrends(p)" in CODE and "range: (start, end) => request('GET', `${base}/log/range?" in CODE
+    assert "button('Trends', 'secondary', () => openTrends(seen)" in CODE and "range: (start, end) => request('GET', `${base}/log/range?" in CODE
     for code in (trends, body, symptoms):
         shared_part = code[code.find("source"):]
         for word in ("api.add", "api.update", "api.delete"):

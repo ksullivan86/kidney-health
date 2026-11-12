@@ -86,6 +86,8 @@
         builtin_foods: builtin,
         ...(this._activityExport ? this._activityExport() : { activity_days: [], activity_workouts: [], activity_extra: null }),
         care_suggestions: this._careExport ? this._careExport() : [], // suggestions from the Care team (js/mock/care.js)
+        reminders: this._remindersExport ? this._remindersExport() : [], // reminders (js/mock/reminders.js); never the devices
+        care_notes: this._careNotesExport ? this._careNotesExport() : [], // notes from the Care team (js/mock/care.js)
       };
     },
   });

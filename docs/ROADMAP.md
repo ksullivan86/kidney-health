@@ -3,7 +3,7 @@
 One line per item, with the specification that defers it (the design notes are in
 [`docs/dev/research/`](dev/research/)). Items leave this list when they ship (move them to
 [CHANGELOG.md](../CHANGELOG.md)) or when the owner drops them. Each feature owner appends to its own
-section. Last reviewed for the v0.23.0 release (2026-11-07).
+section. Last reviewed for the v0.24.0 release (2026-11-12).
 
 ## First: daily logging you can trust (the owner, 2026-10-29)
 
@@ -35,14 +35,20 @@ recovery trustworthy before more AI or native-app features.
 The owner's order from 2026-10-31 has shipped (0.16 to 0.22), and so have the reliability and audit passes (0.22.1 to 0.22.3)
 and password reset by email (0.23.0). Candidates, for the owner to choose:
 
-* **Reminders by phone notification** (Web Push, opt-in, never for lows): "Installable app" below. Medium.
-* **Reading a lab PDF's own text** instead of drawing each page as a photo: "Lab results from a PDF report" below. Medium.
+* ~~Reminders by phone notification~~: shipped in 0.24.0 (note 35). Waiting on tests on a real iPhone and Android phone.
+* **Reading a lab PDF's own text** instead of drawing each page as a photo: shipped in 0.24.0
+  ([note 36](dev/research/36-lab-pdf-text.md)). Left for the owner: a live run on real portal PDFs and the local model.
 * **A name detector on top of the privacy filter** (adds packages and a model to the image; the owner's choice): "Privacy
   tiers" below. Small to medium.
-* **Clinician accounts with notes**: "Ideas from the owner" below. Large.
-* **Kroger next to Instacart**, if its API allows it: "The shopping list outside the app" below.
+* **Clinician accounts with notes, phase 2**: replies, notifications by email or Web Push, attachments ("Ideas from the owner"
+  below). Phase 1 is built.
+* **Kroger next to Instacart**: checked 2026-11-12 and not recommended for now. Kroger has no list link; its Cart API puts exact
+  products into the person's own Kroger cart after they sign in, so each food needs a product search and a pick, the searches and
+  the cart are tied to their loyalty account, and the server would hold a long-lived token for it. The owner would register a
+  developer app and publish a privacy policy. Medium to large. Sources: developer.kroger.com (Cart, Products and Locations
+  APIs, acceptable use, terms of 2019-04-09).
 
-Waiting on the owner: an Instacart key; an Apple Developer membership for the iPhone app's step 3 (signing, TestFlight and
+Waiting on the owner: an Instacart key; reminders tried on a real iPhone (from the Home Screen) and an Android phone; an Apple Developer membership for the iPhone app's step 3 (signing, TestFlight and
 tests on a real iPhone; steps 1 and 2 are built, [note 15](dev/research/15-native-ios-app.md)); runs with real files (list
 apps, a Health export, lab PDFs on the local model); the clinician review below.
 
@@ -64,7 +70,7 @@ apps, a Health export, lab PDFs on the local model); the clinician review below.
 
 ## Installable app (note 02)
 
-* Reminders through Web Push, opt-in and off by default (its own switch, because `PUSH_ENABLED` now turns on phone shortcuts; a VAPID key file; `pywebpush` 2.5.0 + `py-vapid` 1.9.4, generic bodies, never for lows: "use your CGM's alerts"), the push hosts in `docs/network-allowlist.md`, device tests on iOS 18.4+ and Chrome on Android — note 02 §3.6, R8 and §6 Phase 6 (v0.4).
+* ~~Reminders through Web Push~~ — built, not yet released ([note 35](dev/research/35-reminders.md), [`reminders.md`](reminders.md), schema step 35): off until the admin sets `REMINDERS_ENABLED` and `VAPID_SUBJECT`; Settings → Reminders turns on each device and sets times to log a meal, plan tomorrow or log a weight; generic words, never for lows ("use your CGM's alerts"); VAPID and the message encryption written on `cryptography`, so no new dependency; the push hosts in `docs/network-allowlist.md`. Still to do, by the owner: tests on a real iPhone (iOS 18.4 or later, from the Home Screen) and Chrome on Android, and a check that a tap opens the right screen on each.
 
 ## Personalised targets and labs (note 05)
 
@@ -140,7 +146,7 @@ Added 2026-10-07 after comparing similar projects (for example Kidney Advisor, a
 * **Phone shortcuts: what is left (the owner).** Built in 0.5.0 ([note 12](dev/research/12-phone-push-tokens.md), [`push.md`](push.md)). Left:
   run the handbook's recipe on a real iPhone (the Shortcuts action names and their order; that a personal automation runs without asking;
   that the phone reaches the server) and correct the handbook where it differs (`handbook/REVIEW.md` lists the check).
-* **Lab results from a PDF report: what is left.** Built in 0.5.0 ([note 13](dev/research/13-lab-results-from-a-pdf.md), [`ai.md`](ai.md#lab-report-photos)): the PDF is opened and its ticked pages drawn in the browser (the vendored pdf.js), each page read like a photo; the server never takes a PDF. Left, for the owner: the live run on a real local vision model with real portal PDFs (Quest, Labcorp, a hospital portal) on an iPhone (Safari) and a desktop browser (`scripts/ai_eval.py` skips the local-only cases: try real reports on the Arc A770 or a larger card and watch which units and dates the model misreads, and whether a scan made of JPEG 2000 or JBIG2 images, which are not decoded, comes out blank). Not built: reading the PDF's own text layer, which would be faster and exact for the many portal PDFs that have one, but needs its own AI feature, prompt and judge ([note 13 §6](dev/research/13-lab-results-from-a-pdf.md#6-risks-and-later)). A small follow-up: a page is drawn at 2048 px and the photo helper (`KH.ai.prepareJpeg`) then redraws it at 1600 px; drawing it at 1600 px once would save a step.
+* **Lab results from a PDF report: what is left.** Built in 0.5.0 ([note 13](dev/research/13-lab-results-from-a-pdf.md), [`ai.md`](ai.md#lab-report-photos)): the PDF is opened and its ticked pages drawn in the browser (the vendored pdf.js), each page read like a photo; the server never takes a PDF. Left, for the owner: the live run on a real local vision model with real portal PDFs (Quest, Labcorp, a hospital portal) on an iPhone (Safari) and a desktop browser (`scripts/ai_eval.py` skips the local-only cases: try real reports on the Arc A770 or a larger card and watch which units and dates the model misreads, and whether a scan made of JPEG 2000 or JBIG2 images, which are not decoded, comes out blank). Built, waiting for the next release: reading the PDF's own text layer ([note 36](dev/research/36-lab-pdf-text.md), `POST /api/ai/read-lab-report-text`, local AI only, a value kept only when it is written in the text). Left for the owner: real portal PDFs on the local model with `scripts/ai_eval.py --lab-text` and by hand, to see how their text comes out in lines. A small follow-up: a page is drawn at 2048 px and the photo helper (`KH.ai.prepareJpeg`) then redraws it at 1600 px; drawing it at 1600 px once would save a step.
 * **An assistant you can talk to: what is left (the owner's main AI wish, 2026-10-08; built in 0.4.0).** Recipes themselves are built (the recipe API, the fitting engine and the Plan screens: "Recipes that fit your targets" below). Built for 0.19 ([note 30](dev/research/30-list-sync-and-recipe-import.md), [`recipe-import.md`](recipe-import.md)): **Import a recipe** from pasted ingredients or a recipe page (schema.org `Recipe` data), each line matched to a food and checked by the person, per-serving totals and warnings with the estimate sentence, saved with the source link. The owner decided on 2026-10-31 that the server may read the page (off until `RECIPE_IMPORT_ENABLED`); this replaces "web fetching stays in the chat client". Not built: an Ask or MCP tool that imports a page. Commercial recipe APIs (Edamam, Spoonacular) are an optional later source (keys, rate limits, terms that restrict storage). Live runs and device checks are in the Optional AI section above.
 * **Kidney-only profile: what is left.** The app and the AI prompts follow a profile with *Diabetes: None* (no carbohydrate goals or alerts, the "Not medical advice" note without insulin decisions, prompts worded from the profile: [`ai.md`](ai.md#the-instructions-follow-your-profile), `tests/test_kidney_only.py`). Left to the owner: the golden-set run with a live model for the current `PROMPT_VERSION` (`python scripts/ai_eval.py --chat`, [`ai.md`](ai.md#for-contributors)); the handbook framing (reviewed content: keep the T1D section but stop presenting it as everyone's); and the app's one-line description in the page metadata and the web app manifest ("for a renal diet with type 1 diabetes"), which is the owner's framing to choose.
 * **Privacy tiers: what is left (medium; next, for 0.20, by the owner's choice of 2026-10-31).** The app already withholds identity from every provider (no name, exact age, dates or notes; a keyed hash as the user id). Tier (1), per-feature routing, and tier (3), local first with a cloud fallback, ship in 0.4.0 ([`ai.md`](ai.md#which-ai-does-each-feature-use)). What a cloud model still sees is the free text a person types, photos, and the structured meal data. Remaining: (2) *redaction before the cloud*: **built for 0.20 as rules** ([note 31](dev/research/31-privacy-filter.md),
@@ -159,7 +165,12 @@ the owner's choice since it adds packages and a model to the image (note 31 §5 
   [`instacart.md`](instacart.md); off until `INSTACART_ENABLED` and the server's own key). Left: a try against real Grocy,
   KitchenOwl and Mealie servers and against Instacart's development host (the tests use fakes), Instacart's review of the
   production key (the owner), and Kroger (Ralphs, Food 4 Less), only if practical.
-* **Clinician accounts with notes (large).** Builds on "Read-only sharing with a caregiver or dietitian" above: a `clinician` role that a person invites (and can revoke) to see their log, labs, symptoms and visit summaries read-only, and to add notes the person can read. Every view by a clinician goes to the person's activity log. The read-only sharing it builds on is built (note 19); it still needs a notes table, and wording about what the app is not: a self-hosted personal tool, not part of a clinic's medical record.
+* **Clinician accounts with notes (large).** Builds on "Read-only sharing with a caregiver or dietitian" above. Design: [note 37](dev/research/37-clinician-accounts.md).
+  * **Phase 1, built (unreleased, schema step 36):** the share switch `may_note` and the **Clinician** preset (a Viewer who may write notes), the server switch `CARE_NOTES_ENABLED` (off), notes the person reads in their own app (the Notes list, a Today card, a screen-only line on Visit prep), Write a note from Open and Trends, edit and withdraw only while unread, the text check for lows and dosing words, the limits, the hourly look rows, the activity rows, the export, the demo and a Chromium walk. The note's defaults were kept.
+  * **Phase 2a, replies:** the person answers a note (same table with `reply_to`, same limits and checks).
+  * **Phase 2b, email:** an opt-in "you have a new note" letter, at most one a day, no name or health data, only with `EMAIL_ENABLED` and a confirmed address.
+  * **Phase 2c, Web Push:** one more opt-in kind once the Web Push reminders are in, the same generic text, never about lows.
+  * **Phase 2d, attachments:** a PDF or photo with a note. Not recommended until asked.
 * **Direct patient-portal connection (SMART on FHIR, large; probably not).** Each EHR vendor (Epic, Oracle Health) requires registering the app and an OAuth flow per health system; for a self-hosted app each operator would have to register their own instance. The file imports above cover most of the value. This route covers MyChart (Epic's patient portal) and other EHR portals; the lab companies Quest and Labcorp are not EHRs and, as far as we know, offer no open patient API (check before designing), but their portals download PDF reports (the PDF item above) and results usually reach the doctor's EHR too. Paid aggregators (for example 1upHealth or Health Gorilla) would route health data through a third party, against the self-hosted design.
 
 ### Rough cost of the owner's ideas

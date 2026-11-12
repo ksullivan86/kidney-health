@@ -373,6 +373,8 @@
 
     <div id="alerts" class="alerts" role="status" aria-live="polite" aria-atomic="false"></div>
     <div id="projected-alerts" class="alerts projected" role="status" aria-live="polite" aria-atomic="false"></div>
+    <!-- New notes from your Care team (design note 37; js/views/notes.js): shown only when there are unread ones. -->
+    <div id="today-notes" class="today-notes" hidden></div>
 
     <section class="card" aria-labelledby="status-heading">
       <div class="card-head">
@@ -589,6 +591,9 @@
   <section id="view-trends" class="view" role="tabpanel" aria-labelledby="tab-trends" hidden>
     <!-- Someone else's trends, read-only (design note 19 §11; js/views/trends.js shared mode) -->
     <p id="trends-shared" class="visit-shared" role="note" hidden></p>
+    <div class="note-actions" id="trends-note-actions" hidden>
+      <button class="btn secondary" type="button" id="trends-write-note">Write a note</button>
+    </div>
     <div class="trends-head">
       <div>
         <h2 class="card-title" id="trends-title">Last 14 days</h2>
@@ -1049,12 +1054,14 @@
     <!-- Read a lab report photo or PDF (js/views/lab_photo.js): shown only when the server's AI status says the local AI can read one.
          The photo goes to the local AI on the admin's own network (never to a cloud AI); every row it reads starts unticked. A PDF is opened
          on this device (js/engine/pdf_pages.js, the vendored pdf.js): the person ticks pages, each is drawn here and sent as a picture, and the
-         PDF file itself is never sent. -->
+         PDF file itself is never sent. A page with its own text can be sent as text instead (js/engine/pdf_text.js, design note 36), to the
+         same local AI. In the demo only that text reading is offered, and it answers with a fixed example. -->
     <section class="card" id="lab-photo" aria-labelledby="lab-photo-h" hidden>
       <h2 class="card-title" id="lab-photo-h">Read a lab report photo or PDF</h2>
       <p id="lab-photo-why" class="muted small" hidden></p>
       <div id="lab-photo-controls" hidden>
-        <p class="muted small">Take a photo or a screenshot of your lab report, or choose the PDF from your lab's website. The AI on your own network copies the printed results; nothing is saved until you check each one against the report, tick it and press Save. The report may show your name and date of birth, so crop the photo to the results table if you can. A PDF stays on this device: you choose the pages, and only those pages are drawn here and sent as pictures.</p>
+        <p class="muted small">Take a photo or a screenshot of your lab report, or choose the PDF from your lab's website. The AI on your own network copies the printed results; nothing is saved until you check each one against the report, tick it and press Save. The report may show your name and date of birth, so crop the photo to the results table if you can. A PDF stays on this device: you choose the pages. A page with its own text is read as text, which is faster and copies the exact numbers; other pages are drawn here and sent as pictures.</p>
+        <p id="lab-photo-demo" class="muted small" hidden>This is the demo. Choose a PDF to try reading its text: nothing is sent to an AI, and the results shown are a fixed example.</p>
         <div class="field">
           <label for="lab-photo-file">Photo, screenshot or PDF of the report</label>
           <input id="lab-photo-file" class="ai-file" type="file" accept="image/*,application/pdf,.pdf" aria-describedby="lab-photo-hint">
@@ -1113,6 +1120,12 @@
       <button class="link-btn visit-back" type="button" id="visit-back">Back to Trends</button>
       <h2 id="visit-title" class="visit-title" tabindex="-1">Visit prep</h2>
       <p class="muted small" id="visit-intro">One page to bring to an appointment, made on this device from what you logged. Print it or save it as a PDF; nothing is sent anywhere.</p>
+      <!-- Notes from your Care team in this period (design note 37; js/views/notes.js). On screen only: notes are never printed. -->
+      <p class="visit-notes-line" id="visit-notes-line" hidden></p>
+      <!-- A Clinician looking at someone's page writes a note for them here (js/views/notes.js). -->
+      <div class="note-actions" id="visit-note-actions" hidden>
+        <button class="btn secondary" type="button" id="visit-write-note">Write a note</button>
+      </div>
       <div class="visit-controls">
         <div class="segmented" role="group" aria-label="Period" id="visit-periods"></div>
         <button class="btn primary" type="button" id="visit-print">
@@ -1186,6 +1199,24 @@
     <p class="sr-only" id="visit-live" aria-live="polite"></p>
   </section>
 
+  <!-- ===================== NOTES (js/views/notes.js; design note 37) =====================
+       Notes from your Care team, newest first (reached from the Today card, Settings → Care team and Visit prep), or, for someone
+       on another person's Care team with notes on, the notes they wrote for that person. Plain text only, never printed. -->
+  <section id="view-notes" class="view notes-view" aria-labelledby="notes-title" hidden>
+    <div class="notes-head">
+      <button class="link-btn notes-back" type="button" id="notes-back">Back to Today</button>
+      <h2 id="notes-title" class="notes-title" tabindex="-1">Notes from your Care team</h2>
+      <p class="muted small" id="notes-intro"></p>
+      <div class="note-actions" id="notes-actions" hidden>
+        <button class="btn primary" type="button" id="notes-write">Write a note</button>
+      </div>
+    </div>
+    <div id="notes-list" class="notes-list" aria-live="polite"></div>
+    <div class="note-actions" id="notes-more" hidden>
+      <button class="btn secondary" type="button" id="notes-older">Show older notes</button>
+    </div>
+  </section>
+
   <!-- ===================== SETTINGS (js/views/settings.js; note 07 §4.17, note 02 R10) =====================
        Reached from the header gear and from Profile (#settings). Sections are filled by settings.js;
        This device is completed by js/pwa.js in the installed app. -->
@@ -1205,7 +1236,7 @@
 
     <section class="card settings-section" id="set-care" data-title="Care team" aria-labelledby="set-care-h" hidden>
       <h2 class="card-title" id="set-care-h">Care team</h2>
-      <div id="set-care-body" class="settings-body"></div>
+      <div id="set-care-section" class="settings-body"></div>
     </section>
 
     <section class="card settings-section" id="set-prefs" data-title="Preferences" aria-labelledby="set-prefs-h">
@@ -1280,6 +1311,12 @@
     <section class="card settings-section" id="set-assistant" data-title="Outside AI apps" aria-labelledby="set-assistant-h" hidden>
       <h2 class="card-title" id="set-assistant-h">Outside AI apps</h2>
       <div id="set-assistant-body" class="settings-body"></div>
+    </section>
+
+    <!-- Reminders by phone notification (design note 35; js/views/reminders.js): shown only while the server has it on. -->
+    <section class="card settings-section" id="set-reminders" data-title="Reminders" aria-labelledby="set-reminders-h" hidden>
+      <h2 class="card-title" id="set-reminders-h">Reminders</h2>
+      <div id="set-reminders-body" class="settings-body" role="region" aria-labelledby="set-reminders-h"></div>
     </section>
 
     <section class="card settings-section" id="set-device" data-title="This device" aria-labelledby="set-device-h">
@@ -2125,6 +2162,45 @@
 </dialog>
 
 <!-- ===================== RE-AUTHENTICATION (js/views/auth.js): sensitive actions answer reauth_required ===================== -->
+<!-- Write or change a note for someone whose Care team you are on (design note 37; js/views/notes.js). Plain text, at most 1,000
+     characters. It never changes their data. -->
+<dialog id="sheet-note" class="sheet" aria-labelledby="sheet-note-title" aria-describedby="note-what">
+  <div class="sheet-form">
+    <div class="sheet-head">
+      <div>
+        <h2 id="sheet-note-title" class="sheet-title">Write a note</h2>
+      </div>
+      <button class="icon-btn" type="button" data-close aria-label="Close">
+        <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+      </button>
+    </div>
+    <div class="sheet-body">
+      <p class="hint" id="note-what"></p>
+      <div class="form-grid">
+        <div class="field">
+          <label for="note-area">About</label>
+          <select id="note-area"></select>
+        </div>
+        <div class="field">
+          <label for="note-date">Day (optional)</label>
+          <input id="note-date" type="date">
+        </div>
+      </div>
+      <div class="field">
+        <label for="note-body">Note</label>
+        <textarea id="note-body" rows="6" maxlength="1000" aria-describedby="note-count"></textarea>
+        <p class="hint" id="note-count" aria-live="polite"></p>
+      </div>
+      <div class="form-error" id="note-error" role="alert" hidden></div>
+    </div>
+    <div class="sheet-foot">
+      <span class="spacer"></span>
+      <button class="btn secondary" type="button" data-close>Cancel</button>
+      <button class="btn primary" type="button" id="note-send">Send</button>
+    </div>
+  </div>
+</dialog>
+
 <!-- A share link (#/share/<code>; design note 19; js/views/sharing.js): who is sharing what, and Accept. Nothing is saved until
      the person presses Accept. -->
 <dialog id="sheet-share" class="sheet" aria-labelledby="sheet-share-title" aria-describedby="share-question">
@@ -2490,6 +2566,7 @@
 <script src="js/engine/fhir_labs.js"></script>
 <script src="js/engine/ccda_labs.js"></script>
 <script src="js/engine/pdf_pages.js"></script>
+<script src="js/engine/pdf_text.js"></script>
 <script src="js/engine/menu_link.js"></script>
 <script src="js/engine/symptoms.js"></script>
 <script src="js/engine/body.js"></script>
@@ -2534,6 +2611,7 @@
 <script src="js/mock/devices.js"></script>
 <script src="js/mock/activity.js"></script>
 <script src="js/mock/lists.js"></script>
+<script src="js/mock/reminders.js"></script>
 <script src="js/mock/handbook.js"></script>
 <script src="js/mock/meta.js"></script>
 <script src="js/mock/ai.js"></script>
@@ -2566,6 +2644,7 @@
 <script src="js/views/devices.js"></script>
 <script src="js/views/list_sync.js"></script>
 <script src="js/views/instacart.js"></script>
+<script src="js/views/reminders.js" data-preview="omit"></script>
 <script src="js/views/recipe_import.js"></script>
 <script src="js/views/ai.js"></script>
 <script src="js/views/ai_routing.js"></script>
@@ -2574,6 +2653,7 @@
 <script src="js/views/plandays.js"></script>
 <script src="js/views/careplan.js"></script>
 <script src="js/views/suggestions.js"></script>
+<script src="js/views/notes.js"></script>
 <script src="js/views/ask.js"></script>
 <script src="js/views/ask-voice.js"></script>
 <script src="js/views/demo_local.js"></script>

@@ -101,6 +101,10 @@ ACTIONS: set[str] = {
     "suggestion.accepted",
     "suggestion.declined",
     "suggestion.expired",
+    "care_note.written",  # notes from the Care team (design note 37; app/care_notes.py); never the text
+    "care_note.edited",
+    "care_note.withdrawn",
+    "care_note.deleted",
     "oidc.linked",  # sign-in with a provider (design note 24; app/auth/oidc_api.py, admin_api.py)
     "oidc.unlinked",
     "device.connected",  # connected devices (design note 27; app/devices/)
@@ -115,6 +119,10 @@ ACTIONS: set[str] = {
     "email.set",  # email for password resets (design note 34; app/auth/email_api.py); never the address
     "email.confirmed",
     "email.removed",
+    "reminder.set",  # reminders by phone notification (design note 35; app/reminders.py); the kind only, never the words
+    "reminder.removed",
+    "reminder.device_added",
+    "reminder.device_removed",
 }
 USER_VISIBLE_ACTIONS = frozenset(
     {
@@ -162,6 +170,10 @@ USER_VISIBLE_ACTIONS = frozenset(
         "suggestion.accepted",
         "suggestion.declined",
         "suggestion.expired",
+        "care_note.written",
+        "care_note.edited",
+        "care_note.withdrawn",
+        "care_note.deleted",
         "oidc.linked",
         "oidc.unlinked",
         "device.connected",
@@ -176,6 +188,10 @@ USER_VISIBLE_ACTIONS = frozenset(
         "email.set",
         "email.confirmed",
         "email.removed",
+        "reminder.set",
+        "reminder.removed",
+        "reminder.device_added",
+        "reminder.device_removed",
     }
 )
 _ACTION = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")

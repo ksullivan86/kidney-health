@@ -156,6 +156,35 @@
     throw err;
   }
 
+  // The text of one page of a lab report PDF (POST /api/ai/read-lab-report-text, local AI only; design note 36): {text, page} as JSON.
+  // Like uploadPhoto it takes a `signal` so Cancel can stop the request, and rejects with the browser's AbortError. In the demo and the
+  // preview the request goes to the demo's own answer (js/mock/ai.js: a fixed example, nothing is sent).
+  async function readLabText(text, page, dry, signal) {
+    const path = `/api/ai/read-lab-report-text${dry ? '?dry_run=true' : ''}`;
+    if (MOCK) return request('POST', path, { text, page }, { noQueue: true });
+    let res;
+    try {
+      res = await fetch(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json', 'X-Requested-With': KH.brand.csrfHeaderValue },
+        body: JSON.stringify({ text, page }),
+        credentials: 'same-origin',
+        ...(signal ? { signal } : {}),
+      });
+    } catch (e) {
+      if (e && e.name === 'AbortError') throw e;
+      throw Object.assign(new Error('Cannot reach the server. Check your connection.'), { status: 0 });
+    }
+    const body = await res.text();
+    let data = null;
+    try { data = body ? JSON.parse(body) : null; } catch (e) { data = { detail: body.slice(0, 200) }; }
+    if (res.ok) return data;
+    const err = new Error((data && typeof data.detail === 'string' && data.detail) || `${res.status} ${res.statusText || 'error'}`);
+    err.status = res.status; err.detail = err.message; err.data = data || {};
+    if (res.status === 401) { err.handled = true; try { KH.auth.onUnauthorized(err); } catch (e) { console.error(e); } }
+    throw err;
+  }
+
   // GET /api/ai/status, cached briefly (404 = AI is off on this server).
   let statusCache = null;
   let statusAt = 0;
@@ -1656,5 +1685,5 @@
   whenShown('view-add', () => { renderAddSlot().catch((e) => console.warn(e)); });
 
   KH.ai = { status, forget, cardEl, confirmTrust, refreshDayCaches, askConsent, openIdeas, openRecipes, mountIdeas, openDescribe, openLabel, openPlate, renderSettings, renderAdmin, renderAddSlot, withConsent, showSent, api, prepareJpeg, preferencesField,
-    uploadPhoto, fallbackNotes, droppedNotes }; // uploadPhoto, fallbackNotes: js/scan.js reads a label photo into Quick add
+    uploadPhoto, readLabText, fallbackNotes, droppedNotes }; // uploadPhoto, fallbackNotes: js/scan.js reads a label photo into Quick add; readLabText: js/views/lab_photo.js
 })();

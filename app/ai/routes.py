@@ -799,6 +799,7 @@ def status_view(request: Request, conn: sqlite3.Connection, user: User) -> dict[
     chat_cfg = routes["chat"].cfg
     labs_cfg = routes["labs"].cfg  # local-only: the shared provider holding the role "local", never a person's own
     lab_report = on("labs") and bool(labs_cfg and labs_cfg.vision_model and labs_cfg.local_only and _photos_allowed(conn, state, labs_cfg))
+    lab_report_text = on("labs") and bool(labs_cfg and labs_cfg.local_only)  # the text of a lab PDF (note 36): no vision model needed
     chat_on = on("chat") and bool(state.store.get(conn, "ai.chat_enabled"))
     voice_cfg = voice_config(request, conn) if chat_on else None  # voice is part of Ask: it follows the chat route
     voice = None
@@ -824,7 +825,8 @@ def status_view(request: Request, conn: sqlite3.Connection, user: User) -> dict[
         "remaining_today": K.remaining_today(conn, state.store, user.id) if cfg is None or cfg.key_scope == "shared" else None,
         "features": {"next_meal": on("meal_ideas"), "parse_meal": on("describe"), "label": on("photos") and photos,
                      "plate": on("photos") and photos and bool(state.store.get(conn, "ai.vision_plate_enabled")),
-                     "chat": chat_on, "voice": voice is not None, "lab_report": lab_report, "recipes": on("recipes"),
+                     "chat": chat_on, "voice": voice is not None, "lab_report": lab_report,
+                     "lab_report_text": lab_report_text, "recipes": on("recipes"),
                      "recipe_steps": on("recipes") and bool(state.store.get(conn, "ai.recipe_steps"))},
         "voice": voice,
         "trust": _trust_view(conn, state, prefs),

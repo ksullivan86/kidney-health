@@ -20,7 +20,11 @@
    step), the barcode ponyfill included; its 1 MB WebAssembly reader is cached on first use. The PDF
    reader (js/engine/pdf_pages.js is in the list; the pdf.js library and its worker, two files under
    /vendor/ of about 1.8 MB together, are not) is fetched when the first lab report PDF is picked and
-   kept by the same /vendor/ rule below. */
+   kept by the same /vendor/ rule below.
+
+   Reminders (design note 35; app/reminders.py): the server sends Declarative Web Push JSON, which iOS 18.4+ shows by itself.
+   Elsewhere the `push` handler below shows the same title and words, always (a push that shows nothing loses the permission
+   on Safari), and `notificationclick` opens the page the message names, only on this server. */
 'use strict';
 
 const VERSION = '__VERSION__';
@@ -59,6 +63,7 @@ const SHELL_URLS = [
   '/js/engine/fhir_labs.js',
   '/js/engine/ccda_labs.js',
   '/js/engine/pdf_pages.js',
+  '/js/engine/pdf_text.js',
   '/js/engine/menu_link.js',
   '/js/engine/symptoms.js',
   '/js/engine/body.js',
@@ -103,6 +108,7 @@ const SHELL_URLS = [
   '/js/mock/devices.js',
   '/js/mock/activity.js',
   '/js/mock/lists.js',
+  '/js/mock/reminders.js',
   '/js/mock/handbook.js',
   '/js/mock/meta.js',
   '/js/mock/ai.js',
@@ -135,6 +141,7 @@ const SHELL_URLS = [
   '/js/views/devices.js',
   '/js/views/list_sync.js',
   '/js/views/instacart.js',
+  '/js/views/reminders.js',
   '/js/views/recipe_import.js',
   '/js/views/feedback.js',
   '/js/views/ai.js',
@@ -144,6 +151,7 @@ const SHELL_URLS = [
   '/js/views/plandays.js',
   '/js/views/careplan.js',
   '/js/views/suggestions.js',
+  '/js/views/notes.js',
   '/js/views/ask.js',
   '/js/views/ask-voice.js',
   '/js/views/demo_local.js',
@@ -212,6 +220,42 @@ self.addEventListener('fetch', (event) => {
   if (!SHELL_URLS.includes(url.pathname)) return; // anything else: the network decides
   event.respondWith(caches.match(req, { cacheName: SHELL }).then((cached) => cached || fetch(req)));
 });
+
+// Reminders (design note 35): show what the server sent; never a push without a notification.
+self.addEventListener('push', (event) => {
+  let data = null;
+  try { data = event.data ? event.data.json() : null; } catch (e) { data = null; }
+  const n = (data && typeof data.notification === 'object' && data.notification) || {};
+  const title = typeof n.title === 'string' && n.title ? n.title.slice(0, 80) : 'Food log';
+  const body = typeof n.body === 'string' ? n.body.slice(0, 200) : '';
+  event.waitUntil(self.registration.showNotification(title, {
+    body, lang: 'en', icon: '/icons/icon-192.png', tag: 'kh-reminder', data: { navigate: ownPage(n.navigate) },
+  }));
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = ownPage(event.notification.data && event.notification.data.navigate);
+  event.waitUntil((async () => {
+    const open = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of open) {
+      if (new URL(c.url).origin !== self.location.origin) continue;
+      await c.focus();
+      if (c.url !== target && 'navigate' in c) await c.navigate(target).catch(() => null);
+      return;
+    }
+    await self.clients.openWindow(target);
+  })());
+});
+
+// A page of this app only: anything else opens the start page.
+function ownPage(url) {
+  try {
+    const u = new URL(String(url || '/'), self.location.origin);
+    if (u.origin === self.location.origin && u.pathname === '/') return u.href;
+  } catch (e) { /* not a URL */ }
+  return new URL('/', self.location.origin).href;
+}
 
 // The handbook (/learn): the network first, keeping a copy of every plain 200 answer for reading offline.
 async function fromLearn(event) {

@@ -9,7 +9,10 @@ stub provider that replays `model_outputs` (no network). The file name is the ca
   that there are at least 40). A `lab_report` case has `feature: "lab_report"` and runs `POST /api/ai/read-lab-report` on a **local**
   stub provider (the only kind that feature may use); `expect.rows` is `[analyte, value, unit, taken_on or null]` per proposed
   row and `expect.dropped` the counts of lines the app left out. `scripts/ai_eval.py` skips these cases (it measures one,
-  possibly cloud, provider). `preferences` (note 09, part C): what the optional AI is told about taste and how it is checked.
+  possibly cloud, provider). `lab_report_text` (design note 36): `feature: "lab_report_text"` runs `POST /api/ai/read-lab-report-text`
+  with `fixture.text` (one made-up report page, never a real person's) on the same local stub; `expect.dropped` also counts
+  `not_in_text`, the rows whose value is not written in the text. `scripts/ai_eval.py --lab-text` runs these against a live
+  **local** provider only. `preferences` (note 09, part C): what the optional AI is told about taste and how it is checked.
   Its meal ideas cases set `fixture.food_preferences` (`[food name, "like" | "less" | "not_for_me" | "neutral"]`) or the
   `guidance` setting's food groups and check the `person` block in the payload (`payload_includes`), the `liked` bit and the
   `you_like` claim (`idea_reason_codes_include` / `_exclude`, `claims_corrected`), that a food marked Not for me is never shown

@@ -47,7 +47,7 @@ spec:
       containers:
         - name: app
           # The tag and digest are set in kustomization.yaml (`images:`).
-          image: ghcr.io/ksullivan86/kidney-health:0.23
+          image: ghcr.io/ksullivan86/kidney-health:0.24
           imagePullPolicy: IfNotPresent
           ports:
             - name: http
@@ -169,6 +169,12 @@ spec:
             #   value: /run/secrets/kidney-health/smtp_password
             # - name: SMTP_FROM
             #   value: Kidney Health <kidney@example.org>
+            # - name: REMINDERS_ENABLED           # reminders by phone notification (docs/reminders.md); PUBLIC_URL https
+            #   value: "true"
+            # - name: VAPID_SUBJECT               # how the push services can reach you
+            #   value: mailto:admin@example.org
+            # - name: VAPID_PRIVATE_KEY_FILE      # optional: your own key from the Secret (else made once in /data)
+            #   value: /run/secrets/kidney-health/vapid_private_key
             # - name: TEST_ACCOUNT_ENABLED        # tester and tester-helper for people who test the app
             #   value: "true"                     # (docs/test-the-full-app.md); never admins
             # - name: TEST_ACCOUNT_PASSWORD_FILE  # their one password, from the Secret (add test_account_password there)

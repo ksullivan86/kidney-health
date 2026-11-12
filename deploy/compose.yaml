@@ -34,9 +34,9 @@ name: kidney-health
 services:
   kidney-health:
     # Track the minor release (security fixes, no breaking changes), never :latest on machines you
-    # care about; or pin a verified digest: ghcr.io/ksullivan86/kidney-health:0.23.0@sha256:...
+    # care about; or pin a verified digest: ghcr.io/ksullivan86/kidney-health:0.24.0@sha256:...
     # (scripts/verify-image.sh checks the signature and prints the digest).
-    image: ghcr.io/ksullivan86/kidney-health:0.23
+    image: ghcr.io/ksullivan86/kidney-health:0.24
     # Build locally instead (context is the repository root):
     # build:
     #   context: ..
@@ -130,6 +130,7 @@ services:
       PUSH_ENABLED: ${PUSH_ENABLED:-}
       TOKENS_ALLOW_NEVER_EXPIRING: ${TOKENS_ALLOW_NEVER_EXPIRING:-}
       SHARING_ENABLED: ${SHARING_ENABLED:-}
+      CARE_NOTES_ENABLED: ${CARE_NOTES_ENABLED:-}
       TEST_ACCOUNT_ENABLED: ${TEST_ACCOUNT_ENABLED:-}
       TEST_ACCOUNT_AI: ${TEST_ACCOUNT_AI:-}
       # The test accounts' one password is a file secret only (TEST_ACCOUNT_PASSWORD is refused; docs/test-the-full-app.md):
@@ -163,6 +164,12 @@ services:
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_FROM: ${SMTP_FROM:-}
       SMTP_TIMEOUT_S: ${SMTP_TIMEOUT_S:-}
+      # Reminders by phone notification (docs/reminders.md). Needs PUBLIC_URL with https. The push key is made once in /data;
+      # to give your own, as a file secret only (VAPID_PRIVATE_KEY is refused):
+      # VAPID_PRIVATE_KEY_FILE: /run/secrets/vapid_private_key   # and add vapid_private_key below
+      REMINDERS_ENABLED: ${REMINDERS_ENABLED:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-}
+      REMINDERS_TIMEOUT_S: ${REMINDERS_TIMEOUT_S:-}
       HANDBOOK_PUBLIC_URL: ${HANDBOOK_PUBLIC_URL:-}
       PASSWORD_BREACH_CHECK: ${PASSWORD_BREACH_CHECK:-}
       # Sign in with Authentik, Google or another OpenID Connect provider (docs/accounts.md). Off unless OIDC_ENABLED=true;
@@ -267,6 +274,9 @@ secrets:
   #   x-podman.relabel: Z
   # smtp_password:                      # only for password reset by email (EMAIL_ENABLED; docs/accounts.md)
   #   file: ./secrets/smtp_password
+  #   x-podman.relabel: Z
+  # vapid_private_key:                  # only to give your own reminders key (REMINDERS_ENABLED; docs/reminders.md)
+  #   file: ./secrets/vapid_private.pem
   #   x-podman.relabel: Z
   # test_account_password:              # only for test accounts (TEST_ACCOUNT_ENABLED; docs/test-the-full-app.md)
   #   file: ./secrets/test_account_password

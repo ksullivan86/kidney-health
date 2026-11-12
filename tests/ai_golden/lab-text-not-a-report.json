@@ -1,0 +1,15 @@
+{
+  "id": "lab-text-not-a-report",
+  "category": "lab_report_text",
+  "feature": "lab_report_text",
+  "fixture": {
+    "text": "Your appointment is on 2026-11-20 at 10:30.\nPlease arrive 15 minutes early.\nParking is in lot 3."
+  },
+  "model_outputs": [
+    "{\"status\": \"not_a_lab_report\", \"rows\": []}"
+  ],
+  "expect": {
+    "status": "not_a_lab_report",
+    "rows": []
+  }
+}

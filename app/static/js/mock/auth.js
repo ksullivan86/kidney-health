@@ -25,7 +25,7 @@
     'POST /api/auth/reset/info', 'POST /api/auth/forgot', 'POST /api/auth/email/confirm']);
   const USER_VISIBLE_ACTIONS = new Set(['login.succeeded', 'login.failed', 'user.locked', 'user.password_changed', 'user.reset_link_issued',
     'user.reset_link_revoked', 'user.must_change_password', 'sessions.revoked', 'session.revoked_reauth', 'secret.set', 'secret.removed', 'export.created', 'data.imported',
-    'email.set', 'email.confirmed', 'email.removed']);
+    'email.set', 'email.confirmed', 'email.removed', 'reminder.set', 'reminder.removed', 'reminder.device_added', 'reminder.device_removed']);
   const LINK_INVALID = 'This link is not valid any more. Ask your admin for a new one.';
   // Password reset by email (design note 34; app/auth/email_api.py and app/mail.py). The demo sends nothing: an address counts as
   // confirmed at once, "Forgot your password?" gives the server's answer, and the test email says nothing was sent.

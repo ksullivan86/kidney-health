@@ -32,7 +32,7 @@
   const MAX_IMPORT_BYTES = 16 * 1024 * 1024;
   const MIN_SERVING_G = 0.1, MAX_SERVING_G = 100000, MAX_SERVINGS = 1000, MAX_GRAMS = 100000, MAX_NUTRIENT_VALUE = 1000000;
   const IMPORTED_SETTINGS = ['guidance', 'ui.theme', 'user.units.labs', 'food.scan_prefer_camera', 'user.units.weight', 'body.weight_alarm', 'body.bp_goal'];
-  const SKIPPED_SECTIONS = ['user', 'ai_audit', 'activity', 'ai_usage', 'ai_consents', 'ai_provider', 'activity_days', 'activity_workouts', 'activity_extra', 'care_suggestions'];
+  const SKIPPED_SECTIONS = ['user', 'ai_audit', 'activity', 'ai_usage', 'ai_consents', 'ai_provider', 'activity_days', 'activity_workouts', 'activity_extra', 'care_suggestions', 'reminders', 'care_notes'];
   const NOT_IMPORTED = [
     'Your username, password and sign-in sessions',
     'Assistant access tokens and any API keys (an export never holds them; a file that does is ignored)',
@@ -41,6 +41,8 @@
     'Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)',
     'Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)',
     "Meal suggestions from your Care team (they came from other people's accounts)",
+    'Your reminders (set them again here, and turn on notifications on each device)',
+    "Notes from your Care team (they are other people's words)",
   ];
   const RULE = 'Your file\'s foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. '
     + 'If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you '

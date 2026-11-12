@@ -3,10 +3,11 @@
 A person (the **owner**) adds someone with an account on the same server (the **grantee**) to their Care team in Settings → Care
 team: by a link they send, or by that person's user name (an invite the other person accepts or declines in their own Settings).
 From then on the grantee can read the areas the owner ticked, and nothing else, until either side stops it, or until the end date
-the owner chose (``days``; :func:`expire` ends it then). Each share has four **switches** (schema step 31): ``may_plan`` (plan
-meals and use the shopping list), ``may_log`` (log eaten food), ``may_use_saved_meals`` and ``may_suggest``. The **role** is a
-preset over them (:data:`PRESETS`): a ``viewer`` only reads, a ``care_helper`` also plans, a ``caregiver`` also logs eaten food;
-any other mix is ``custom``.
+the owner chose (``days``; :func:`expire` ends it then). Each share has **switches**: ``may_plan`` (plan meals and use the
+shopping list), ``may_log`` (log eaten food), ``may_use_saved_meals`` and ``may_suggest`` (schema step 31; each needs the food
+log), and ``may_note`` (write notes for the person, schema step 36, :mod:`app.care_notes`). The **role** is a preset over them
+(:data:`PRESETS`): a ``viewer`` only reads, a ``care_helper`` also plans, a ``caregiver`` also logs eaten food, a ``clinician``
+reads and writes notes; any other mix is ``custom``.
 
 * ``/api/me/shares``: the owner's list, a new link or a user name invite (recent password), the role and the switches, stopping a
   share, cancelling a link or an invite.
@@ -98,14 +99,17 @@ from .profile import get_profile
 SWITCH = "sharing.enabled"
 AREAS = ("food", "labs", "body", "symptoms", "activity")  # "activity": activity and recovery (design note 28 §4.4, step 30)
 Area = Literal["food", "labs", "body", "symptoms", "activity"]
-ROLES = ("viewer", "care_helper", "caregiver")  # presets over the switches (design note 29 §2)
-Role = Literal["viewer", "care_helper", "caregiver"]
-SWITCHES = ("may_plan", "may_log", "may_use_saved_meals", "may_suggest")  # schema step 31
+ROLES = ("viewer", "care_helper", "caregiver", "clinician")  # presets over the switches (design notes 29 §2 and 37 §4)
+Role = Literal["viewer", "care_helper", "caregiver", "clinician"]
+FOOD_SWITCHES = ("may_plan", "may_log", "may_use_saved_meals", "may_suggest")  # schema step 31: each needs the food log
+SWITCHES = (*FOOD_SWITCHES, "may_note")  # may_note: write notes for the person (schema step 36); it needs no area
 PRESETS: dict[str, dict[str, bool]] = {
-    "viewer": {"may_plan": False, "may_log": False, "may_use_saved_meals": False, "may_suggest": False},
-    "care_helper": {"may_plan": True, "may_log": False, "may_use_saved_meals": False, "may_suggest": False},
-    "caregiver": {"may_plan": True, "may_log": True, "may_use_saved_meals": False, "may_suggest": False},
+    "viewer": {"may_plan": False, "may_log": False, "may_use_saved_meals": False, "may_suggest": False, "may_note": False},
+    "care_helper": {"may_plan": True, "may_log": False, "may_use_saved_meals": False, "may_suggest": False, "may_note": False},
+    "caregiver": {"may_plan": True, "may_log": True, "may_use_saved_meals": False, "may_suggest": False, "may_note": False},
+    "clinician": {"may_plan": False, "may_log": False, "may_use_saved_meals": False, "may_suggest": False, "may_note": True},
 }
+NOTES_SWITCH = "care_notes.enabled"  # the server's second switch, for notes (design note 37 §12 decision 2)
 CODE_DAYS = 7
 INVITE_DAYS = 7  # a user name invite waits this long for an answer
 MAX_DAYS = 365  # the longest time limit a share can have
@@ -126,6 +130,7 @@ NO_INVITE = "That invite is no longer open."
 NO_ENTRY = "log entry {} not found"
 LOW_TREATMENT = "Only {} can change or remove a low treatment."
 NOT_YOUR_EATEN = "You can change only the eaten food you added."
+NOTES_OFF = "Notes are turned off on this server. Your admin can turn them on."
 
 register_limit("share_link", 20, 3600, "Too many tries with share links. Try again in an hour.")
 register_limit("care_invite", 20, 3600, "Too many invites. Try again in an hour.")
@@ -175,6 +180,7 @@ class SwitchChange(BaseModel):
     may_log: StrictBool | None = None
     may_use_saved_meals: StrictBool | None = None
     may_suggest: StrictBool | None = None
+    may_note: StrictBool | None = None  # write notes for you (design note 37); needs notes on
 
 
 class HelperEntry(LogCreate):
@@ -239,6 +245,17 @@ def enabled(conn: sqlite3.Connection, request: Request) -> bool:
     return ctx.settings.auth_mode != "none" and bool(ctx.store.get(conn, SWITCH))
 
 
+def notes_enabled(conn: sqlite3.Connection, request: Request) -> bool:
+    """Notes from the Care team (design note 37) need the Care team on and their own switch, ``care_notes.enabled``."""
+    return enabled(conn, request) and bool(auth_context(request).store.get(conn, NOTES_SWITCH))
+
+
+def _no_notes_unless_on(conn: sqlite3.Connection, request: Request, switches: dict[str, bool]) -> None:
+    """The Clinician role and the notes switch can be chosen only while notes are on (``400``)."""
+    if switches.get("may_note") and not notes_enabled(conn, request):
+        raise ApiProblem(400, NOTES_OFF)
+
+
 def _available(request: Request, conn: sqlite3.Connection) -> None:
     if not enabled(conn, request):
         raise HTTPException(status_code=404, detail="Not Found")
@@ -254,22 +271,27 @@ def _areas(raw: str) -> list[str]:
 
 
 def _clean_areas(areas: list[str], switches: dict[str, bool] | None = None) -> list[str]:
-    """One each, in the order of AREAS. Planning, logging, saved meals and suggestions all need the food log, so any "Do"
-    switch on adds it (design note 29 §2)."""
-    wanted = set(areas) | ({"food"} if switches and any(switches.values()) else set())
+    """One each, in the order of AREAS. Planning, logging, saved meals and suggestions all need the food log, so any of those
+    switches on adds it (design note 29 §2). Notes do not: a note may be about lab results only (design note 37 §4)."""
+    wanted = set(areas) | ({"food"} if switches and any(switches.get(k) for k in FOOD_SWITCHES) else set())
     return [a for a in AREAS if a in wanted]
 
 
 def _switches(row: sqlite3.Row) -> dict[str, bool]:
-    """The four switches of a share, a link or an invite. A row without them (before schema step 31) reads from its role."""
+    """The switches of a share, a link or an invite. A row without the four of step 31 reads them from its role; without
+    ``may_note`` (before step 36) notes are off."""
     keys = row.keys()
-    if all(k in keys for k in SWITCHES):
-        return {k: bool(row[k]) for k in SWITCHES}
-    return dict(PRESETS["care_helper" if "role" in keys and row["role"] == "care_helper" else "viewer"])
+    if all(k in keys for k in FOOD_SWITCHES):
+        out = {k: bool(row[k]) for k in FOOD_SWITCHES}
+    else:
+        preset = PRESETS["care_helper" if "role" in keys and row["role"] == "care_helper" else "viewer"]
+        out = {k: preset[k] for k in FOOD_SWITCHES}
+    out["may_note"] = bool(row["may_note"]) if "may_note" in keys else False
+    return out
 
 
 def role_of(switches: dict[str, bool]) -> str:
-    """The preset these switches match (``viewer``, ``care_helper``, ``caregiver``), or ``custom``."""
+    """The preset these switches match (``viewer``, ``care_helper``, ``caregiver``, ``clinician``), or ``custom``."""
     return next((name for name, preset in PRESETS.items() if preset == {k: bool(switches.get(k)) for k in SWITCHES}), "custom")
 
 
@@ -305,6 +327,21 @@ def _helper_changes(row: sqlite3.Row) -> dict[str, Any] | None:
     return {"day": got["day"], **{k: int(got.get(k) or 0) for k in _CHANGE_KINDS}}
 
 
+def _view_hours(row: sqlite3.Row) -> dict[str, Any]:
+    """``{hour, areas, last}`` of a share with notes on (schema step 36): the UTC hour (``YYYY-MM-DDTHH``), the areas already
+    written to the person's activity in it, and the area of the latest such row. ``{}`` when there is none."""
+    raw = row["view_hours"] if "view_hours" in row.keys() else None
+    try:
+        got = json.loads(raw) if raw else None
+    except ValueError:
+        return {}
+    if not isinstance(got, dict):
+        return {}
+    areas = [a for a in got.get("areas") or [] if a in AREAS]
+    last = got.get("last") if got.get("last") in AREAS else None
+    return {"hour": str(got.get("hour") or ""), "areas": areas, "last": last}
+
+
 def _name(row: sqlite3.Row, prefix: str) -> str:
     return (row[f"{prefix}_display"] or "").strip() or row[f"{prefix}_username"]
 
@@ -325,7 +362,8 @@ def sharing_item(row: sqlite3.Row) -> dict[str, Any]:
     """One person who can see the owner's data, as the owner's list shows it. ``until`` is when it ends (None: until stopped)."""
     return {"id": int(row["id"]), "name": _name(row, "grantee"), "username": row["grantee_username"], "areas": _areas(row["areas"]),
             "since": row["accepted_at"], "until": row["ends_at"], "last_viewed_at": row["last_viewed_at"],
-            "active": row["grantee_status"] == "active", "role": _role(row), **_switches(row), "helper_changes": _helper_changes(row)}
+            "last_viewed_area": _view_hours(row).get("last"), "active": row["grantee_status"] == "active", "role": _role(row),
+            **_switches(row), "helper_changes": _helper_changes(row)}
 
 
 def code_item(row: sqlite3.Row) -> dict[str, Any]:
@@ -459,18 +497,21 @@ def _find_code(conn: sqlite3.Connection, request: Request, user: User, raw: str)
 
 @me_router.get("")
 def list_my_shares(request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    """``{enabled, areas, roles, max, sharing, codes, invites}``: your Care team (each with its ``role``), your unused links and
-    your user name invites waiting for an answer. ``enabled`` is false (and the lists empty) while the admin has sharing off."""
+    """``{enabled, notes, areas, roles, max, sharing, codes, invites}``: your Care team (each with its ``role``), your unused links
+    and your user name invites waiting for an answer. ``enabled`` is false (and the lists empty) while the admin has sharing off;
+    ``notes`` says whether notes from the Care team are on (design note 37), so the Clinician role can be offered."""
     if not enabled(conn, request):
         if auth_context(request).settings.auth_mode == "none":
             raise HTTPException(status_code=404, detail="Not Found")
-        return {"enabled": False, "areas": list(AREAS), "roles": list(ROLES), "max": MAX_SHARES, "sharing": [], "codes": [], "invites": []}
+        return {"enabled": False, "notes": False, "areas": list(AREAS), "roles": list(ROLES), "max": MAX_SHARES, "sharing": [],
+                "codes": [], "invites": []}
     expire(conn)
     sharing = [r for r in conn.execute(_PEOPLE + " WHERE s.owner_user_id = ? AND s.accepted_at IS NOT NULL AND s.ended_at IS NULL "
                                                  "ORDER BY s.accepted_at, s.id", (user.id,)).fetchall() if _same_kind(r)]
     codes = conn.execute(_PEOPLE + " WHERE s.owner_user_id = ? AND s.accepted_at IS NULL AND s.ended_at IS NULL AND s.expires_at > ? "
                                    "ORDER BY s.created_at, s.id", (user.id, clock.now_iso())).fetchall()
-    return {"enabled": True, "areas": list(AREAS), "roles": list(ROLES), "max": MAX_SHARES, "sharing": [sharing_item(r) for r in sharing],
+    return {"enabled": True, "notes": notes_enabled(conn, request), "areas": list(AREAS), "roles": list(ROLES), "max": MAX_SHARES,
+            "sharing": [sharing_item(r) for r in sharing],
             "codes": [code_item(r) for r in codes], "invites": [sent_invite_item(r) for r in _waiting_invites(conn, user.id)]}
 
 
@@ -479,9 +520,10 @@ def create_share_link(body: ShareCreate, request: Request, user: RecentUser, con
     """A new link for the areas ticked (``food``, ``labs``, ``body``, ``symptoms``), in this answer only (``link``). It works once,
     for 7 days. ``days`` (1 to 365) makes the share end that many days after it is accepted; without it the share lasts until
     someone stops it. ``role`` (``viewer`` or ``care_helper``) is the role the share starts with. Needs a recent password, like
-    making a token."""
+    making a token. ``clinician`` needs notes on (``400`` otherwise)."""
     _available(request, conn)
     switches = PRESETS[body.role]
+    _no_notes_unless_on(conn, request, switches)
     areas = _clean_areas(body.areas, switches)
     now = clock.now()
     open_codes = int(conn.execute("SELECT COUNT(*) FROM shares WHERE owner_user_id = ? AND accepted_at IS NULL AND ended_at IS NULL "
@@ -528,8 +570,10 @@ def invite_by_username(body: CareInviteCreate, request: Request, user: RecentUse
     """Invite someone who already has an account here to your Care team, by their user name (design note 25 §3). The answer is
     the same whether or not the name belongs to an active account: the invite as your list shows it, waiting 7 days for an
     answer. Only an active account with that name sees it, in their own Settings → Care team. A second invite to the same name
-    replaces the first. Your own name is ``400``. 20 tries an hour; at most 5 waiting. Needs a recent password, like a link."""
+    replaces the first. Your own name is ``400``. 20 tries an hour; at most 5 waiting. Needs a recent password, like a link.
+    ``clinician`` needs notes on (``400`` otherwise)."""
     _available(request, conn)
+    _no_notes_unless_on(conn, request, PRESETS[body.role])
     ctx = auth_context(request)
     ctx.limits.take("care_invite", f"user:{user.id}")
     ctx.limits.take("care_invite", f"ip:{request_ip(request)}")
@@ -597,11 +641,14 @@ def _store_switches(conn: sqlite3.Connection, share_id: int, switches: dict[str,
 def change_role(share_id: ShareId, body: RoleChange, request: Request, user: CurrentUser,
                 conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """Choose a role for someone on your Care team: ``viewer`` (look only), ``care_helper`` (also plan your meals and use your
-    shopping list) or ``caregiver`` (also log food you ate). A role sets the four switches (design note 29 §2); what you share
-    stays, and the food log is added when the role needs it. The next request they make uses it. Not yours or ended is ``404``."""
+    shopping list), ``caregiver`` (also log food you ate) or ``clinician`` (look and write notes for you; needs notes on, else
+    ``400``). A role sets the switches (design notes 29 §2 and 37 §4); what you share stays, and the food log is added when the
+    role needs it. The next request they make uses it. Not yours or ended is ``404``."""
     _available(request, conn)
     row = _my_share(conn, share_id, user)
     switches = dict(PRESETS[body.role])
+    if not _switches(row)["may_note"]:
+        _no_notes_unless_on(conn, request, switches)
     if _switches(row) != switches:
         before = _areas(row["areas"])
         areas = _clean_areas(before, switches)
@@ -617,8 +664,9 @@ def change_role(share_id: ShareId, body: RoleChange, request: Request, user: Cur
 def change_switches(share_id: ShareId, body: SwitchChange, request: Request, user: CurrentUser,
                     conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """Change what someone on your Care team may see (``areas``) and do (``may_plan``, ``may_log``, ``may_use_saved_meals``,
-    ``may_suggest``). Only what you send changes, at once: their next request uses it. Any "Do" switch on adds the food log. The
-    role is worked out from the switches (``custom`` when they match no role). Not yours or ended is ``404``."""
+    ``may_suggest``, ``may_note``). Only what you send changes, at once: their next request uses it. Any of the first four on
+    adds the food log; ``may_note`` adds nothing and needs notes on (``400``). The role is worked out from the switches
+    (``custom`` when they match no role). Not yours or ended is ``404``."""
     _available(request, conn)
     row = _my_share(conn, share_id, user)
     old_switches = _switches(row)
@@ -626,6 +674,8 @@ def change_switches(share_id: ShareId, body: SwitchChange, request: Request, use
     if any(sent.get(k) is None and k in sent for k in (*SWITCHES, "areas")):
         raise ApiProblem(400, "Send true or false for each switch, and at least one area.")
     switches = {k: bool(sent[k]) if k in sent else old_switches[k] for k in SWITCHES}
+    if switches["may_note"] and not old_switches["may_note"]:
+        _no_notes_unless_on(conn, request, switches)
     before = _areas(row["areas"])
     wanted = _clean_areas(sent["areas"] if "areas" in sent else before)
     areas = _clean_areas(wanted, switches)
@@ -646,15 +696,15 @@ def change_switches(share_id: ShareId, body: SwitchChange, request: Request, use
 
 @shared_router.get("")
 def list_shared_with_me(request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
-    """``{people, invites}``: the people whose Care team you are on (what they share and your ``role``), and the user name
-    invites waiting for your answer, while the other account is active."""
+    """``{people, invites, notes}``: the people whose Care team you are on (what they share, your ``role`` and switches), the
+    user name invites waiting for your answer, while the other account is active, and whether notes are on (design note 37)."""
     _available(request, conn)
     rows = conn.execute(_PEOPLE + " WHERE s.grantee_user_id = ? AND s.accepted_at IS NOT NULL AND s.ended_at IS NULL "
                                   "AND o.status = 'active' ORDER BY s.accepted_at, s.id", (user.id,)).fetchall()
     invites = conn.execute(_INVITES + " WHERE i.invitee_user_id = ? AND i.answer IS NULL AND i.expires_at > ? AND o.status = 'active' "
                                       "ORDER BY i.created_at, i.id", (user.id, clock.now_iso())).fetchall()
     return {"people": [person_item(r) for r in rows if _same_kind(r, user)],
-            "invites": [invite_for_me_item(r) for r in invites if _same_kind(r, user)]}
+            "invites": [invite_for_me_item(r) for r in invites if _same_kind(r, user)], "notes": notes_enabled(conn, request)}
 
 
 def _open_invite(conn: sqlite3.Connection, invite_id: int, user: User) -> sqlite3.Row:
@@ -794,11 +844,30 @@ def _check_share(share_id: int, request: Request, user: User, conn: sqlite3.Conn
     owner = load_user(conn, int(row["owner_user_id"]))
     if owner is None or not owner.is_active or not user.is_active:
         raise ApiProblem(404, NOT_SHARED)
+    _note_view(conn, row, share_id, user, owner, area)
+    return owner, row
+
+
+def _note_view(conn: sqlite3.Connection, row: sqlite3.Row, share_id: int, user: User, owner: User, area: str | None) -> None:
+    """Write a look to the person's activity (``share.viewed``). A share without notes: the first read each UTC day. A share with
+    ``may_note`` on (design note 37 §6): the first read of each area in each UTC hour, with ``{area}``; a read of no area (the
+    profile, the notes) still counts once a day. Commits when it writes."""
+    now = clock.now_iso()
+    if area is not None and _switches(row)["may_note"]:
+        marks = _view_hours(row)
+        hour = now[:13]
+        seen = marks.get("areas", []) if marks.get("hour") == hour else []
+        if area in seen:
+            return
+        conn.execute("UPDATE shares SET last_viewed_at = ?, view_hours = ? WHERE id = ?",
+                     (now, json.dumps({"hour": hour, "areas": [*seen, area], "last": area}, sort_keys=True), share_id))
+        audit(conn, user.id, "share.viewed", "user", owner.id, share=share_id, area=area)
+        conn.commit()
+        return
     if (row["last_viewed_at"] or "")[:10] != _today():
-        conn.execute("UPDATE shares SET last_viewed_at = ? WHERE id = ?", (clock.now_iso(), share_id))
+        conn.execute("UPDATE shares SET last_viewed_at = ? WHERE id = ?", (now, share_id))
         audit(conn, user.id, "share.viewed", "user", owner.id, share=share_id)
         conn.commit()
-    return owner, row
 
 
 @dataclass(frozen=True)
@@ -857,7 +926,23 @@ def care_suggester(share_id: ShareId, request: Request, user: CurrentUser,
     return _care(share_id, request, user, conn, "may_suggest")
 
 
+def care_noter(share_id: ShareId, request: Request, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> CareShare:
+    """The one check for the author's note routes (``app/care_notes.py``, design note 37 §9): notes on for the server, then
+    :func:`_check_share` with ``may_note`` on now and no area. Anything else is the one ``404``."""
+    if not notes_enabled(conn, request):
+        raise HTTPException(status_code=404, detail="Not Found")
+    owner, row = _check_share(share_id, request, user, conn, None, any_of=("may_note",))
+    return CareShare(owner=owner, helper=user, share_id=share_id, switches=_switches(row))
+
+
+def share_areas(conn: sqlite3.Connection, share_id: int) -> list[str]:
+    """The areas of a share now (the caller checked it is the signed-in person's)."""
+    row = conn.execute("SELECT areas FROM shares WHERE id = ?", (share_id,)).fetchone()
+    return _areas(row["areas"]) if row is not None else []
+
+
 Helper = Annotated[CareShare, Depends(care_helper)]
+Noter = Annotated[CareShare, Depends(care_noter)]
 Suggester = Annotated[CareShare, Depends(care_suggester)]
 Planner = Annotated[CareShare, Depends(care_planner)]
 FoodSearch = Annotated[CareShare, Depends(care_food_search)]

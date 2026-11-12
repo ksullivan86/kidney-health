@@ -132,6 +132,9 @@ tabs and buttons are left off. It is made on your device and **nothing is sent a
 Your name is printed only if you gave the app a display name. The page records and shows; it never says whether a
 number is good or bad.
 
+If someone on your Care team writes notes for you, the screen also says how many came in this period, with a link to them
+([Notes from your Care team](settings-and-keys.md#sharing)). Notes are not printed: they are someone else's words.
+
 ## What to do before a visit
 
 - [ ] Ask your dietitian which days they want to see, and how they want the file (printed, on your

@@ -39,6 +39,11 @@ spec:
         # - matchName: inference-api.nousresearch.com
         # Optional: open the shopping list at Instacart (INSTACART_ENABLED; docs/instacart.md):
         # - matchName: connect.instacart.com
+        # Optional: reminders by phone notification (REMINDERS_ENABLED; docs/reminders.md), the push services:
+        # - matchPattern: "*.push.apple.com"
+        # - matchName: fcm.googleapis.com
+        # - matchName: updates.push.services.mozilla.com
+        # - matchPattern: "*.notify.windows.com"
         # Optional breached-password check (PASSWORD_BREACH_CHECK=true):
         # - matchName: api.pwnedpasswords.com
       toPorts:

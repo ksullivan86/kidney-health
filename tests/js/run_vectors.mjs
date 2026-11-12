@@ -656,7 +656,18 @@ function careVectors() {
     banned_pattern: C.BANNED_SOURCE, texts: C.texts }, doc.constants);
   for (const c of doc.role_cases) expect(`role: ${JSON.stringify(c.switches)}`, C.roleOf(c.switches), c.role);
   for (const c of doc.note_cases) expect(`note: ${JSON.stringify(c.note)}`, C.noteProblem(c.note, 'Ana'), c.problem);
-  return [checks, failures, `${doc.role_cases.length} role cases, ${doc.note_cases.length} notes`];
+  // Notes from the Care team (design note 37; app/care_notes.py).
+  const N = C.notes;
+  const cn = doc.care_notes;
+  expect('notes constants', { max_body: N.MAX_BODY, max_per_day: N.MAX_PER_DAY, max_kept: N.MAX_KEPT, max_page: N.MAX_PAGE,
+    max_days_back: N.MAX_DAYS_BACK, dosing_pattern: N.DOSING_SOURCE, texts: N.texts }, cn.constants);
+  for (const c of cn.text_cases) {
+    expect(`notes text: ${JSON.stringify(c.text).slice(0, 60)}`, { clean: N.cleanBody(c.text), problem: N.problem(c.text, 'Ana') },
+      { clean: c.clean, problem: c.problem });
+  }
+  for (const c of cn.day_cases) expect(`notes day: ${c.date}`, N.dayProblem(c.date, c.today), c.problem);
+  return [checks, failures, `${doc.role_cases.length} role cases, ${doc.note_cases.length} notes, ${cn.text_cases.length} Care team notes, `
+    + `${cn.day_cases.length} days`];
 }
 
 function symptomsVectors() {

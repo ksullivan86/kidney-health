@@ -556,7 +556,7 @@ def test_the_status_says_where_each_feature_runs(rig):
     assert routes["chat"]["consent"] is None  # not agreed for the cloud provider yet
     assert status["available"] is True and status["provider"]["id"] == rig.local  # the headline: the first feature that resolves
     assert status["features"] == {"next_meal": True, "parse_meal": True, "label": False, "plate": False, "chat": True, "voice": False,
-                                  "lab_report": True, "recipes": True, "recipe_steps": False}
+                                  "lab_report": True, "lab_report_text": True, "recipes": True, "recipe_steps": False}
     assert status["consent"]["text"]["host"].startswith("ollama.lan") and status["consent"]["photos"] is None
 
 

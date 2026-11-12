@@ -251,6 +251,7 @@ def _csv(header: Iterable[str], rows: Iterable[Iterable[Any]]) -> str:
 def export_data(conn: sqlite3.Connection, user_id: int, *, app_version: str) -> dict[str, Any]:
     """The ``export.json`` document for ``user_id`` (only that person's rows)."""
     from . import care_suggestions
+    from . import care_notes
     from .foods import row_to_food
     from .log import entry_fields, fetch_entries
     from .meals import row_to_template
@@ -292,7 +293,15 @@ def export_data(conn: sqlite3.Connection, user_id: int, *, app_version: str) -> 
         "builtin_foods": _builtin_foods(conn, uid),
         **_activity(conn, uid),
         "care_suggestions": care_suggestions.export_rows(conn, uid),  # schema step 31 (note 29 §9); the import skips it
+        "reminders": _reminders(conn, uid),  # schema step 35 (note 35): never the devices or their keys; the import skips it
+        "care_notes": care_notes.export_rows(conn, uid),  # schema step 36 (note 37 §10); the person's notes only; the import skips it
     }
+
+
+def _reminders(conn: sqlite3.Connection, uid: int) -> list[dict[str, Any]]:
+    from .reminders import reminder_view, reminders_of
+
+    return [reminder_view(r) for r in reminders_of(conn, uid)]
 
 
 def build_export(conn: sqlite3.Connection, user_id: int, *, app_version: str) -> bytes:

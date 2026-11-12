@@ -137,6 +137,8 @@ USER_AGENT_LISTS = "kidney-health"  # a person's own list app: Grocy, KitchenOwl
 # Instacart (``app/instacart.py``, design note 33): plain on purpose, like the list's title. The product's name would tell Instacart
 # something about the health of the person who opens the page.
 USER_AGENT_INSTACART = "shopping-list"
+# Push services for reminders (``app/webpush.py``, design note 35): plain on purpose, for the same reason.
+USER_AGENT_PUSH = "reminders"
 
 # --------------------------------------------------------------------------- #
 # Key derivation labels (the HKDF ``info`` of ``app.crypto.Keyring``)

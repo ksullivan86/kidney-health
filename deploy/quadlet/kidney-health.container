@@ -30,10 +30,10 @@ Wants=network-online.target
 # Preferred for a host managed from git: pin the release's multi-arch index digest (it is in the
 # GitHub release notes; scripts/verify-image.sh checks it), remove AutoUpdate= below, and let
 # Renovate or Dependabot bump tag and digest together:
-#   Image=ghcr.io/ksullivan86/kidney-health:0.23.0@sha256:<index digest>
+#   Image=ghcr.io/ksullivan86/kidney-health:0.24.0@sha256:<index digest>
 # Otherwise track the minor release: patch releases arrive through AutoUpdate, breaking changes
 # never do. Do not track :latest (or :edge, the main branch) on a machine you care about.
-Image=ghcr.io/ksullivan86/kidney-health:0.23
+Image=ghcr.io/ksullivan86/kidney-health:0.24
 ContainerName=kidney-health
 # `systemctl --user enable --now podman-auto-update.timer` pulls a newer image for this tag daily
 # and restarts the unit, rolling back if it fails. Never mount podman.sock into a container for
@@ -190,6 +190,12 @@ Environment=TRUSTED_PROXIES=127.0.0.1,::1
 # Environment="SMTP_FROM=Kidney Health <kidney@example.org>"
 # Secret=kidney-smtp-password,type=mount,target=smtp_password,uid=10001,gid=10001,mode=0400
 # Environment=SMTP_PASSWORD_FILE=/run/secrets/smtp_password
+# Reminders by phone notification (docs/reminders.md). Needs PUBLIC_URL with https. The push key is made once in the data
+# volume; to give your own instead, use a Podman secret (podman secret create kidney-vapid-key FILE) and the two lines after.
+# Environment=REMINDERS_ENABLED=true
+# Environment=VAPID_SUBJECT=mailto:admin@example.org
+# Secret=kidney-vapid-key,type=mount,target=vapid_private_key,uid=10001,gid=10001,mode=0400
+# Environment=VAPID_PRIVATE_KEY_FILE=/run/secrets/vapid_private_key
 # Names listed here are first values, not locks: written once, then changeable in the app (docs/deployment.md).
 # Environment=SETTINGS_INITIAL_ONLY=SHARING_ENABLED,PUSH_ENABLED
 # Admins must use two-step sign-in before they can open Server administration (docs/accounts.md). Off by default.

@@ -292,8 +292,11 @@ time under **What they may see and do** in their Care team list. Each change is 
   themselves.
 * Two more switches are off unless the person turns them on: **Use my saved meals** and **Suggest meals for me to add**. A
   Viewer may have the suggestions switch too, for a coach or dietitian.
+* A **Clinician** can look, like a Viewer, and write notes for the person. This needs notes turned on (below). "Clinician" is
+  the name the person chose for someone: the app does not check who someone is.
 * When the switches match no role, the role shows as **Custom**.
 * Planning, logging, saved meals and suggestions all need the food log. Turning one on asks first, then shares the food log.
+  Notes do not: a Clinician may see lab results only.
 * A shared food log includes the note on each entry. The form says so.
 * The person's activity lists when a Care team member accepted, looked or stopped, without that member's network address (since
   0.22.2). When an admin ends someone's sharing, each person on the other side of those shares sees it in their own activity too.
@@ -347,6 +350,25 @@ lows, insulin, doses, medicines or lab results is refused. Turning suggestions o
 person closes them. At most 10 wait from one person, and one person sends at most 20 a day. Suggestions are in the person's
 export; the import leaves them out.
 
+**Notes from the Care team.** Notes are off until you turn them on as well: `CARE_NOTES_ENABLED=true`, or **Server
+administration → Server settings → Care team**. They also need the Care team on. Then a person can pick **Clinician** when they
+invite someone, or turn on **Write notes for me** for anyone on their Care team.
+
+* The writer finds **Write a note** on the person's summary (**Open**) and in their **Trends**. The day and the part they are
+  looking at are filled in; they can change or clear them. A note is plain text, up to 1,000 characters.
+* A note about lows, insulin or doses is refused. Nothing else is: a dietitian can write about food and lab results.
+* The person sees "1 new note from Dee" on Today, and all notes under **Notes from your Care team** (also in Settings → Care team
+  and on Visit prep). Opening a note marks it read. The person can delete any note; it is gone for both.
+* The writer sees their notes under **Notes** in **Care teams you are on**, each "Read on …" or "Not read yet". They can change or
+  withdraw a note only before it is read. After that, a correction is a new note.
+* Only the person and the writer see a note. Other Care team members, admins and the AI never do. Visit prep does not print notes.
+* A note gives no orders and changes nothing: no targets, labs, medicines or log. It is not a medical record. A clinic keeps its own.
+* At most 10 notes a day from one writer to one person, and 500 kept for one person.
+* For a share with notes on, the person's activity shows each part looked at, once an hour, and the Care team list says what was
+  looked at last. Notes written, changed, withdrawn or deleted show in the activity too, never their text.
+* When the share ends, the writer can no longer see or change their notes; the person keeps them. If the writer's account is
+  deleted, the person keeps the notes with "account removed". Notes are in the person's export; the import leaves them out.
+
 **Control and records.**
 
 * Either side can stop at once: **Remove** or **Leave**. The person's list shows each role and what they may do, when they last
@@ -360,8 +382,8 @@ export; the import leaves them out.
   deletes its shares and invites. While an account is turned off, nothing it shares can be seen or changed.
 * Not with `AUTH_MODE=none`, where there is only one person.
 
-How it works, and why: [design note 19](dev/research/19-sharing.md), [design note 25](dev/research/25-care-team.md) and
-[design note 29](dev/research/29-full-care-team.md).
+How it works, and why: [design note 19](dev/research/19-sharing.md), [design note 25](dev/research/25-care-team.md),
+[design note 29](dev/research/29-full-care-team.md) and [design note 37](dev/research/37-clinician-accounts.md).
 
 ## Test accounts
 

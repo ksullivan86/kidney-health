@@ -91,11 +91,11 @@ the app:
 ```bash
 # 1. Copy the built handbook out of the image you run (no shell needed in the image).
 mkdir -p learn-site
-podman create --name kh-learn ghcr.io/ksullivan86/kidney-health:0.23
+podman create --name kh-learn ghcr.io/ksullivan86/kidney-health:0.24
 podman cp kh-learn:/app/learn ./learn-site/learn && podman rm kh-learn     # docker: same commands
 # 2. The header your proxy must send there (the same policy the app sends at /learn):
 podman run --rm --entrypoint python -v "$PWD/learn-site/learn:/site:ro,Z" \
-  ghcr.io/ksullivan86/kidney-health:0.23 -m app.handbook csp /site
+  ghcr.io/ksullivan86/kidney-health:0.24 -m app.handbook csp /site
 ```
 
 3. Serve `./learn-site` as static files on its own name, for example
@@ -166,7 +166,7 @@ Tick every line before you put real health data in the app.
 - [ ] `Network=pasta`; `TRUSTED_PROXIES` set from the logged peer address (section 4). With a proxy container on a shared network instead: no `PublishPort` at all, the proxy's address pinned (`IP=`) and trusted alone, never the subnet.
 - [ ] `PUBLIC_URL` set to the URL people type; HTTPS in front ([`https.md`](https.md)).
 - [ ] SELinux hosts: enforcing, no `SecurityLabelDisable`; bind mounts use `:Z`.
-- [ ] `loginctl enable-linger` for the user; `podman-auto-update.timer` enabled if you track `:0.23`.
+- [ ] `loginctl enable-linger` for the user; `podman-auto-update.timer` enabled if you track `:0.24`.
 - [ ] No Podman socket mounted into any container (section 7).
 
 ### Rootless Docker
@@ -249,6 +249,7 @@ The app makes **no** outbound request until you turn a feature on. The full list
 | A person's own list app (Grocy, KitchenOwl, Mealie) | Yes (`LIST_SYNC_ENABLED=false`) | The person's key in a header, and the names and amounts of the foods they tick. Home addresses only through the env-only `LIST_SYNC_ALLOWED_HOSTS`; plain http only to those; no redirects ([list-sync.md](list-sync.md)). |
 | Instacart | Yes (`INSTACART_ENABLED=false`, and it needs the server's own key in `INSTACART_API_KEY_FILE`) | The server's key in a header, the title "Shopping list", and the name, amount and grams of each food the person ticks, each time they confirm. Private and metadata addresses are always refused; no redirects; the link that comes back must be on Instacart's own domains ([instacart.md](instacart.md)). |
 | Password reset by email | Yes (`EMAIL_ENABLED=false`) | To your own mail server (`SMTP_HOST`) only: a confirmation email when a person adds an address, a reset link when they use "Forgot your password?", and an admin's test email. Each holds a user name and a link, no health data. The certificate is checked; plain SMTP only to this machine. The password only as a file (`SMTP_PASSWORD_FILE`). "Forgot your password?" answers the same for every user name ([accounts.md](accounts.md#password-reset-by-email)). |
+| Reminders by phone notification | Yes (`REMINDERS_ENABLED=false`, then each person turns on each device) | To the push service of a device a person turned on, at their reminder's time or on Send a test: one message encrypted for that browser (RFC 8291) with generic words ("Time to log lunch."), the server's name and its address, and a VAPID signature. Only `*.push.apple.com`, `fcm.googleapis.com`, `updates.push.services.mozilla.com` and `*.notify.windows.com`, https on 443; private and metadata addresses refused; no redirects. The push key is a file, never logged or returned ([reminders.md](reminders.md)). |
 | Recipe pages | Yes (`RECIPE_IMPORT_ENABLED=false`) | A plain request for the one page a person pastes, from the server, with no cookie and nothing about the person. Private and metadata addresses are always refused; up to 3 redirects, each checked again ([recipe-import.md](recipe-import.md)). |
 
 AI base URLs pass an SSRF filter: private, loopback and link-local addresses are reachable only
@@ -272,8 +273,8 @@ publicly is refused. On Kubernetes the egress NetworkPolicy is a second layer.
 * **Scanning**: Grype fails the build on High or Critical vulnerabilities **with a fix available**,
   on pull requests (amd64) and before any tag moves (amd64 and arm64). A weekly scan of the
   published `:latest` and `:edge` prints the full report and opens an issue on a new fixable High.
-* **Tags**: pushes to `main` publish `:edge` and `:sha-<short>` only. `:latest`, `:0.23` and `:0.23.x`
-  move only on a `v*` tag, after the scan passed. **Track `:0.23` (or a verified digest), never
+* **Tags**: pushes to `main` publish `:edge` and `:sha-<short>` only. `:latest`, `:0.24` and `:0.24.x`
+  move only on a `v*` tag, after the scan passed. **Track `:0.24` (or a verified digest), never
   `:latest` or `:edge` on a machine you care about.**
 * **Signing and provenance**: buildx records SLSA provenance (`mode=max`) and an SBOM in the image
   index. Once the repository is public, release.yml also signs the index keylessly with cosign and
@@ -302,5 +303,5 @@ publicly is refused. On Kubernetes the egress NetworkPolicy is a second layer.
   may reach; its single-use state and the browser's own cookie refuse a forged one.
 * A kernel zero-day that escapes a user namespace is out of scope; the subordinate-UID mapping limits
   what it can reach.
-* Auto-update trusts whoever controls the tag you track; signing, tag rulesets and the `:0.23`
+* Auto-update trusts whoever controls the tag you track; signing, tag rulesets and the `:0.24`
   advice reduce, but do not remove, that risk.

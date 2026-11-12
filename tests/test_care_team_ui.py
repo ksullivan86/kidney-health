@@ -40,7 +40,7 @@ def test_settings_has_its_own_care_team_section_near_the_top():
     assert account < care < INDEX.index('id="set-prefs"')
     assert "KH.sharing.block()" not in SETTINGS[SETTINGS.index("function renderAccount()"):SETTINGS.index("function renderAccount()") + 4000]
     assert "sec.hidden = authMode() === 'none' || !KH.sharing;" in SETTINGS
-    assert "['Care team', ['sharing.enabled']]," in SETTINGS
+    assert "['Care team', ['sharing.enabled', 'care_notes.enabled']]," in SETTINGS
 
 
 def test_the_screens_say_care_team_not_sharing():
@@ -201,8 +201,9 @@ def test_the_pure_helpers():
 def test_the_demo_shows_a_sample_care_team_and_a_helper_plans_anas_days():
     got = json.loads(subprocess.run(["node", str(ROOT / "tests" / "js" / "care_demo.mjs")], capture_output=True, text=True, check=True,
                                     timeout=120).stdout)
-    assert got["mine"]["enabled"] is True and [s["role"] for s in got["mine"]["sharing"]] == ["custom"]  # Jordan plans and suggests
-    assert got["mine"]["roles"] == ["viewer", "care_helper", "caregiver"]
+    # Jordan plans and suggests; Dee is a Clinician (design note 37)
+    assert got["mine"]["enabled"] is True and [s["role"] for s in got["mine"]["sharing"]] == ["custom", "clinician"]
+    assert got["mine"]["roles"] == ["viewer", "care_helper", "caregiver", "clinician"]
     assert [i["username"] for i in got["mine"]["invites"]] == ["riley"]
     assert [(p["name"], p["role"], p["may_log"]) for p in got["shared"]["people"]] == [("Ana", "custom", True)]
     assert [i["name"] for i in got["shared"]["invites"]] == ["Lee"]

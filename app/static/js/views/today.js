@@ -44,6 +44,7 @@
     backToToday.hidden = state.date === todayStr();
     if (KH.symptoms) KH.symptoms.today(state.date).catch((e) => console.warn('Symptoms:', e)); // load independently of the food log
     if (KH.body) KH.body.today(state.date).catch((e) => console.warn('Weight and blood pressure:', e));
+    if (KH.notes) KH.notes.todayCard().catch((e) => console.warn('Notes:', e)); // new notes from the Care team (js/views/notes.js)
     if (state.dayLoadedFor !== state.date) mealsEl.style.opacity = '0.6';
     loadWeekStrip();
     try {
