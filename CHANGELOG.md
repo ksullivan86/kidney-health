@@ -7,6 +7,21 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+### Added
+
+* **Notes from the Care team.** A person can make someone on their Care team a **Clinician**: a Viewer who may also write short
+  notes for them. Or they can turn on **Write notes for me** for anyone on their Care team. The writer finds **Write a note** on
+  the person's summary and Trends. The person sees new notes on Today, reads them under **Notes from your Care team**, and can
+  delete any note. The writer sees whether a note was read, and can change or withdraw it only before then.
+  * Notes are plain text, at most 1,000 characters. A note about lows, insulin or doses is refused. A note never changes any data.
+  * Only the person and the writer see a note. Admins, other Care team members and the AI never do. Visit prep shows how many
+    notes came in the period, on screen only; notes are never printed.
+  * For a share with notes on, the person's activity shows each part looked at, once an hour.
+  * Notes are in the person's export; the import leaves them out.
+  * Off by default. Turn it on with `CARE_NOTES_ENABLED=true` or in Server administration → Server settings → Care team. It
+    needs the Care team (`SHARING_ENABLED`) too. The app does not check who someone is: "Clinician" is the person's word.
+  * Schema step 36 adds the switch to Care team shares and invites (off for every existing one) and a `care_notes` table.
+
 ### Fixed
 
 * Opening another handbook menu while its foods are being added keeps the new draft. The earlier reply no longer

@@ -32,6 +32,11 @@ the Web Push reminders helper's; do not touch app/reminders*, app/ai lab feature
 
 - Step 6: tools/e2e/clinician_notes.py (port 8118): 26 passed, 0 failed (2026-11-12). In HARNESSES and tools/e2e/README.md.
 
+- Step 7 (docs): ARCHITECTURE (file list, steps 35/36, ownership row, /api/me/notes rows, GET /api/me/shares, new section "Notes from
+  the Care team"), docs/accounts.md, docs/privacy.md, docs/deployment.md + deploy/.env.example + compose.yaml (CARE_NOTES_ENABLED),
+  docs/test-the-full-app.md, handbook settings-and-keys + reports-for-your-team + sources.yml NOTE37 (build_handbook regenerated),
+  CHANGELOG Unreleased, ROADMAP (phase 1 built, phases 2a-2d), note 37 status. OpenAPI regenerated (+ openapi_doc CONFLICT/RATE_LIMITED).
+
 ## Decisions
 - Step 35 is held by an empty `m035_reserved.py` because the runner refuses gaps. INTEGRATOR: delete it when merging
   `m035_reminders.py` (discover() refuses two step-35 files, so it cannot slip through). Step 36 does not touch step 35's tables;

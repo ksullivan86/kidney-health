@@ -335,7 +335,7 @@ def edit_note(share_id: sharing.ShareId, note_id: NoteId, body: NoteUpdate, care
     return sent_item(conn.execute("SELECT * FROM care_notes WHERE id = ?", (note_id,)).fetchone())
 
 
-@shared_router.delete("/{share_id}/notes/{note_id}", status_code=204, response_class=Response, responses=ANSWERS)
+@shared_router.delete("/{share_id}/notes/{note_id}", status_code=204, response_class=Response, responses={412: ANSWERS[412]})
 def withdraw_note(share_id: sharing.ShareId, note_id: NoteId, care: sharing.Noter, if_match: IfMatch = None,
                   conn: sqlite3.Connection = Depends(get_db)) -> Response:
     """Withdraw a note you wrote while the person has not read it (``409`` once read). With ``If-Match``, ``412`` when it

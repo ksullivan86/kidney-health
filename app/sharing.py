@@ -3,10 +3,11 @@
 A person (the **owner**) adds someone with an account on the same server (the **grantee**) to their Care team in Settings → Care
 team: by a link they send, or by that person's user name (an invite the other person accepts or declines in their own Settings).
 From then on the grantee can read the areas the owner ticked, and nothing else, until either side stops it, or until the end date
-the owner chose (``days``; :func:`expire` ends it then). Each share has four **switches** (schema step 31): ``may_plan`` (plan
-meals and use the shopping list), ``may_log`` (log eaten food), ``may_use_saved_meals`` and ``may_suggest``. The **role** is a
-preset over them (:data:`PRESETS`): a ``viewer`` only reads, a ``care_helper`` also plans, a ``caregiver`` also logs eaten food;
-any other mix is ``custom``.
+the owner chose (``days``; :func:`expire` ends it then). Each share has **switches**: ``may_plan`` (plan meals and use the
+shopping list), ``may_log`` (log eaten food), ``may_use_saved_meals`` and ``may_suggest`` (schema step 31; each needs the food
+log), and ``may_note`` (write notes for the person, schema step 36, :mod:`app.care_notes`). The **role** is a preset over them
+(:data:`PRESETS`): a ``viewer`` only reads, a ``care_helper`` also plans, a ``caregiver`` also logs eaten food, a ``clinician``
+reads and writes notes; any other mix is ``custom``.
 
 * ``/api/me/shares``: the owner's list, a new link or a user name invite (recent password), the role and the switches, stopping a
   share, cancelling a link or an invite.

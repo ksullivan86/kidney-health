@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Proposed 2026-11-12. Design only, nothing built. The choices in §12 are defaults the owner can change. Schema step: the next free number when it is built. |
+| Status | Proposed 2026-11-12. Phase 1 built 2026-11-12 (unreleased) with the defaults of §12, schema step 36. Phase 2 (§11) is not built. |
 | Owner's words | ROADMAP "Clinician accounts with notes (large)": "a `clinician` role that a person invites (and can revoke) to see their log, labs, symptoms and visit summaries read-only, and to add notes the person can read. Every view by a clinician goes to the person's activity log. … wording about what the app is not: a self-hosted personal tool, not part of a clinic's medical record." |
 | Builds on | [Note 19](19-sharing.md) (shares, `shared_owner`, links, the switch, `share.viewed`), [note 25](25-care-team.md) (the Care team, invites by user name, Viewer), [note 29](29-full-care-team.md) (switches on the share, roles as presets, suggestions and their note checks), [note 21](21-suggestions-from-a-caregiver.md) §6 ("coach mode later"), [note 07](07-accounts-settings-secrets.md) (accounts, audit, the isolation matrix), [note 34](34-password-reset-by-email.md) (email), the Visit prep page ([`ARCHITECTURE.md`](../../../ARCHITECTURE.md#visit-prep)), [`accounts.md`](../../accounts.md#care-team). |
 | Scope | One more switch on a Care team share, **May write notes**, and a role preset over it, **Clinician**. Notes a Care team member writes for the person, which the person reads in their own app. Finer view logging for those shares. |

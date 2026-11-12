@@ -1617,7 +1617,8 @@
             "enum": [
               "viewer",
               "care_helper",
-              "caregiver"
+              "caregiver",
+              "clinician"
             ],
             "title": "Role",
             "type": "string"
@@ -7107,6 +7108,231 @@
         "title": "NotForMeList",
         "type": "object"
       },
+      "NoteCreate": {
+        "additionalProperties": false,
+        "description": "``POST /api/shared/{id}/notes``: the text, and what it is about (an area the person shares, a day), both optional.",
+        "properties": {
+          "area": {
+            "anyOf": [
+              {
+                "enum": [
+                  "food",
+                  "labs",
+                  "body",
+                  "symptoms",
+                  "activity"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area"
+          },
+          "body": {
+            "maxLength": 4000,
+            "title": "Body",
+            "type": "string"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "title": "NoteCreate",
+        "type": "object"
+      },
+      "NoteForMe": {
+        "properties": {
+          "area": {
+            "anyOf": [
+              {
+                "enum": [
+                  "food",
+                  "labs",
+                  "body",
+                  "symptoms",
+                  "activity"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area"
+          },
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "edited_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edited At"
+          },
+          "from": {
+            "$ref": "#/components/schemas/NoteFrom"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read At"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "from",
+          "area",
+          "date",
+          "body",
+          "version",
+          "created_at",
+          "edited_at",
+          "read_at"
+        ],
+        "title": "NoteForMe",
+        "type": "object"
+      },
+      "NoteFrom": {
+        "properties": {
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "removed": {
+            "title": "Removed",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "name",
+          "removed"
+        ],
+        "title": "NoteFrom",
+        "type": "object"
+      },
+      "NoteUpdate": {
+        "additionalProperties": false,
+        "description": "``PUT /api/shared/{id}/notes/{note_id}``: only what is sent changes. ``area`` or ``date`` ``null`` clears it.",
+        "properties": {
+          "area": {
+            "anyOf": [
+              {
+                "enum": [
+                  "food",
+                  "labs",
+                  "body",
+                  "symptoms",
+                  "activity"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area"
+          },
+          "body": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          }
+        },
+        "title": "NoteUpdate",
+        "type": "object"
+      },
+      "NotesForMe": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "notes": {
+            "items": {
+              "$ref": "#/components/schemas/NoteForMe"
+            },
+            "title": "Notes",
+            "type": "array"
+          },
+          "unread": {
+            "title": "Unread",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "enabled",
+          "unread",
+          "notes"
+        ],
+        "title": "NotesForMe",
+        "type": "object"
+      },
       "NutrientRoom": {
         "additionalProperties": false,
         "properties": {
@@ -10374,7 +10600,8 @@
             "enum": [
               "viewer",
               "care_helper",
-              "caregiver"
+              "caregiver",
+              "clinician"
             ],
             "title": "Role",
             "type": "string"
@@ -10752,6 +10979,105 @@
         "title": "SentList",
         "type": "object"
       },
+      "SentNote": {
+        "properties": {
+          "area": {
+            "anyOf": [
+              {
+                "enum": [
+                  "food",
+                  "labs",
+                  "body",
+                  "symptoms",
+                  "activity"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area"
+          },
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At",
+            "type": "string"
+          },
+          "date": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "edited_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Edited At"
+          },
+          "id": {
+            "title": "Id",
+            "type": "integer"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Read At"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "area",
+          "date",
+          "body",
+          "version",
+          "created_at",
+          "edited_at",
+          "read_at"
+        ],
+        "title": "SentNote",
+        "type": "object"
+      },
+      "SentNotes": {
+        "properties": {
+          "notes": {
+            "items": {
+              "$ref": "#/components/schemas/SentNote"
+            },
+            "title": "Notes",
+            "type": "array"
+          }
+        },
+        "required": [
+          "notes"
+        ],
+        "title": "SentNotes",
+        "type": "object"
+      },
       "SentSuggestion": {
         "properties": {
           "answer": {
@@ -10964,7 +11290,8 @@
             "enum": [
               "viewer",
               "care_helper",
-              "caregiver"
+              "caregiver",
+              "clinician"
             ],
             "title": "Role",
             "type": "string"
@@ -11895,6 +12222,17 @@
               }
             ],
             "title": "May Log"
+          },
+          "may_note": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "May Note"
           },
           "may_plan": {
             "anyOf": [
@@ -22724,6 +23062,214 @@
         ]
       }
     },
+    "/api/me/notes": {
+      "get": {
+        "description": "Notes from your Care team, newest first, at most 50 a page (``before``: the last ``id`` of the page you have). ``unread``\ncounts all your unread notes. While notes are off: ``enabled: false``, no notes.",
+        "operationId": "me_my_notes",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "before",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 9223372036854775807,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Before"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 50,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotesForMe"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "My Notes",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/me/notes/{note_id}": {
+      "delete": {
+        "description": "Delete a note, read or not. It is gone for both of you. Audit ``care_note.deleted`` (your own, without the text). Not\nyours is ``404``.",
+        "operationId": "me_delete_note",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "note_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Note Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Delete Note",
+        "tags": [
+          "me"
+        ]
+      }
+    },
+    "/api/me/notes/{note_id}/read": {
+      "post": {
+        "description": "Mark a note read. ``If-Match`` is the version you were shown: when the author changed it since, ``412`` with the note as\nit is now, so ``read_at`` always belongs to the text you saw. Already read is ``204``. Not yours is ``404``. No activity\nrow: ``read_at`` is enough.",
+        "operationId": "me_read_note",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "note_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Note Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The note's `version`, quoted: \"<version>\". When it is not the note's version now the answer is 412 and nothing changes.",
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The note's `version`, quoted: \"<version>\". When it is not the note's version now the answer is 412 and nothing changes.",
+              "title": "If-Match"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryConflictProblem"
+                }
+              }
+            },
+            "description": "If-Match is not the note's version now: it was changed since it was shown. Body: {detail, current}."
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "428": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "If-Match is missing."
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Read Note",
+        "tags": [
+          "me"
+        ]
+      }
+    },
     "/api/me/oidc": {
       "get": {
         "description": "``{available, enabled, label, providers, links, can_link, has_password, passkeys}`` (never a subject or a token).\n``providers`` lists each provider in use with ``linked`` (this person has a link to it); ``can_link`` is whether any is\nleft to link. ``label`` is the first provider's words.",
@@ -23398,7 +23944,7 @@
     },
     "/api/me/shares": {
       "get": {
-        "description": "``{enabled, areas, roles, max, sharing, codes, invites}``: your Care team (each with its ``role``), your unused links and\nyour user name invites waiting for an answer. ``enabled`` is false (and the lists empty) while the admin has sharing off.",
+        "description": "``{enabled, notes, areas, roles, max, sharing, codes, invites}``: your Care team (each with its ``role``), your unused links\nand your user name invites waiting for an answer. ``enabled`` is false (and the lists empty) while the admin has sharing off;\n``notes`` says whether notes from the Care team are on (design note 37), so the Clinician role can be offered.",
         "operationId": "me_list_my_shares",
         "responses": {
           "200": {
@@ -23434,7 +23980,7 @@
         ]
       },
       "post": {
-        "description": "A new link for the areas ticked (``food``, ``labs``, ``body``, ``symptoms``), in this answer only (``link``). It works once,\nfor 7 days. ``days`` (1 to 365) makes the share end that many days after it is accepted; without it the share lasts until\nsomeone stops it. ``role`` (``viewer`` or ``care_helper``) is the role the share starts with. Needs a recent password, like\nmaking a token.",
+        "description": "A new link for the areas ticked (``food``, ``labs``, ``body``, ``symptoms``), in this answer only (``link``). It works once,\nfor 7 days. ``days`` (1 to 365) makes the share end that many days after it is accepted; without it the share lasts until\nsomeone stops it. ``role`` (``viewer`` or ``care_helper``) is the role the share starts with. Needs a recent password, like\nmaking a token. ``clinician`` needs notes on (``400`` otherwise).",
         "operationId": "me_create_share_link",
         "requestBody": {
           "content": {
@@ -23491,7 +24037,7 @@
     },
     "/api/me/shares/invite": {
       "post": {
-        "description": "Invite someone who already has an account here to your Care team, by their user name (design note 25 §3). The answer is\nthe same whether or not the name belongs to an active account: the invite as your list shows it, waiting 7 days for an\nanswer. Only an active account with that name sees it, in their own Settings → Care team. A second invite to the same name\nreplaces the first. Your own name is ``400``. 20 tries an hour; at most 5 waiting. Needs a recent password, like a link.",
+        "description": "Invite someone who already has an account here to your Care team, by their user name (design note 25 §3). The answer is\nthe same whether or not the name belongs to an active account: the invite as your list shows it, waiting 7 days for an\nanswer. Only an active account with that name sees it, in their own Settings → Care team. A second invite to the same name\nreplaces the first. Your own name is ``400``. 20 tries an hour; at most 5 waiting. Needs a recent password, like a link.\n``clinician`` needs notes on (``400`` otherwise).",
         "operationId": "me_invite_by_username",
         "requestBody": {
           "content": {
@@ -23647,7 +24193,7 @@
     },
     "/api/me/shares/{share_id}/role": {
       "put": {
-        "description": "Choose a role for someone on your Care team: ``viewer`` (look only), ``care_helper`` (also plan your meals and use your\nshopping list) or ``caregiver`` (also log food you ate). A role sets the four switches (design note 29 §2); what you share\nstays, and the food log is added when the role needs it. The next request they make uses it. Not yours or ended is ``404``.",
+        "description": "Choose a role for someone on your Care team: ``viewer`` (look only), ``care_helper`` (also plan your meals and use your\nshopping list), ``caregiver`` (also log food you ate) or ``clinician`` (look and write notes for you; needs notes on, else\n``400``). A role sets the switches (design notes 29 §2 and 37 §4); what you share stays, and the food log is added when the\nrole needs it. The next request they make uses it. Not yours or ended is ``404``.",
         "operationId": "me_change_role",
         "parameters": [
           {
@@ -23717,7 +24263,7 @@
     },
     "/api/me/shares/{share_id}/switches": {
       "put": {
-        "description": "Change what someone on your Care team may see (``areas``) and do (``may_plan``, ``may_log``, ``may_use_saved_meals``,\n``may_suggest``). Only what you send changes, at once: their next request uses it. Any \"Do\" switch on adds the food log. The\nrole is worked out from the switches (``custom`` when they match no role). Not yours or ended is ``404``.",
+        "description": "Change what someone on your Care team may see (``areas``) and do (``may_plan``, ``may_log``, ``may_use_saved_meals``,\n``may_suggest``, ``may_note``). Only what you send changes, at once: their next request uses it. Any of the first four on\nadds the food log; ``may_note`` adds nothing and needs notes on (``400``). The role is worked out from the switches\n(``custom`` when they match no role). Not yours or ended is ``404``.",
         "operationId": "me_change_switches",
         "parameters": [
           {
@@ -25136,7 +25682,7 @@
     },
     "/api/shared": {
       "get": {
-        "description": "``{people, invites}``: the people whose Care team you are on (what they share and your ``role``), and the user name\ninvites waiting for your answer, while the other account is active.",
+        "description": "``{people, invites, notes}``: the people whose Care team you are on (what they share, your ``role`` and switches), the\nuser name invites waiting for your answer, while the other account is active, and whether notes are on (design note 37).",
         "operationId": "shared_list_shared_with_me",
         "responses": {
           "200": {
@@ -26813,6 +27359,341 @@
           }
         ],
         "summary": "Helper Apply Meal",
+        "tags": [
+          "shared"
+        ]
+      }
+    },
+    "/api/shared/{share_id}/notes": {
+      "get": {
+        "description": "The notes you wrote for this person, through any share, newest first, with ``read_at``. A note the person deleted is gone\nfrom here too.",
+        "operationId": "shared_written_notes",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Share Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SentNotes"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Written Notes",
+        "tags": [
+          "shared"
+        ]
+      },
+      "post": {
+        "description": "Write a note for the person (``may_note`` on, checked now). ``area`` must be one the person shares with you now, or none;\n``date`` a day in the last year. The text check refuses lows and dosing words (``400``). At most 10 notes in 24 hours for\none person (``429``) and 500 kept for them (``409``). Audit ``care_note.written`` in the person's activity, never the text.",
+        "operationId": "shared_write_note",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Share Id",
+              "type": "integer"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SentNote"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Write Note",
+        "tags": [
+          "shared"
+        ]
+      }
+    },
+    "/api/shared/{share_id}/notes/{note_id}": {
+      "delete": {
+        "description": "Withdraw a note you wrote while the person has not read it (``409`` once read). With ``If-Match``, ``412`` when it\nchanged. The note is deleted; the activity row ``care_note.withdrawn`` stays, without the text.",
+        "operationId": "shared_withdraw_note",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Share Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "note_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Note Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The note's `version`, quoted: \"<version>\". When it is not the note's version now the answer is 412 and nothing changes.",
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The note's `version`, quoted: \"<version>\". When it is not the note's version now the answer is 412 and nothing changes.",
+              "title": "If-Match"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryConflictProblem"
+                }
+              }
+            },
+            "description": "If-Match is not the note's version now: it was changed since it was shown. Body: {detail, current}."
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Withdraw Note",
+        "tags": [
+          "shared"
+        ]
+      },
+      "put": {
+        "description": "Change a note you wrote while the person has not read it (``409`` once read: write a new one). ``If-Match`` is the\nversion you were shown (``428`` without it, ``412`` when it changed). Only what is sent changes; the checks are those of\nwriting. Audit ``care_note.edited``.",
+        "operationId": "shared_edit_note",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Share Id",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "path",
+            "name": "note_id",
+            "required": true,
+            "schema": {
+              "maximum": 9223372036854775807,
+              "minimum": 1,
+              "title": "Note Id",
+              "type": "integer"
+            }
+          },
+          {
+            "description": "The note's `version`, quoted: \"<version>\". When it is not the note's version now the answer is 412 and nothing changes.",
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The note's `version`, quoted: \"<version>\". When it is not the note's version now the answer is 412 and nothing changes.",
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NoteUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SentNote"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/Unauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/Conflict"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryConflictProblem"
+                }
+              }
+            },
+            "description": "If-Match is not the note's version now: it was changed since it was shown. Body: {detail, current}."
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "428": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Problem"
+                }
+              }
+            },
+            "description": "If-Match is missing."
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "session": []
+          }
+        ],
+        "summary": "Edit Note",
         "tags": [
           "shared"
         ]

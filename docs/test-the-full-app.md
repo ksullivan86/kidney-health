@@ -165,6 +165,10 @@ Sam and Jo stay on the same two phones. Sam chooses what Jo may do; Jo tries it.
 * As **tester**, open the **Plan** tab. Is Jo's suggestion at the top? Press **Add to my plan**. Is it now on tomorrow's plan?
 * As **tester**, open **Today**. Does the food Jo logged as eaten say **Added by Jo**?
 * As **tester-helper**, look at **Suggestions you sent**. Does it say Sam added it?
+* If your admin turned on notes (`CARE_NOTES_ENABLED=true`): as **tester**, tick **Write notes for me** for Jo. As
+  **tester-helper**, press **Open** next to Sam, then **Write a note**. Try a note about insulin; it should be refused. Send a
+  short note about food instead. As **tester**, does **Today** show "1 new note from Jo"? Press **Read**. Is it clear the note
+  is not a medical record? As **tester-helper**, press **Notes** next to Sam. Does it say Sam read it?
 * As **tester**, untick **Log food I ate** for Jo. On Jo's phone, try **Mark eaten** again. Jo should be told they can no longer
   do that.
 

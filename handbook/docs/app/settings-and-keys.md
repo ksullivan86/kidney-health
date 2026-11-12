@@ -23,7 +23,7 @@ can be shared by your admin or added by you ([design note 07][NOTE07]).
 | Section | What you find there |
 |---|---|
 | **Account** | your name, user name, **Change password**, **Email for password resets** (when your admin turns email on), **Two-step sign-in**, **Passkeys**, **Signed-in devices**, **Your data** (export, import, **Phone shortcuts** for an iPhone Shortcut that sends your weight and blood pressure: [Weight and blood pressure](weight-and-blood-pressure.md#from-a-phone-shortcut); delete account), your recent sign-in activity, **Sign out** |
-| **Care team** | family, a caregiver or a dietitian on your server who can look at your log (**Viewer**), also plan your meals (**Care helper**) or also log food you ate (**Caregiver**), with a switch for each thing; invites for you; the Care teams you are on ([Care team](#sharing)) |
+| **Care team** | family, a caregiver or a dietitian on your server who can look at your log (**Viewer**), also plan your meals (**Care helper**) or also log food you ate (**Caregiver**), with a switch for each thing; invites for you; the Care teams you are on ([Care team](#sharing)); a Clinician who may also write notes for you |
 | **Connected devices** (when your admin sets it up) | **Connect Withings** so the server fetches your weight, blood pressure and pulse ([Weight and blood pressure](weight-and-blood-pressure.md#from-withings)); **Connect Whoop** for calories burned, strain, recovery, HRV, sleep and workouts ([Activity and recovery](reports-for-your-team.md#activity-and-recovery)), and **Add active-day calories to my target** ([More calories on active days](targets-and-warnings.md#active-day-calories)); **Sync now**; **Disconnect** stops pending imports and sign-ins too |
 | **Shopping list app** (when your admin turns it on) | your own **Grocy**, **KitchenOwl** or **Mealie**: its address and a key you make there, **Test**, the list the food goes to, **Remove**. The key is never shown again. Plan's shopping list then has **Send** ([Send it to your own list app](planning-and-menus.md#send-it-to-your-own-list-app); [design note 30][NOTE30]) |
 | **Preferences** | theme (match device, light, dark), the day your week starts on, **Units for lab results** (US or SI: the unit offered first) |
@@ -191,16 +191,19 @@ computers you can also tap the user name box: your passkey is listed there, and 
 ## Care team {#sharing}
 
 Your **Care team** is family, a caregiver or a dietitian who has their own account on your server. You choose what each person
-can see and do, and you can change it or stop it at any time ([design notes 19][NOTE19], [25][NOTE25] and [29][NOTE29]). Your
-admin turns the Care team on first; until then, Settings says so. **Profile → Open Care team** takes you there too.
+can see and do, and you can change it or stop it at any time ([design notes 19][NOTE19], [25][NOTE25], [29][NOTE29] and
+[37][NOTE37]). Your admin turns the Care team on first; until then, Settings says so. **Profile → Open Care team** takes you
+there too.
 
-There are three roles. A role is a quick way to set what someone may do:
+There are four roles. A role is a quick way to set what someone may do:
 
 - A **Viewer** can look at the parts you tick: your food log, lab results, weight and blood pressure, symptoms, activity and
   recovery (from Whoop). They never change anything.
 - A **Care helper** can also plan your meals and use your shopping list.
 - A **Caregiver** can also log food you ate. They can mark planned food as eaten, and fix or remove eaten food they added
   themselves. They never change food you logged yourself.
+- A **Clinician** can look, like a Viewer, and write notes for you. Your admin must turn notes on first. "Clinician" is your
+  word for them: the app does not check who someone is.
 
 Two more things are off unless you turn them on for someone: **Use my saved meals** and **Suggest meals for me to add**. A
 coach or dietitian can be a Viewer who may suggest meals. When the switches match no role, the role says **Custom**.
@@ -240,6 +243,18 @@ no. They see which one you chose, never why. A suggestion goes away by itself af
 treating a low, and a note about lows, insulin, doses, medicines or lab results cannot be sent. Turning the switch off keeps
 what was already sent; removing the person closes them.
 
+**Notes from your Care team.** If someone may write notes for you (a Clinician, or **Write notes for me** turned on), Today
+shows a small card when there is a new one, such as "1 new note from Dee". Tap **Read**. You also find them under **Notes from
+your Care team** in Settings → Care team and on Visit prep.
+
+- Each note shows who wrote it, when, what it is about (tap it to open that day, or your lab results) and the text.
+- Opening a note marks it read. The writer then sees that you read it.
+- **Delete** removes a note for good, for both of you.
+- A note is a message, not a medical record. It never changes your targets, labs, medicines or log. Notes cannot be about lows,
+  insulin or doses: talk to your care team about those. For anything urgent, call your care team.
+- Only you and the writer see a note. Other people on your Care team do not, and neither does the AI.
+- While someone may write notes, your activity shows each part they looked at, once an hour.
+
 **When you are on someone's Care team**, they are under **Care teams you are on**. **Open** shows their summary page, **Trends**
 their charts; **Leave** ends it. Their weight chart uses their dry weight, never yours. If a part cannot load, tap **Retry**.
 
@@ -259,6 +274,12 @@ your own plan is never mixed with theirs. What you see follows what they allow:
   send it, the app shows how it fits their day. **Suggestions you sent** shows their answers.
 - A low treatment says only they change it.
 - Helping someone needs a connection to your server. Changes for them never wait on your phone.
+
+**Writing notes for someone.** If they let you write notes, their summary (**Open**) and their **Trends** have **Write a note**.
+The day and the part you are looking at are filled in; change or clear them if you like. Write up to 1,000 characters and tap
+**Send**. A note about lows, insulin or doses cannot be sent. **Notes**, next to their name, lists what you wrote and whether they
+read it. You can change or withdraw a note until they read it; after that, write a new one. This is their personal app, not a
+clinic's record: keep your own record as your clinic requires.
 
 ## Assistant access
 
@@ -319,6 +340,6 @@ change is listed in your activity, and a food it set shows in **Settings → Mea
 - [Design note 02][NOTE02] (This device); [design note 03][NOTE03] (barcode settings); [design note 04][NOTE04] (AI keys);
   [design note 06][NOTE06] (guidance settings).
 - [Design note 19][NOTE19]: read-only sharing. [Design note 25][NOTE25]: the Care team. [Design note 29][NOTE29]: switches,
-  the Caregiver, saved meals and suggestions.
+  the Caregiver, saved meals and suggestions. [Design note 37][NOTE37]: notes from a Clinician on your Care team.
 - [USDA FoodData Central API guide][FDC-API]: free keys and rate limits.
 - [Design note 34][NOTE34]: password reset by email.

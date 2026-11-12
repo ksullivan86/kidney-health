@@ -1709,6 +1709,13 @@ NOTE34:
   licence: "PolyForm Noncommercial 1.0.0 (project)"
   checked: 2026-11-07
   kind: project
+NOTE37:
+  cite: "kidney-health design note 37: clinician accounts with notes."
+  short: "Design note 37"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/37-clinician-accounts.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-11-12
+  kind: project
 INSTACART-IDP:
   cite: "Instacart Developer Platform. Create shopping list page (POST /idp/v1/products/products_link)."
   short: "Instacart Developer Platform"
