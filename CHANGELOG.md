@@ -5,9 +5,11 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
-## Unreleased
+## 0.24.0 — 2026-11-12
 
-### Upgrading
+### Upgrading from 0.23 (read this first)
+
+* Change the image tag to `:0.24`; the shipped deployment files already say `:0.24`.
 
 * Back up first. Schema step 35 adds two empty tables for reminders, and step 36 adds a
   switch to Care team shares (off for every existing one) and an empty table for notes. Nothing changes until you turn reminders on.
@@ -44,6 +46,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
   * Schema step 36 adds the switch to Care team shares and invites (off for every existing one) and a `care_notes` table.
 
 ### Fixed
+
+* Settings → Care team: the invite form's weight and blood pressure box no longer shares its id with the section around it.
 
 * The menu plan sheet uses the same words as every other sheet when an earlier save fails after you closed it.
 

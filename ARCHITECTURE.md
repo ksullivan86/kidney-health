@@ -1114,7 +1114,9 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 
 **Unreleased (2026-11-12):** reminders by phone notification (note 35, schema step 35), off until `REMINDERS_ENABLED`.
 
-**Status (2026-11-07): v0.23.0 is prepared.** Password reset by email (note 34, schema step 34), off until `EMAIL_ENABLED`;
+**Status (2026-11-12): v0.24.0 is prepared.** Reminders by phone notification (note 35, schema step 35, `REMINDERS_ENABLED`),
+reading the text of a lab PDF on the local AI (note 36, no schema step), and Care team notes, phase 1 (note 37, schema step 36,
+`CARE_NOTES_ENABLED`); all off by default. **v0.23.0**: password reset by email (note 34, schema step 34), off until `EMAIL_ENABLED`;
 an Ask retry that races its first save reports that save; device sign-in shares `sessions.is_live`. **v0.22.3**: fifteen audit fixes: writes recheck access and trust inside their write lock
 (assistant and phone tokens, Ask, device sign-in, provider account actions), imports and daily limits are serialised, and every
 sheet keeps late replies with the opening that sent them while still saying when an earlier save failed. **v0.22.2**: the owner's four choices from the sharing and passkey review (a reset link removes
@@ -5194,7 +5196,7 @@ Signed in only (`current_user`; an anonymous caller gets the generic `401`, so a
 (`no-store` like every `/api` answer). The answer:
 
 ```json
-{"app_version": "0.23.0", "api_version": 1,
+{"app_version": "0.24.0", "api_version": 1,
  "capabilities": {"ai": false, "ai_next_meal": false, "ai_parse_meal": false, "ai_label": false, "ai_plate": false, "ai_lab_report": false,
                   "chat": false, "voice": false, "assistant": false, "push": false,
                   "barcode": false, "barcode_off": false, "barcode_usda": false, "handbook": false},

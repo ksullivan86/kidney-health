@@ -3,7 +3,7 @@
 One line per item, with the specification that defers it (the design notes are in
 [`docs/dev/research/`](dev/research/)). Items leave this list when they ship (move them to
 [CHANGELOG.md](../CHANGELOG.md)) or when the owner drops them. Each feature owner appends to its own
-section. Last reviewed for the v0.23.0 release (2026-11-07).
+section. Last reviewed for the v0.24.0 release (2026-11-12).
 
 ## First: daily logging you can trust (the owner, 2026-10-29)
 
@@ -35,14 +35,18 @@ recovery trustworthy before more AI or native-app features.
 The owner's order from 2026-10-31 has shipped (0.16 to 0.22), and so have the reliability and audit passes (0.22.1 to 0.22.3)
 and password reset by email (0.23.0). Candidates, for the owner to choose:
 
-* ~~Reminders by phone notification~~: built, not yet released (note 35). Waiting on tests on a real iPhone and Android phone.
-* **Reading a lab PDF's own text** instead of drawing each page as a photo: built, waiting for the next release
+* ~~Reminders by phone notification~~: shipped in 0.24.0 (note 35). Waiting on tests on a real iPhone and Android phone.
+* **Reading a lab PDF's own text** instead of drawing each page as a photo: shipped in 0.24.0
   ([note 36](dev/research/36-lab-pdf-text.md)). Left for the owner: a live run on real portal PDFs and the local model.
 * **A name detector on top of the privacy filter** (adds packages and a model to the image; the owner's choice): "Privacy
   tiers" below. Small to medium.
 * **Clinician accounts with notes, phase 2**: replies, notifications by email or Web Push, attachments ("Ideas from the owner"
   below). Phase 1 is built.
-* **Kroger next to Instacart**, if its API allows it: "The shopping list outside the app" below.
+* **Kroger next to Instacart**: checked 2026-11-12 and not recommended for now. Kroger has no list link; its Cart API puts exact
+  products into the person's own Kroger cart after they sign in, so each food needs a product search and a pick, the searches and
+  the cart are tied to their loyalty account, and the server would hold a long-lived token for it. The owner would register a
+  developer app and publish a privacy policy. Medium to large. Sources: developer.kroger.com (Cart, Products and Locations
+  APIs, acceptable use, terms of 2019-04-09).
 
 Waiting on the owner: an Instacart key; reminders tried on a real iPhone (from the Home Screen) and an Android phone; an Apple Developer membership for the iPhone app's step 3 (signing, TestFlight and
 tests on a real iPhone; steps 1 and 2 are built, [note 15](dev/research/15-native-ios-app.md)); runs with real files (list

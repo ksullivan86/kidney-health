@@ -64,7 +64,7 @@ def ana_invites(page: Any, out: Path) -> None:
     page.fill("#set-care-invite-name", "dee")
     page.check("#set-care-role-clinician")
     for area in ("body", "symptoms", "activity"):
-        page.uncheck(f"input#set-care-{area}")  # input: the section body is also #set-care-body
+        page.uncheck(f"#set-care-{area}")
     page.click("#set-care-invite")
     page.wait_for_selector("#set-care-sent:has-text('Invite sent')", timeout=20000)
     check("[ana] the invite waits with the Clinician role", "Clinician" in text(page, "#set-care-invites"), text(page, "#set-care-invites"))

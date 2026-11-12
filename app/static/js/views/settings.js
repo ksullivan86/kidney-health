@@ -26,7 +26,7 @@
   const REG = KH.settings;
 
   // Kept equal to APP_VERSION in app/main.py (tests/test_settings_ui.py).
-  const APP_VERSION = '0.23.0';
+  const APP_VERSION = '0.24.0';
 
   const A = {
     sessions: () => request('GET', '/api/me/sessions'),
@@ -2479,7 +2479,7 @@
     const sec = $('#set-care');
     if (!sec) return;
     sec.hidden = authMode() === 'none' || !KH.sharing;
-    if (!sec.hidden) clear($('#set-care-body')).append(KH.sharing.block());
+    if (!sec.hidden) clear($('#set-care-section')).append(KH.sharing.block());
   }
   // Settings → Connected devices (js/views/devices.js, design note 27): shown only while the server has it on.
   let devicesDraw = 0;
