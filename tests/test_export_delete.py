@@ -19,7 +19,7 @@ JSON_KEYS = {"format", "version", "exported_at", "app_version", "user", "profile
              "food_preferences", "ai_usage", "ai_consents", "ai_provider",  # AI: schema step 6
              "builtin_foods",  # added for the import (app/data_import.py)
              "activity_days", "activity_workouts", "activity_extra",  # Whoop (schema step 30)
-             "care_suggestions"}  # suggestions from the Care team (schema step 31)
+             "care_suggestions", "reminders"}  # suggestions from the Care team (schema step 31)
 
 
 def fill(client: TestClient) -> dict:

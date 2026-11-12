@@ -7,6 +7,21 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+### Upgrading
+
+* Back up first. Schema step 35 adds two empty tables for reminders. Nothing changes until you turn reminders on.
+
+### Added
+
+* **Reminders by phone notification**, off by default. Set `REMINDERS_ENABLED=true`, `VAPID_SUBJECT` (`mailto:` with your
+  address) and an `https://` `PUBLIC_URL`. People can then turn on notifications on each phone or computer in Settings →
+  Reminders, and pick times to log a meal, plan tomorrow or log their weight. On iPhone it works in the app added to the Home
+  Screen. A meal reminder is skipped when that meal is already logged. The words are plain ("Time to log lunch.") and hold no
+  health data. Reminders are a convenience: do not rely on them for low blood sugar; use your CGM's alerts. The server makes its
+  push key once in the data folder and sends only to the push services of Apple, Google, Mozilla and Microsoft. See
+  [reminders.md](docs/reminders.md). Not yet tried on a real iPhone or Android phone.
+* `VAPID_PRIVATE_KEY` given inline stops the start, as for the other secrets.
+
 ### Fixed
 
 * The menu plan sheet uses the same words as every other sheet when an earlier save fails after you closed it.

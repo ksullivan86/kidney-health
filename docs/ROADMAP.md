@@ -35,14 +35,14 @@ recovery trustworthy before more AI or native-app features.
 The owner's order from 2026-10-31 has shipped (0.16 to 0.22), and so have the reliability and audit passes (0.22.1 to 0.22.3)
 and password reset by email (0.23.0). Candidates, for the owner to choose:
 
-* **Reminders by phone notification** (Web Push, opt-in, never for lows): "Installable app" below. Medium.
+* ~~Reminders by phone notification~~: built, not yet released (note 35). Waiting on tests on a real iPhone and Android phone.
 * **Reading a lab PDF's own text** instead of drawing each page as a photo: "Lab results from a PDF report" below. Medium.
 * **A name detector on top of the privacy filter** (adds packages and a model to the image; the owner's choice): "Privacy
   tiers" below. Small to medium.
 * **Clinician accounts with notes**: "Ideas from the owner" below. Large.
 * **Kroger next to Instacart**, if its API allows it: "The shopping list outside the app" below.
 
-Waiting on the owner: an Instacart key; an Apple Developer membership for the iPhone app's step 3 (signing, TestFlight and
+Waiting on the owner: an Instacart key; reminders tried on a real iPhone (from the Home Screen) and an Android phone; an Apple Developer membership for the iPhone app's step 3 (signing, TestFlight and
 tests on a real iPhone; steps 1 and 2 are built, [note 15](dev/research/15-native-ios-app.md)); runs with real files (list
 apps, a Health export, lab PDFs on the local model); the clinician review below.
 
@@ -64,7 +64,7 @@ apps, a Health export, lab PDFs on the local model); the clinician review below.
 
 ## Installable app (note 02)
 
-* Reminders through Web Push, opt-in and off by default (its own switch, because `PUSH_ENABLED` now turns on phone shortcuts; a VAPID key file; `pywebpush` 2.5.0 + `py-vapid` 1.9.4, generic bodies, never for lows: "use your CGM's alerts"), the push hosts in `docs/network-allowlist.md`, device tests on iOS 18.4+ and Chrome on Android — note 02 §3.6, R8 and §6 Phase 6 (v0.4).
+* ~~Reminders through Web Push~~ — built, not yet released ([note 35](dev/research/35-reminders.md), [`reminders.md`](reminders.md), schema step 35): off until the admin sets `REMINDERS_ENABLED` and `VAPID_SUBJECT`; Settings → Reminders turns on each device and sets times to log a meal, plan tomorrow or log a weight; generic words, never for lows ("use your CGM's alerts"); VAPID and the message encryption written on `cryptography`, so no new dependency; the push hosts in `docs/network-allowlist.md`. Still to do, by the owner: tests on a real iPhone (iOS 18.4 or later, from the Home Screen) and Chrome on Android, and a check that a tap opens the right screen on each.
 
 ## Personalised targets and labs (note 05)
 

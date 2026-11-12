@@ -7,9 +7,9 @@ applies_to: [all]
 status: draft
 reviewed_by: ""
 reviewed_on: null
-last_checked: 2026-11-07
+last_checked: 2026-11-12
 fact_checked: 2026-10-05
-sources: [NOTE07, NOTE03, NOTE04, NOTE06, NOTE02, FDC-API, NOTE17, NOTE18, NOTE19, NOTE25, NOTE28, NOTE29, NOTE30, NOTE34]
+sources: [NOTE07, NOTE03, NOTE04, NOTE06, NOTE02, FDC-API, NOTE17, NOTE18, NOTE19, NOTE25, NOTE28, NOTE29, NOTE30, NOTE34, NOTE35]
 ---
 
 # Settings and keys
@@ -31,6 +31,7 @@ can be shared by your admin or added by you ([design note 07][NOTE07]).
 | **Food data** | your own USDA key, the shared key's status and today's remaining lookups, **Send barcodes I scan to Open Food Facts** ([Barcodes and label photos](barcode-and-photo.md)) |
 | **AI ideas** | opt in, provider, where each feature runs, **Choose which AI each feature uses** (when your admin lets you: [Choosing the AI yourself](ai.md#choosing-the-ai-yourself)), your own AI provider and key, what you agreed to send, AI activity ([Optional AI](ai.md)) |
 | **Assistant access** (when your admin turns it on) | personal tokens for a chat assistant you connect: make one, copy it once, see when it was last used, revoke it ([below](#assistant-access)) |
+| **Reminders** (when your admin turns them on) | turn on notifications on this phone or computer, reminders to log a meal, plan tomorrow or log your weight, **Send a test**, the devices that get them ([below](#reminders)) |
 | **This device** | installed or not, "Offline ready", storage used, entries waiting to sync with **Sync now**, **Retry** and **Discard**, **Clear offline data on this device** ([Install the app](install.md)) |
 | **Admin** (admins only) | a button that opens **Server administration** (below) |
 | **About & privacy** | what is stored, who can see it, disclaimers, **Learn** (this handbook), data sources and licences ([Privacy and your data](privacy.md)) |
@@ -136,6 +137,28 @@ other devices and removes your passkeys. Two-step sign-in still asks for your co
   no longer works.
 - The email holds your user name and the link. It holds no health data.
 - An email you did not ask for? Ignore it. Your password stays the same. If it happens often, tell your admin.
+
+## Reminders {#reminders}
+
+If your admin has turned reminders on, **Settings → Reminders** can send a notification to your phone or computer at a time you
+choose: "Time to log lunch.", "Time to plan tomorrow's meals." or "Time to log your weight." ([design note 35][NOTE35]).
+
+!!! warning "Not for low blood sugar"
+    Reminders are a convenience. Do not rely on them for low blood sugar; use your CGM's alerts. A notification can come late
+    or not at all, for example when the phone is on Do Not Disturb or the server is down.
+
+1. **On an iPhone or iPad**, add the app to your Home Screen first and open it from there: in Safari, tap **Share**, then
+   **Add to Home Screen** ([Install the app](install.md)). Notifications do not work in a Safari tab.
+2. Tap **Turn on notifications on this device**. Your phone asks whether to allow notifications. Tap **Allow**.
+3. Tap **Add a reminder**. Choose what, the time and the days, then **Save reminder**. The time is your phone's time.
+4. Tap **Send a test** to see what a reminder looks like.
+
+- Turn it on on each phone or computer you want reminders on. The list at the bottom shows them, with **This device** on the one
+  in your hand. **Remove** stops reminders to a device.
+- A meal reminder is skipped when you already logged food for that meal today.
+- Each reminder comes at most once a day. If the server was off at that time, it does not come late.
+- The words never include food names, numbers or anything about your health. Tapping the notification opens the app.
+- Turned off notifications by mistake? Allow them again in your phone's or browser's settings for this site.
 
 ## Two-step sign-in
 
@@ -322,3 +345,4 @@ change is listed in your activity, and a food it set shows in **Settings → Mea
   the Caregiver, saved meals and suggestions.
 - [USDA FoodData Central API guide][FDC-API]: free keys and rate limits.
 - [Design note 34][NOTE34]: password reset by email.
+- [Design note 35][NOTE35]: reminders by phone notification.

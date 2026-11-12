@@ -50,6 +50,11 @@ Keys (defaults in brackets):
   ``SMTP_PORT`` [587], ``SMTP_SECURITY`` [``starttls``; ``tls``; ``none`` only to localhost, 127.0.0.1 or ::1], ``SMTP_USERNAME``,
   ``SMTP_PASSWORD_FILE`` (only as a file: ``SMTP_PASSWORD`` is refused), ``SMTP_FROM`` (required when on), ``SMTP_TIMEOUT_S`` [15].
   Env only. On needs ``AUTH_MODE=local`` and ``PUBLIC_URL`` (the links in the emails use it).
+* Reminders by phone notification (design note 35; :class:`RemindersEnv`, ``Settings.reminders``): ``REMINDERS_ENABLED``
+  [false], ``VAPID_SUBJECT`` (``mailto:`` or ``https:``; required when on), ``VAPID_PRIVATE_KEY_FILE`` [``$DATA_DIR/vapid_private.pem``,
+  made once with mode 0600 when missing; only as a file: ``VAPID_PRIVATE_KEY`` is refused], ``REMINDERS_TIMEOUT_S`` [10]. Env only.
+  On needs ``PUBLIC_URL`` with https (or http on localhost) and a sign-in mode other than ``none``. Its own switch: ``PUSH_ENABLED``
+  is phone shortcuts.
 * Test accounts (design note 26): ``TEST_ACCOUNT_PASSWORD_FILE`` (only as a file: ``TEST_ACCOUNT_PASSWORD`` is refused). The file
   is read when the accounts are made or reset. The switches ``TEST_ACCOUNT_ENABLED`` and ``TEST_ACCOUNT_AI`` are settings
   (``test_accounts.*``).
@@ -575,6 +580,76 @@ def _validate_email(s: "Settings") -> list[str]:
     return []
 
 
+@dataclass(frozen=True)
+class RemindersEnv:
+    """Reminders by phone notification (design note 35). Env only, like every outbound address. The key file is read (or made)
+    at start-up by :mod:`app.webpush`; its contents never reach an API or the log."""
+
+    enabled: bool = False
+    subject: str | None = None  # VAPID_SUBJECT: mailto: or https:
+    key_file: Path | None = None  # VAPID_PRIVATE_KEY_FILE; None: $DATA_DIR/vapid_private.pem
+    timeout_s: int = 10
+
+
+def load_reminders_env(env: Mapping[str, str]) -> RemindersEnv:
+    if env.get("VAPID_PRIVATE_KEY"):
+        raise ConfigError("Give the reminders key as a file: set VAPID_PRIVATE_KEY_FILE to its path, or leave it unset to have the "
+                          "server make one in DATA_DIR. Remove VAPID_PRIVATE_KEY.")
+    key_file = _raw(env, "VAPID_PRIVATE_KEY_FILE")
+    return RemindersEnv(
+        enabled=parse_bool(env, "REMINDERS_ENABLED", False),
+        subject=_raw(env, "VAPID_SUBJECT"),
+        key_file=Path(key_file) if key_file else None,
+        timeout_s=parse_int(env, "REMINDERS_TIMEOUT_S", 10, 1, 60),
+    )
+
+
+def check_vapid_subject(raw: str) -> str:
+    """``VAPID_SUBJECT``: ``mailto:name@example.org`` or an ``https://`` address (Apple refuses anything else)."""
+    text = raw.strip()
+    if text.lower().startswith("mailto:"):
+        address = text[7:]
+        if "@" in address and " " not in address and len(text) <= 320 and address.split("@")[-1]:
+            return text
+    elif text.lower().startswith("https://"):
+        try:
+            host = urlsplit(text).hostname
+        except ValueError:
+            host = None
+        if host and " " not in text and len(text) <= 320:
+            return text
+    raise ConfigError("VAPID_SUBJECT must be mailto: with your email address, such as mailto:admin@example.org, or an https:// "
+                      "address where the push services can reach you.")
+
+
+def _validate_reminders(s: "Settings") -> list[str]:
+    r = s.reminders
+    if not r.enabled:
+        return ["VAPID_SUBJECT set without REMINDERS_ENABLED=true: reminders stay off."] if r.subject else []
+    if s.auth_mode == "none":
+        raise ConfigError("REMINDERS_ENABLED=true needs sign-in: with AUTH_MODE=none there are no accounts to send reminders to.")
+    if not s.public_url:
+        raise ConfigError("REMINDERS_ENABLED=true needs PUBLIC_URL with https: browsers allow notifications only on secure pages, "
+                          "and a notification opens this address. For example PUBLIC_URL=https://kidney.example.org.")
+    parts = urlsplit(s.public_url)
+    if parts.scheme != "https" and (parts.hostname or "").lower() not in ("localhost", "127.0.0.1", "::1"):
+        raise ConfigError("REMINDERS_ENABLED=true needs PUBLIC_URL with https (http only for localhost): browsers allow "
+                          "notifications only on secure pages.")
+    if not r.subject:
+        raise ConfigError("REMINDERS_ENABLED=true needs VAPID_SUBJECT: how the push services can reach you, for example "
+                          "VAPID_SUBJECT=mailto:admin@example.org.")
+    check_vapid_subject(r.subject)
+    if r.key_file is not None and not r.key_file.exists():
+        try:
+            inside = r.key_file.resolve().is_relative_to(s.data_dir.resolve())
+        except OSError:
+            inside = False
+        if not inside:
+            raise ConfigError(f"VAPID_PRIVATE_KEY_FILE points to {r.key_file}, which does not exist. Leave it unset to have the "
+                              "server make one in DATA_DIR, or put the key there.")
+    return []
+
+
 def check_oidc_issuer(raw: str, var: str = "OIDC_ISSUER") -> str:
     """``OIDC_ISSUER``: ``https://`` with a host (plain ``http://`` only for a loopback host, for tests), no query, no fragment."""
     try:
@@ -750,6 +825,8 @@ class Settings:
     instacart: InstacartEnv = field(default_factory=InstacartEnv, repr=False)
     # Email for password resets (design note 34): off for Settings built in code.
     email: EmailEnv = field(default_factory=EmailEnv, repr=False)
+    # Reminders by phone notification (design note 35): off for Settings built in code.
+    reminders: RemindersEnv = field(default_factory=RemindersEnv, repr=False)
 
     # Secrets at rest (note 07 §4.12). ``secret_key`` holds the raw SECRET_KEY text (one key per
     # line); None means "use or create $DATA_DIR/secret.key" (see app.crypto.load_keyring).
@@ -776,6 +853,11 @@ class Settings:
     @property
     def db_path(self) -> Path:
         return self.data_dir / DB_FILENAME
+
+    @property
+    def vapid_key_path(self) -> Path:
+        """The reminders' push key (design note 35): ``VAPID_PRIVATE_KEY_FILE``, or made in ``DATA_DIR``."""
+        return self.reminders.key_file or self.data_dir / "vapid_private.pem"
 
     @property
     def secret_key_path(self) -> Path:
@@ -1139,6 +1221,7 @@ def load_settings(env: Mapping[str, str] | None = None) -> Settings:
         list_sync_allowed_hosts=tuple(h.lower() for h in _split_list(env.get("LIST_SYNC_ALLOWED_HOSTS"))),
         instacart=load_instacart_env(env),
         email=load_email_env(env),
+        reminders=load_reminders_env(env),
     )
     extra: list[str] = []
     if env.get("FORWARDED_ALLOW_IPS"):
@@ -1239,6 +1322,7 @@ def _validate(s: Settings) -> list[str]:
     warnings += _validate_whoop(s)
     warnings += _validate_instacart(s)
     warnings += _validate_email(s)
+    warnings += _validate_reminders(s)
     if "*" in s.allowed_hosts:
         warnings.append("ALLOWED_HOSTS contains '*': the Host check (DNS-rebinding defence) is switched off.")
     if s.docs_enabled:

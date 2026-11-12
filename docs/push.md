@@ -1,5 +1,8 @@
 # Phone shortcuts: sending weight and blood pressure from an iPhone
 
+Not reminders: notifications from the server to a phone are [reminders.md](reminders.md), with their own switch
+(`REMINDERS_ENABLED`). `PUSH_ENABLED` is only about phone shortcuts.
+
 A person can make a **device token** in Settings and paste it into a Shortcut on their iPhone. The Shortcut sends the person's latest
 weight and blood pressure to their own server, without opening the app and without an export. The token can **only add** weights and
 blood pressure readings to its owner's log: it cannot read anything, change or delete a row, or reach any other route.
