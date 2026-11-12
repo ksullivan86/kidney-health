@@ -869,6 +869,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 31 | `m031_care_team_full.py` | the full Care team (note 29 §6) | `shares` and `care_invites` each gain four switches, `INTEGER NOT NULL DEFAULT 0 CHECK (… IN (0, 1))`: `may_plan`, `may_log`, `may_use_saved_meals`, `may_suggest`. When the columns are first added, a `care_helper` row gets `may_plan = 1`, so every share keeps its meaning. The `role` column of step 27 stays with its `CHECK`; the app writes it `care_helper` exactly when `may_plan` is on. New table `care_suggestions` (`share_id` `ON DELETE CASCADE`, `owner_user_id` and `from_user_id` `ON DELETE CASCADE`, never the same; `date`, `meal`, `items_json` a JSON list of 1 to 30, `note` at most 280 characters, `created_at`, `expires_at`, `answered_at`, `answer` (`accepted`, `declined`, `expired`, `ended`)). |
 | 33 | `m033_ai_route_choice.py` | a person may choose the server's local or cloud AI (note 32) | `users.can_choose_ai` (`INTEGER NOT NULL DEFAULT 0 CHECK (… IN (0, 1))`): an admin's tick in Server administration → Users. Every existing account starts without it. The person's choices are the personal setting `ai.route_choice`, not a column. |
 | 34 | `m034_reset_email.py` | password reset by email (note 34) | `users.email` (TEXT, NULL, at most 320 characters, stored lower case) and `users.email_confirmed_at`; unique index `users_email_confirmed` on `email` for confirmed addresses only (an address typed but not confirmed blocks nobody); `email_tokens` (id, user_id `ON DELETE CASCADE`, the address it was sent to, SHA-256 of the verifier, 24 h, single use): the confirmation links, in their own table because `auth_tokens.purpose` has a CHECK. Every existing account starts without an address. |
+| 35 | `m035_reminders.py` | reminders by phone notification (note 35) | two new tables, both `user_id` `ON DELETE CASCADE`: `push_subscriptions` (`endpoint` UNIQUE, `p256dh`, `auth` (base64url), `user_agent`, `created_at`, `last_ok_at`, `last_error`) and `reminders` (`kind` CHECK `log_meal`, `plan_tomorrow` or `weigh_in`; `meal` CHECK the four meals or NULL; `time_local` `HH:MM`; `days` bitmask 1–127, bit 0 Monday; `time_zone` (IANA, `''` = the server's time); `enabled`; `created_at`; `last_sent_on`). Nothing else changes. |
 | 23 | `m023_passkeys.py` | passkeys (note 18) | `passkeys` (one row per passkey: `credential_id` BLOB, unique, 1 to 1,023 bytes; `public_key`, the COSE key as sent; `alg`; `user_handle`, 32 random bytes shared by one person's passkeys; `sign_count`; `name`; `backed_up`; `created_at`; `last_used_at`). `ON DELETE CASCADE`. Nothing is sealed: a public key is not a secret. Nobody has a passkey after the upgrade. |
 
 ## Backend file ownership
@@ -897,6 +898,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | Two-step sign-in (design note 17) | `app/auth/totp.py` (RFC 6238, recovery codes, storage), `app/auth/totp_api.py` (`/api/me/totp*`), `_second_step` and the reset-link rule in `app/auth/routes.py`, `LoginBody.code` and `TotpCodeBody` in `app/auth/schemas.py`, `DELETE /api/admin/users/{id}/totp` and `two_step` in `app/auth/admin_api.py`, `remove-two-step` in `app/admin.py`, the `totp.*` audit actions, `totp_factors.secret_enc` in `crypto.ENCRYPTED_COLUMNS`, `app/migrations/m022_totp.py`; screens: `js/views/two_step.js` (Settings block, QR code from the vendored `qrcode-generator`), the code field of `#form-login` and the totp_required answers in `js/views/auth.js`, the People badge and removal in `js/views/settings.js`, the demo's answers in `js/mock/auth.js`; tests `tests/test_totp.py`, `tests/test_migration_m022.py`, `tests/test_two_step_ui.py`, `tools/e2e/two_step.py` |
 | Passkeys (design note 18) | `app/auth/webauthn.py` (the WebAuthn checks for a Relying Party, a CBOR reader and COSE keys, on `cryptography` only), `app/auth/passkeys.py` (storage, the in-memory challenges), `app/auth/passkeys_api.py` (`/api/me/passkeys*`, `/api/auth/passkey*`), `passkey_challenges` in `app/auth/context.py`, `passkeys` in `GET /api/auth/status`, `DELETE /api/admin/users/{id}/passkeys` and `passkeys` in `app/auth/admin_api.py`, `remove-passkeys` in `app/admin.py`, the `passkey.*` audit actions, `app/migrations/m023_passkeys.py`; screens: `js/views/passkeys.js` (Settings block, `KH.passkeys.signIn`), the passkey button of `#form-login` in `index.html` and `js/views/auth.js`, the People badge and removal in `js/views/settings.js`, the demo's answers in `js/mock/auth.js`; tests `tests/test_webauthn.py` (with `tests/data/webauthn_w3c_vectors.json`), `tests/webauthn_support.py`, `tests/test_passkeys.py`, `tests/test_migration_m023.py`, `tests/test_passkeys_ui.py`, `tools/e2e/passkeys.py` |
 | Sign-in with a provider (design note 24) | `app/auth/oidc.py` (discovery, the JWKS cache, PKCE, the token exchange through `app/egress.py`, the JWS and claim checks on `cryptography` only, the in-memory `FlowStore`), `app/auth/oidc_api.py` (`/api/auth/oidc/*`, `/api/auth/reauth/oidc`, `/api/me/oidc*`, the account rules, `status_view`, `about_view`), `OidcEnv` in `app/config.py`, the `auth.oidc.*` keys (`app/settings_registry.py`, `js/engine/settings.js`), `app/migrations/m026_oidc.py`, `signed_in_with` in `app/auth/sessions.py`, the OIDC exemption in `deps.two_step_required`, `security.PROVIDER_RETURN_RE`, `brand.OIDC_COOKIE*` and `USER_AGENT_OIDC`, `DELETE /api/admin/users/{id}/oidc`, `oidc_links` and `oidc` in `app/auth/admin_api.py`, the `oidc.*` audit actions; screens: `js/views/oidc.js` (`KH.oidc`: the buttons, Settings → Linked sign-in, the result sentences), the `#login-oidc`, `#register-oidc` and `#reauth-oidc` blocks of `index.html`, the People badge and removal and About lines in `js/views/settings.js`, the demo's answers in `js/mock/auth.js`; tests `tests/oidc_support.py` (a fake provider), `tests/test_oidc.py`, `tests/test_oidc_providers.py` (two providers at once, `OIDC_ONLY`), `tests/test_oidc_ui.py`, `tests/test_migration_m026.py`, `tools/e2e/oidc.py` |
+| Reminders (design note 35) | `app/webpush.py` (VAPID, RFC 8291 encryption, the push-host list, `Sender`), `app/reminders.py` (`/api/reminders`, the loop), `app/migrations/m035_reminders.py`, `RemindersEnv` in `app/config.py`, `brand.USER_AGENT_PUSH`, the `push` and `notificationclick` handlers in `app/static/sw.js`, `js/views/reminders.js`, `js/mock/reminders.js`, `#set-reminders` in `index.html`, `docs/reminders.md`, `tests/test_webpush.py`, `tests/test_reminders*.py`, `tests/test_migration_m035.py`, `tools/e2e/reminders*.py` |
 | API document and meta (design note 14, changes 2 and 4) | `app/openapi_doc.py` (operation ids, errors, security schemes; wired in `app/main.py` with `generate_unique_id_function` and `openapi_doc.install`), `app/api_version.py`, `app/meta.py` (`GET /api/meta`) with `status_view` in `app/ai/routes.py` and `providers_available` in `app/barcode.py`, `scripts/gen_openapi.py`, `docs/api/**`, `js/mock/meta.js`, `tests/test_openapi_snapshot.py`, `tests/test_meta.py`, `tests/data/gen_meta_vectors.py`, `tests/data/meta_vectors.json`, the meta section of `tools/e2e/parity.py` |
 | Brand strings (design note 14, change 3) | `app/brand.py` and the modules that import it (every one that names a cookie, a token prefix, the CSRF value, the database file, the export format, a User-Agent, an HKDF label or a logger), `js/engine/brand.js` (`KH.brand`; registered in `index.html` and `sw.js`) and the scripts that read it, `tests/test_brand.py` |
 | Assistant step 2 | `app/ai/chat.py`, `ChatStep` in `app/ai/schemas.py`, the chat prompt in `app/ai/prompts.py`, `guard.MEDICINE_NAMES`, `POST /api/ai/chat` in `app/ai/routes.py`, `app/migrations/m012_*`, the `ai.chat_enabled` key, `js/views/ask.js`, `css/ask.css`, the Ask tab and view in `index.html`, `scripts/ai_eval.py --chat`, `docs/dev/plans/assistant-step2.md`, `tests/test_ai_chat.py`, `tests/test_ai_chat_checks.py`, `tests/test_migration_m012.py`, `tests/test_ask_ui.py`; part C (saving from the chat): `app/ai/chat_save.py`, `app/migrations/m013_*`, the `ai.allow_trusted_saves` key and `trust` in the person's `ai` setting, the `Asker` identity in `app/mcp/tools.py`, `ask_key_hash` in `app/mcp/request_keys.py`, `ai.trust_changed` in `app/audit.py`, the trust choice and warning sheet in `js/views/ai.js`, the cards in `js/views/ask.js`, `tests/test_ai_chat_save.py`, `tests/test_migration_m013.py` |
@@ -1106,6 +1108,8 @@ preferences and the Python 3.15 image. What it could not verify is listed under 
 checks a maintainer runs before tagging are in `docs/maintainers.md`, and everything deferred or left open, with its owner, is in
 `docs/ROADMAP.md`. The progress notes of this build were condensed into those files and removed
 (`docs/dev/progress/README.md`).
+
+**Unreleased (2026-11-12):** reminders by phone notification (note 35, schema step 35), off until `REMINDERS_ENABLED`.
 
 **Status (2026-11-07): v0.23.0 is prepared.** Password reset by email (note 34, schema step 34), off until `EMAIL_ENABLED`;
 an Ask retry that races its first save reports that save; device sign-in shares `sessions.is_live`. **v0.22.3**: fifteen audit fixes: writes recheck access and trust inside their write lock
@@ -2375,7 +2379,8 @@ and pinning is its job. `read_capped` counts decoded bytes. Every outbound clien
 `app/foods.py`, Open Food Facts `app/off.py`, the breached-password check `app/auth/policy.py`, sign-in providers
 `app/auth/oidc.py`, Withings `app/devices/withings.py`, Whoop `app/devices/whoop.py`, a person's list app
 `app/list_sync/apps.py` (its `ListTransport` subclass allows the private hosts of `LIST_SYNC_ALLOWED_HOSTS` and keeps plain
-`http` on them), recipe pages `app/recipe_import/fetch.py`, Instacart `app/instacart.py`) or, for AI,
+`http` on them), recipe pages `app/recipe_import/fetch.py`, Instacart `app/instacart.py`, push services for reminders
+`app/webpush.py`) or, for AI,
 `app/ai/transport.py`'s `PinnedTransport`; `tests/test_egress.py` fails on any other client.
 
 Email (note 34) is SMTP, not HTTP, so it is outside this rule: `app/mail.py` connects with `smtplib` only to `SMTP_HOST`, which
@@ -5417,3 +5422,72 @@ Built 2026-11-07, not yet released. Schema step 34. A person adds an email in Se
   `node tests/js/run_vectors.mjs` against `KH.mock.emailAddress` and `EMAIL_TEXTS`.
 * **Tests**: `tests/test_reset_email.py` (a small SMTP server in `tests/fake_smtp.py` on 127.0.0.1; TLS checked at the `smtplib`
   seam), `tests/test_reset_email_ui.py`, `tests/test_migration_m034.py`.
+
+## Reminders by phone notification (design note 35)
+
+Built 2026-11-12, not yet released. Schema step 35. A person turns on notifications on each phone or computer in Settings →
+Reminders and sets times to log a meal, plan tomorrow or log their weight. Off unless the operator sets `REMINDERS_ENABLED`.
+**Reminders are a convenience. Do not rely on them for low blood sugar; use your CGM's alerts.** There is no kind about lows,
+insulin, medicines or glucose (a CHECK on `reminders.kind`), never dosing, and the words are generic.
+
+* **Config** (env only, `app/config.py` `RemindersEnv`, `Settings.reminders`): `REMINDERS_ENABLED` [false], `VAPID_SUBJECT`
+  (`mailto:` with an `@`, or `https://` with a host; required when on), `VAPID_PRIVATE_KEY_FILE` [`$DATA_DIR/vapid_private.pem`,
+  `Settings.vapid_key_path`; only as a file: `VAPID_PRIVATE_KEY` is a `ConfigError`; a missing file outside `DATA_DIR` is a
+  `ConfigError`], `REMINDERS_TIMEOUT_S` [10, 1–60]. On needs `PUBLIC_URL` with `https` (or `http` on `localhost`, `127.0.0.1`,
+  `::1`) and `AUTH_MODE` other than `none`. Not in the settings registry. Its own switch: `PUSH_ENABLED` is phone shortcuts.
+* **Web Push** (`app/webpush.py`, no new dependency, on `cryptography`): `load_or_create_key` reads the P-256 PEM key, or makes it
+  once with `O_EXCL` and mode 0600 inside `DATA_DIR`; the PEM is registered with the log redaction. `Vapid` signs ES256 JWTs
+  (`aud` the push service's origin, `exp` now + 12 h, `sub`), reused for up to 1 hour per `aud`; `Authorization: vapid t=…, k=…`.
+  `encrypt` is RFC 8291 `aes128gcm` (one record, rs 4096, a new key and salt per message, at most 3,993 bytes of payload);
+  `decrypt` is the browser's side, for tests and the e2e fake. `check_endpoint`: `https`, port 443, no user info or fragment, at
+  most 1,024 characters, host `fcm.googleapis.com`, `updates.push.services.mozilla.com`, or a name under `.push.apple.com` or
+  `.notify.windows.com`. `check_keys`: a P-256 point and a 16-byte secret. `Sender` (`app.state.webpush`; tests set `resolver`,
+  `direct`, `use_env_proxy`) posts through `egress.CheckedTransport(allow_private=False)`, no redirects, 16 KiB, with
+  `TTL: 3600`, `Urgency: normal`, `User-Agent: reminders` (`brand.USER_AGENT_PUSH`), within `2 × REMINDERS_TIMEOUT_S`
+  (`egress.run_with_deadline("webpush", …)`). Results: `None` (2xx), `gone` (404, 410: the caller deletes the device), `auth`,
+  `busy`, `rejected`, `bad_answer`, `blocked`, `timeout`, `unreachable`.
+* **The message**: Declarative Web Push `{"web_push": 8030, "notification": {title, body, navigate, lang: "en"}}`. `title` is the
+  instance name when the admin changed it, else "Food log" (the default "Kidney Health" names a condition). `body`: "Time to log
+  breakfast." / lunch / dinner / "Time to log a snack.", "Time to plan tomorrow's meals.", "Time to log your weight.", the test
+  "This is a test. Your reminders will look like this.". `navigate`: `<PUBLIC_URL>/#add`, `#plan`, `#today`, `#settings`.
+* **The loop** (`app/reminders.py` `loop`, started in the lifespan only when on): 20 s after start, then at each minute. `run_due`
+  finds enabled reminders of active, non-test people who have a device; `is_due`: the reminder's day bit in its time zone, and the
+  local time from `time_local` to 5 minutes after; not already `last_sent_on` today. It claims the day with a conditional
+  `UPDATE … SET last_sent_on` (at most once a day, also with two workers), skips a `log_meal` reminder when the person has an
+  `eaten` entry for that meal on that local date, then sends to each device and records `last_ok_at` / `last_error`.
+
+| Method and path | Auth | Body → response |
+|---|---|---|
+| `GET /api/reminders` | signed in | `{enabled, can_use, public_key, max_reminders: 10, max_devices: 5, safety, kinds: [{kind, label, meals}], reminders: [Reminder], devices: [{id, endpoint_hash, user_agent, created_at, last_ok_at, last_error}]}`. Always 200; while off `enabled: false` and empty lists. `endpoint_hash` is the first 32 hex digits of SHA-256(endpoint): the page finds "this device" without the endpoint; the endpoint and keys are never returned |
+| `POST /api/reminders` | signed in | `{kind, meal?, time "HH:MM", days 1–127 (127), time_zone? (IANA, ""), enabled? (true)}` → 201 Reminder `{id, kind, meal, time, days, time_zone, enabled, created_at, last_sent_on}`. 400 with a sentence and `field` (meal needed or not allowed, time, days, time zone); 409 at 10; 403 test account; 404 while off |
+| `PATCH /api/reminders/{id}` | signed in | any of the fields → Reminder. A new time, days or zone clears `last_sent_on`. 404 not yours |
+| `DELETE /api/reminders/{id}` | signed in | 204. 404 not yours |
+| `POST /api/reminders/subscriptions` | signed in | `PushSubscription.toJSON()` (`{endpoint, keys: {p256dh, auth}}`, other keys ignored) → 201 device, or 200 with the same device for an endpoint already this person's (the keys are updated). 400 an endpoint off the list or bad keys; 409 at 5 devices; 403 test account. An endpoint another account had moves here (one browser profile has one subscription per site; that account's activity gets `reminder.device_removed` `via: other_account`). `User-Agent` is kept, cut to 300 characters |
+| `DELETE /api/reminders/subscriptions/{id}` | signed in | 204. 404 not yours |
+| `POST /api/reminders/test` | signed in | → `{devices, sent, failed, removed, demo: false}`: one test to each of the person's devices. 409 no device; 429 after 5 an hour (`reminders_test`); 403 test account |
+
+* **Audit** (all in `USER_VISIBLE_ACTIONS`): `reminder.set` (`kind`, `new`), `reminder.removed` (`kind`),
+  `reminder.device_added`, `reminder.device_removed` (`via`: `person`, `push_service` on 404/410, `other_account`). Never the
+  words or the endpoint.
+* **Export**: `export.json` has `reminders` (the Reminder shape); never the devices or their keys. The import skips it
+  (`SKIPPED_SECTIONS`). Deleting an account deletes both tables (cascade).
+* **Service worker** (`app/static/sw.js`): `push` parses the same JSON and always calls `showNotification` (title at most 80,
+  body at most 200, icon, `tag: kh-reminder`), so a browser without Declarative Web Push shows the same thing and Safari never
+  sees a silent push; `notificationclick` focuses an open window of this origin and navigates it, or opens one, and only ever to
+  a page of this origin with path `/` (`ownPage`).
+* **Screens** (`js/views/reminders.js`, `KH.reminders.render`, section `#set-reminders` before This device, hidden while off):
+  the safety words; **This device** (Turn on notifications on this device: `Notification.requestPermission()` only from that tap,
+  then `pushManager.subscribe({userVisibleOnly: true, applicationServerKey})` and `POST /subscriptions`; Send a test; Turn off on
+  this device: `DELETE` then `unsubscribe()`); on iOS outside `display-mode: standalone` a Home Screen how-to instead of the
+  button; **Your reminders** (what, time, days, On; up to 10; the browser's `Intl` time zone is saved with each); **Devices with
+  notifications on** (`KH.deviceName`, This device, the last error in words, Remove). Activity labels for the four actions.
+* **Parity**: `js/mock/reminders.js` answers every route like a server with it on, keeps the reminders for the export, never
+  sends (`/test` answers `demo: true`, the page says "Demo: no notification was sent.") and the page never asks the browser for
+  a subscription in the demo. No JS twin of the loop, so no vectors. `tests/js/reminders_demo.mjs` with
+  `tests/test_reminders_ui.py` checks the words and shapes against `app/reminders.py`.
+* **Tests**: `tests/test_webpush.py` (RFC 8291 Appendix A byte for byte, round trips, the JWT claims and reuse, the host list,
+  the key file, a fake push service behind the real transport, private addresses, the deadline), `tests/test_reminders.py`
+  (routes, isolation, the loop at a fixed time in a time zone, the meal skip, 404/410, start-up refusals, the key never in an
+  answer or the log), `tests/test_reminders_ui.py`, `tests/test_migration_m035.py`; the Chromium walk `tools/e2e/reminders.py`
+  (`reminders_app.py`: a fake push service in the app process). Guide: `docs/reminders.md`. Not yet tried on a real iPhone or
+  Android phone (ROADMAP).
