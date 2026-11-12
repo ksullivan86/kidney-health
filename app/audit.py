@@ -101,6 +101,10 @@ ACTIONS: set[str] = {
     "suggestion.accepted",
     "suggestion.declined",
     "suggestion.expired",
+    "care_note.written",  # notes from the Care team (design note 37; app/care_notes.py); never the text
+    "care_note.edited",
+    "care_note.withdrawn",
+    "care_note.deleted",
     "oidc.linked",  # sign-in with a provider (design note 24; app/auth/oidc_api.py, admin_api.py)
     "oidc.unlinked",
     "device.connected",  # connected devices (design note 27; app/devices/)
@@ -166,6 +170,10 @@ USER_VISIBLE_ACTIONS = frozenset(
         "suggestion.accepted",
         "suggestion.declined",
         "suggestion.expired",
+        "care_note.written",
+        "care_note.edited",
+        "care_note.withdrawn",
+        "care_note.deleted",
         "oidc.linked",
         "oidc.unlinked",
         "device.connected",

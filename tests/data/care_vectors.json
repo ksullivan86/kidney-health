@@ -1,35 +1,47 @@
 {
- "about": "Made by tests/data/gen_care_vectors.py from app/sharing.py and app/care_suggestions.py (design note 29).",
+ "about": "Made by tests/data/gen_care_vectors.py from app/sharing.py, app/care_suggestions.py and app/care_notes.py (design notes 29 and 37).",
  "constants": {
   "switches": [
    "may_plan",
    "may_log",
    "may_use_saved_meals",
-   "may_suggest"
+   "may_suggest",
+   "may_note"
   ],
   "roles": [
    "viewer",
    "care_helper",
-   "caregiver"
+   "caregiver",
+   "clinician"
   ],
   "presets": {
    "viewer": {
     "may_plan": false,
     "may_log": false,
     "may_use_saved_meals": false,
-    "may_suggest": false
+    "may_suggest": false,
+    "may_note": false
    },
    "care_helper": {
     "may_plan": true,
     "may_log": false,
     "may_use_saved_meals": false,
-    "may_suggest": false
+    "may_suggest": false,
+    "may_note": false
    },
    "caregiver": {
     "may_plan": true,
     "may_log": true,
     "may_use_saved_meals": false,
-    "may_suggest": false
+    "may_suggest": false,
+    "may_note": false
+   },
+   "clinician": {
+    "may_plan": false,
+    "may_log": false,
+    "may_use_saved_meals": false,
+    "may_suggest": false,
+    "may_note": true
    }
   },
   "areas": [
@@ -62,7 +74,8 @@
     "may_plan": false,
     "may_log": false,
     "may_use_saved_meals": false,
-    "may_suggest": false
+    "may_suggest": false,
+    "may_note": false
    },
    "role": "viewer"
   },
@@ -71,7 +84,28 @@
     "may_plan": false,
     "may_log": false,
     "may_use_saved_meals": false,
-    "may_suggest": true
+    "may_suggest": false,
+    "may_note": true
+   },
+   "role": "clinician"
+  },
+  {
+   "switches": {
+    "may_plan": false,
+    "may_log": false,
+    "may_use_saved_meals": false,
+    "may_suggest": true,
+    "may_note": false
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": false,
+    "may_log": false,
+    "may_use_saved_meals": false,
+    "may_suggest": true,
+    "may_note": true
    },
    "role": "custom"
   },
@@ -80,7 +114,8 @@
     "may_plan": false,
     "may_log": false,
     "may_use_saved_meals": true,
-    "may_suggest": false
+    "may_suggest": false,
+    "may_note": false
    },
    "role": "custom"
   },
@@ -89,7 +124,28 @@
     "may_plan": false,
     "may_log": false,
     "may_use_saved_meals": true,
-    "may_suggest": true
+    "may_suggest": false,
+    "may_note": true
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": false,
+    "may_log": false,
+    "may_use_saved_meals": true,
+    "may_suggest": true,
+    "may_note": false
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": false,
+    "may_log": false,
+    "may_use_saved_meals": true,
+    "may_suggest": true,
+    "may_note": true
    },
    "role": "custom"
   },
@@ -98,7 +154,8 @@
     "may_plan": false,
     "may_log": true,
     "may_use_saved_meals": false,
-    "may_suggest": false
+    "may_suggest": false,
+    "may_note": false
    },
    "role": "custom"
   },
@@ -107,7 +164,28 @@
     "may_plan": false,
     "may_log": true,
     "may_use_saved_meals": false,
-    "may_suggest": true
+    "may_suggest": false,
+    "may_note": true
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": false,
+    "may_log": true,
+    "may_use_saved_meals": false,
+    "may_suggest": true,
+    "may_note": false
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": false,
+    "may_log": true,
+    "may_use_saved_meals": false,
+    "may_suggest": true,
+    "may_note": true
    },
    "role": "custom"
   },
@@ -116,7 +194,8 @@
     "may_plan": false,
     "may_log": true,
     "may_use_saved_meals": true,
-    "may_suggest": false
+    "may_suggest": false,
+    "may_note": false
    },
    "role": "custom"
   },
@@ -125,7 +204,28 @@
     "may_plan": false,
     "may_log": true,
     "may_use_saved_meals": true,
-    "may_suggest": true
+    "may_suggest": false,
+    "may_note": true
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": false,
+    "may_log": true,
+    "may_use_saved_meals": true,
+    "may_suggest": true,
+    "may_note": false
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": false,
+    "may_log": true,
+    "may_use_saved_meals": true,
+    "may_suggest": true,
+    "may_note": true
    },
    "role": "custom"
   },
@@ -134,7 +234,8 @@
     "may_plan": true,
     "may_log": false,
     "may_use_saved_meals": false,
-    "may_suggest": false
+    "may_suggest": false,
+    "may_note": false
    },
    "role": "care_helper"
   },
@@ -143,7 +244,28 @@
     "may_plan": true,
     "may_log": false,
     "may_use_saved_meals": false,
-    "may_suggest": true
+    "may_suggest": false,
+    "may_note": true
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": true,
+    "may_log": false,
+    "may_use_saved_meals": false,
+    "may_suggest": true,
+    "may_note": false
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": true,
+    "may_log": false,
+    "may_use_saved_meals": false,
+    "may_suggest": true,
+    "may_note": true
    },
    "role": "custom"
   },
@@ -152,7 +274,8 @@
     "may_plan": true,
     "may_log": false,
     "may_use_saved_meals": true,
-    "may_suggest": false
+    "may_suggest": false,
+    "may_note": false
    },
    "role": "custom"
   },
@@ -161,7 +284,28 @@
     "may_plan": true,
     "may_log": false,
     "may_use_saved_meals": true,
-    "may_suggest": true
+    "may_suggest": false,
+    "may_note": true
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": true,
+    "may_log": false,
+    "may_use_saved_meals": true,
+    "may_suggest": true,
+    "may_note": false
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": true,
+    "may_log": false,
+    "may_use_saved_meals": true,
+    "may_suggest": true,
+    "may_note": true
    },
    "role": "custom"
   },
@@ -170,7 +314,8 @@
     "may_plan": true,
     "may_log": true,
     "may_use_saved_meals": false,
-    "may_suggest": false
+    "may_suggest": false,
+    "may_note": false
    },
    "role": "caregiver"
   },
@@ -179,7 +324,28 @@
     "may_plan": true,
     "may_log": true,
     "may_use_saved_meals": false,
-    "may_suggest": true
+    "may_suggest": false,
+    "may_note": true
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": true,
+    "may_log": true,
+    "may_use_saved_meals": false,
+    "may_suggest": true,
+    "may_note": false
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": true,
+    "may_log": true,
+    "may_use_saved_meals": false,
+    "may_suggest": true,
+    "may_note": true
    },
    "role": "custom"
   },
@@ -188,7 +354,8 @@
     "may_plan": true,
     "may_log": true,
     "may_use_saved_meals": true,
-    "may_suggest": false
+    "may_suggest": false,
+    "may_note": false
    },
    "role": "custom"
   },
@@ -197,7 +364,28 @@
     "may_plan": true,
     "may_log": true,
     "may_use_saved_meals": true,
-    "may_suggest": true
+    "may_suggest": false,
+    "may_note": true
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": true,
+    "may_log": true,
+    "may_use_saved_meals": true,
+    "may_suggest": true,
+    "may_note": false
+   },
+   "role": "custom"
+  },
+  {
+   "switches": {
+    "may_plan": true,
+    "may_log": true,
+    "may_use_saved_meals": true,
+    "may_suggest": true,
+    "may_note": true
    },
    "role": "custom"
   }
@@ -275,5 +463,198 @@
    "note": "A correction for lunch",
    "problem": "Please leave out \"correction\". Notes are about food: never insulin, doses, medicines or lab results, and never call food \"safe\" or \"bad\"."
   }
- ]
+ ],
+ "care_notes": {
+  "constants": {
+   "max_body": 1000,
+   "max_per_day": 10,
+   "max_kept": 500,
+   "max_page": 50,
+   "max_days_back": 365,
+   "dosing_pattern": "\\b(insulin|bolus|basal|units?|doses?|dosing|corrections?|ratios?|pumps?)\\b",
+   "texts": {
+    "refused": "Notes cannot be about lows, insulin or doses. Talk to Ana directly about those.",
+    "empty": "Write the note first.",
+    "too_long": "A note can be at most 1,000 characters.",
+    "too_many_today": "You have written 10 notes for Ana in the last 24 hours, the most allowed. Try again tomorrow.",
+    "too_many_kept": "Ana has 500 notes. Ask them to delete old ones.",
+    "already_read": "Ana has read this note. Write a new one instead.",
+    "area_not_shared": "Ana does not share that with you. Choose something they share, or nothing.",
+    "bad_day": "Choose a day in the last year, not in the future.",
+    "no_note": "That note is not here any more.",
+    "changed": "This note was changed since you opened it.",
+    "send_version": "Send the note's version in If-Match.",
+    "notes_off": "Notes are turned off on this server. Your admin can turn them on."
+   }
+  },
+  "text_cases": [
+   {
+    "text": null,
+    "clean": "",
+    "problem": "Write the note first."
+   },
+   {
+    "text": "",
+    "clean": "",
+    "problem": "Write the note first."
+   },
+   {
+    "text": "   ",
+    "clean": "",
+    "problem": "Write the note first."
+   },
+   {
+    "text": "Your potassium was lower on the days you swapped the potato for rice. Keep that up.",
+    "clean": "Your potassium was lower on the days you swapped the potato for rice. Keep that up.",
+    "problem": null
+   },
+   {
+    "text": "Your lab results look steadier. Let's talk about supplements at the visit.",
+    "clean": "Your lab results look steadier. Let's talk about supplements at the visit.",
+    "problem": null
+   },
+   {
+    "text": "This snack is safe on dialysis days.",
+    "clean": "This snack is safe on dialysis days.",
+    "problem": null
+   },
+   {
+    "text": "Low-sodium soup is a good swap.",
+    "clean": "Low-sodium soup is a good swap.",
+    "problem": null
+   },
+   {
+    "text": "Take 2 units before lunch",
+    "clean": "Take 2 units before lunch",
+    "problem": "Notes cannot be about lows, insulin or doses. Talk to Ana directly about those."
+   },
+   {
+    "text": "Your insulin to carb ratio",
+    "clean": "Your insulin to carb ratio",
+    "problem": "Notes cannot be about lows, insulin or doses. Talk to Ana directly about those."
+   },
+   {
+    "text": "One dose of the binder",
+    "clean": "One dose of the binder",
+    "problem": "Notes cannot be about lows, insulin or doses. Talk to Ana directly about those."
+   },
+   {
+    "text": "If you feel shaky, treat it first",
+    "clean": "If you feel shaky, treat it first",
+    "problem": "Notes cannot be about lows, insulin or doses. Talk to Ana directly about those."
+   },
+   {
+    "text": "I'm low",
+    "clean": "I'm low",
+    "problem": "Notes cannot be about lows, insulin or doses. Talk to Ana directly about those."
+   },
+   {
+    "text": "Sugar was 3.2 earlier",
+    "clean": "Sugar was 3.2 earlier",
+    "problem": "Notes cannot be about lows, insulin or doses. Talk to Ana directly about those."
+   },
+   {
+    "text": "Dosing is for your diabetes team",
+    "clean": "Dosing is for your diabetes team",
+    "problem": "Notes cannot be about lows, insulin or doses. Talk to Ana directly about those."
+   },
+   {
+    "text": "A bolus before meals",
+    "clean": "A bolus before meals",
+    "problem": "Notes cannot be about lows, insulin or doses. Talk to Ana directly about those."
+   },
+   {
+    "text": "Basal rates",
+    "clean": "Basal rates",
+    "problem": "Notes cannot be about lows, insulin or doses. Talk to Ana directly about those."
+   },
+   {
+    "text": "Your pump settings",
+    "clean": "Your pump settings",
+    "problem": "Notes cannot be about lows, insulin or doses. Talk to Ana directly about those."
+   },
+   {
+    "text": "A correction at night",
+    "clean": "A correction at night",
+    "problem": "Notes cannot be about lows, insulin or doses. Talk to Ana directly about those."
+   },
+   {
+    "text": "ｉｎｓｕｌｉｎ in full-width letters",
+    "clean": "ｉｎｓｕｌｉｎ in full-width letters",
+    "problem": "Notes cannot be about lows, insulin or doses. Talk to Ana directly about those."
+   },
+   {
+    "text": "  Trimmed at both ends  ",
+    "clean": "Trimmed at both ends",
+    "problem": null
+   },
+   {
+    "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "clean": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "problem": null
+   },
+   {
+    "text": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "clean": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "problem": "A note can be at most 1,000 characters."
+   },
+   {
+    "text": " bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb ",
+    "clean": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "problem": null
+   },
+   {
+    "text": "Line one\r\nLine two",
+    "clean": "Line one\nLine two",
+    "problem": null
+   },
+   {
+    "text": "Phosphorus 5.8 last month, down from 6.4",
+    "clean": "Phosphorus 5.8 last month, down from 6.4",
+    "problem": null
+   },
+   {
+    "text": "Community units for meals",
+    "clean": "Community units for meals",
+    "problem": "Notes cannot be about lows, insulin or doses. Talk to Ana directly about those."
+   }
+  ],
+  "day_cases": [
+   {
+    "today": "2026-11-12",
+    "date": null,
+    "problem": null
+   },
+   {
+    "today": "2026-11-12",
+    "date": "2026-11-12",
+    "problem": null
+   },
+   {
+    "today": "2026-11-12",
+    "date": "2026-11-13",
+    "problem": null
+   },
+   {
+    "today": "2026-11-12",
+    "date": "2026-11-14",
+    "problem": "Choose a day in the last year, not in the future."
+   },
+   {
+    "today": "2026-11-12",
+    "date": "2025-11-12",
+    "problem": null
+   },
+   {
+    "today": "2026-11-12",
+    "date": "2025-11-11",
+    "problem": "Choose a day in the last year, not in the future."
+   },
+   {
+    "today": "2026-11-12",
+    "date": "2026-01-01",
+    "problem": null
+   }
+  ]
+ }
 }

@@ -40,7 +40,8 @@ and password reset by email (0.23.0). Candidates, for the owner to choose:
   ([note 36](dev/research/36-lab-pdf-text.md)). Left for the owner: a live run on real portal PDFs and the local model.
 * **A name detector on top of the privacy filter** (adds packages and a model to the image; the owner's choice): "Privacy
   tiers" below. Small to medium.
-* **Clinician accounts with notes**: "Ideas from the owner" below. Large.
+* **Clinician accounts with notes, phase 2**: replies, notifications by email or Web Push, attachments ("Ideas from the owner"
+  below). Phase 1 is built.
 * **Kroger next to Instacart**, if its API allows it: "The shopping list outside the app" below.
 
 Waiting on the owner: an Instacart key; reminders tried on a real iPhone (from the Home Screen) and an Android phone; an Apple Developer membership for the iPhone app's step 3 (signing, TestFlight and
@@ -160,7 +161,12 @@ the owner's choice since it adds packages and a model to the image (note 31 §5 
   [`instacart.md`](instacart.md); off until `INSTACART_ENABLED` and the server's own key). Left: a try against real Grocy,
   KitchenOwl and Mealie servers and against Instacart's development host (the tests use fakes), Instacart's review of the
   production key (the owner), and Kroger (Ralphs, Food 4 Less), only if practical.
-* **Clinician accounts with notes (large).** Builds on "Read-only sharing with a caregiver or dietitian" above: a `clinician` role that a person invites (and can revoke) to see their log, labs, symptoms and visit summaries read-only, and to add notes the person can read. Every view by a clinician goes to the person's activity log. The read-only sharing it builds on is built (note 19); it still needs a notes table, and wording about what the app is not: a self-hosted personal tool, not part of a clinic's medical record.
+* **Clinician accounts with notes (large).** Builds on "Read-only sharing with a caregiver or dietitian" above. Design: [note 37](dev/research/37-clinician-accounts.md).
+  * **Phase 1, built (unreleased, schema step 36):** the share switch `may_note` and the **Clinician** preset (a Viewer who may write notes), the server switch `CARE_NOTES_ENABLED` (off), notes the person reads in their own app (the Notes list, a Today card, a screen-only line on Visit prep), Write a note from Open and Trends, edit and withdraw only while unread, the text check for lows and dosing words, the limits, the hourly look rows, the activity rows, the export, the demo and a Chromium walk. The note's defaults were kept.
+  * **Phase 2a, replies:** the person answers a note (same table with `reply_to`, same limits and checks).
+  * **Phase 2b, email:** an opt-in "you have a new note" letter, at most one a day, no name or health data, only with `EMAIL_ENABLED` and a confirmed address.
+  * **Phase 2c, Web Push:** one more opt-in kind once the Web Push reminders are in, the same generic text, never about lows.
+  * **Phase 2d, attachments:** a PDF or photo with a note. Not recommended until asked.
 * **Direct patient-portal connection (SMART on FHIR, large; probably not).** Each EHR vendor (Epic, Oracle Health) requires registering the app and an OAuth flow per health system; for a self-hosted app each operator would have to register their own instance. The file imports above cover most of the value. This route covers MyChart (Epic's patient portal) and other EHR portals; the lab companies Quest and Labcorp are not EHRs and, as far as we know, offer no open patient API (check before designing), but their portals download PDF reports (the PDF item above) and results usually reach the doctor's EHR too. Paid aggregators (for example 1upHealth or Health Gorilla) would route health data through a third party, against the self-hosted design.
 
 ### Rough cost of the owner's ideas

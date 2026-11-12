@@ -10,7 +10,9 @@ Produced by the server's own code, ``app/sharing.py`` and ``app/care_suggestions
 * ``constants``: the switches, the roles and their presets, the suggestion limits, the words guidance never uses
   (``messages.BANNED_PATTERN``) and every fixed sentence the routes answer with;
 * ``role_cases``: every mix of the four switches and the role it shows (``custom`` when it matches no preset);
-* ``note_cases``: a suggestion's note and why it is refused (null when it may be sent), for a person named Ana.
+* ``note_cases``: a suggestion's note and why it is refused (null when it may be sent), for a person named Ana;
+* ``care_notes``: notes from the Care team (design note 37, ``app/care_notes.py``): the limits, the fixed sentences, the dosing
+  words, ``text_cases`` (a note's text and why it is refused) and ``day_cases`` (a note's day against a fixed today).
 """
 from __future__ import annotations
 
@@ -25,6 +27,7 @@ ROOT = Path(__file__).resolve().parents[2]
 OUT = Path(__file__).resolve().parent / "care_vectors.json"
 sys.path.insert(0, str(ROOT))
 
+from app import care_notes as N  # noqa: E402
 from app import care_suggestions as C  # noqa: E402
 from app import sharing as S  # noqa: E402
 from app.guidance.messages import BANNED_PATTERN  # noqa: E402
@@ -35,6 +38,17 @@ NOTES = [
     "Your lab results said so", "Sugar was 3.2 earlier", "I'm low, eat this", "no need to count it", "Skip the binder today",
     "ｉｎｓｕｌｉｎ in full-width letters", "Dinner at 6 with Sam", "Good for dialysis days", "A correction for lunch",
 ]
+NOTE_TEXTS = [
+    None, "", "   ", "Your potassium was lower on the days you swapped the potato for rice. Keep that up.",
+    "Your lab results look steadier. Let's talk about supplements at the visit.", "This snack is safe on dialysis days.",
+    "Low-sodium soup is a good swap.", "Take 2 units before lunch", "Your insulin to carb ratio", "One dose of the binder",
+    "If you feel shaky, treat it first", "I'm low", "Sugar was 3.2 earlier", "Dosing is for your diabetes team",
+    "A bolus before meals", "Basal rates", "Your pump settings", "A correction at night", "ｉｎｓｕｌｉｎ in full-width letters",
+    "  Trimmed at both ends  ", "a" * 1000, "a" * 1001, " " + "b" * 1000 + " ", "Line one\r\nLine two",
+    "Phosphorus 5.8 last month, down from 6.4", "Community units for meals",
+]
+DAY_TODAY = "2026-11-12"
+DAYS = [None, "2026-11-12", "2026-11-13", "2026-11-14", "2025-11-12", "2025-11-11", "2026-01-01"]
 
 
 def build() -> dict[str, Any]:
@@ -43,7 +57,7 @@ def build() -> dict[str, Any]:
         switches = dict(zip(S.SWITCHES, values))
         roles.append({"switches": switches, "role": S.role_of(switches)})
     return {
-        "about": "Made by tests/data/gen_care_vectors.py from app/sharing.py and app/care_suggestions.py (design note 29).",
+        "about": "Made by tests/data/gen_care_vectors.py from app/sharing.py, app/care_suggestions.py and app/care_notes.py (design notes 29 and 37).",
         "constants": {
             "switches": list(S.SWITCHES), "roles": list(S.ROLES), "presets": S.PRESETS, "areas": list(S.AREAS),
             "suggest_days": C.SUGGEST_DAYS, "max_open_per_share": C.MAX_OPEN_PER_SHARE, "max_per_day": C.MAX_PER_DAY,
@@ -54,6 +68,17 @@ def build() -> dict[str, Any]:
         },
         "role_cases": roles,
         "note_cases": [{"note": note, "problem": C.note_problem(note, "Ana")} for note in NOTES],
+        "care_notes": {
+            "constants": {"max_body": N.MAX_BODY, "max_per_day": N.MAX_PER_DAY, "max_kept": N.MAX_KEPT, "max_page": N.MAX_PAGE,
+                          "max_days_back": N.MAX_DAYS_BACK, "dosing_pattern": N.DOSING_PATTERN.pattern,
+                          "texts": {"refused": N.NOTE_REFUSED.format("Ana"), "empty": N.EMPTY, "too_long": N.TOO_LONG,
+                                    "too_many_today": N.TOO_MANY_TODAY.format("Ana"), "too_many_kept": N.TOO_MANY_KEPT.format("Ana"),
+                                    "already_read": N.ALREADY_READ.format("Ana"), "area_not_shared": N.AREA_NOT_SHARED.format("Ana"),
+                                    "bad_day": N.BAD_DAY, "no_note": N.NO_NOTE, "changed": N.CHANGED, "send_version": N.SEND_VERSION,
+                                    "notes_off": S.NOTES_OFF}},
+            "text_cases": [{"text": t, "clean": N.clean_body(t), "problem": N.note_problem(t, "Ana")} for t in NOTE_TEXTS],
+            "day_cases": [{"today": DAY_TODAY, "date": d, "problem": N.day_problem(d, DAY_TODAY)} for d in DAYS],
+        },
     }
 
 

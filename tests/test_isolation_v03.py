@@ -50,6 +50,7 @@ import test_list_sync
 import test_migration_m032
 import test_reminders
 import test_migration_m035
+import test_care_notes
 from ai_support import FakeProvider, attach, chat
 from conftest import DAY, HTTPS_URL, TestClient, add_user, find_food, sign_in
 from app.config import AiEnv
@@ -121,6 +122,10 @@ MATRIX: dict[str, tuple[str, ...]] = {
                          "test_care_team_full.test_no_thanks_and_what_the_suggester_sees",
                          "test_care_team_full.test_every_new_route_is_the_same_404_when_it_is_not_yours_now",
                          "test_migration_m031.test_suggestions_check_and_cascade"),
+    "care_notes": ("test_care_notes.test_a_note_is_only_ever_seen_by_the_person_and_its_author",  # step 36 (note 37)
+                   "test_care_notes.test_every_note_route_is_the_same_404_when_it_is_not_yours_now",
+                   "test_care_notes.test_deleting_the_authors_account_keeps_the_note_for_the_person",
+                   "test_care_notes.test_step_36_runs_on_a_database_at_step_34_or_35"),
     "feedback": ("test_test_accounts.test_feedback_is_for_test_accounts_and_admins_only",  # test accounts, step 28 (note 26)
                  "test_test_accounts.test_reset_deletes_what_they_made_and_starts_again"),
     "oidc_links": ("test_oidc.test_another_persons_link_is_404",  # sign-in with a provider, step 26 (note 24)
@@ -171,7 +176,7 @@ MODULES = {"test_reset_email": test_reset_email, "test_isolation": test_isolatio
            "test_whoop": test_whoop, "test_activity": test_activity, "test_migration_m030": test_migration_m030,
            "test_care_team_full": test_care_team_full, "test_migration_m031": test_migration_m031,
            "test_list_sync": test_list_sync, "test_migration_m032": test_migration_m032,
-           "test_reminders": test_reminders, "test_migration_m035": test_migration_m035}
+           "test_reminders": test_reminders, "test_migration_m035": test_migration_m035, "test_care_notes": test_care_notes}
 
 
 def _tables_with_people(conn: sqlite3.Connection) -> dict[str, list[str]]:

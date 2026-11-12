@@ -212,6 +212,7 @@
 [NOTE33]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/33-instacart.md "Design note 33"
 [NOTE34]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/34-password-reset-by-email.md "Design note 34"
 [NOTE35]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/35-reminders.md "Design note 35"
+[NOTE37]: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/37-clinician-accounts.md "Design note 37"
 [INSTACART-IDP]: https://docs.instacart.com/developer_platform_api/api/products/create_shopping_list_page "Instacart Developer Platform"
 [SCHEMA-NUTRITION]: https://schema.org/NutritionInformation "schema.org NutritionInformation"
 [ODRISCOLL20]: https://bjsm.bmj.com/content/54/6/332 "O'Driscoll 2020: how well activity monitors estimate energy"

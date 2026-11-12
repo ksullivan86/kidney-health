@@ -22,21 +22,29 @@
   const AREAS = ['food', 'labs', 'body', 'symptoms', 'activity'];
   const AREA_LABEL = { food: 'food log', labs: 'lab results', body: 'weight and blood pressure', symptoms: 'symptoms',
     activity: 'activity and recovery' };
-  const ROLES = ['viewer', 'care_helper', 'caregiver'];
-  const ROLE_LABEL = { viewer: 'Viewer', care_helper: 'Care helper', caregiver: 'Caregiver', custom: 'Custom' };
+  const ROLES = ['viewer', 'care_helper', 'caregiver', 'clinician'];
+  const ROLE_LABEL = { viewer: 'Viewer', care_helper: 'Care helper', caregiver: 'Caregiver', clinician: 'Clinician', custom: 'Custom' };
   const ROLE_HINT = { viewer: 'can look at what you choose, and never change anything',
     care_helper: 'can also plan your meals and use your shopping list. They never change what you ate, your targets or your profile',
-    caregiver: 'can also log food you ate. They never change your targets, labs, profile or medicines, or a low treatment' };
-  // The four "Do" switches of a share (design note 29 §2). A role is a preset over them; any other mix shows as Custom.
-  const SWITCHES = ['may_plan', 'may_log', 'may_use_saved_meals', 'may_suggest'];
+    caregiver: 'can also log food you ate. They never change your targets, labs, profile or medicines, or a low treatment',
+    clinician: 'can look and write notes for you' };
+  // Under the Clinician choice (design note 37 §5): what a note is and is not.
+  const CLINICIAN_NOTE = 'Notes are messages for you. They are not a medical record and never change your targets, labs or medicines. '
+    + 'The app does not check who someone is.';
+  // The "Do" switches of a share (design notes 29 §2 and 37 §4). A role is a preset over them; any other mix shows as Custom. The
+  // first four need the food log; notes do not.
+  const FOOD_SWITCHES = ['may_plan', 'may_log', 'may_use_saved_meals', 'may_suggest'];
+  const SWITCHES = [...FOOD_SWITCHES, 'may_note'];
   const PRESETS = {
-    viewer: { may_plan: false, may_log: false, may_use_saved_meals: false, may_suggest: false },
-    care_helper: { may_plan: true, may_log: false, may_use_saved_meals: false, may_suggest: false },
-    caregiver: { may_plan: true, may_log: true, may_use_saved_meals: false, may_suggest: false },
+    viewer: { may_plan: false, may_log: false, may_use_saved_meals: false, may_suggest: false, may_note: false },
+    care_helper: { may_plan: true, may_log: false, may_use_saved_meals: false, may_suggest: false, may_note: false },
+    caregiver: { may_plan: true, may_log: true, may_use_saved_meals: false, may_suggest: false, may_note: false },
+    clinician: { may_plan: false, may_log: false, may_use_saved_meals: false, may_suggest: false, may_note: true },
   };
   const SWITCH_LABEL = { may_plan: 'Plan my meals and use my shopping list', may_log: 'Log food I ate', may_use_saved_meals: 'Use my saved meals',
-    may_suggest: 'Suggest meals for me to add' };
-  const SWITCH_NOUN = { may_plan: 'planning', may_log: 'logging food', may_use_saved_meals: 'saved meals', may_suggest: 'suggestions' };
+    may_suggest: 'Suggest meals for me to add', may_note: 'Write notes for me' };
+  const SWITCH_NOUN = { may_plan: 'planning', may_log: 'logging food', may_use_saved_meals: 'saved meals', may_suggest: 'suggestions',
+    may_note: 'notes' };
   const NEEDS_FOOD = 'Planning, logging, saved meals and suggestions need your food log.';
   // How long a share lasts once accepted (POST /api/me/shares `days`; the server takes 1 to 365).
   const DAY_CHOICES = [['', 'Until I stop it'], ['7', '1 week'], ['30', '30 days'], ['90', '90 days'], ['365', '1 year']];
@@ -100,9 +108,15 @@
     const d = new Date(String(iso).length === 10 ? `${iso}T12:00:00` : iso);
     return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   }
-  /** When the other person last looked, in words. `today` is YYYY-MM-DD (UTC, as the server counts views). */
-  function lastLooked(iso, today) {
+  /** When the other person last looked, in words. `today` is YYYY-MM-DD (UTC, as the server counts views). With `area` (a share
+      with notes on writes each look by area and hour, design note 37 §6): "last looked today 14:05 at lab results". */
+  function lastLooked(iso, today, area = null) {
     if (!iso) return 'has not looked yet';
+    if (area && AREA_LABEL[area]) {
+      const d = new Date(iso);
+      const time = Number.isNaN(d.getTime()) ? '' : ` ${d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}`;
+      return `${String(iso).slice(0, 10) === today ? 'last looked today' : `last looked ${fmtDay(iso)}`}${time} at ${AREA_LABEL[area]}`;
+    }
     return String(iso).slice(0, 10) === today ? 'looked today' : `last looked ${fmtDay(iso)}`;
   }
   /** How long a share lasts, in words: "for 30 days" (a link's `days`) or "until Nov 28, 2026" (an accepted share's `until`). */
@@ -122,7 +136,7 @@
   /** Whether turning on `switches` (merged over the share) needs the food log added first. */
   function needsFood(s, switches) {
     const merged = { ...s, ...switches };
-    return SWITCHES.some((k) => merged[k]) && !(s.areas || []).includes('food');
+    return FOOD_SWITCHES.some((k) => merged[k]) && !(s.areas || []).includes('food');
   }
   /** A helper's changes on the latest day: "changed your plan today: 3 added, 1 removed; logged 2 foods" (null when none). */
   function changesText(c, today) {
@@ -135,7 +149,8 @@
     return out.length ? out.join('; ') : null;
   }
   function sharingLine(s, today) {
-    const parts = [roleText(s.role), areasText(s.areas), doText(s), `since ${fmtDay(s.since)}`, untilText(s.until), lastLooked(s.last_viewed_at, today),
+    const parts = [roleText(s.role), areasText(s.areas), doText(s), `since ${fmtDay(s.since)}`, untilText(s.until),
+      lastLooked(s.last_viewed_at, today, s.may_note ? s.last_viewed_area : null),
       changesText(s.helper_changes, today)].filter(Boolean);
     if (s.active === false) parts.push('their account is turned off');
     return parts.join(' · ');
@@ -150,8 +165,11 @@
       ? 'as a Care helper. You can see this and plan their meals and use their shopping list, but not change what they ate, their targets or their profile. '
       : info.role === 'caregiver'
         ? 'as a Caregiver. You can see this, plan their meals, use their shopping list and log food they ate, but not change their targets, their profile or a low treatment. '
-        : 'You can look, but not change anything. ';
-    const helper = info.role === 'care_helper' || info.role === 'caregiver';
+        : info.role === 'clinician'
+          ? 'as a Clinician. You can look at this and write notes they can read. This is their personal app, not part of a clinic\'s '
+            + 'record. Keep your own record as your clinic requires. '
+          : 'You can look, but not change anything. ';
+    const helper = info.role === 'care_helper' || info.role === 'caregiver' || info.role === 'clinician';
     return `${who} wants to add you to their Care team and share their ${areasText(info.areas)} with you${helper ? ', ' : '. '}${what}`
       + `${who} can stop this at any time, and so can you.${lasts}`;
   }
@@ -225,6 +243,12 @@
     clear(body);
     if (!mine.enabled) { body.append(offNote()); return; }
     body.append(h('p', {}, INTRO));
+    const notesOn = !!mine.notes; // notes from the Care team are on for this server (design note 37)
+    if (notesOn && KH.notes) {
+      const read = h('button', { class: 'btn secondary', type: 'button', id: 'set-care-notes' }, 'Notes from your Care team');
+      read.addEventListener('click', () => KH.notes.openOwn('settings'));
+      body.append(h('div', { class: 'settings-actions' }, read));
+    }
 
     if (invites.length) body.append(invitesForMe(body, invites));
 
@@ -234,7 +258,7 @@
       const ul = h('ul', { class: 'list device-list', id: 'set-sharing-list', 'aria-labelledby': 'set-care-team-h' });
       for (const s of mine.sharing) {
         const actions = h('div', { class: 'token-actions' });
-        actions.append(roleSelect(body, s, actions));
+        actions.append(roleSelect(body, s, actions, notesOn));
         const stop = h('button', { class: 'btn secondary', type: 'button', 'aria-label': `Remove ${whoText(s)} from your Care team` }, 'Remove');
         stop.addEventListener('click', () => confirm.inline(actions, stop, {
           message: `Remove ${whoText(s)} from your Care team? They can no longer see any of your data or plan your meals.`,
@@ -243,7 +267,7 @@
         }));
         actions.append(stop);
         ul.append(h('li', { class: 'device care-member' }, h('div', { class: 'device-main' }, h('span', { class: 'row-title' }, whoText(s)),
-          h('span', { class: 'row-sub' }, sharingLine(s, today()))), actions, switchesBox(body, s)));
+          h('span', { class: 'row-sub' }, sharingLine(s, today()))), actions, switchesBox(body, s, notesOn)));
       }
       body.append(ul);
     }
@@ -282,7 +306,7 @@
     if (mine.sharing.length >= mine.max) {
       body.append(h('p', { class: 'hint' }, `Your Care team has ${mine.max} people, the most allowed. Remove someone to add another.`));
     } else {
-      body.append(inviteForm(body), shareForm(body));
+      body.append(inviteForm(body, notesOn), shareForm(body, notesOn));
       if (made) body.append(linkBox(made, fresh));
     }
 
@@ -294,8 +318,12 @@
       const ul = h('ul', { class: 'list device-list', id: 'set-shared-list', 'aria-labelledby': 'set-shared-h' });
       for (const p of people) {
         const actions = h('div', { class: 'token-actions' });
-        const open = button('Open', 'primary', () => openShared(p), { 'aria-label': `Open what ${whoText(p)} shares with you` });
-        const trends = button('Trends', 'secondary', () => openTrends(p), { 'aria-label': `Open ${whoText(p)}'s trends` });
+        const canNote = notesOn && !!p.may_note; // they let you write notes, and notes are on (design note 37)
+        const seen = { ...p, may_note: canNote };
+        const open = button('Open', 'primary', () => openShared(seen), { 'aria-label': `Open what ${whoText(p)} shares with you` });
+        const trends = button('Trends', 'secondary', () => openTrends(seen), { 'aria-label': `Open ${whoText(p)}'s trends` });
+        const notes = canNote && KH.notes
+          ? button('Notes', 'secondary', () => KH.notes.openAuthor(p), { 'aria-label': `Your notes for ${whoText(p)}` }) : null;
         const helpLabel = p.may_plan ? 'Plan meals' : p.may_log ? 'Log food' : 'Suggest a meal';
         const plan = KH.carePlan && KH.carePlan.canHelp(p)
           ? button(helpLabel, 'secondary', () => KH.carePlan.open(p), { 'aria-label': `${helpLabel} for ${whoText(p)}` }) : null;
@@ -305,7 +333,7 @@
           confirmText: 'Leave',
           onConfirm: async () => { await A.stop(p.id); toast(`You left ${p.name || p.username}'s Care team`, 'ok'); await load(body, null, '#set-shared-h'); return true; },
         }));
-        actions.append(open, trends, plan, stop);
+        actions.append(open, trends, notes, plan, stop);
         ul.append(h('li', { class: 'device' }, h('div', { class: 'device-main' }, h('span', { class: 'row-title' }, whoText(p)),
           h('span', { class: 'row-sub' }, personLine(p))), actions));
       }
@@ -337,9 +365,11 @@
 
   /** The role of someone on your Care team, changed in place. A role is a preset of the switches; "Custom" shows when the switches
       match none and is never chosen. A Care helper or Caregiver always sees the food log, so it is added (said first). */
-  function roleSelect(body, s, actions) {
+  function roleSelect(body, s, actions, notesOn = false) {
     const id = `set-care-role-${s.id}`;
-    const select = h('select', { id, 'aria-label': `Role of ${whoText(s)}` }, ...ROLES.map((r) => h('option', { value: r }, ROLE_LABEL[r])),
+    // Clinician is offered only while notes are on (or when it is already the role).
+    const offered = ROLES.filter((r) => r !== 'clinician' || notesOn || s.role === 'clinician');
+    const select = h('select', { id, 'aria-label': `Role of ${whoText(s)}` }, ...offered.map((r) => h('option', { value: r }, ROLE_LABEL[r])),
       h('option', { value: 'custom', disabled: true, hidden: s.role !== 'custom' || null }, ROLE_LABEL.custom));
     select.value = s.role || 'viewer';
     const apply = async (role) => {
@@ -353,7 +383,7 @@
     };
     select.addEventListener('change', () => {
       const role = select.value;
-      if (role !== 'viewer' && !(s.areas || []).includes('food')) {
+      if (FOOD_SWITCHES.some((k) => PRESETS[role] && PRESETS[role][k]) && !(s.areas || []).includes('food')) {
         confirm.inline(actions, select, {
           message: `A ${ROLE_LABEL[role]} sees your food log so they can help with meals. Share your food log with ${whoText(s)} and make them a ${ROLE_LABEL[role]}?`,
           confirmText: `Make ${ROLE_LABEL[role]}`,
@@ -369,7 +399,7 @@
 
   /** What someone on your Care team may see and do: one switch each, saved at once (PUT /api/me/shares/{id}/switches). Turning on
       a "Do" switch while the food log is not shared asks first, then shares it. */
-  function switchesBox(body, s) {
+  function switchesBox(body, s, notesOn = false) {
     const box = h('details', { class: 'care-switches', id: `set-care-switches-${s.id}` },
       h('summary', {}, `What ${s.name || s.username} may see and do`));
     const save = async (changes, focusId) => {
@@ -389,7 +419,7 @@
     };
     const see = AREAS.map((a) => {
       const id = `set-care-${s.id}-see-${a}`;
-      const locked = a === 'food' && SWITCHES.some((k) => s[k]);
+      const locked = a === 'food' && FOOD_SWITCHES.some((k) => s[k]);
       const label = row(id, `My ${AREA_LABEL[a]}`, (s.areas || []).includes(a), (cb) => {
         const areas = AREAS.filter((x) => (x === a ? cb.checked : (s.areas || []).includes(x)));
         if (!areas.length) { cb.checked = true; toast('Leave at least one thing they can see, or remove them from your Care team.'); return; }
@@ -398,7 +428,8 @@
       if (locked) { const cb = $('input', label); cb.disabled = true; label.append(h('span', { class: 'hint' }, ` (${NEEDS_FOOD.replace(' need your food log.', ' need it')})`)); }
       return label;
     });
-    const doRows = SWITCHES.map((k) => {
+    // Write notes for me shows while notes are on, or while it is on for this person (so it can be turned off).
+    const doRows = SWITCHES.filter((k) => k !== 'may_note' || notesOn || s.may_note).map((k) => {
       const id = `set-care-${s.id}-${k.replace(/_/g, '-')}`;
       const label = row(id, SWITCH_LABEL[k], s[k], (cb) => {
         const change = { [k]: cb.checked };
@@ -423,12 +454,14 @@
   }
 
   /** The parts of the form both ways of adding someone use: the role, what they see, how long. `prefix` keeps the ids apart. */
-  function choices(prefix) {
+  function choices(prefix, notesOn = false) {
     const roleName = `${prefix}-role`;
-    const roles = ROLES.map((r) => {
+    const offered = ROLES.filter((r) => r !== 'clinician' || notesOn);
+    const roles = offered.map((r) => {
       const radio = h('input', { type: 'radio', name: roleName, id: `${prefix}-role-${r}`, value: r });
       radio.checked = r === 'viewer';
-      return h('label', { class: 'check', for: `${prefix}-role-${r}` }, radio, ` ${ROLE_LABEL[r]}: ${ROLE_HINT[r]}`);
+      const label = h('label', { class: 'check', for: `${prefix}-role-${r}` }, radio, ` ${ROLE_LABEL[r]}: ${ROLE_HINT[r]}`);
+      return r === 'clinician' ? [label, h('p', { class: 'hint', id: `${prefix}-clinician-hint` }, CLINICIAN_NOTE)] : label;
     });
     const boxes = AREAS.map((a) => {
       const id = `${prefix}-${a}`;
@@ -441,19 +474,20 @@
         h('p', { class: 'hint', id: `${prefix}-notes-hint` }, 'Your food log includes the note on each entry.')),
       h('label', { class: 'label', for: `${prefix}-days` }, 'For how long'), lasts];
     const read = (form) => {
-      const role = (ROLES.find((r) => $(`#${prefix}-role-${r}`, form).checked)) || 'viewer';
+      const role = (offered.find((r) => $(`#${prefix}-role-${r}`, form).checked)) || 'viewer';
       const areas = AREAS.filter((a) => $(`#${prefix}-${a}`, form).checked);
-      return { role, areas: role !== 'viewer' && !areas.includes('food') ? ['food', ...areas] : areas, days: Number(lasts.value) || null };
+      const food = FOOD_SWITCHES.some((k) => PRESETS[role][k]); // a Clinician's notes need no food log
+      return { role, areas: food && !areas.includes('food') ? ['food', ...areas] : areas, days: Number(lasts.value) || null };
     };
     return { nodes, read };
   }
 
   /** Add someone who already has an account here, by user name. The answer is the same whether or not the name is an account. */
-  function inviteForm(body) {
+  function inviteForm(body, notesOn = false) {
     const err = h('div', { class: 'form-error', role: 'alert' });
     const done = h('p', { class: 'hint', id: 'set-care-sent', role: 'status' });
     const name = h('input', { id: 'set-care-invite-name', type: 'text', autocomplete: 'off', autocapitalize: 'none', spellcheck: 'false', maxlength: 255 });
-    const c = choices('set-care');
+    const c = choices('set-care', notesOn);
     const send = h('button', { class: 'btn primary', type: 'submit', id: 'set-care-invite' }, 'Send invite');
     const form = h('form', { class: 'settings-form sharing-form', id: 'set-care-invite-form', novalidate: true },
       h('h4', { class: 'settings-minor' }, 'Add someone'),
@@ -483,9 +517,9 @@
   }
 
   /** For someone without a user name you know: a link shown once. */
-  function shareForm(body) {
+  function shareForm(body, notesOn = false) {
     const err = h('div', { class: 'form-error', role: 'alert' });
-    const c = choices('set-share');
+    const c = choices('set-share', notesOn);
     const make = h('button', { class: 'btn secondary', type: 'submit', id: 'set-sharing-make' }, 'Make a link');
     const form = h('form', { class: 'settings-form sharing-form', id: 'set-share-form', novalidate: true },
       h('details', { class: 'care-link' }, h('summary', {}, 'Make a link instead'),
@@ -664,5 +698,6 @@
   setupSheet();
 
   KH.sharing = { block, reads, renderDay, openShared, openPending, takeLink, areasText, lastLooked, lastsText, sharingLine, personLine, whoText,
-    questionText, entryLine, roleText, roleOf, doText, needsFood, changesText, people: A.people, AREAS, AREA_LABEL, ROLES, ROLE_LABEL, SWITCHES, PRESETS };
+    questionText, entryLine, roleText, roleOf, doText, needsFood, changesText, people: A.people, AREAS, AREA_LABEL, ROLES, ROLE_LABEL, SWITCHES,
+    FOOD_SWITCHES, PRESETS, CLINICIAN_NOTE };
 })();

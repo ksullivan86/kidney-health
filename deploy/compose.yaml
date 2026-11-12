@@ -130,6 +130,7 @@ services:
       PUSH_ENABLED: ${PUSH_ENABLED:-}
       TOKENS_ALLOW_NEVER_EXPIRING: ${TOKENS_ALLOW_NEVER_EXPIRING:-}
       SHARING_ENABLED: ${SHARING_ENABLED:-}
+      CARE_NOTES_ENABLED: ${CARE_NOTES_ENABLED:-}
       TEST_ACCOUNT_ENABLED: ${TEST_ACCOUNT_ENABLED:-}
       TEST_ACCOUNT_AI: ${TEST_ACCOUNT_AI:-}
       # The test accounts' one password is a file secret only (TEST_ACCOUNT_PASSWORD is refused; docs/test-the-full-app.md):

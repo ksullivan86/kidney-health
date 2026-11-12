@@ -638,7 +638,7 @@
     browser: 'This browser cannot open a .zip here. Open the .zip on your device and choose the export.json inside it.',
   };
   // Parts of an export the import never reads (AI activity, sign-in activity, the account itself): not even sent.
-  const IMPORT_NEVER_SENT = ['user', 'ai_audit', 'activity', 'ai_usage', 'ai_consents', 'ai_provider', 'activity_days', 'activity_workouts', 'activity_extra', 'care_suggestions', 'reminders'];
+  const IMPORT_NEVER_SENT = ['user', 'ai_audit', 'activity', 'ai_usage', 'ai_consents', 'ai_provider', 'activity_days', 'activity_workouts', 'activity_extra', 'care_suggestions', 'reminders', 'care_notes'];
   const IMPORT_KINDS = [
     ['log_entries', 'log entry', 'log entries'],
     ['custom_foods', 'food of yours', 'foods of yours'],
@@ -869,6 +869,8 @@
     'care.switches_changed': 'Care team switches changed', 'care.food_logged': 'Someone on your Care team logged food you ate',
     'suggestion.sent': 'A meal suggestion from your Care team', 'suggestion.accepted': 'You added a suggestion to your plan',
     'suggestion.declined': 'You said no thanks to a suggestion', 'suggestion.expired': 'A suggestion expired after 14 days',
+    'care_note.written': 'A note from your Care team', 'care_note.edited': 'A note from your Care team was changed before you read it',
+    'care_note.withdrawn': 'A note from your Care team was taken back before you read it', 'care_note.deleted': 'You deleted a note from your Care team',
     'oidc.linked': 'Sign-in provider linked', 'oidc.unlinked': 'Sign-in provider link removed',
     'device.connected': 'Device connected', 'device.disconnected': 'Device disconnected', 'device.sync_failed': 'Device sync stopped working',
     'activity.extra_on': 'Active-day calories turned on', 'activity.extra_off': 'Active-day calories turned off',
@@ -968,6 +970,8 @@
     if (ev.action === 'care.switches_changed' && KH.sharing) {
       return [d.role === 'custom' ? 'now a custom set of switches' : `now a ${KH.sharing.roleText(d.role)}`, d.food_added ? 'food log shared' : null].filter(Boolean).join(', ');
     }
+    if (ev.action === 'share.viewed' && d.area && KH.sharing) return `looked at ${KH.sharing.areasText([d.area])}`;
+    if (ev.action.startsWith('care_note.') && d.area && KH.sharing) return `about ${KH.sharing.areasText([d.area])}`;
     if (ev.action === 'suggestion.accepted' && d.skipped) return `${d.skipped} ${d.skipped === 1 ? 'food was' : 'foods were'} left out`;
     if (d.links_revoked) return d.links_revoked === 1 ? '1 open link revoked' : `${d.links_revoked} open links revoked`;
     return '';
@@ -2077,7 +2081,7 @@
       'ai.route.recipes', 'ai.route.local_provider', 'ai.route.cloud_provider']],
     ['Phone shortcuts', ['push.enabled']],
     ['Tokens for outside apps and phone shortcuts', ['tokens.allow_never_expiring']],
-    ['Care team', ['sharing.enabled']],
+    ['Care team', ['sharing.enabled', 'care_notes.enabled']],
     ['Connected devices', ['devices.enabled', 'devices.sync_hours']],
     ['Shopping list app and recipe import', ['lists.sync_enabled', 'recipes.import_enabled']],
     ['Instacart', ['lists.instacart_enabled']],

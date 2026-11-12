@@ -9,7 +9,8 @@
    "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
    "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
    "Meal suggestions from your Care team (they came from other people's accounts)",
-   "Your reminders (set them again here, and turn on notifications on each device)"
+   "Your reminders (set them again here, and turn on notifications on each device)",
+   "Notes from your Care team (they are other people's words)"
   ],
   "imported_settings": [
    "guidance",
@@ -31,7 +32,8 @@
    "activity_workouts",
    "activity_extra",
    "care_suggestions",
-   "reminders"
+   "reminders",
+   "care_notes"
   ],
   "max_depth": 32
  },
@@ -2785,7 +2787,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -3824,7 +3827,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -4148,7 +4152,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -4715,7 +4720,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -5859,7 +5865,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -6210,7 +6217,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -6638,7 +6646,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -6890,7 +6899,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -7118,7 +7128,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -7322,7 +7333,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -7526,7 +7538,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -8315,7 +8328,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -15042,7 +15056,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -15339,7 +15354,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -15543,7 +15559,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -15937,7 +15954,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -16222,7 +16240,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -16426,7 +16445,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -16726,7 +16746,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -16954,7 +16975,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -17990,7 +18012,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -30890,7 +30913,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -31208,7 +31232,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -32186,7 +32211,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -32677,7 +32703,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -32881,7 +32908,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -33084,7 +33112,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -33289,7 +33318,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -33504,7 +33534,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -33698,7 +33729,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -33902,7 +33934,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -34106,7 +34139,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -34300,7 +34334,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -34406,7 +34441,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -34493,7 +34529,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -34606,7 +34643,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -34695,7 +34733,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -34790,7 +34829,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -34879,7 +34919,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -34977,7 +35018,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -35181,7 +35223,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -35274,7 +35317,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -35503,7 +35547,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -35707,7 +35752,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -36220,7 +36266,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -36412,7 +36459,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -36608,7 +36656,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }
@@ -36741,7 +36790,8 @@
       "Your Open Food Facts barcode choice and your AI ideas choice (they are consents; choose them again here)",
       "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
       "Meal suggestions from your Care team (they came from other people's accounts)",
-      "Your reminders (set them again here, and turn on notifications on each device)"
+      "Your reminders (set them again here, and turn on notifications on each device)",
+      "Notes from your Care team (they are other people's words)"
      ],
      "rule": "Your file's foods, log entries, saved meals, lab results, symptoms, weights, blood pressure readings and food preferences are added to this account. If the account already has entries, foods of your own, saved meals, lab results, symptoms, weights or blood pressure readings, nothing is imported unless you choose \"Add to my existing data\". Then whatever is already here is left out: an entry with the same date, meal, food, amount, status and time; a food of yours with the same name, serving and values; a saved meal with the same name and foods; a lab result with the same test, date and value; a symptom with the same date, name, severity and note; a weight or blood pressure reading that came from an import and has the same key, or one you typed with the same date, time, numbers, circumstances and note. So importing the same file again adds nothing. Your profile, targets and settings are replaced only if you choose \"Also replace my profile, targets and settings\"."
     }

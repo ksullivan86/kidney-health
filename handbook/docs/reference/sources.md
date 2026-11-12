@@ -594,6 +594,8 @@ Pages cite these by id, for example `[KDIGO 2024 CKD guideline][K24]`. The list 
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-11-07.
 - **NOTE35**: kidney-health design note 35: reminders by phone notification. <https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/35-reminders.md>  
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-11-12.
+- **NOTE37**: kidney-health design note 37: clinician accounts with notes. <https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/37-clinician-accounts.md>  
+  Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-11-12.
 - **DEPLOY**: kidney-health project. docs/deployment.md: Podman, Quadlet and Kubernetes. <https://github.com/ksullivan86/kidney-health/blob/main/docs/deployment.md>  
   Licence: PolyForm Noncommercial 1.0.0 (project). Checked 2026-10-05.
 - **ASSISTANT-DOC**: kidney-health project. docs/assistant.md: the assistant (access tokens, the MCP server, connecting Open WebUI or a Hermes Agent profile, the system prompt, honest limits). <https://github.com/ksullivan86/kidney-health/blob/main/docs/assistant.md>  

@@ -139,7 +139,7 @@ IMPORTED_SETTINGS: tuple[str, ...] = ("guidance", "ui.theme", "user.units.labs",
 
 # Sections the export writes that belong to the server, not to the person's records: accepted, never read.
 SKIPPED_SECTIONS: tuple[str, ...] = ("user", "ai_audit", "activity", "ai_usage", "ai_consents", "ai_provider", "activity_days",
-                                     "activity_workouts", "activity_extra", "care_suggestions", "reminders")
+                                     "activity_workouts", "activity_extra", "care_suggestions", "reminders", "care_notes")
 
 NOT_IMPORTED: tuple[str, ...] = (
     "Your username, password and sign-in sessions",
@@ -151,6 +151,7 @@ NOT_IMPORTED: tuple[str, ...] = (
     "Your days and workouts from Whoop and your active-day calorie setting (connect Whoop again here)",
     "Meal suggestions from your Care team (they came from other people's accounts)",
     "Your reminders (set them again here, and turn on notifications on each device)",
+    "Notes from your Care team (they are other people's words)",
 )
 
 RULE = (
@@ -631,6 +632,7 @@ class ExportFile(_Strict):
     activity_extra: Any = None
     care_suggestions: Any = None
     reminders: Any = None
+    care_notes: Any = None
 
     @field_validator("exported_at")
     @classmethod

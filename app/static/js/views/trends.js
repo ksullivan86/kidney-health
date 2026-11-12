@@ -27,6 +27,8 @@
     $('#guidance-period').hidden = shared || $('#guidance-period').hidden;
     const visit = $('#visit-open');
     if (visit) visit.closest('.period-visit').hidden = shared;
+    // Write a note (design note 37; js/views/notes.js), about the food log when it is shared.
+    if (KH.notes) KH.notes.noteButton('trends-note-actions', 'trends-write-note', T.source, () => (sharedHas('food') ? { area: 'food' } : {}));
   }
   $$('.segmented .seg[data-days]').forEach((b) => b.addEventListener('click', () => {
     state.trendsDays = Number(b.dataset.days);
@@ -396,7 +398,7 @@
     return loadTrends();
   });
   function openShared(person) {
-    T.pending = { id: person.id, name: person.name || person.username, areas: person.areas || [], reads: person.reads };
+    T.pending = { id: person.id, name: person.name || person.username, areas: person.areas || [], reads: person.reads, may_note: !!person.may_note };
     router.show('trends');
   }
   KH.views.trends = { loadTrends, renderTrends, renderPeriodSummary, openShared };

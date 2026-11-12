@@ -606,7 +606,7 @@
   // Profile's "Lab results" button).
   // Ask is a tab too, but js/views/ask.js hides it unless the server's chat is available (arrow keys skip a hidden tab).
   const TAB_VIEWS = ['today', 'add', 'plan', 'trends', 'ask', 'profile'];
-  const VIEWS = [...TAB_VIEWS, 'settings', 'labs', 'visit', 'admin'];
+  const VIEWS = [...TAB_VIEWS, 'settings', 'labs', 'visit', 'notes', 'admin']; // notes: design note 37 (js/views/notes.js)
   const viewLoaders = {};
   function registerView(name, onShow) { viewLoaders[name] = onShow; }
   function showView(name, { focusTab = false } = {}) {
