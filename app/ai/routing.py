@@ -14,7 +14,7 @@ feature        what it covers                                              conse
 ``meal_ideas`` next-meal ideas, their order, swaps, the day plan           ``text``
 ``describe``   turning a described meal into search words                  ``text``
 ``chat``       the Ask screen                                              ``chat``
-``labs``       reading a photo of a lab report                             ``labs``
+``labs``       reading a photo of a lab report or the text of its PDF       ``labs``
 ``recipes``    AI recipes: suggest one, or rework a saved recipe           ``text``
 =============  ==========================================================  ====================
 

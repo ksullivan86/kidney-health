@@ -162,6 +162,7 @@ be sent?" (`?dry_run=true`), and pinned by a snapshot test (`tests/test_ai_promp
 | Your messages in an Ask conversation (the last 20, each ≤ 2000 characters; a message about a low or an emergency is answered by the app and is never sent) and the app's own numbers the assistant looks up with its tools: your targets and a day's totals, food names and their nutrients | Yes (Ask only), after you agree to the separate "Ask conversations" consent |
 | Your voice recording from the Ask microphone (up to 60 seconds) | Only if you tap the microphone, **not to the AI provider**: to the speech-to-text server your admin set up (`STT_BASE_URL`), which turns it into text; the recording is deleted at once and never stored. Only the words you then choose to send go to the AI. See [Voice input](#voice-input-speech-to-text) |
 | The photo (label, plate) | Yes (photo features): JPEG only, with location, camera data, comments and any trailing bytes removed by the server; never stored |
+| The text of a lab report PDF page | Only to the **local AI**, like a photo of the report, under the same consent. Lines that may name you (patient, name, date of birth, record numbers, address, phone, insurance) are left out in your browser first. The AI activity list keeps a fingerprint of the text, not the text and not what the AI copied |
 | The photo of a lab report | Only to the **local AI** on your admin's network (never a cloud AI, never a person's own provider), and only after you agree to the separate "Lab report photos" consent: JPEG only, location and camera data removed, never stored. **The report may show your name, date of birth and record numbers, and the app cannot remove them from an image**: crop the photo to the results table if you can. The AI activity list keeps the photo's fingerprint and size, not the photo and not what the AI copied |
 | `safety_identifier` (OpenAI on a shared key) | A keyed hash (HMAC under the server's secret key) of your account number; it cannot be turned back into the number |
 | Your name, user name, e-mail, account number, weight, height, exact age or birth month, dates, entry notes, a food's printed ingredient text, a recipe's name, note, steps or link, other people's data | **Never** |
@@ -379,11 +380,38 @@ photo is not a lab report, or cannot be read, you are told and nothing is shown.
 * **Limits worth knowing.** A scanned report made of JPEG 2000 or JBIG2 images can come out blank (those decoders are not
   shipped, so that nothing is ever fetched); a PDF that has real text but fonts it does not embed is drawn with your device's fonts,
   which does not change digits. The pictures are redrawn at most 1600 px on the longer side, like every AI photo, so a very small
-  print may be easier to read from a screenshot of a zoomed page. Reading the PDF's own text (faster and exact when it exists) is
-  a later idea (ROADMAP).
+  print may be easier to read from a screenshot of a zoomed page.
 * **For the person running the server:** nothing to switch on or configure: the same routing (`ai.route.labs`, local or off),
   consent and limits as photos, no new setting, route or schema step. The only change is one more named Trusted Types policy in
   the page's CSP, `kh-pdf` (see [security.md](security.md) and, behind your own reverse proxy that sets a CSP, [deployment.md](deployment.md)).
+
+**Reading a PDF's own text** (design note 36). Many lab websites make the PDF from text, not from a scan. Then the app can send the
+text of a page instead of a picture of it. This is faster, copies the exact digits, and works with a small local model that cannot
+read pictures.
+
+* **How it looks.** When you choose a PDF, your browser reads the text of each page. The page list says "Page 1 (has text)" or
+  "Page 2 (picture only)". If any page has text, you can choose **Read the text** (chosen first) or **Read pictures of the pages**.
+  With text, each page that has text is sent as text and the others as pictures.
+* **Lines that may say who you are are left out first.** Before a page's text is sent, the browser drops lines that name a patient,
+  a name, a date of birth, a record, account or member number, an address, a phone number, insurance or an email address. The table
+  then says how many were left out. This helps, but it cannot catch every way a report prints a name. What keeps the text private
+  is the rule above: it goes **only to the local AI**, like a photo, under the same consent. It never goes to a cloud AI, not even
+  if you chose the cloud for everything else, and there is no fallback.
+* **Only numbers that are written in the page are kept.** The app checks every value the AI returns against the text it sent. A
+  value that is not written there (made up, converted or rounded) is dropped, and a line says so: "1 line was left out because its
+  number is not written in the page's text." A date that is not written in the text is left for you to enter. Then the same checks
+  as for a photo apply.
+* **One table, as before.** Each row says where it came from: "page 1 of your PDF, read from its text" or "page 2 of your PDF, read
+  from a picture of it". Every row starts unticked, and nothing is saved until you tick rows and press Save.
+* **Limits.** A page with more than 20,000 characters, or more text than the local AI's prompt can take (`AI_CONTEXT_TOKENS`), is
+  read as a picture. A table printed in an odd order can give mixed-up lines; the AI then copies less, and the check above stops a
+  wrong number from another line only if that number is not on the page at all. Check each row against the report.
+* **Nothing is kept.** The AI activity list holds the page number, the number of lines and characters and a fingerprint of the
+  text, never the text or what the AI copied, whatever the retention setting.
+* **For the person running the server:** no new setting. It runs on the `labs` route like photos. A local AI **without** a vision
+  model can read text: the card then offers PDFs with text only, and a photo or a scanned page is refused with a sentence. Measure
+  a model with `python scripts/ai_eval.py --lab-text` (local role only; it uses made-up report pages). In the demo on a server
+  (`?mock=1`) the card answers a PDF's text with a fixed example and says that nothing was sent.
 
 ## For the person running the server
 

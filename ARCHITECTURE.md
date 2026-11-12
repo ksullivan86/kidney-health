@@ -2590,7 +2590,7 @@ query takes `user.id`; another person's provider, consent or AI activity is neve
 
 | Method and path | Body / query → response |
 |---|---|
-| `GET /api/ai/status` | → `{enabled, opted_in, available, reason, message, provider: {id, label, host, model, vision_model, scope, kind, policy} \| null, consent: {text, photos, chat, labs, voice?}, routing: {mode: "routed" \| "as_before"}, routes: {photos, meal_ideas, describe, chat, labs, recipes: {feature, label, purpose, route, role: "local" \| "cloud" \| "own" \| null, available, reason, message, text, runs_on: {id, label, host, model, vision_model, scope, kind, policy} \| null, consent}}, policy_version, daily_limit, remaining_today, features: {next_meal, parse_meal, label, plate, chat, voice, lab_report, recipes, recipe_steps}, voice: {host, model, max_seconds, max_bytes, remaining_today, consent, request} \| null, trust: {setting, allowed, effective}, prompt_version}`; `provider` and the `reason` are those of the first feature that resolves (meal ideas, describe, photos, chat); `consent.text` is meal ideas'; `features.voice` (and `voice`, and `consent.voice`) only with the chat available (the chat route resolves and is not `off`), `ai.voice_enabled` on and `STT_BASE_URL` set; `features.chat` is true only with the person set up for AI, a provider for the chat route **and** `ai.chat_enabled` on; `features.lab_report` is true only with the person opted in and the `labs` route resolving to the local AI (role `local`, pinned to the private network) with a vision model ("Lab report photos" below); `routes.labs.text` says why not ("Needs a local AI on your own network, which is not set up on this server, so it is off."); `trust.setting` is the person's choice, `allowed` the admin switch `ai.allow_trusted_saves`, `effective` the choice when allowed and `ask` when not |
+| `GET /api/ai/status` | → `{enabled, opted_in, available, reason, message, provider: {id, label, host, model, vision_model, scope, kind, policy} \| null, consent: {text, photos, chat, labs, voice?}, routing: {mode: "routed" \| "as_before"}, routes: {photos, meal_ideas, describe, chat, labs, recipes: {feature, label, purpose, route, role: "local" \| "cloud" \| "own" \| null, available, reason, message, text, runs_on: {id, label, host, model, vision_model, scope, kind, policy} \| null, consent}}, policy_version, daily_limit, remaining_today, features: {next_meal, parse_meal, label, plate, chat, voice, lab_report, lab_report_text, recipes, recipe_steps}, voice: {host, model, max_seconds, max_bytes, remaining_today, consent, request} \| null, trust: {setting, allowed, effective}, prompt_version}`; `provider` and the `reason` are those of the first feature that resolves (meal ideas, describe, photos, chat); `consent.text` is meal ideas'; `features.voice` (and `voice`, and `consent.voice`) only with the chat available (the chat route resolves and is not `off`), `ai.voice_enabled` on and `STT_BASE_URL` set; `features.chat` is true only with the person set up for AI, a provider for the chat route **and** `ai.chat_enabled` on; `features.lab_report` is true only with the person opted in and the `labs` route resolving to the local AI (role `local`, pinned to the private network) with a vision model ("Lab report photos" below); `features.lab_report_text` the same without the vision model (the text of a PDF page, "Text from a PDF" there); `routes.labs.text` says why not ("Needs a local AI on your own network, which is not set up on this server, so it is off."); `trust.setting` is the person's choice, `allowed` the admin switch `ai.allow_trusted_saves`, `effective` the choice when allowed and `ask` when not |
 | `POST /api/ai/next-meal` | `{meal, date?, mode: "ideas" \| "rerank" \| "swap" \| "plan", entry_id? \| food_id? + servings?, exclude_food_ids? (ideas only, ≤ 60: the foods of ideas already shown, left out of the candidates for **Other ideas**; 400 in another mode)}` (`?dry_run=true`) → `AiAnswer` |
 | `POST /api/ai/recipes` | `{mode: "suggest" \| "change", target?: "meal" \| "day" ("meal"), meal?, date?, dish? (suggest: one of the fixed dishes), makes? (1, 2, 4 or 6; suggest), meal_id? (change), exclude_food_ids? (≤ 60: foods of recipes already shown, left out of the candidates for **Other recipes** unless flagged `ingredient`)}` (`?dry_run=true`) → `AiAnswer` with `recipes: [{title, dish, theme, reason_codes, why, makes, fit: {status, before, after, changes, still_over}, fitted, items, per_serving, unknown, steps, steps_label, steps_note, steps_dropped, differences, body}]` (≤ 2; 1 for `change`), `steps_dropped`, `claims_corrected`, `dropped`, `portions_lowered: [{index, reason: "share_too_large", changes: [{food_id, from_servings, to_servings}]}]`; `body` is the exact `POST /api/meals` body. A recipe with more than 3 servings of a food in one serving goes through `fit_recipe` like any other and, when the fit makes it pass, its card carries `portion_note` ("The app changed a food…" when a food was swapped out) and its `portions_lowered` (servings of the food in one serving; 0 when the fit swapped it out); every other drop reason is checked first and still drops it. AI recipes (note 16 §8, docs/ai.md "Recipes that fit"): route `recipes`, consent `text`; a recipe with a low-treatment food answers `{status: "not_sent", ai_called: false}`; 404 for another person's `meal_id`; never saves |
 | `POST /api/ai/parse-meal` | `{text (1–300), meal?, date?}` (`?dry_run=true`) → `AiAnswer` with `items: [{text, search, amount, unit, matches: [{food, servings \| null}] (≤ 3)}]`, or the pre-filter answer |
@@ -2602,6 +2602,7 @@ query takes `user.id`; another person's provider, consent or AI activity is neve
 | `DELETE /api/ai/audit` | → 204 ("Delete my AI history"; usage counts stay) |
 | `POST /api/vision/label` | raw `image/jpeg` body (`?dry_run=true`) → `AiAnswer` with `{draft: FoodCreate-shaped (flags empty), from_photo (fields the AI read, the serving included), estimated (from % Daily Value or salt, or the 100 g / 100 mL serving of a per-100 label), needs, checks, notice}` or `{status: "not_a_label" \| "unreadable", draft: null}`; never saves |
 | `POST /api/vision/plate` | raw `image/jpeg` body (`?dry_run=true`) → `AiAnswer` with `{items: [{name, search, grams_estimate, portion_text, confidence, ticked, candidates: [{food, servings}] (≤ 3)}], banner, notice}`; off unless `ai.vision_plate_enabled` |
+| `POST /api/ai/read-lab-report-text` | `{text, page}` (one page of a lab report PDF as text, at most 20,000 characters; `?dry_run=true`) → the same answer as the photo route, with `dropped.not_in_text` and `page`. **Local AI only**, purpose `labs`, no vision model needed; `413 too_long_for_ai` over the prompt budget; never saves ("Text from a PDF" under "Lab report photos") |
 | `POST /api/ai/read-lab-report` | raw `image/jpeg` body (`?dry_run=true`) → `{status: "ok" \| "no_results" \| "not_a_lab_report" \| "unreadable", rows: [{analyte, label, value, unit, display, taken_on \| null, printed_date \| null, date_problem \| null, date_note \| null}], dropped: {unknown_analyte, unknown_unit, out_of_range}, dropped_notes: [text], message?, notice, provider: {id, label, model, host}, …}` (the `AiAnswer` fields). **Local AI only** and its own consent purpose `labs`; never saves ("Lab report photos" below) |
 | `GET /api/me/ai` | → `{enabled, settings, chat_enabled, trusted_saves_allowed, user_keys_allowed, allow_user_base_url, own: Provider \| null, shared: [{id, label, host, kind, policy, photos, usable}], routing: {mode, features: [{feature, label, role, route, available, reason, text, runs_on}]} \| null, presets, consents, daily_limit, remaining_today}` |
 | `PATCH /api/me/ai` | any of `{opt_in, provider, share_age_sex, preferences, trust}` → the view above; a change of `trust` writes one `ai.trust_changed` activity row (so does `PATCH /api/me/settings` with an `ai` object) |
@@ -3017,9 +3018,9 @@ browser `js/views/lab_photo.js` (`KH.labPhoto`), `js/engine/pdf_pages.js` (`KH.p
 * **Nothing is written by this route.** A saved result is the person's tick and the ordinary `POST /api/labs/import`
   (`LabImport`, each row checked again like `POST /api/labs`, duplicates skipped, the potassium alert returned as for a CSV file).
 * **Browser.** The card `#lab-photo` ("Read a lab report photo or PDF") in the Labs view (below "Import from a spreadsheet") is hidden unless `GET /api/ai/status`
-  says `features.lab_report`; with AI on but the feature unavailable it shows only the server's sentence (`routes.labs.text`; the
-  person not opted in; a local AI without a vision model); with AI off, and in the demo and preview, it is not there at all
-  (`js/mock/ai.js` answers every `/api/ai/*` route `404`). The photo is redrawn on the device (`KH.ai.prepareJpeg`), sent through
+  says `features.lab_report` or `features.lab_report_text`; with AI on but the feature unavailable it shows only the server's sentence
+  (`routes.labs.text`; the person not opted in); with AI off and in the static preview builds it is not there at all (`js/mock/ai.js`
+  answers every other `/api/ai/*` route `404`; the demo on a server offers a PDF's text: "Text from a PDF" below). The photo is redrawn on the device (`KH.ai.prepareJpeg`), sent through
   `KH.ai.withConsent('labs', …, 'labs')` and `KH.ai.uploadPhoto('lab-report', …)`; "What will be sent?" is the dry run. The result is
   drawn with the CSV import's table (same classes, `lab-photo-list` besides), **every checkbox unchecked**, the notice line and
   the dropped counts above it; a row without a date shows a date input and its checkbox is disabled until a valid date
@@ -3075,6 +3076,38 @@ browser `js/views/lab_photo.js` (`KH.labPhoto`), `js/engine/pdf_pages.js` (`KH.p
     for a file that cannot be used are fixed sentences in `lab_photo.js`. The pdf.js document and its worker are closed as soon as a run ends (the
     chosen file stays chosen), and the PDF, its pages and the document are let go on Discard, Save and a new pick; nothing is stored, and the browser
     asks no other host (`tools/e2e/lab_pdf.py` checks the requests, the Worker, the CSP report and the service worker's cache).
+* **Text from a PDF (design note 36; `POST /api/ai/read-lab-report-text`, `js/engine/pdf_text.js` = `KH.pdfText`).** Many portal PDFs
+  are made of text. For each page, `KH.pdfPages` hands over the page's own text items (`text(n)`: `page.getTextContent()` with its default
+  options, plain `{str, transform, width, height}`), and `KH.pdfText.pageText` rebuilds the lines: items sorted by baseline (top first), then x,
+  then their index; an item joins a line when its baseline is within max(2, half the smaller height) of the line's first item; within a line,
+  items are joined with one space when the gap is over max(0.5, 0.15 × height) points; at most 400 lines. A page **has text** with at least 50
+  letters and digits and 2 lines with a digit. Lines that name a patient, a name, a date of birth, a record, account or member number, a social
+  security number, an address, a phone or fax number, insurance, a guarantor or an email address are left out before sending (a courtesy, not
+  the guarantee). A page over 20,000 characters goes as a picture.
+  * *The screen.* The page list says "Page 1 (has text)" or "Page 2 (picture only)" and, when a page has text and the server offers it
+    (`features.lab_report_text`), "How to read the pages": **Read the text** (chosen first) or **Read pictures of the pages** (only when
+    `features.lab_report` is on too). With text, each page with text is one `KH.ai.readLabText(text, page, dry, signal)` (JSON, its own
+    `AbortSignal` for Cancel) through `KH.ai.withConsent('labs', …)`, and the line under the list and in the consent sheet says that pages with
+    text are sent as text without those lines. A page without text goes as a picture, or, on a server whose local AI has no vision model, is
+    left out with a line. A `413 too_long_for_ai` reads that page as a picture. Each row says "page 2 of your PDF, read from its text" or
+    "… read from a picture of it", and a line counts the identity lines left out. A photo on a server that reads text only is refused with a
+    sentence.
+  * *The server.* `prepare_read_lab_report_text` (feature `read_lab_report_text`) runs under the routed feature `labs` exactly like a photo
+    (`local` or `off`, purpose `labs`, `LocalOnlyRequired`, `local_only` checked again in `run_call`, no fallback, never a person's own
+    provider or choice) but needs no vision model: `features.lab_report_text` is the person opted in and `labs` resolving to the local AI. The
+    body is `{text: 1 to 20,000 characters, page: 1 to 50 or null}` (`extra` refused; `400` otherwise). Each line is cleaned with
+    `textclean.clean_text` and sent as `{"lines": [...]}` in the data block under `TASK_LINES["lab_report_text"]` with the photo's schema,
+    temperature 0. A body that does not fit the provider's prompt budget is `413 too_long_for_ai`. `lab_report.judge_text` runs first: a row
+    whose value is not a number written in the sent text (`numbers_in`: `5.4`, `1,250` and `1,2` read both ways) is dropped and counted in
+    `dropped.not_in_text`; a date not written in the text is cleared (the person types it, with "No date was read from the page's text.");
+    then `lab_report.judge`. The answer is the photo's with `notice` "Read by AI from the text of your PDF. …" and `page`. The AI activity
+    row (`read_lab_report_text`) keeps neither the text nor the answer: the data block becomes `<data>[not kept]</data>` with `lab_text:
+    {page, lines, characters, text_sha256}` (`Prepared.hidden_text`), whatever `ai.audit_retention_days` says. Same slot, quota and dry run
+    rules as the photo route.
+  * *The demo.* `js/mock/ai.js` answers this one AI route (every other is `404`): the body is checked like the server's and the answer is a
+    fixed example of three rows with "This is the demo: nothing was sent to an AI. These rows are a fixed example, not read from your file."
+    (`tests/test_lab_text_demo.py` runs the server's judge on the same lines and compares). The card shows in the demo on a server
+    (`?mock=1`) with a note; the static preview builds carry no pdf.js, so the card stays hidden there.
 * **Tests.** `tests/test_lab_photo.py` (routing, consent, filters and counts, "same validation as POST /api/labs", dates, nothing
   written, nothing kept, two people), `tests/test_migration_m016.py`, `tests/test_lab_photo_ui.py`, the golden category `lab_report`
   (`tests/ai_golden/lab-report-*.json`; `scripts/ai_eval.py` skips them: they are local-only). For a PDF: `tests/test_pdf_pages.py` (the module in
@@ -3082,6 +3115,10 @@ browser `js/views/lab_photo.js` (`KH.labPhoto`), `js/engine/pdf_pages.js` (`KH.p
   scale for Letter, A4, a receipt and a tiny page, every error code, `close()`, Cancel), `tests/test_lab_photo_ui.py` with
   `tests/js/lab_photo_page.mjs` (the page list, one request a page, the merge, failures, messages, release), `tests/test_vendor.py`, and the
   browser walk `tools/e2e/lab_pdf.py` (a two-page PDF from a tiny PDF writer, through the server with a fake local AI, real Chromium).
+  For a PDF's text: `tests/test_lab_text.py` (local only, also for a person who chose the cloud, the verbatim check, limits, gates, the
+  activity row, the prompt snapshot `tests/fixtures/ai/lab_report_text_request.txt`), `tests/test_pdf_text.py` with
+  `tests/js/pdf_text.test.mjs` (the line builder), `tests/test_lab_text_demo.py`, the golden category `lab_report_text`
+  (`tests/ai_golden/lab-text-*.json`; `scripts/ai_eval.py --lab-text` runs them on a local AI) and `tools/e2e/lab_pdf_text.py`.
 
 ### Ask chat (assistant step 2, parts A and C)
 

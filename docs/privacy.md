@@ -186,6 +186,10 @@ row and press Save, and then it is stored like any lab result they typed (in the
 forms, nothing fetched). **The PDF file is never sent to the server or anywhere else**; only the pages the person ticks (at most 10) are drawn
 in the browser and sent, each as a JPEG, through the same route, local AI, consent and checks as a photo, and the drawn pages and the PDF are let
 go when the person saves, discards, picks another file or cancels. A password-protected PDF is refused (the app never asks for the password).
+When a page has its own text, the browser can send that text instead of a picture (design note 36). It first leaves out lines that may name
+the person (patient, name, date of birth, record numbers, address, phone, insurance, email). The text goes the same way as a photo: the local
+AI only, the same consent, no fallback. The AI activity row keeps the page number, the line and character counts and a fingerprint of the
+text, never the text or what the AI copied.
 
 When the assistant in Ask saves food or a recipe, what it saves is stored like anything else the person logs (their own
 entries and saved meals, in their export and deleted with their account). By default it only saves when the person presses

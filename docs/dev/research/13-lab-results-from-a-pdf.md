@@ -83,7 +83,7 @@ Since 0.4.0 a person can photograph or screenshot a lab report and the admin's l
 | The vendored pdf.js gets a security fix | `--check-latest` weekly (warn), the update steps in `vendor/README.md`; a pdf.js advisory is a reason to update outside the cooldown (write why in the PR). |
 | Non-embedded fonts draw a little differently | The AI reads the picture; small font differences do not change digits. Re-verify with real portal PDFs. |
 | Slow on a phone or a small local model | Pages are ticked by the person (default up to 6, at most 10), read one by one with progress and Cancel. |
-| Later: text-layer reading | Many portal PDFs have real text; reading it (`getTextContent`) and sending text instead of pictures could be faster and more exact, but needs a new AI feature and its own prompt and judge: a separate note. |
+| Later: text-layer reading | Many portal PDFs have real text; reading it (`getTextContent`) and sending text instead of pictures could be faster and more exact, but needs a new AI feature and its own prompt and judge: a separate note. Built in [note 36](36-lab-pdf-text.md). |
 
 ## 7. Decisions (2026-10-22, the owner's standing "recommended least-trust choice")
 

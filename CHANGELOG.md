@@ -7,6 +7,17 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+### Added
+
+* **Read the text of a lab PDF.** When a page of the PDF from your lab's website has its own text, Labs → Read a lab report can send
+  that text instead of a picture of the page. It is faster, copies the exact numbers and works with a local AI that cannot read
+  pictures. **Read the text** is chosen when a page has text; scanned pages still go as pictures, and you can choose pictures for
+  every page. Lines that may show your name, date of birth or record numbers are left out in your browser first. The text goes
+  only to the local AI, under the same consent as lab report photos, never to a cloud AI. The app keeps a value only if it is
+  written in the page's text. Every row still starts unticked. New route `POST /api/ai/read-lab-report-text` on the same `labs`
+  switch; no new setting and no schema step. [Design note 36](docs/dev/research/36-lab-pdf-text.md).
+* `scripts/ai_eval.py --lab-text` measures a local model on made-up report pages.
+
 ### Fixed
 
 * Opening another handbook menu while its foods are being added keeps the new draft. The earlier reply no longer

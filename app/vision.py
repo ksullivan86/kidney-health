@@ -9,6 +9,10 @@ runs **only on the local AI** (the shared provider holding the role ``local``, p
 provider and the cloud are never used, whatever is set); it has its own consent purpose ``labs``; and the AI activity row
 keeps no content (the photo's SHA-256 only). It returns *proposed* rows and writes nothing.
 
+``POST /api/ai/read-lab-report-text`` (design note 36) is the same for the text of one page of a lab report PDF, read in the browser: a
+JSON body (at most 20,000 characters), the same ``labs`` route, consent and local-only rule, no vision model needed, and a check that
+each value the model returns is written in the text. The activity row keeps a fingerprint of the text, never the text.
+
 * Registered with the AI routes and like them **404 while ``ai.enabled`` is off**; a signed-in person
   only. ``503`` (with ``reason``) when no vision model is set (``vision_not_configured``), plate photos
   are off (``plate_disabled``, the default), or the provider is a Hermes agent and

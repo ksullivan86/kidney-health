@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Decided 2026-11-12 (§8), built in one part. |
+| Status | Decided 2026-11-12 (§8), built in one part; waiting for the next release. |
 | Date researched | 2026-11-12, against `main` at `fed556c` |
 | Scope | Labs → **Read a lab report** with a PDF: for each ticked page that has real text, the browser reads that text with pdf.js, rebuilds its lines, leaves out lines that may say who the person is, and sends the lines to a new AI feature on the **local AI only**. Pages without text still go as pictures (note 13). |
 | Out of scope | Parsing a PDF on the server; text from a photo (no OCR); a cloud AI for lab reports; saving anything without the person's tick. |
@@ -91,7 +91,8 @@ text goes only to the local AI (§5).
 ### 4.4 The demo and the preview
 
 They have no AI. `POST /api/ai/read-lab-report-text` in the demo answers with a fixed example (three rows) and says that nothing
-was sent and that the rows are an example, not read from the file. Pictures stay unavailable in the demo.
+was sent and that the rows are an example, not read from the file. Pictures stay unavailable in the demo. The card shows in the demo on
+a server (`?mock=1`); the static preview builds (`scripts/build_preview.py`) carry no pdf.js, so it stays hidden there, as before.
 
 ## 5. Privacy
 
@@ -118,8 +119,9 @@ was sent and that the rows are an example, not read from the file. Pictures stay
   invented row dropped by the verbatim check, a date not in the text, an injected instruction in the text, a name line that
   the browser would strip, too long for the budget.
 * `scripts/ai_eval.py --lab-text` runs the same pages against a live **local** provider (refused for `--role cloud`) and reports
-  `lab_text_value_verbatim_rate` (values that passed the verbatim check, of all values the model returned; gate 100 % of shown
-  rows by construction, so the number to watch is how many it had to drop) and `lab_text_rows_expected_rate` (expected rows found).
+  `lab_text_rows_expected_rate` (the expected rows that were shown), `lab_text_not_in_text` (values the app had to drop: what the model
+  made up, converted or rounded) and `lab_text_unverbatim_shown`, the script's own check, written apart from the app's, of shown values
+  that are not written in the page; its gate `lab_text_verbatim` needs 0.
 
 ## 8. Decisions (2026-11-12, the owner's brief)
 
