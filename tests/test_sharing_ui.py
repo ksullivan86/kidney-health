@@ -49,7 +49,7 @@ def test_settings_shows_the_block_outside_no_sign_in_mode_and_the_admin_can_end_
     assert "sec.hidden = authMode() === 'none' || !KH.sharing;" in settings and "KH.sharing.block()" in settings
     assert "endUserShares: (id) => request('DELETE', `/api/admin/users/${id}/shares`)" in settings
     assert "if (u.shares)" in settings and "'End Care team'" in settings
-    assert "['Care team', ['sharing.enabled']]," in settings
+    assert "['Care team', ['sharing.enabled', 'care_notes.enabled']]," in settings
 
 
 def test_the_form_offers_how_long_a_share_lasts():

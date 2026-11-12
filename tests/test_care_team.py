@@ -34,11 +34,15 @@ WRITE_CHECKS = {
     ("post", "/api/shared/{share_id}/guidance/plan-days"): sharing.care_planner,
     ("post", "/api/shared/{share_id}/meals/{meal_id}/apply"): sharing.care_saved_meals,  # design note 29 §4
     ("post", "/api/shared/{share_id}/suggestions"): sharing.care_suggester,  # design note 29 §5
+    ("post", "/api/shared/{share_id}/notes"): sharing.care_noter,  # design note 37 §9: notes write only care_notes rows
+    ("put", "/api/shared/{share_id}/notes/{note_id}"): sharing.care_noter,
+    ("delete", "/api/shared/{share_id}/notes/{note_id}"): sharing.care_noter,
 }
 READ_CHECKS = {
     ("get", "/api/shared/{share_id}/foods"): sharing.care_food_search,
     ("get", "/api/shared/{share_id}/plan/shopping"): sharing.care_planner,
     ("get", "/api/shared/{share_id}/meals"): sharing.care_saved_meals,
+    ("get", "/api/shared/{share_id}/notes"): sharing.care_noter,  # design note 37 §9
 }
 HELPER_WRITES = set(WRITE_CHECKS)
 HELPER_READS = set(READ_CHECKS)
@@ -165,7 +169,7 @@ def test_accepting_makes_a_share_with_the_role_and_the_food_log(team):
     assert person["id"] == sid and person["role"] == "care_helper" and person["areas"] == ["food", "labs"] and person["until"]
     mine = ana.get("/api/me/shares").json()
     assert mine["invites"] == [] and [(s["username"], s["role"]) for s in mine["sharing"]] == [("sam", "care_helper")]
-    assert mine["roles"] == ["viewer", "care_helper", "caregiver"]
+    assert mine["roles"] == ["viewer", "care_helper", "caregiver", "clinician"]  # clinician: design note 37
     # a newer invite replaces the share, as a newer link does
     sid2 = join(ana, sam, role="viewer", areas=["body"])
     people = sam.get("/api/shared").json()["people"]
@@ -254,11 +258,11 @@ def _entry(owner: TestClient, query: str = "apple", day: str = TOMORROW, **extra
 
 
 def test_every_helper_write_goes_through_the_one_check():
-    from app import care_suggestions
+    from app import care_notes, care_suggestions
 
     wanted = {**WRITE_CHECKS, **READ_CHECKS}
     seen = {}
-    for route in [*sharing.shared_router.routes, *care_suggestions.shared_router.routes]:
+    for route in [*sharing.shared_router.routes, *care_suggestions.shared_router.routes, *care_notes.shared_router.routes]:
         for method in route.methods:
             if (method.lower(), route.path) in wanted:
                 deps, stack = [], [route.dependant]

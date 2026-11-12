@@ -986,6 +986,20 @@ register(
 )
 register(
     SettingDef(
+        key="care_notes.enabled",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="CARE_NOTES_ENABLED",
+        label="Let someone on a Care team write notes for the person",
+        help="Off by default, and needs the Care team on. When on, a person can make someone on their Care team a Clinician, or "
+        "turn on Write notes for me, and that person can write short notes they read in their own app. Notes never change any "
+        "data, and the app does not check who someone is. Only the person and the writer see a note. While off, no note can be "
+        "written or read; turned on again, the notes are there again.",
+    ),
+)
+register(
+    SettingDef(
         key="push.enabled",
         model=bool,
         default=False,

@@ -19,13 +19,16 @@
   const { scaleNutrients, emptyTotals, addTotals, countUnknown, roundNutrients } = KH.rules;
 
   const AREAS = ['food', 'labs', 'body', 'symptoms', 'activity'];
-  const ROLES = ['viewer', 'care_helper', 'caregiver'];
-  const SWITCHES = ['may_plan', 'may_log', 'may_use_saved_meals', 'may_suggest'];
+  const ROLES = ['viewer', 'care_helper', 'caregiver', 'clinician'];
+  const FOOD_SWITCHES = ['may_plan', 'may_log', 'may_use_saved_meals', 'may_suggest']; // each needs the food log
+  const SWITCHES = [...FOOD_SWITCHES, 'may_note']; // may_note: write notes for the person (design note 37)
   const PRESETS = {
-    viewer: { may_plan: false, may_log: false, may_use_saved_meals: false, may_suggest: false },
-    care_helper: { may_plan: true, may_log: false, may_use_saved_meals: false, may_suggest: false },
-    caregiver: { may_plan: true, may_log: true, may_use_saved_meals: false, may_suggest: false },
+    viewer: { may_plan: false, may_log: false, may_use_saved_meals: false, may_suggest: false, may_note: false },
+    care_helper: { may_plan: true, may_log: false, may_use_saved_meals: false, may_suggest: false, may_note: false },
+    caregiver: { may_plan: true, may_log: true, may_use_saved_meals: false, may_suggest: false, may_note: false },
+    clinician: { may_plan: false, may_log: false, may_use_saved_meals: false, may_suggest: false, may_note: true },
   };
+  const ROLE_ERROR = "role: Input should be 'viewer', 'care_helper', 'caregiver' or 'clinician'";
   const NOT_SHARED = 'Not shared with you.';
   const LOW_TREATMENT = (name) => `Only ${name} can change or remove a low treatment.`;
   const NOT_YOUR_EATEN = 'You can change only the eaten food you added.';
@@ -58,8 +61,8 @@
     const want = Object.fromEntries(SWITCHES.map((k) => [k, !!(sw && sw[k])]));
     return ROLES.find((r) => SWITCHES.every((k) => PRESETS[r][k] === want[k])) || 'custom';
   }
-  /** sharing._clean_areas: one each, in order; any "Do" switch adds the food log. */
-  const clean = (areas, sw) => AREAS.filter((a) => (areas || []).includes(a) || (a === 'food' && SWITCHES.some((k) => sw && sw[k])));
+  /** sharing._clean_areas: one each, in order; planning, logging, saved meals or suggestions add the food log (notes do not). */
+  const clean = (areas, sw) => AREAS.filter((a) => (areas || []).includes(a) || (a === 'food' && FOOD_SWITCHES.some((k) => sw && sw[k])));
   /** care_suggestions.note_problem: why a note cannot be sent, or null (the AI text checks). */
   function noteProblem(note, person) {
     if (!note) return null;
@@ -76,13 +79,22 @@
       this._careState = {
         nextId: 100,
         mine: [{ id: 1, name: 'Jordan', username: 'jordan', areas: ['food', 'labs'], since: iso(-6), until: null, last_viewed_at: iso(0), active: true,
-          ...PRESETS.care_helper, may_suggest: true, helper_changes: { day: iso(0).slice(0, 10), added: 2, changed: 0, removed: 0, logged: 0 } }],
+          ...PRESETS.care_helper, may_suggest: true, helper_changes: { day: iso(0).slice(0, 10), added: 2, changed: 0, removed: 0, logged: 0 } },
+        // Dee, a dietitian you made a Clinician (design note 37): she looks at your food log and labs and wrote you one note.
+        { id: 5, name: 'Dee', username: 'dee', areas: ['food', 'labs'], since: iso(-30), until: null, last_viewed_at: iso(-1), last_viewed_area: 'labs',
+          active: true, ...PRESETS.clinician, helper_changes: null }],
         codes: [],
         invites: [{ id: 2, username: 'riley', areas: ['food'], ...PRESETS.viewer, days: null, created_at: iso(-1), expires_at: iso(6) }],
         people: [{ id: 3, name: 'Ana', username: 'ana', areas: ['food'], since: iso(-20), until: null, may_plan: true, may_log: true,
-          may_use_saved_meals: true, may_suggest: true }],
+          may_use_saved_meals: true, may_suggest: true, may_note: true }],
         forMe: [{ id: 4, name: 'Lee', username: 'lee', areas: ['food'], ...PRESETS.viewer, days: 30, expires_at: iso(5) }],
         suggestions: null, // made on first use: the foods come from the demo's list
+        // Notes (app/care_notes.py): `to: 'me'` from Dee for you, `to: 'ana'` the ones you write for Ana. `written` keeps when you
+        // wrote each one, withdrawn or not, for the daily limit.
+        notes: [{ id: 60, to: 'me', share_id: 5, author_name: 'Dee', author_removed: false, area: 'food', about_date: day(-2),
+          body: 'Your potassium was lower on the days you swapped the potato for rice. Keep that up, and bring your next lab results to the visit.',
+          version: 1, created_at: iso(-1), edited_at: null, read_at: null }],
+        written: [],
         worlds: {},
       };
       return this._careState;
@@ -189,7 +201,8 @@
   route('GET', '/api/me/shares', function () {
     this._currentUser();
     const s = this._care();
-    return { enabled: true, areas: AREAS, roles: ROLES, max: 10, sharing: s.mine.map(withRole), codes: s.codes.map(withRole), invites: s.invites.map(withRole) };
+    return { enabled: true, notes: true, areas: AREAS, roles: ROLES, max: 10, sharing: s.mine.map(withRole), codes: s.codes.map(withRole),
+      invites: s.invites.map(withRole) };
   });
   route('POST', '/api/me/shares', function () {
     this._currentUser();
@@ -201,7 +214,7 @@
     const name = String(b.username || '').trim().toLowerCase();
     if (!name) fail(400, 'Type the user name of the person you want to invite.');
     if (name === String(me.username).toLowerCase()) fail(400, 'That is your own user name. Type the user name of the person you want on your Care team.');
-    if (b.role != null && !ROLES.includes(b.role)) fail(400, "role: Input should be 'viewer', 'care_helper' or 'caregiver'");
+    if (b.role != null && !ROLES.includes(b.role)) fail(400, ROLE_ERROR);
     const sw = PRESETS[b.role || 'viewer'];
     const areas = clean(b.areas, sw);
     if (!areas.length) fail(400, 'areas: List should have at least 1 item after validation, not 0');
@@ -222,7 +235,7 @@
     this._currentUser();
     const s = this._care().mine.find((x) => x.id === Number(id));
     if (!s) fail(404, 'share not found');
-    if (!body || !ROLES.includes(body.role)) fail(400, "role: Input should be 'viewer', 'care_helper' or 'caregiver'");
+    if (!body || !ROLES.includes(body.role)) fail(400, ROLE_ERROR);
     Object.assign(s, PRESETS[body.role]);
     s.areas = clean(s.areas, s);
     return withRole(s);
@@ -255,7 +268,7 @@
   route('GET', '/api/shared', function () {
     this._currentUser();
     const s = this._care();
-    return { people: s.people.map(withRole), invites: s.forMe.map(withRole) };
+    return { people: s.people.map(withRole), invites: s.forMe.map(withRole), notes: true };
   });
   route('POST', /^\/api\/shared\/invites\/(\d+)\/(accept|decline)$/, function ({ ids }) {
     this._currentUser();
@@ -442,7 +455,159 @@
     return { entries: rows.map((r) => this._entryView(r)), skipped };
   });
 
+  // ---- notes from the Care team (app/care_notes.py, design note 37) ----
+  const NOTE_MAX_BODY = 1000;
+  const NOTE_MAX_PER_DAY = 10;
+  const NOTE_MAX_KEPT = 500;
+  const NOTE_MAX_PAGE = 50;
+  const NOTE_MAX_DAYS_BACK = 365;
+  // care_notes.DOSING_PATTERN, word for word (tests/data/care_vectors.json compares the source).
+  const DOSING_SOURCE = String.raw`\b(insulin|bolus|basal|units?|doses?|dosing|corrections?|ratios?|pumps?)\b`;
+  const DOSING = new RegExp(DOSING_SOURCE, 'i');
+  const NOTE_TEXTS_FOR = (name) => ({
+    refused: `Notes cannot be about lows, insulin or doses. Talk to ${name} directly about those.`,
+    empty: 'Write the note first.',
+    too_long: 'A note can be at most 1,000 characters.',
+    too_many_today: `You have written ${NOTE_MAX_PER_DAY} notes for ${name} in the last 24 hours, the most allowed. Try again tomorrow.`,
+    too_many_kept: `${name} has ${NOTE_MAX_KEPT} notes. Ask them to delete old ones.`,
+    already_read: `${name} has read this note. Write a new one instead.`,
+    area_not_shared: `${name} does not share that with you. Choose something they share, or nothing.`,
+    bad_day: 'Choose a day in the last year, not in the future.',
+    no_note: 'That note is not here any more.',
+    changed: 'This note was changed since you opened it.',
+    send_version: "Send the note's version in If-Match.",
+    notes_off: 'Notes are turned off on this server. Your admin can turn them on.',
+  });
+  /** care_notes.clean_body: line endings made \n and the ends trimmed (Python's str.strip: whitespace). */
+  const cleanBody = (text) => String(text == null ? '' : text).replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+  /** care_notes.note_problem: why a note cannot be sent, or null. Lows (the "Treating a low" prefilter) and dosing words only. */
+  function notesProblem(text, person) {
+    const T = NOTE_TEXTS_FOR(person);
+    const body = cleanBody(text);
+    if (!body) return T.empty;
+    if (body.length > NOTE_MAX_BODY) return T.too_long;
+    if (KH.guidanceEngine.mentionsLow(body) || DOSING.test(KH.aiguard.fold(body))) return T.refused;
+    return null;
+  }
+  /** care_notes.day_problem: a day at most a year back and not after tomorrow (UTC `today`, YYYY-MM-DD). */
+  function dayProblem(date, today) {
+    if (date == null) return null;
+    const first = KH.util.addDays(today, -NOTE_MAX_DAYS_BACK);
+    const last = KH.util.addDays(today, 1);
+    return first <= date && date <= last ? null : NOTE_TEXTS_FOR('').bad_day;
+  }
+  const noteMatches = (header, version) => header != null && String(header).split(',').some((t) => {
+    const tag = t.trim();
+    return tag === '*' || (!/^w\//i.test(tag) && tag.replace(/^"|"$/g, '') === String(version));
+  });
+  const forMeView = (n) => ({ id: n.id, from: { name: n.author_name, removed: !!n.author_removed }, area: n.area, date: n.about_date, body: n.body,
+    version: n.version, created_at: n.created_at, edited_at: n.edited_at, read_at: n.read_at });
+  const sentView = (n) => ({ id: n.id, area: n.area, date: n.about_date, body: n.body, version: n.version, created_at: n.created_at,
+    edited_at: n.edited_at, read_at: n.read_at });
+  const NOTE_KEYS = ['body', 'area', 'date'];
+  function noteBody(api, b, p, partial) {
+    if (!b || typeof b !== 'object' || Array.isArray(b)) fail(400, 'body: Input should be a valid dictionary');
+    const extra = Object.keys(b).filter((k) => !NOTE_KEYS.includes(k));
+    if (extra.length) fail(400, `${extra[0]}: Extra inputs are not permitted`);
+    if (!partial && typeof b.body !== 'string') fail(400, 'body: Field required');
+    if ('body' in b && b.body != null && typeof b.body !== 'string') fail(400, 'body: Input should be a valid string');
+    if (b.area != null && !AREAS.includes(b.area)) fail(400, "area: Input should be 'food', 'labs', 'body', 'symptoms' or 'activity'");
+    if (b.date != null && M.validDate(b.date)) fail(400, `date: ${M.validDate(b.date)}`);
+    const T = NOTE_TEXTS_FOR(p.name);
+    const text = 'body' in b && b.body != null ? cleanBody(b.body) : null;
+    if (text != null || !partial) { const why = notesProblem(text, p.name); if (why) fail(400, why); }
+    if (b.area != null && !p.areas.includes(b.area)) fail(400, T.area_not_shared);
+    const bad = dayProblem(b.date == null ? null : b.date, new Date().toISOString().slice(0, 10));
+    if (bad) fail(400, bad);
+    return text;
+  }
+  Object.assign(MockApi.prototype, {
+    _notes() { return this._care().notes; },
+    _authorNote(p, id) {
+      const n = this._notes().find((x) => x.id === Number(id) && x.to === p.username);
+      if (!n) fail(404, NOT_SHARED);
+      return n;
+    },
+    // account.export_data: the person's notes (care_notes.export_rows)
+    _careNotesExport() {
+      return this._notes().filter((n) => n.to === 'me').slice().sort((a, b) => a.id - b.id).map((n) => ({ date: n.about_date, area: n.area,
+        from: n.author_name, body: n.body, created_at: n.created_at, edited_at: n.edited_at, read_at: n.read_at }));
+    },
+  });
+  route('GET', '/api/me/notes', function ({ query }) {
+    this._currentUser();
+    const limit = query.get('limit') == null ? NOTE_MAX_PAGE : Number(query.get('limit'));
+    if (!Number.isInteger(limit) || limit < 1 || limit > NOTE_MAX_PAGE) fail(400, `limit: Input should be less than or equal to ${NOTE_MAX_PAGE}`);
+    const before = query.get('before') == null ? null : Number(query.get('before'));
+    const all = this._notes().filter((n) => n.to === 'me').sort((a, b) => b.id - a.id);
+    return { enabled: true, unread: all.filter((n) => !n.read_at).length,
+      notes: all.filter((n) => before == null || n.id < before).slice(0, limit).map(forMeView) };
+  });
+  route('POST', /^\/api\/me\/notes\/(\d+)\/read$/, function ({ ids, header }) {
+    this._currentUser();
+    const T = NOTE_TEXTS_FOR('');
+    if (header('If-Match') == null) fail(428, T.send_version);
+    const n = this._notes().find((x) => x.id === Number(ids[0]) && x.to === 'me');
+    if (!n) fail(404, T.no_note);
+    if (n.read_at) return null;
+    if (!noteMatches(header('If-Match'), n.version)) fail(412, T.changed, { current: forMeView(n) });
+    n.read_at = new Date().toISOString();
+    return null;
+  });
+  route('DELETE', /^\/api\/me\/notes\/(\d+)$/, function ({ ids }) {
+    this._currentUser();
+    const s = this._care();
+    if (!s.notes.some((x) => x.id === Number(ids[0]) && x.to === 'me')) fail(404, NOTE_TEXTS_FOR('').no_note);
+    s.notes = s.notes.filter((x) => !(x.id === Number(ids[0]) && x.to === 'me'));
+    return null;
+  });
+  route('POST', /^\/api\/shared\/(\d+)\/notes$/, function ({ ids, body }) {
+    const p = this._careShare(ids[0], null, ['may_note']);
+    const text = noteBody(this, body, p, false);
+    const T = NOTE_TEXTS_FOR(p.name);
+    const s = this._care();
+    const since = new Date(Date.now() - DAY_MS).toISOString();
+    if (s.written.filter((w) => w.to === p.username && w.at > since).length >= NOTE_MAX_PER_DAY) fail(429, T.too_many_today);
+    if (s.notes.filter((n) => n.to === p.username).length >= NOTE_MAX_KEPT) fail(409, T.too_many_kept);
+    const now = new Date().toISOString();
+    const n = { id: s.nextId++, to: p.username, share_id: p.id, author_name: this._helperName(), author_removed: false, area: body.area ?? null,
+      about_date: body.date ?? null, body: text, version: 1, created_at: now, edited_at: null, read_at: null };
+    s.notes.push(n);
+    s.written.push({ to: p.username, at: now });
+    return sentView(n);
+  });
+  route('GET', /^\/api\/shared\/(\d+)\/notes$/, function ({ ids }) {
+    const p = this._careShare(ids[0], null, ['may_note']);
+    return { notes: this._notes().filter((n) => n.to === p.username).sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : b.id - a.id))
+      .slice(0, NOTE_MAX_KEPT).map(sentView) };
+  });
+  route('*', /^\/api\/shared\/(\d+)\/notes\/(\d+)$/, function ({ method, ids, body, header }) {
+    if (method !== 'PUT' && method !== 'DELETE') fail(405, 'Method Not Allowed');
+    const p = this._careShare(ids[0], null, ['may_note']);
+    const T = NOTE_TEXTS_FOR(p.name);
+    if (method === 'PUT') {
+      const text = noteBody(this, body, p, true);
+      if (header('If-Match') == null) fail(428, T.send_version);
+      const n = this._authorNote(p, ids[1]);
+      if (n.read_at) fail(409, T.already_read);
+      if (!noteMatches(header('If-Match'), n.version)) fail(412, T.changed, { current: sentView(n) });
+      const next = { body: text != null ? text : n.body, area: 'area' in body ? body.area : n.area, about_date: 'date' in body ? body.date : n.about_date };
+      if (next.body !== n.body || next.area !== n.area || next.about_date !== n.about_date) {
+        Object.assign(n, next, { version: n.version + 1, edited_at: new Date().toISOString() });
+      }
+      return sentView(n);
+    }
+    const n = this._authorNote(p, ids[1]);
+    if (n.read_at) fail(409, T.already_read);
+    if (header('If-Match') != null && !noteMatches(header('If-Match'), n.version)) fail(412, T.changed, { current: sentView(n) });
+    const s = this._care();
+    s.notes = s.notes.filter((x) => x !== n);
+    return null;
+  });
+
   M.care = { AREAS, ROLES, SWITCHES, PRESETS, SUGGEST_DAYS, MAX_OPEN_PER_SHARE, MAX_PER_DAY, MAX_NOTE, MAX_ITEMS, BANNED_SOURCE, roleOf, noteProblem,
     texts: { not_shared: NOT_SHARED, low_treatment: LOW_TREATMENT('Ana'), not_your_eaten: NOT_YOUR_EATEN, no_suggestion: NO_SUGGESTION,
-      none_left: NONE_LEFT, too_many_open: TOO_MANY_OPEN('Ana'), too_many_today: TOO_MANY_TODAY, low_food: LOW_FOOD('Glucose tablets', 'Ana') } };
+      none_left: NONE_LEFT, too_many_open: TOO_MANY_OPEN('Ana'), too_many_today: TOO_MANY_TODAY, low_food: LOW_FOOD('Glucose tablets', 'Ana') },
+    notes: { MAX_BODY: NOTE_MAX_BODY, MAX_PER_DAY: NOTE_MAX_PER_DAY, MAX_KEPT: NOTE_MAX_KEPT, MAX_PAGE: NOTE_MAX_PAGE, MAX_DAYS_BACK: NOTE_MAX_DAYS_BACK,
+      DOSING_SOURCE, cleanBody, problem: notesProblem, dayProblem, texts: NOTE_TEXTS_FOR('Ana') } };
 })();
