@@ -32,10 +32,18 @@ Branch `lab-pdf-text` from origin/main (fed556c). No schema step. Do not touch W
 * Tests: tests/js/pdf_text.test.mjs (+ tests/test_pdf_text.py), pdf_pages text() in fake_pdfjs/pdf_pages_page.mjs/test_pdf_pages.py,
   lab_photo_page.mjs §9 + test_lab_photo_ui.py, tests/test_lab_text_demo.py (demo rows == server judge).
 
+* Golden cases tests/ai_golden/lab-text-*.json (7, category lab_report_text) + test_ai_golden branch; scripts/ai_eval.py --lab-text
+  (local role only; own verbatim check `written_in`; gate lab_text_verbatim) + tests in test_ai_eval_script.py.
+* Chromium walk tools/e2e/lab_pdf_text.py: 58/58 PASS (375 light, 1280 dark, demo ?mock=1). tools/e2e/lab_pdf.py now picks
+  "Read pictures" (REPORT has text): 102/102 PASS. Registered in tests/test_e2e_tools.py and tools/e2e/README.md.
+* OpenAPI regenerated; gen_*.py --check all fine (no vector change needed); handbook --check fine; node vectors and all
+  node --test (302) green; ruff clean.
+* Docs: ARCHITECTURE ("Text from a PDF" bullet, status features, route table), docs/ai.md, docs/privacy.md, handbook app/ai.md and
+  targets-and-warnings.md, CHANGELOG Unreleased, ROADMAP, note 13 pointer, note 36.
+* Demo: card shows only in the server demo (?mock=1), not in static preview builds (no pdf.js there).
+
 ## Next
-* Golden cases (tests/ai_golden/lab-text-*.json + test_ai_golden feature lab_report_text) and scripts/ai_eval.py --lab-text.
-* Chromium walk tools/e2e/lab_pdf_text.py (+ test_e2e_tools.py, tools/e2e/README.md); update tools/e2e/lab_pdf.py to choose pictures.
-* OpenAPI regen, settings vectors, docs (ARCHITECTURE, docs/ai.md, handbook, CHANGELOG, ROADMAP), full suite.
+* Full pytest suite (running at the end), then mark complete.
 
 ## Decisions
 * Reuses routing feature `labs` and consent purpose `labs` (same switch, same local-only rule); no new route setting, no schema step.
