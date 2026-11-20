@@ -129,6 +129,9 @@ Note 12 built the server half of that: a write-only device token and an add-only
    from §4.4: Apple's cloud signing with an App Store Connect API key of the Admin role makes the certificate and profile at build
    time, so only the key is a secret and no certificate or profile is stored. The team ID is in the project. The app got its icon
    (the web app's, 1024 px, no alpha) and `ITSAppUsesNonExemptEncryption = NO`, because it uses only the system's HTTPS.
+   The first uploads showed two more needs. Apple makes a development profile while archiving, so the team needs one registered
+   iPhone. App Store Connect also refuses a HealthKit app without `NSHealthUpdateUsageDescription`, even one that never writes. The
+   sentence says the app never writes, and the app still asks to share nothing (`toShare: []`, a test).
 4. **(Optional) pairing by QR code**: about 1M tokens. The test-token route is built. Built 2026-10-29 (§4.3).
 
 That totals about 4–6M tokens for option A, below the ROADMAP's 6–10M for the full shell (option B).
