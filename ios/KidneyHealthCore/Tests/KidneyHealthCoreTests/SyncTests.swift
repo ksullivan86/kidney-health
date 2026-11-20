@@ -93,7 +93,7 @@ final class SyncTests: XCTestCase {
         XCTAssertEqual(outcome.state, .needsNewToken)
         XCTAssertNil(outcome.anchorToKeep)
         XCTAssertEqual(transport.sent.count, 2)
-        XCTAssertTrue(Sync.describe(outcome).contains("Settings → Phone shortcuts"))
+        XCTAssertTrue(Sync.describe(outcome).contains("Settings → Account → Your data → Phone shortcuts"))
     }
 
     func testTooManyRequestsWaitsForRetryAfter() async {

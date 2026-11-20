@@ -258,7 +258,7 @@
     // Phone shortcuts (design note 12; app/auth/api_tokens.py, app/push.py). The device tokens are rows of api_tokens, never settings.
     { key: 'push.enabled', type: 'bool', default: false, scope: 'instance', env: 'PUSH_ENABLED',
       label: 'Let people send weights and blood pressure from a phone shortcut',
-      help: 'Off by default. When on, each person can make tokens in Settings → Phone shortcuts; a shortcut on their phone can use one to add weights and blood pressure readings to that person\'s own log. '
+      help: 'Off by default. When on, each person can make tokens in Settings → Account → Your data → Phone shortcuts; a shortcut on their phone can use one to add weights and blood pressure readings to that person\'s own log. '
         + 'A token can only add: it cannot read or change anything. While off, no token can be made or used; turned on again, tokens that have not expired or been revoked work again.' },
     { key: 'recipes.import_enabled', type: 'bool', default: false, scope: 'instance', env: 'RECIPE_IMPORT_ENABLED',
       label: 'Let people import a recipe from a web page',

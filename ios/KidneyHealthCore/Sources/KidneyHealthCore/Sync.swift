@@ -214,7 +214,7 @@ public enum Sync {
                 lines.append("\(outcome.alreadyThere) \(outcome.alreadyThere == 1 ? "was" : "were") already on the server.")
             }
         case .needsNewToken:
-            lines.append("The server did not accept the token. Make a new one in Settings → Phone shortcuts and paste it here.")
+            lines.append("The server did not accept the token. Make a new one in Settings → Account → Your data → Phone shortcuts and paste it here.")
         case .wait:
             lines.append("The server asked the app to wait. It will try again later.")
         case .refused(let detail):
@@ -281,7 +281,7 @@ public enum ConnectionCheck: Equatable, Sendable {
         case .ok:
             return "Connected. The server took the token."
         case .badToken:
-            return "The server did not accept the token. Make a new one in Settings → Phone shortcuts. If that does not help, ask the "
+            return "The server did not accept the token. Make a new one in Settings → Account → Your data → Phone shortcuts. If that does not help, ask the "
                 + "person who runs the server whether phone shortcuts are on."
         case .wait:
             return "The token was used many times this hour. Try again later."
@@ -328,7 +328,7 @@ public enum Settings {
         return parts?.url
     }
 
-    /// True for a device token as Settings → Phone shortcuts makes it: `khd_` and 43 base64url characters.
+    /// True for a device token as Settings → Account → Your data → Phone shortcuts makes it: `khd_` and 43 base64url characters.
     public static func isDeviceToken(_ token: String) -> Bool {
         let text = token.trimmingCharacters(in: .whitespacesAndNewlines)
         guard text.hasPrefix("khd_") else { return false }

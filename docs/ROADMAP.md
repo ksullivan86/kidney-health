@@ -138,6 +138,10 @@ Added 2026-10-07 after comparing similar projects (for example Kidney Advisor, a
   as "Health-data imports" above) and the clinician review of the blood pressure lines in `handbook/REVIEW.md`. Not built, on purpose for
   now: weights and readings in Ask's `get_today` behind the existing consent (they are not sent to an AI or the assistant today), and
   adding them to the offline outbox (they need the connection). Glucose and insulin stay out: no dosing, and CGM apps keep their own alerts.
+* **The iPhone app without a server (large; the owner's, 2026-11-20; [note 38](dev/research/38-iphone-app-without-a-server.md)).**
+  The web app packed inside the iPhone app, running the browser mode's engine with data kept on the phone; a Keys and services
+  page (a USDA key, Open Food Facts); Apple's on-device AI; and sending to a server when one is set up. Step 0 is a test on a
+  real iPhone. Six decisions for the owner are in §10.
 * **A native iOS app (large; the owner's, 2026-10-22; [note 15](dev/research/15-native-ios-app.md)).** The next build, in three steps: see
   "Next" at the top. After the Health sync companion comes the full shell if wanted (option B: a `WKWebView` around the person's own server,
   which gives up the service worker's offline shell, and later an Android app with Health Connect). A public App Store listing is a

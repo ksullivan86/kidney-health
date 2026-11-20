@@ -1,4 +1,4 @@
-// The pairing link in the QR code that the web app shows with a new phone token (Settings → Phone shortcuts; design note 15 §4.3):
+// The pairing link in the QR code that the web app shows with a new phone token (Settings → Account → Your data → Phone shortcuts; design note 15 §4.3):
 // kidneyhealth://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_…
 // The server builds it (app/pairing.py). This reads it exactly as the server's reference reading does, so a link is taken only in the
 // form the server makes. tests/data/pairing_vectors.json holds the server's answers, including the links it refuses.

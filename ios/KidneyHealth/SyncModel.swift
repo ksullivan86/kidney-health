@@ -49,7 +49,7 @@ final class SyncModel: ObservableObject {
         let tokenChanged = !pasted.isEmpty && Data(pasted.utf8) != Keychain.read(.token)
         if !pasted.isEmpty {
             guard Settings.isDeviceToken(pasted) else {
-                return "That is not a phone token. Make one in Settings → Phone shortcuts. It starts with khd_."
+                return "That is not a phone token. Make one in Settings → Account → Your data → Phone shortcuts. It starts with khd_."
             }
             do {
                 try Keychain.save(Data(pasted.utf8), as: .token)
@@ -79,12 +79,12 @@ final class SyncModel: ObservableObject {
     }
 
     /// Said when the app is opened with a link that is not a pairing link the server made.
-    static let notAPairingLink = "That is not a pairing code from Settings → Phone shortcuts. Make a new phone token there and scan its QR code."
+    static let notAPairingLink = "That is not a pairing code from Settings → Account → Your data → Phone shortcuts. Make a new phone token there and scan its QR code."
 
     /// What the app asks before it saves the address and token of a QR code, so a code made by someone else is not taken quietly.
     func pairingQuestion(_ link: Pairing.Link) -> String {
         var text = "This phone will send your weight and blood pressure to \(link.server). "
-            + "Pair only with a QR code from your own server, under Settings → Phone shortcuts."
+            + "Pair only with a QR code from your own server, under Settings → Account → Your data → Phone shortcuts."
         if hasToken { text += " The token saved on this phone now is replaced." }
         return text
     }

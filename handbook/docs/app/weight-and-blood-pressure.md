@@ -225,6 +225,20 @@ ask each time. Whether an automation runs without asking depends on your iOS ver
 - **429.** The token has sent more than 60 requests in an hour. Wait and try again.
 - **It cannot connect.** The phone cannot reach the server (see above).
 
+### Connect the Kidney Health iPhone app
+
+The iPhone app sends new weights and blood pressure readings from Apple Health to your server by itself. To connect it:
+
+1. Whoever runs your server turns on **Phone shortcuts** (Server administration → Server settings). Your server needs an
+   `https://` address, and your phone must be able to reach it, for example at home or over your VPN.
+2. In the web app, open **Settings → Account → Your data → Phone shortcuts** and make a token. Give it a name such as
+   "My iPhone".
+3. The page shows the token once, with a QR code. Either point the iPhone Camera at the QR code and tap the link, then tap
+   **Pair**; or open the app, type your server's address, paste the token and tap **Save**.
+4. In the app, tap **Test connection**. Then tap **Allow weight and blood pressure** and allow both in the Health screen.
+
+Each person connects with a token from their own account, so their readings go to their own log.
+
 ### The QR code next to the token
 
 When the server has an `https://` address, the page also shows a **QR code** with the new token. It is for the project's

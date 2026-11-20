@@ -46,8 +46,10 @@ struct ContentView: View {
                 } header: {
                     Text("Your server")
                 } footer: {
-                    Text("Make a token in the web app under Settings → Phone shortcuts, then scan its QR code with the Camera, or paste "
-                         + "the address and the token here. The token is kept on this phone only and is never shown again. "
+                    Text("To connect: in the web app, open Settings → Account → Your data → Phone shortcuts and make a token. "
+                         + "Scan its QR code with the Camera, or type your server's address and paste the token here, then tap Save. "
+                         + "If there is no Phone shortcuts form, ask whoever runs your server to turn phone shortcuts on. "
+                         + "The token is kept on this phone only and is never shown again. "
                          + "Test connection checks the saved address and token, and sends nothing else.")
                 }
 

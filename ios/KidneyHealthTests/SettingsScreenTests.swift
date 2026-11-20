@@ -21,7 +21,7 @@ final class SettingsScreenTests: XCTestCase {
         XCTAssertEqual(m.save(address: "http://kidney.example.org", token: ""),
                        "Type the address of your server. It starts with https://.")
         XCTAssertEqual(m.save(address: "https://kidney.example.org", token: "kha_" + String(repeating: "a", count: 43)),
-                       "That is not a phone token. Make one in Settings → Phone shortcuts. It starts with khd_.")
+                       "That is not a phone token. Make one in Settings → Account → Your data → Phone shortcuts. It starts with khd_.")
         XCTAssertFalse(m.hasToken)
         XCTAssertNil(m.save(address: " https://kidney.example.org ", token: "khd_" + String(repeating: "a", count: 43)))
         XCTAssertTrue(m.hasToken)
@@ -35,7 +35,7 @@ final class SettingsScreenTests: XCTestCase {
         let link = try XCTUnwrap(Pairing.parse("kidneyhealth://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=" + token))
         XCTAssertFalse(m.hasToken)  // reading the link saves nothing
         XCTAssertEqual(m.pairingQuestion(link), "This phone will send your weight and blood pressure to https://kidney.example.org. "
-                       + "Pair only with a QR code from your own server, under Settings → Phone shortcuts.")
+                       + "Pair only with a QR code from your own server, under Settings → Account → Your data → Phone shortcuts.")
         XCTAssertNil(m.save(address: link.server, token: link.token))
         XCTAssertTrue(m.hasToken)
         XCTAssertEqual(m.address, "https://kidney.example.org")
