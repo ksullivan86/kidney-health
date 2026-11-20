@@ -128,7 +128,7 @@ curl -sS https://food.example.org/push/v1/check -H "Authorization: Bearer khd_�
 
 ## Pairing the iPhone app by QR code
 
-When a device token is made, `POST /api/me/tokens` also answers `pair_url`, and Settings → Phone shortcuts draws it as a QR code
+When a device token is made, `POST /api/me/tokens` also answers `pair_url`, and Settings → Account → Your data → Phone shortcuts draws it as a QR code
 next to the token. It is shown once, like the token.
 
 ```text

@@ -11,6 +11,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 * The iPhone app can go to TestFlight. A workflow you start by hand builds it, signs it with your App Store Connect key and
   uploads it. Steps are in `ios/README.md`. The app also has its icon now.
+* The iPhone app and the handbook give the whole path to make a phone token, Settings → Account → Your data → Phone
+  shortcuts, and say that whoever runs the server must turn phone shortcuts on first.
 * The iPhone app is called Kidney Health, like the project, everywhere. Its bundle ID is now
   `io.github.ksullivan86.kidneyhealth` and its pairing links start `kidneyhealth://`. A QR code from an older server
   will not open the new app: update the server, or paste the address and token into the app by hand.
