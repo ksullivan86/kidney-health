@@ -43,12 +43,13 @@ itself, so none are stored. The project's team is `579992SASJ`.
 
 Once, in Apple's websites:
 
-1. Register the App ID `io.github.ksullivan86.kidneyhealth.sync` with the **HealthKit** capability (Certificates, Identifiers &
+1. Register one iPhone under Devices (its UDID). Apple needs a device on the team to make the profile used while archiving.
+2. Register the App ID `io.github.ksullivan86.kidneyhealth.sync` with the **HealthKit** capability (Certificates, Identifiers &
    Profiles → Identifiers).
-2. Create the app in App Store Connect with that bundle ID.
-3. Make a Team API key with the **Admin** role (Users and Access → Integrations → App Store Connect API). Only Admin keys may use
+3. Create the app in App Store Connect with that bundle ID.
+4. Make a Team API key with the **Admin** role (Users and Access → Integrations → App Store Connect API). Only Admin keys may use
    cloud-managed certificates. Download the `.p8` file; Apple offers it once.
-4. In GitHub, Settings → Environments → `release`, add three secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, and `ASC_KEY_P8` (the whole
+5. In GitHub, Settings → Environments → `release`, add three secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, and `ASC_KEY_P8` (the whole
    file, with its BEGIN and END lines).
 
 Each time: Actions → TestFlight → Run workflow. The build number is the run number. Apple takes 5 to 30 minutes to process a build,

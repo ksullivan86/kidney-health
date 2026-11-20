@@ -34,7 +34,11 @@ def test_the_entitlements_are_health_reading_and_background_delivery_only():
 
 def test_the_app_explains_reading_and_never_asks_to_write():
     assert "INFOPLIST_KEY_NSHealthShareUsageDescription" in PROJECT
-    for key in ("NSHealthUpdateUsageDescription", "NSHealthClinicalHealthRecordsShareUsageDescription", "NSAllowsArbitraryLoads",
+    # App Store Connect refuses a HealthKit app without the writing sentence, even one that never writes (the first TestFlight
+    # upload, 2026-11-20), so the sentence is there and says the app never writes. What the app asks for is checked below.
+    updates = re.findall(r'INFOPLIST_KEY_NSHealthUpdateUsageDescription = "([^"]*)";', PROJECT)
+    assert len(updates) == 2 and all(u.startswith("The app never writes to Health.") for u in updates)
+    for key in ("NSHealthClinicalHealthRecordsShareUsageDescription", "NSAllowsArbitraryLoads",
                 "NSAppTransportSecurity", "UIBackgroundModes"):
         assert key not in PROJECT, key
     asks = re.findall(r"requestAuthorization\(toShare:\s*([^,]*),\s*read:\s*([^)]*)\)", "\n".join(APP.values()))

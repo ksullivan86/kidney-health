@@ -262,6 +262,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "Kidney Health Sync";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "The app reads your weight and blood pressure from Health and sends them to your own Kidney Health server. It reads nothing else.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "The app never writes to Health. Apple asks every Health app for this sentence; the app only reads your weight and blood pressure.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
@@ -293,6 +294,7 @@
 				INFOPLIST_KEY_CFBundleDisplayName = "Kidney Health Sync";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "The app reads your weight and blood pressure from Health and sends them to your own Kidney Health server. It reads nothing else.";
+				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "The app never writes to Health. Apple asks every Health app for this sentence; the app only reads your weight and blood pressure.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
