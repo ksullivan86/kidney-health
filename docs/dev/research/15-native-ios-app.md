@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Steps 1 and 2 are built (2026-10-28):** `ios/KidneyHealthCore` with its Linux tests, and the app `ios/KidneyHealthSync` with simulator tests on the macOS runner. Step 3 (signing, TestFlight, a real iPhone) waits for the owner's Apple account. Decisions 3 and 4 are open. |
+| Status | **Steps 1 and 2 are built (2026-10-28):** `ios/KidneyHealthCore` with its Linux tests, and the app `ios/KidneyHealthSync` with simulator tests on the macOS runner. Step 3's workflow is built (2026-11-20): `.github/workflows/testflight.yml` with cloud signing; the tests on a real iPhone wait for the owner. Decisions 3 and 4 are open. |
 | Date researched | 2026-10-22, against `main` with notes 10–14 |
 | Scope | What a native iPhone app adds to the Home Screen web app, the smallest first version, how it reuses the server and the tests, what it needs from the owner (an Apple Developer account, signing, TestFlight), and how it is built without a Mac. |
 | Out of scope | An App Store listing (a separate decision: review, a privacy policy, Apple's health-data rules and a regulatory opinion, ROADMAP); Android (later, the same pattern with Health Connect); glucose, insulin and medicines (CLAUDE.md: no dosing data, ever; the app never reads those HealthKit types); push notifications from the server. |
@@ -125,6 +125,10 @@ Note 12 built the server half of that: a write-only device token and an add-only
    * The Xcode project is written by hand in the folder-based format (`objectVersion = 77`), because XcodeGen could not be fetched and
      pinned. Xcode adds new files in those folders by itself.
 3. **Signing, TestFlight and the owner's phone tests**: the owner's account and time, plus about 1M tokens of workflow and fixes.
+   Workflow built 2026-11-20 (`.github/workflows/testflight.yml`, run by hand from main under the `release` environment). It differs
+   from §4.4: Apple's cloud signing with an App Store Connect API key of the Admin role makes the certificate and profile at build
+   time, so only the key is a secret and no certificate or profile is stored. The team ID is in the project. The app got its icon
+   (the web app's, 1024 px, no alpha) and `ITSAppUsesNonExemptEncryption = NO`, because it uses only the system's HTTPS.
 4. **(Optional) pairing by QR code**: about 1M tokens. The test-token route is built. Built 2026-10-29 (§4.3).
 
 That totals about 4–6M tokens for option A, below the ROADMAP's 6–10M for the full shell (option B).

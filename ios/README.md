@@ -33,7 +33,28 @@ How a sync works:
   sending again after a refused token.
 * Readings deleted in Health stay on the server. In the web app, Settings → Phone shortcuts → "Delete what it sent" removes them.
 
-Signing, TestFlight and a real iPhone come next, with the owner's Apple Developer account (step 3 of the design note).
+## Putting it on an iPhone (TestFlight)
+
+The `TestFlight` workflow (`.github/workflows/testflight.yml`) builds the app on GitHub's Mac runner, signs it and uploads it to
+TestFlight. No Mac is needed. It runs only when someone starts it from main, under the `release` environment.
+
+Signing is Apple's cloud signing: `xcodebuild` signs in with an App Store Connect API key and makes the certificate and profile
+itself, so none are stored. The project's team is `579992SASJ`.
+
+Once, in Apple's websites:
+
+1. Register the App ID `io.github.ksullivan86.kidneyhealth.sync` with the **HealthKit** capability (Certificates, Identifiers &
+   Profiles → Identifiers).
+2. Create the app in App Store Connect with that bundle ID.
+3. Make a Team API key with the **Admin** role (Users and Access → Integrations → App Store Connect API). Only Admin keys may use
+   cloud-managed certificates. Download the `.p8` file; Apple offers it once.
+4. In GitHub, Settings → Environments → `release`, add three secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, and `ASC_KEY_P8` (the whole
+   file, with its BEGIN and END lines).
+
+Each time: Actions → TestFlight → Run workflow. The build number is the run number. Apple takes 5 to 30 minutes to process a build,
+then it appears in the TestFlight app for internal testers. A build lasts 90 days.
+
+Family or friends as testers, or an App Store listing, need Apple's review and a privacy policy first (design note 15, out of scope).
 
 ## Running the tests
 

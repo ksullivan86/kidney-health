@@ -48,8 +48,8 @@ and password reset by email (0.23.0). Candidates, for the owner to choose:
   developer app and publish a privacy policy. Medium to large. Sources: developer.kroger.com (Cart, Products and Locations
   APIs, acceptable use, terms of 2019-04-09).
 
-Waiting on the owner: an Instacart key; reminders tried on a real iPhone (from the Home Screen) and an Android phone; an Apple Developer membership for the iPhone app's step 3 (signing, TestFlight and
-tests on a real iPhone; steps 1 and 2 are built, [note 15](dev/research/15-native-ios-app.md)); runs with real files (list
+Waiting on the owner: an Instacart key; reminders tried on a real iPhone (from the Home Screen) and an Android phone; the iPhone app on a real iPhone (the TestFlight workflow is built; the owner adds the App Store Connect key and runs it, steps in
+[`ios/README.md`](../ios/README.md#putting-it-on-an-iphone-testflight), [note 15](dev/research/15-native-ios-app.md)); runs with real files (list
 apps, a Health export, lab PDFs on the local model); the clinician review below.
 
 ## Clinical review (before the draft banners can go)
