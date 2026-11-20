@@ -1,7 +1,7 @@
 // What the settings screen accepts, and the words it answers with.
 import KidneyHealthCore
 import XCTest
-@testable import KidneyHealthSync
+@testable import KidneyHealth
 
 @MainActor
 final class SettingsScreenTests: XCTestCase {
@@ -32,7 +32,7 @@ final class SettingsScreenTests: XCTestCase {
     func testAQRCodeIsSavedOnlyAfterTheQuestionAndSaysWhatItReplaces() throws {
         let m = model()
         let token = "khd_" + String(repeating: "b", count: 43)
-        let link = try XCTUnwrap(Pairing.parse("kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=" + token))
+        let link = try XCTUnwrap(Pairing.parse("kidneyhealth://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=" + token))
         XCTAssertFalse(m.hasToken)  // reading the link saves nothing
         XCTAssertEqual(m.pairingQuestion(link), "This phone will send your weight and blood pressure to https://kidney.example.org. "
                        + "Pair only with a QR code from your own server, under Settings → Phone shortcuts.")
@@ -40,7 +40,7 @@ final class SettingsScreenTests: XCTestCase {
         XCTAssertTrue(m.hasToken)
         XCTAssertEqual(m.address, "https://kidney.example.org")
         XCTAssertTrue(m.pairingQuestion(link).hasSuffix(" The token saved on this phone now is replaced."))
-        XCTAssertNil(Pairing.parse("kidneyhealthsync://pair?v=1&server=http%3A%2F%2Fkidney.example.org&token=" + token))
+        XCTAssertNil(Pairing.parse("kidneyhealth://pair?v=1&server=http%3A%2F%2Fkidney.example.org&token=" + token))
     }
 
     func testAnotherServerStartsAgainFromThreeMonthsBack() throws {

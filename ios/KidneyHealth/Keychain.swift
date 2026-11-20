@@ -4,7 +4,7 @@ import Foundation
 import Security
 
 enum Keychain {
-    static let service = "io.github.ksullivan86.kidneyhealth.sync"
+    static let service = "io.github.ksullivan86.kidneyhealth"
 
     enum Item: String {
         case token

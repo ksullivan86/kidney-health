@@ -14,17 +14,17 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 IOS = ROOT / "ios"
-PROJECT = (IOS / "KidneyHealthSync.xcodeproj" / "project.pbxproj").read_text(encoding="utf-8")
+PROJECT = (IOS / "KidneyHealth.xcodeproj" / "project.pbxproj").read_text(encoding="utf-8")
 SWIFT = {p.relative_to(IOS).as_posix(): p.read_text(encoding="utf-8") for p in sorted(IOS.rglob("*.swift")) if ".build" not in p.parts}
 # The code without its comments, which may name what the app refuses.
 CODE = {name: re.sub(r"//[^\n]*", "", text) for name, text in SWIFT.items()}
-APP = {name: text for name, text in SWIFT.items() if name.startswith("KidneyHealthSync/")}
+APP = {name: text for name, text in SWIFT.items() if name.startswith("KidneyHealth/")}
 
 pytestmark = pytest.mark.safety
 
 
 def test_the_entitlements_are_health_reading_and_background_delivery_only():
-    entitlements = plistlib.loads((IOS / "KidneyHealthSync.entitlements").read_bytes())
+    entitlements = plistlib.loads((IOS / "KidneyHealth.entitlements").read_bytes())
     assert entitlements == {
         "com.apple.developer.healthkit": True,
         "com.apple.developer.healthkit.access": [],  # no clinical health records
@@ -48,7 +48,7 @@ def test_the_app_explains_reading_and_never_asks_to_write():
 def test_the_read_types_come_from_the_package_list_of_three():
     core = SWIFT["KidneyHealthCore/Sources/KidneyHealthCore/Body.swift"]
     assert "public static let readTypes = [weightType, systolicType, diastolicType]" in core
-    assert "Body.readTypes.map" in APP["KidneyHealthSync/HealthSource.swift"]
+    assert "Body.readTypes.map" in APP["KidneyHealth/HealthSource.swift"]
 
 
 @pytest.mark.parametrize("word", ["glucose", "insulin", "medication", "dietary", "carbohydrate", "clinical", "HKWorkout",
@@ -63,7 +63,7 @@ def test_no_code_names_another_health_type(word):
 def test_no_third_party_packages_and_only_apple_frameworks():
     assert "XCRemoteSwiftPackageReference" not in PROJECT
     allowed = {"Foundation", "HealthKit", "Security", "SwiftUI", "UIKit", "XCTest", "PackageDescription", "KidneyHealthCore",
-               "KidneyHealthSync"}
+               "KidneyHealth"}
     for name, text in SWIFT.items():
         for module in re.findall(r"^(?:@testable )?import (\w+)", text, re.M):
             assert module in allowed, (name, module)
@@ -74,31 +74,31 @@ def test_no_third_party_packages_and_only_apple_frameworks():
 def test_the_app_talks_only_https_and_follows_no_redirect():
     for name, text in APP.items():
         assert "http://" not in text, name
-    transport = APP["KidneyHealthSync/URLSessionTransport.swift"]
+    transport = APP["KidneyHealth/URLSessionTransport.swift"]
     assert "completionHandler(nil)" in transport and "httpCookieStorage = nil" in transport and "urlCache = nil" in transport
 
 
 def test_the_token_and_anchors_stay_on_this_device():
-    keychain = APP["KidneyHealthSync/Keychain.swift"]
+    keychain = APP["KidneyHealth/Keychain.swift"]
     assert "kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly" in keychain
     assert "kSecAttrSynchronizable" not in keychain
-    model = APP["KidneyHealthSync/SyncModel.swift"]
+    model = APP["KidneyHealth/SyncModel.swift"]
     assert re.search(r"defaults\.set\([^)]*token", model) is None  # the token never goes to UserDefaults
 
 
 def test_the_app_opens_only_its_pairing_links_and_asks_before_it_saves():
     from app import brand
 
-    info = plistlib.loads((IOS / "KidneyHealthSync-Info.plist").read_bytes())
+    info = plistlib.loads((IOS / "KidneyHealth-Info.plist").read_bytes())
     assert info == {"ITSAppUsesNonExemptEncryption": False,  # only standard HTTPS, so no export questions in App Store Connect
-                    "CFBundleURLTypes": [{"CFBundleTypeRole": "Viewer", "CFBundleURLName": "io.github.ksullivan86.kidneyhealth.sync.pair",
+                    "CFBundleURLTypes": [{"CFBundleTypeRole": "Viewer", "CFBundleURLName": "io.github.ksullivan86.kidneyhealth.pair",
                                                               "CFBundleURLSchemes": [brand.PAIRING_SCHEME]}]}
-    app_configs = [block for block in PROJECT.split("isa = XCBuildConfiguration;") if "PRODUCT_BUNDLE_IDENTIFIER = io.github.ksullivan86.kidneyhealth.sync;" in block]
-    assert len(app_configs) == 2 and all('INFOPLIST_FILE = "KidneyHealthSync-Info.plist";' in b for b in app_configs)
+    app_configs = [block for block in PROJECT.split("isa = XCBuildConfiguration;") if "PRODUCT_BUNDLE_IDENTIFIER = io.github.ksullivan86.kidneyhealth;" in block]
+    assert len(app_configs) == 2 and all('INFOPLIST_FILE = "KidneyHealth-Info.plist";' in b for b in app_configs)
     assert len(re.findall(r"\sINFOPLIST_FILE =", PROJECT)) == 2  # the tests target has none
     pairing = SWIFT["KidneyHealthCore/Sources/KidneyHealthCore/Pairing.swift"]
     assert f'public static let scheme = "{brand.PAIRING_SCHEME}"' in pairing
-    view = APP["KidneyHealthSync/ContentView.swift"]
+    view = APP["KidneyHealth/ContentView.swift"]
     assert ".onOpenURL { url in" in view and "Pairing.parse(url.absoluteString)" in view
     # nothing is saved when the link arrives: only the alert's Pair button saves
     opened = view[view.index(".onOpenURL"):view.index(".alert(")]
@@ -114,9 +114,9 @@ TESTFLIGHT = ROOT / ".github" / "workflows" / "testflight.yml"
 
 def test_the_project_signs_for_the_owners_team_and_has_an_icon():
     assert PROJECT.count(f"DEVELOPMENT_TEAM = {TEAM_ID};") == 4 and 'DEVELOPMENT_TEAM = "";' not in PROJECT
-    app_configs = [block for block in PROJECT.split("isa = XCBuildConfiguration;") if "PRODUCT_BUNDLE_IDENTIFIER = io.github.ksullivan86.kidneyhealth.sync;" in block]
+    app_configs = [block for block in PROJECT.split("isa = XCBuildConfiguration;") if "PRODUCT_BUNDLE_IDENTIFIER = io.github.ksullivan86.kidneyhealth;" in block]
     assert all("ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;" in b for b in app_configs)
-    iconset = IOS / "KidneyHealthSync" / "Assets.xcassets" / "AppIcon.appiconset"
+    iconset = IOS / "KidneyHealth" / "Assets.xcassets" / "AppIcon.appiconset"
     import json
 
     images = json.loads((iconset / "Contents.json").read_text(encoding="utf-8"))["images"]
@@ -150,4 +150,4 @@ def test_the_app_is_named_like_the_project():
 
     names = re.findall(r'INFOPLIST_KEY_CFBundleDisplayName = "([^"]*)";', PROJECT)
     assert names == [brand.NAME, brand.NAME]
-    assert f'.navigationTitle("{brand.NAME}")' in APP["KidneyHealthSync/ContentView.swift"]
+    assert f'.navigationTitle("{brand.NAME}")' in APP["KidneyHealth/ContentView.swift"]

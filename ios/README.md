@@ -9,16 +9,16 @@ What is here:
   day a reading gets, the watch rule, kilogram rounding, the key that stops a reading being added twice, and requests of at most 50 rows.
   It checks each row the way `POST /push/v1/body` does before the app sends it, because one refused row makes the whole request fail.
   It also holds one sync: what to send, when to stop, and the status line. It has no dependencies and no HealthKit code.
-* `KidneyHealthSync/`: the app, one screen with three parts.
+* `KidneyHealth/`: the app, one screen with three parts.
   * **Your server**: the address (HTTPS only) and the phone token from Settings → Phone shortcuts. The token is kept in the Keychain
     for this phone only. **Test connection** asks the server whether the saved token works (`GET /push/v1/check`) and sends nothing else.
   * **Pairing by QR code**: Settings → Phone shortcuts shows a QR code with a new token. The iPhone Camera opens the app with its
-    `kidneyhealthsync://pair?…` link (registered in `KidneyHealthSync-Info.plist`). The app asks "Pair with …?" and saves the address and
+    `kidneyhealth://pair?…` link (registered in `KidneyHealth-Info.plist`). The app asks "Pair with …?" and saves the address and
     the token only when the person taps **Pair**. `Pairing.parse` in the package reads the link exactly as the server makes it.
   * **Apple Health**: one button asks to read weight and blood pressure. The app never asks to write.
   * **Sending**: what the last sync did, and **Send now**. Health wakes the app when it saves a new weight or reading.
-* `KidneyHealthSyncTests/`: tests that run in the iPhone simulator.
-* `KidneyHealthSync.xcodeproj`: the Xcode project. It names folders, not files, so a new `.swift` file needs no project change.
+* `KidneyHealthTests/`: tests that run in the iPhone simulator.
+* `KidneyHealth.xcodeproj`: the Xcode project. It names folders, not files, so a new `.swift` file needs no project change.
 
 How a sync works:
 
@@ -44,7 +44,7 @@ itself, so none are stored. The project's team is `579992SASJ`.
 Once, in Apple's websites:
 
 1. Register one iPhone under Devices (its UDID). Apple needs a device on the team to make the profile used while archiving.
-2. Register the App ID `io.github.ksullivan86.kidneyhealth.sync` with the **HealthKit** capability (Certificates, Identifiers &
+2. Register the App ID `io.github.ksullivan86.kidneyhealth` with the **HealthKit** capability (Certificates, Identifiers &
    Profiles → Identifiers).
 3. Create the app in App Store Connect with that bundle ID.
 4. Make a Team API key with the **Admin** role (Users and Access → Integrations → App Store Connect API). Only Admin keys may use
@@ -73,7 +73,7 @@ If a replay fails, fix the Swift code, not the vectors. When the server's rules 
 To build the app and run its tests in the simulator you need a Mac with Xcode 26:
 
 ```bash
-xcodebuild test -project ios/KidneyHealthSync.xcodeproj -scheme KidneyHealthSync \
+xcodebuild test -project ios/KidneyHealth.xcodeproj -scheme KidneyHealth \
   -destination "platform=iOS Simulator,name=iPhone 17"
 ```
 

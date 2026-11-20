@@ -132,7 +132,7 @@ When a device token is made, `POST /api/me/tokens` also answers `pair_url`, and 
 next to the token. It is shown once, like the token.
 
 ```text
-kidneyhealthsync://pair?v=1&server=https%3A%2F%2Ffood.example.org&token=khd_…
+kidneyhealth://pair?v=1&server=https%3A%2F%2Ffood.example.org&token=khd_…
 ```
 
 * `server` is `PUBLIC_URL`'s origin, or else the address the page came from. It must be `https://` and a host name or IPv4

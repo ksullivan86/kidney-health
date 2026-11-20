@@ -91,10 +91,11 @@ VERSION_HEADER = "X-KDL-Version"
 ASSISTANT_TOKEN_PREFIX = "kha_"
 DEVICE_TOKEN_PREFIX = "khd_"
 
-# The link scheme of the iPhone app (``kidneyhealthsync://pair?…``): the QR code that Settings → Phone shortcuts shows with a new
+# The link scheme of the iPhone app (``kidneyhealth://pair?…``): the QR code that Settings → Phone shortcuts shows with a new
 # device token opens the app with the address and the token (``app/pairing.py``, design note 15 §4.3).
 # Compatibility: the app registers this scheme, and an app already installed only opens links that use it.
-PAIRING_SCHEME = "kidneyhealthsync"
+# It was ``kidneyhealthsync`` until 2026-11-20, changed with the app's name before anyone relied on it.
+PAIRING_SCHEME = "kidneyhealth"
 
 # The realm of the ``WWW-Authenticate: Bearer`` challenge that a refused token gets at ``/mcp`` and ``/push/v1``.
 # Compatibility: a client may match on it.

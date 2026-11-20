@@ -135,7 +135,7 @@ jobs:
           echo "simulator: $udid"
           results="$RUNNER_TEMP/tests.xcresult"
           if ! xcodebuild test -quiet \
-            -project ios/KidneyHealthSync.xcodeproj -scheme KidneyHealthSync \
+            -project ios/KidneyHealth.xcodeproj -scheme KidneyHealth \
             -destination "id=$udid" -derivedDataPath "$RUNNER_TEMP/derived" -resultBundlePath "$results"; then
             xcrun xcresulttool get test-results summary --path "$results" || true
             xcrun xcresulttool get test-results tests --path "$results" | head -c 20000 || true

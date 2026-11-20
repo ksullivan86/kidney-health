@@ -2,7 +2,7 @@
 import HealthKit
 import KidneyHealthCore
 import XCTest
-@testable import KidneyHealthSync
+@testable import KidneyHealth
 
 final class HealthMappingTests: XCTestCase {
     let start = Date(timeIntervalSince1970: 1_792_667_700)

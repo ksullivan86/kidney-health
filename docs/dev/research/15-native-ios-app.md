@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | **Steps 1 and 2 are built (2026-10-28):** `ios/KidneyHealthCore` with its Linux tests, and the app `ios/KidneyHealthSync` with simulator tests on the macOS runner. Step 3's workflow is built (2026-11-20): `.github/workflows/testflight.yml` with cloud signing; the tests on a real iPhone wait for the owner. Decisions 3 and 4 are open. |
+| Status | **Steps 1 and 2 are built (2026-10-28):** `ios/KidneyHealthCore` with its Linux tests, and the app `ios/KidneyHealth` with simulator tests on the macOS runner. Step 3's workflow is built (2026-11-20): `.github/workflows/testflight.yml` with cloud signing; the tests on a real iPhone wait for the owner. Decisions 3 and 4 are open. |
 | Date researched | 2026-10-22, against `main` with notes 10–14 |
 | Scope | What a native iPhone app adds to the Home Screen web app, the smallest first version, how it reuses the server and the tests, what it needs from the owner (an Apple Developer account, signing, TestFlight), and how it is built without a Mac. |
 | Out of scope | An App Store listing (a separate decision: review, a privacy policy, Apple's health-data rules and a regulatory opinion, ROADMAP); Android (later, the same pattern with Health Connect); glucose, insulin and medicines (CLAUDE.md: no dosing data, ever; the app never reads those HealthKit types); push notifications from the server. |
@@ -77,7 +77,7 @@ Note 12 built the server half of that: a write-only device token and an add-only
 
 * **Optionally, a QR code for pairing** in Settings → Phone shortcuts, holding the address and the token once. It is drawn on the device by the page, without a vendored library if one fits in a few hundred lines; otherwise vendored and pinned.
   Built 2026-10-29:
-  * `POST /api/me/tokens` answers `pair_url` for a device token: `kidneyhealthsync://pair?v=1&server=…&token=khd_…`, built by
+  * `POST /api/me/tokens` answers `pair_url` for a device token: `kidneyhealth://pair?v=1&server=…&token=khd_…`, built by
     `app/pairing.py` from `PUBLIC_URL` or the request's address. It is `null` unless the address is `https://` and a host, because the
     app needs HTTPS. The page draws it with the `qrcode-generator` module already vendored for two-step sign-in.
   * The iPhone Camera opens the app through its link scheme, so the app has no camera code and asks for no camera permission.
@@ -132,6 +132,9 @@ Note 12 built the server half of that: a write-only device token and an add-only
    The first uploads showed two more needs. Apple makes a development profile while archiving, so the team needs one registered
    iPhone. App Store Connect also refuses a HealthKit app without `NSHealthUpdateUsageDescription`, even one that never writes. The
    sentence says the app never writes, and the app still asks to share nothing (`toShare: []`, a test).
+   Renamed 2026-11-20, at the owner's wish, before anyone used it: the app, its Xcode project and folders, its bundle ID
+   (`io.github.ksullivan86.kidneyhealth`) and its link scheme (`kidneyhealth://`) all lost "Sync". Apple fixes a bundle ID and a
+   SKU once an app exists, so App Store Connect got a new app record.
 4. **(Optional) pairing by QR code**: about 1M tokens. The test-token route is built. Built 2026-10-29 (§4.3).
 
 That totals about 4–6M tokens for option A, below the ROADMAP's 6–10M for the full shell (option B).

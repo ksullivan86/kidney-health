@@ -42,7 +42,7 @@ final class PairingVectorTests: XCTestCase {
             XCTAssertNotNil(Settings.pushURL(got.server), got.server)
             XCTAssertTrue(Settings.isDeviceToken(got.token), got.token)
         }
-        let link = try XCTUnwrap(Pairing.parse("kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fexample.org%3A8443&token=khd_"
+        let link = try XCTUnwrap(Pairing.parse("kidneyhealth://pair?v=1&server=https%3A%2F%2Fexample.org%3A8443&token=khd_"
                                                + String(repeating: "A", count: 43)))
         XCTAssertEqual(link.host, "example.org:8443")
     }

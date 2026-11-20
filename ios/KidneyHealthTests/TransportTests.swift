@@ -1,7 +1,7 @@
 // The request the app sends, and that a redirect is never followed.
 import KidneyHealthCore
 import XCTest
-@testable import KidneyHealthSync
+@testable import KidneyHealth
 
 /// Answers every request from a handler set by the test.
 final class StubProtocol: URLProtocol {

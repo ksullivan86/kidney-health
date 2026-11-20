@@ -4,7 +4,7 @@ import SwiftUI
 import UIKit
 
 @main
-struct KidneyHealthSyncApp: App {
+struct KidneyHealthApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var model = SyncModel.shared
 
