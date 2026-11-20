@@ -5,6 +5,13 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## Unreleased
+
+### Added
+
+* The iPhone app can go to TestFlight. A workflow you start by hand builds it, signs it with your App Store Connect key and
+  uploads it. Steps are in `ios/README.md`. The app also has its icon now.
+
 ## 0.24.0 — 2026-11-12
 
 ### Upgrading from 0.23 (read this first)

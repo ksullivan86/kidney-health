@@ -78,6 +78,7 @@ deploy/k8s/*.yaml (+ kustomization.yaml)   PSA restricted, NetworkPolicy, HTTPRo
 .github/workflows/ci.yml    pytest 3.12+3.14+3.15, JS parity, linters, image smoke test + Grype gate (never pushes)
 .github/workflows/release.yml  build by digest -> scan -> sign/attest (public repo) -> tags (v0.3 decision 7)
 .github/workflows/tag-release.yml  a merge that changes the version tags it and starts release.yml (decision 7)
+.github/workflows/testflight.yml  by hand from main: build, cloud-sign and upload the iPhone app to TestFlight (note 15 step 3)
 SECURITY.md, docs/security.md, docs/https.md, scripts/verify-image.sh   (v0.3, deploy owner)
 CHANGELOG.md                user-facing changes per version (v0.3)
 CONTRIBUTING.md, CODE_OF_CONDUCT.md, AGENTS.md   contributor rules and how-tos; Contributor Covenant 2.1; agents' short rules
