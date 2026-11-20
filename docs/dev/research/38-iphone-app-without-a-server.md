@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Proposed 2026-11-20. Nothing built. Step 0 (§9) is a test on a real iPhone before anything else. |
+| Status | Decided 2026-11-20 (§10). Nothing built. Step 0 (§9) is a test on a real iPhone before anything else. |
 | Owner's words | "I'd like to have it work locally if connection to the server is lost and sync later, maybe use the iOS AI if possible as well. I'd like to also have users not need a server to use the app." And: "can we also just include the option for a USDA API key to be added to app, it could have its own settings page for keys or APIs." (2026-11-20) |
 | Builds on | [Note 15](15-native-ios-app.md) (the iPhone app, signing, TestFlight), [note 02](02-ios-pwa.md) (the Home Screen web app, the service worker on iOS), [note 12](12-phone-push-tokens.md) (device tokens), [note 14](14-reuse-map.md) (the JavaScript twins and their vectors), [`demo.md`](../../demo.md) ("Keep my data in this browser"), [note 36](36-lab-pdf-text.md) (lab text, local model only), [note 32](32-choose-local-or-cloud-ai.md) (local or cloud AI). |
 | Scope | The iPhone app as a whole food log that works with no server. It keeps data on the phone, looks foods up with the person's own keys, uses Apple's on-device AI, and sends to a server when one is set up and reachable. |
@@ -199,17 +199,22 @@ already on the ROADMAP: is this a wellness app or clinical decision support? Bui
 
 Each step is its own pull request with tests, and TestFlight builds let the owner try it between steps.
 
-## 10. Decisions for the owner (defaults in bold)
+## 10. Decisions (the owner, 2026-11-20)
 
-* **D1. Two apps or one?** **One app, Kidney Health.** It works alone, and connecting a server is optional. (The other choice is
-  a second app for the no-server use.)
-* **D2. When a server is set up, where is the log kept?** **On the phone first, sent to the server** (§5.5). (Or: the app
-  becomes a window onto the server's web app when a server is set up.)
-* **D3. iPhone backups.** **Included in the phone's own backup** (iCloud or a computer, as the person has set up their phone).
-  Or excluded, so the data never leaves the phone and the export file is the only backup.
-* **D4. Lock.** **Optional Face ID or passcode lock, off by default.**
-* **D5. Services on by default.** **None.** The built-in food list works with nothing turned on.
-* **D6. The App Store.** **Not now.** TestFlight for family until the regulatory question is answered.
+* **D1. One app.** Kidney Health works alone, and connecting a server is a setting. The owner asked for advice; one app was
+  advised because family install one thing, there is one TestFlight listing and one set of Apple setup, and the code is not
+  split. A second app would only make sense for an App Store listing with a different purpose.
+* **D2. Local-first.** The phone keeps the log and works with or without the server. A connected server gets what the phone
+  adds and is the shared copy for the Care team and backups (§5.5). The owner asked for the usual practice; local-first is
+  how offline-capable apps work, because the app never waits for the network. The cost: an entry made in the web app does not
+  reach the phone until two-way sync (§9, step 6). If one person logs on both the phone and the web app, step 6 moves up.
+* **D3. iPhone backups include the app's data.** The owner: "data is fine in iCloud, it should be considered secure." The
+  handbook will suggest Apple's Advanced Data Protection, which encrypts iCloud backups end to end.
+* **D4. Optional Face ID or passcode lock, off by default.**
+* **D5. Every service is off until the person sets it up.** USDA cannot work without a key anyway. Open Food Facts needs no key,
+  so it would be the only one able to work by itself; it stays off, and the first barcode scan with no match in the built-in
+  list asks once whether to turn it on, naming the host and what is sent (the barcode only).
+* **D6. No App Store for now.** TestFlight for family until the wellness or clinical decision support question is answered.
 
 ## 11. Sources
 
