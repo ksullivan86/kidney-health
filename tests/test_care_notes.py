@@ -259,6 +259,10 @@ def test_the_constants():
 
 def test_a_share_with_notes_writes_a_look_per_area_per_hour(team, fake_clock):
     ana, sam, kim = team
+    # The test moves the clock on two hours and then expects the same UTC day. Run near midnight UTC (CI, 2026-11-20, 22:40),
+    # it crossed into the next day and saw two daily looks. Start no later than 20:59, moving back only: moving forward would
+    # make the sign-in look stale.
+    fake_clock.moment = fake_clock.moment.replace(hour=min(fake_clock.moment.hour, 20))
     sid = clinician(ana, sam, areas=["food", "labs"])
     other = join(kim, sam, username="sam", role="viewer", areas=["labs"])
     for _ in range(3):
