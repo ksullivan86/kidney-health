@@ -1,5 +1,7 @@
 # Build progress notes
 
+For the current bug audit, start with the [durable audit handoff](../audit-handoff.md). It links each published PR and its saved progress note, and lists the remaining checks.
+
 Each agent working on a long task keeps `<role>.md` here (see "Long-running agent work" in
 `CLAUDE.md`), so an interrupted run can be continued by a fresh agent or a person. Notes are
 condensed and removed when a milestone is finished: what changed goes to `CHANGELOG.md`, decisions to
