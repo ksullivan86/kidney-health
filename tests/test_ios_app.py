@@ -142,3 +142,12 @@ def test_testflight_runs_by_hand_from_main_with_the_key_only_where_it_is_used():
     assert "umask 077" in code and """trap 'rm -f "$key"' EXIT""" in code
     assert code.index("trap 'rm -f") < code.index('> "$key"')
     assert "-allowProvisioningUpdates" in code and "app-store-connect" in code and 'CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER"' in code
+
+
+def test_the_app_is_named_like_the_project():
+    """The owner's rule (2026-11-20): the iPhone app has the project's name, Kidney Health, on the Home Screen and its title bar."""
+    from app import brand
+
+    names = re.findall(r'INFOPLIST_KEY_CFBundleDisplayName = "([^"]*)";', PROJECT)
+    assert names == [brand.NAME, brand.NAME]
+    assert f'.navigationTitle("{brand.NAME}")' in APP["KidneyHealthSync/ContentView.swift"]

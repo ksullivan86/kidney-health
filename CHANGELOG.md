@@ -11,6 +11,7 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 * The iPhone app can go to TestFlight. A workflow you start by hand builds it, signs it with your App Store Connect key and
   uploads it. Steps are in `ios/README.md`. The app also has its icon now.
+* The iPhone app is called Kidney Health, like the project, on the Home Screen and in its title bar.
 
 ## 0.24.0 — 2026-11-12
 

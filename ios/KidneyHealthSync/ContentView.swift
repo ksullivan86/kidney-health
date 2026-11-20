@@ -83,7 +83,7 @@ struct ContentView: View {
                     }
                 }
             }
-            .navigationTitle("Kidney Health Sync")
+            .navigationTitle("Kidney Health")
         }
         .onAppear { address = model.address }
         .onOpenURL { url in
