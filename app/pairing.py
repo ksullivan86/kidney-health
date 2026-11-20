@@ -2,7 +2,7 @@
 
 When a person makes a device token, Settings → Phone shortcuts shows it once as text and as a QR code. The QR code holds one link:
 
-    kidneyhealthsync://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_…
+    kidneyhealth://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=khd_…
 
 The iPhone's Camera opens the app with it. The app asks "Pair with kidney.example.org?" before it saves anything, so a QR code made
 by someone else cannot quietly point the app at their server.

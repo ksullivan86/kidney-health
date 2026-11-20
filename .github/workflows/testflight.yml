@@ -77,9 +77,9 @@ jobs:
                 -authenticationKeyPath "$key"
                 -authenticationKeyID "$ASC_KEY_ID"
                 -authenticationKeyIssuerID "$ASC_ISSUER_ID")
-          archive="$RUNNER_TEMP/KidneyHealthSync.xcarchive"
+          archive="$RUNNER_TEMP/KidneyHealth.xcarchive"
           xcodebuild archive -quiet \
-            -project ios/KidneyHealthSync.xcodeproj -scheme KidneyHealthSync -configuration Release \
+            -project ios/KidneyHealth.xcodeproj -scheme KidneyHealth -configuration Release \
             -destination "generic/platform=iOS" -archivePath "$archive" \
             -derivedDataPath "$RUNNER_TEMP/derived" \
             "${auth[@]}" \

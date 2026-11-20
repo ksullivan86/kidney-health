@@ -15,9 +15,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "4B5D00000000000000000010"
-               BuildableName = "KidneyHealthSync.app"
-               BlueprintName = "KidneyHealthSync"
-               ReferencedContainer = "container:KidneyHealthSync.xcodeproj">
+               BuildableName = "KidneyHealth.app"
+               BlueprintName = "KidneyHealth"
+               ReferencedContainer = "container:KidneyHealth.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -33,9 +33,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "4B5D00000000000000000011"
-               BuildableName = "KidneyHealthSyncTests.xctest"
-               BlueprintName = "KidneyHealthSyncTests"
-               ReferencedContainer = "container:KidneyHealthSync.xcodeproj">
+               BuildableName = "KidneyHealthTests.xctest"
+               BlueprintName = "KidneyHealthTests"
+               ReferencedContainer = "container:KidneyHealth.xcodeproj">
             </BuildableReference>
          </TestableReference>
       </Testables>
@@ -55,9 +55,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "4B5D00000000000000000010"
-            BuildableName = "KidneyHealthSync.app"
-            BlueprintName = "KidneyHealthSync"
-            ReferencedContainer = "container:KidneyHealthSync.xcodeproj">
+            BuildableName = "KidneyHealth.app"
+            BlueprintName = "KidneyHealth"
+            ReferencedContainer = "container:KidneyHealth.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>

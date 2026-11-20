@@ -315,7 +315,7 @@ def walk_person(p: Pass, server: Server, base: str, admin_pass: Pass, person: An
     check(f"[{tag}] the iPhone app box says a QR code needs the server's https:// address (this server is plain http)",
           "The iPhone app needs this server at an https:// address." in text_of(page, "#set-push-body [aria-label='Pair the iPhone app']")
           and page.locator("#set-push-body [aria-label='Pair the iPhone app'] svg").count() == 0)
-    drawn = page.evaluate("""async () => { const svg = await KH.twoStep.qrSvg('kidneyhealthsync://pair?v=1&server=https%3A%2F%2Ffood.example.org&token=khd_' + 'A'.repeat(43), 'x');
+    drawn = page.evaluate("""async () => { const svg = await KH.twoStep.qrSvg('kidneyhealth://pair?v=1&server=https%3A%2F%2Ffood.example.org&token=khd_' + 'A'.repeat(43), 'x');
       return { label: svg.getAttribute('aria-label'), path: (svg.querySelector('path.qr-dark') || { getAttribute: () => '' }).getAttribute('d').length }; }""")
     check(f"[{tag}] the page draws a pairing link as a QR code with the vendored module, in this browser", drawn["label"] == "x" and drawn["path"] > 1000, json.dumps(drawn))
     p.shot("token-shown", "#set-push")

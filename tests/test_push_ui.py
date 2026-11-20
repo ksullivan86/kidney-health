@@ -103,7 +103,7 @@ def test_the_new_token_is_shown_once_with_its_address_and_copy_buttons():
 def test_the_new_token_comes_with_a_qr_code_for_the_iphone_app():
     pair = page()["pair"]
     assert pair["order"] == ["New token", "Address to send to", "Pair the iPhone app"]
-    assert pair["qr"] == [["kidneyhealthsync://pair?v=1&server=https%3A%2F%2Ffood.example.org&token=" + TOKEN,  # the server's link, as it came
+    assert pair["qr"] == [["kidneyhealth://pair?v=1&server=https%3A%2F%2Ffood.example.org&token=" + TOKEN,  # the server's link, as it came
                            "QR code to scan with the iPhone Camera"]]
     assert pair["svg"] == 1 and "Point the iPhone Camera at this code and tap the link. The app asks you before it saves anything." in pair["text"]
     other = page()["pairless"]

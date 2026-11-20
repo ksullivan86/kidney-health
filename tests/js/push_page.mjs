@@ -163,7 +163,7 @@ await page.byId['set-push-create'].handlers.click[0]();
 out.emptyName = { calls: log.calls.length, message: text(find(block, (e) => e.attrs.class === 'form-error' && e.children.length)[0]), focused: page.focused };
 const made = { id: 7, name: 'Morning weight', prefix: 'khd_AbCd1234', scopes: ['body:write'], created_at: '2026-10-22T07:00:00Z', last_used_at: null,
   expires_at: '2027-10-22T07:00:00Z', revoked_at: null, state: 'active', sent: { weights: 0, readings: 0 }, token: 'khd_SECRETSECRETSECRETSECRETSECRETSECRETSECRET1',
-  pair_url: 'kidneyhealthsync://pair?v=1&server=https%3A%2F%2Ffood.example.org&token=khd_SECRETSECRETSECRETSECRETSECRETSECRETSECRET1' };
+  pair_url: 'kidneyhealth://pair?v=1&server=https%3A%2F%2Ffood.example.org&token=khd_SECRETSECRETSECRETSECRETSECRETSECRETSECRET1' };
 answers = { list: () => listOf([item({ id: 7, expires_at: made.expires_at })]), created: () => made };
 page.byId['set-push-name'].value = '  Morning weight ';
 page.byId['set-push-expiry'].value = '365';

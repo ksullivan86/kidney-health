@@ -10,10 +10,10 @@
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 			<key>CFBundleURLName</key>
-			<string>io.github.ksullivan86.kidneyhealth.sync.pair</string>
+			<string>io.github.ksullivan86.kidneyhealth.pair</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>kidneyhealthsync</string>
+				<string>kidneyhealth</string>
 			</array>
 		</dict>
 	</array>

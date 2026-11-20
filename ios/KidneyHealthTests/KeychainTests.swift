@@ -1,6 +1,6 @@
 // The token is kept in the Keychain for this device only, readable after the first unlock (design note 15, fact I4).
 import XCTest
-@testable import KidneyHealthSync
+@testable import KidneyHealth
 
 final class KeychainTests: XCTestCase {
     override func tearDown() {

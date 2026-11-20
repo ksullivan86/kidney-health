@@ -1,10 +1,10 @@
-// Kidney Health Sync: sends new weights and blood pressure readings from Apple Health to the person's own server
+// Kidney Health for iPhone: sends new weights and blood pressure readings from Apple Health to the person's own server
 // (design note 15, option A). Every screen of the food log stays in the web app; this app only syncs.
 import SwiftUI
 import UIKit
 
 @main
-struct KidneyHealthSyncApp: App {
+struct KidneyHealthApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var model = SyncModel.shared
 
