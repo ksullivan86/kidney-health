@@ -895,6 +895,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | Visit prep | `js/engine/visitprep.js`, `js/views/visit.js`, `css/visit.css`, the `#view-visit` section and the Trends link in `index.html`, `visit` in `VIEWS` (`js/core.js`), `KH.symptoms.flagEl`, `tests/test_visit_prep_*.py`, `tests/js/visitprep_runner.mjs`, `tools/e2e/visitprep.py` (no route, no table, no server code) |
 | Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*` and `m011_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `app/mcp/**` (the MCP server, part B; `log_food` and `save_recipe`, part C) with `log.day_summary`, `log.insert_logged`, `foods.usda_search_records`, `foods.add_usda_food` and `security.BEARER_PATHS`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py`, `tests/test_migration_m011.py`, `tests/test_mcp.py`, `tests/test_mcp_write.py`, `tools/e2e/mcp_smoke.py` |
 | Phone push (design note 12; note 38 §5.5) | `app/push.py` (`POST /push/v1/body`, `DELETE /api/me/tokens/{id}/body-rows`), `app/app_sync.py` (`POST /push/v1/sync`), `app/migrations/m037_app_sync.py`, `tests/test_app_sync.py`, `tests/test_migration_m037.py`, the device family in `app/auth/api_tokens.py`, `TokenCreate.family` in `app/auth/schemas.py`, the `push.enabled` key (`app/settings_registry.py`, `js/engine/settings.js`, the "Phone shortcuts" group of `js/views/settings.js`), `app/migrations/m019_body_token.py`, `context_for`, `is_watch_source`, `known_weight_marks` / `known_reading_marks` and `via` in `app/body.py`, `shortcut` in `BodySourceKey`, `security.BEARER_PATHS`, `docs/push.md`, `tests/test_push.py`, `tests/test_device_tokens.py`, `tests/test_migration_m019.py`, `context_cases` / `watch_cases` in `tests/data/body_vectors.json` |
+| iPhone app sends to a server (note 38 step 4, the phone side) | `app/static/js/mock/server_sync.js`, `serverSyncBlock` in `js/views/settings.js`, `ios/KidneyHealth/Services/ServerSync.swift`, the server kinds in `FoodServices.answer`, `Settings.syncURL` in `ios/KidneyHealthCore/Sources/KidneyHealthCore/Sync.swift`; tests `tests/js/server_sync.mjs`, `tests/test_server_sync_phone.py`, the step 4 check in `tests/test_ios_app.py`, Send now in `tools/e2e/device_mode.py` |
 | iPhone app pairing (design note 15 §4.3) | `app/pairing.py`, `pair_url` in `create_my_token` (`app/auth/api_tokens.py`), `brand.PAIRING_SCHEME`, `pushPairBox` in `js/views/settings.js` with `KH.twoStep.qrSvg`, `ios/KidneyHealthCore/Sources/KidneyHealthCore/Pairing.swift`, `ios/KidneyHealth-Info.plist`, `.onOpenURL` and the pairing alert in `ios/KidneyHealth/ContentView.swift`; tests `tests/test_pairing.py`, `tests/data/pairing_vectors.json`, `PairingVectorTests.swift` |
 | Read-only sharing (design note 19) | `app/sharing.py` (`/api/me/shares`, `/api/shared`, the `shared_owner(area)` check), `app/migrations/m024_shares.py`, `app/migrations/m025_share_time_limit.py`, `sharing.enabled` (`app/settings_registry.py`, `js/engine/settings.js`), the `share.*` audit actions, `shares` and `DELETE /api/admin/users/{id}/shares` in `app/auth/admin_api.py`; screens: `js/views/sharing.js` (Settings block, the `#/share/<code>` sheet, `KH.sharing.reads`), the shared mode of `js/views/visit.js`, the People badge and End sharing in `js/views/settings.js`, the demo's answers in `js/mock/auth.js`; tests `tests/test_sharing.py`, `tests/test_migration_m024.py`, `tests/test_migration_m025.py`, `tests/test_sharing_ui.py`, `tools/e2e/sharing.py` |
 | The full Care team (design note 29) | `app/sharing.py` (switches, `PRESETS`, `role_of`, `PUT /api/me/shares/{id}/switches`, the `care_*` checks, eaten food, saved meals), `app/care_suggestions.py`, `app/migrations/m031_care_team_full.py`, `meals.apply_template`, export key `care_suggestions`; screens: the switches in `js/views/sharing.js`, `js/views/careplan.js`, `js/views/suggestions.js` (`#plan-suggestions`); demo `js/mock/care.js`; tests `tests/test_care_team_full.py`, `tests/test_migration_m031.py`, `tests/data/care_vectors.json` (`gen_care_vectors.py`), `tests/js/care_demo.mjs`, `tools/e2e/sharing.py` |
@@ -4515,7 +4516,7 @@ stores nothing but the token's `last_used_at`, and names nothing of the person. 
 ### `POST /push/v1/sync` (the iPhone app sends what it added; note 38 §5.5, schema step 37)
 
 Code `app/app_sync.py`; guide `docs/push.md` ("Sending from the iPhone app"); tests `tests/test_app_sync.py`, `tests/test_migration_m037.py`,
-the app parts of `tests/test_push_ui.py`. The phone keeps the log (note 38 D2, local-first). When the server can be reached, the app sends
+the app parts of `tests/test_push_ui.py`; the phone's side is in "Device mode" (`js/mock/server_sync.js`). The phone keeps the log (note 38 D2, local-first). When the server can be reached, the app sends
 the **new** rows it made, with an **app** token (`khd_`, scopes `body:write app:add`, made in Settings → Phone shortcuts with "What it is
 for: The iPhone app"). Edits and deletes made on the phone are never sent. The token reads nothing and cannot change or delete a row.
 
@@ -5731,6 +5732,29 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
   button says Scan with the camera and sends `scanBarcode`. `Phone/BarcodeScanner.swift` shows Apple's `DataScannerViewController`
   for EAN-13, EAN-8 and UPC-E only and answers `{ ok, code, format }` or `{ error: "cancelled" }`. The page then runs its usual
   look-up, so the food rules stay in one place. It starts on its own when Prefer live camera is on.
-* **Tests**: `tests/js/device_mode.mjs` (the engine, against a fake IndexedDB), `tests/test_device_mode.py` (the build and the wiring), `PhoneTests.swift`,
+* **Sending to your server (step 4, the phone side)**: the page owns the queue and the rules; the app only carries the request.
+  `js/mock/server_sync.js` (device mode only) finds the rows the server has not taken, builds the `POST /push/v1/sync` body
+  ("`POST /push/v1/sync`" above) and asks the `bridge` with `serverInfo` (paired? the host), `serverSyncCheck` (`GET /push/v1/sync`)
+  or `serverSync` (`body`: the JSON text). `Services/ServerSync.swift` posts it to `Settings.syncURL` of the paired address (HTTPS
+  only) with the Keychain token through `URLSessionTransport` (no cookies, no cache, no redirects) and answers
+  `{ ok, status, json, retryAfter? }` or `{ error: "not_paired" | "offline" | "bad_request" }`. The token never reaches the page and
+  nothing is logged.
+  * **The queue** is saved with the log in `_serverSync`: `rows[kind][row id] = { c: client_id, s: sent | refused | stuck, t: tries,
+    g: group, w: why }`, plus `server` (host), `sentAt`, `outcome`, `message`, `waitUntil`, `checkOk`, `checkedAt`. An entry keeps its
+    own `client_id` (the export carries it). The log is saved before a row with a new ID leaves the phone. Starting over makes a new
+    log and so a new queue; another server host sends everything again.
+  * **What is sent**: entries, the person's own foods, the USDA and Open Food Facts foods an entry uses (in `foods`, with `fdc_id` or
+    `gtin`; the entry names them by `client_id`), built-in foods as `{builtin: {fdc_id, name}}`, labs as typed, symptoms, weights and
+    readings (with the Health `source_key`). Foods first, oldest first, at most 200 rows and 256 KiB a request, at most 10 requests a
+    run. A planned entry waits until its day is over. The sample data (`_sample`) is never sent. Edits and deletes are never sent.
+  * **Answers**: 200 marks the rows sent. The server counts skipped rows without naming them, so the rows that could have been
+    skipped are sent again in halving groups until it is clear which; one skipped alone three times is `stuck`. 400 naming a row
+    (`entries.3.date`) marks it `refused` and the rest goes on. 401 stops (automatic runs check again at most hourly); 404/405 says the
+    server is too old; 413 halves the request; 429 waits for `Retry-After`; offline keeps the queue; anything else pauses 5 minutes.
+  * **When**: 10 s after a save, when the page becomes visible, and at start; only while paired and after the token check passed
+    (kept a day). Settings → This device → **Sending to your server** shows the server, the rows waiting, when it last sent, refused
+    and stuck rows, the sentence that changes after sending are not sent, and **Send now**.
+* **Tests**: `tests/js/server_sync.mjs` and `tests/test_server_sync_phone.py` (the queue against a stand-in app, and the page's
+  body through the real route), `tests/js/device_mode.mjs` (the engine, against a fake IndexedDB), `tests/test_device_mode.py` (the build and the wiring), `PhoneTests.swift`,
   `tests/test_ios_app.py` (the shell's rules), `WebShellTests.swift` (the simulator), `tools/e2e/device_mode.py` (Chromium).
 
