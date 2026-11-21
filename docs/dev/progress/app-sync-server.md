@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # app-sync-server: the server side of note 38 step 4 ("sending to a server")
 
@@ -45,7 +45,7 @@ Role: `app-sync-server`. Branch: the worktree branch `worktree-agent-a9fdde3cc5c
    status and §5.5, handbook (weight-and-blood-pressure "Connect the Kidney Health iPhone app", configuration `PUSH_ENABLED`),
    `deploy/caddy/Caddyfile.example` (the bridge name passes `/push/v1/sync`). The `push.enabled` help text names the app token;
    `js/engine/settings.js` and `tests/data/settings_vectors.json` follow (`node tests/js/run_vectors.mjs` passes).
-9. [ ] Run the related suites (122 files: names with token/push/isolation/migration/account/import/settings/brand/export/auth/
+9. [x] Run the related suites (122 files, 3243 passed, 2 skipped; one stale assertion in tests/test_mcp.py on BEARER_PATHS fixed and re-run: names with token/push/isolation/migration/account/import/settings/brand/export/auth/
    security/openapi/device/body/research/deploy/meta, plus files that mention khd_, /push/v1, api_tokens, data_import,
    settings_registry), ruff; final commit.
 
