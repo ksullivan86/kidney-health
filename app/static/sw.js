@@ -157,6 +157,7 @@ const SHELL_URLS = [
   '/js/views/ask.js',
   '/js/views/ask-voice.js',
   '/js/views/demo_local.js',
+  '/js/views/welcome.js',
   '/vendor/barcode-detector-3.2.2/ponyfill.iife.js',
   '/js/scan.js',
   '/js/pwa.js',

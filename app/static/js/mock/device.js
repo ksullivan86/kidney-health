@@ -70,6 +70,18 @@
     }
   }
 
+  // The first-start setup (js/views/welcome.js): whether it was finished, kept with the log so it survives a restart of the app.
+  // An account saved before the setup existed has not finished it, so the setup shows once.
+  M.route('GET', '/api/device/setup', function () {
+    const s = this._deviceSetup || {};
+    return { done: s.done === true, sample: this._sample === true };
+  });
+  M.route('PUT', '/api/device/setup', function ({ body }) {
+    if (!M.isDict(body) || typeof body.done !== 'boolean') M.fail(400, 'done: Input should be a valid boolean');
+    this._deviceSetup = { done: body.done };
+    return { done: body.done, sample: this._sample === true };
+  });
+
   window.KHDevice = { addBody };
   M.device = { lookup, addBody };
 })();

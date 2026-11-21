@@ -49,6 +49,8 @@
       if (KH.menuPlan) KH.menuPlan.openPending().catch((e) => console.warn('Menu day:', e));
       // A share link (#/share/<code>, js/views/sharing.js), kept the same way: asks "Accept?" before anything is saved.
       if (KH.sharing) KH.sharing.openPending().catch((e) => console.warn('Share link:', e));
+      // The iPhone app with no server (design note 38): the first-start setup, until it was finished (js/views/welcome.js).
+      if (DEVICE && KH.welcome) KH.welcome.maybeShow().catch((e) => console.warn('Setup:', e));
       // Back from a device company (#/devices/<word>/<provider>, js/views/devices.js): Settings → Connected devices says how it went.
       if (KH.devices) KH.devices.openPending().catch((e) => console.warn('Connected devices:', e));
       // A signed-in visit: on an iPhone or iPad the third one offers the Home Screen tip (js/pwa.js, note 02 R10).
@@ -60,6 +62,12 @@
       KH.theme.apply(KH.theme.stored());
       $('#date-input').value = state.date;
       if (MOCK) document.title = KH.brand.screenName;
+      if (DEVICE) { // the iPhone app is called Kidney Health (owner, 2026-11-20): its header says so too
+        document.documentElement.classList.add('device-mode'); // base.css leaves out the parts that need a server
+        document.title = KH.brand.name;
+        const brandName = $('.brand-name');
+        if (brandName) brandName.textContent = KH.brand.name;
+      }
       if (MOCK && !DEVICE) { // the app on a phone with no server is not a demo: no pill, no banner
         const pill = $('#brand-pill');
         pill.textContent = PREVIEW ? 'Preview' : 'Demo';

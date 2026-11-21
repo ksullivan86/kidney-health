@@ -290,6 +290,21 @@
     return { reload: fresh };
   }
 
+  // Device mode: replace everything with an empty account or the sample data (the setup's "try it first", Settings → This device →
+  // Start over). The setup's answer is kept. The caller reloads, and the page starts from what was stored.
+  async function restart({ sample = false } = {}) {
+    if (!device() || !st.on) throw unavailableError('Starting over is only offered in the iPhone app.');
+    if (timer) { clearTimeout(timer); timer = null; }
+    for (let waited = 0; st.saving && waited < 3000; waited += 25) await new Promise((r) => setTimeout(r, 25));
+    const fresh = new M.MockApi({ foodsData: M.embeddedFoods ? M.embeddedFoods() : null, seed: sample });
+    fresh._deviceSetup = M.instance && M.instance._deviceSetup ? { ...M.instance._deviceSetup } : undefined;
+    const out = await writeRecord(buildRecord(fresh), st.rev);
+    if (out.conflict) throw unavailableError('The data on this iPhone changed while starting over. Close the app fully and open it again.');
+    st.rev = out.rev; st.savedAt = new Date().toISOString(); dirty = false;
+    safetyCopy();
+    return { reload: true };
+  }
+
   // Delete the stored copy and go back to the in-memory demo (the caller reloads: the sample demo starts again).
   async function disable() {
     if (timer) { clearTimeout(timer); timer = null; }
@@ -308,7 +323,7 @@
   M.onWrite = (api, method, path) => { if (st.on && api === M.instance && !ASKS_ONLY.test(path)) scheduleSave(); };
   M.local = {
     DB_NAME, STORE, KEY, FORMAT, SCHEMA, SAVE_DELAY_MS,
-    allowed, device, on: () => st.on, status, boot, probe, enable, disable, flush,
+    allowed, device, on: () => st.on, status, boot, probe, enable, disable, flush, restart,
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     // for the tests: a stand-in for window.indexedDB, and the pure parts
     _useIndexedDB(fake) { override = fake; },

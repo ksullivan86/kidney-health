@@ -186,4 +186,32 @@ const ok = (fn, label) => { checks += 1; try { fn(); } catch (e) { e.message = `
   ok(() => assert.deepEqual([...KH.off.FIELDS], serverFields), 'KH.off.FIELDS is app/off.py FIELDS');
 }
 
+// 9. The first-start setup's state, and starting over with the sample data or an empty log (the setup's answer is kept).
+{
+  const fresh = createFakeIndexedDB();
+  const page = () => {
+    const KH = loadDemo({ navigator: { userAgent: 'node', onLine: true, storage: {} }, globals: { KDL_PREVIEW: true, KDL_DEVICE: true } });
+    KH.mock.start({ seed: false });
+    KH.mock.local._useIndexedDB(fresh.page(new KH.constructor.constructor(`return ${CLONE_SRC}`)()));
+    return KH;
+  };
+  let KH = page();
+  await KH.mock.local.boot();
+  const s0 = await KH.mock.instance.request('GET', '/api/device/setup');
+  ok(() => assert.deepEqual({ ...s0 }, { done: false, sample: false }), 'the setup is not done at the first start');
+  await KH.mock.instance.request('PUT', '/api/device/setup', { done: true });
+  await KH.mock.local.flush();
+  await KH.mock.local.restart({ sample: true });
+  KH = page();
+  await KH.mock.local.boot();
+  ok(() => assert.ok(KH.mock.instance._entries.length > 0 && KH.mock.instance._care().mine.length > 0), 'the sample data after starting over with it');
+  const s1 = await KH.mock.instance.request('GET', '/api/device/setup');
+  ok(() => assert.deepEqual({ ...s1 }, { done: true, sample: true }), 'the setup stays done');
+  await KH.mock.local.restart({ sample: false });
+  KH = page();
+  await KH.mock.local.boot();
+  ok(() => assert.equal(KH.mock.instance._entries.length + KH.mock.instance._care().mine.length, 0), 'an empty log after starting over without it');
+  await assert.rejects(KH.mock.instance.request('PUT', '/api/device/setup', { done: 'yes' }), (e) => e.status === 400);
+}
+
 console.log(`device mode: ${checks} checks passed`);
