@@ -95,7 +95,9 @@ def test_the_demo_shows_the_tab_with_a_note_and_never_a_mock_answer():
     assert "The AI assistant works in the installed app, with an AI your admin sets up." in ASK_JS
     assert "els.composer.hidden = true;" in ASK_JS  # no input in the demo
     assert "chat_enabled: false" in MOCK_AI  # the demo is a server with the chat off (and no trusted saves)
-    assert "chat" not in MOCK_AI.replace("chat_enabled: false", "")  # js/mock/ai.js still answers every /api/ai/* route 404, like a server with AI off
+    # js/mock/ai.js has no chat route: every other /api/ai/* route is 404, like a server with AI off. Device mode (design note 38 §5.6)
+    # answers only describe a meal and a lab report's text, and its status says the chat is off.
+    assert "/api/ai/chat" not in MOCK_AI and "ask('chat'" not in MOCK_AI and "chat: false, voice: false" in MOCK_AI
     assert re.search(r"route\('\*', /\^\\/api\\/\(\?:ai\|vision\)\\//", MOCK_AI)
 
 

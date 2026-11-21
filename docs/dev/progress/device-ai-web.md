@@ -1,4 +1,4 @@
-Status: in progress (all built; the full pytest run of the related files is the last check)
+Status: complete
 
 # device-ai-web: the iPhone's own AI in device mode, web side (design note 38 §5.6, step 5)
 
@@ -51,3 +51,13 @@ schema line) because guided generation enforces the shape. A lab payload over 8,
     python -m pytest -p no:cacheprovider -o addopts="" tests/test_ai_device_vectors.py tests/test_device_mode.py ...
     cd tools/e2e && python device_mode.py --out <empty dir>
     /root/.local/bin/ruff check .
+
+## Verified (2026-11-21)
+
+* `node tests/js/run_vectors.mjs`: all groups pass, "ai device vectors: 869 checks passed".
+* `node tests/js/device_mode.mjs`: 86 checks passed.
+* pytest of every file that mentions mock/ai.js, views/ai.js, aiguard, lab_report, build_preview or device, plus the vector tests:
+  2690 passed; the 3 failures (source-reading tests in test_ai_ui, test_lab_photo_ui, test_ask_ui) were updated and pass now.
+* `tools/e2e/device_mode.py`: 32 PASS (Chromium, 375 light and 1280 dark).
+* `ruff check .`: clean.
+* `tests/test_vectors_readme.py` was failing before this work (no usda section, barcode `off_map_cases` missing); fixed in the README.
