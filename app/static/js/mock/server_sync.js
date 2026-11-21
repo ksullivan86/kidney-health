@@ -421,6 +421,7 @@
   function soon(ms = SEND_DELAY_MS) {
     if (timer) clearTimeout(timer);
     timer = setTimeout(() => { timer = null; run(); }, ms);
+    if (timer && typeof timer.unref === 'function') timer.unref(); // Node (the tests' page): a waiting send keeps nothing running
   }
 
   // What the screen shows (Settings → This device → Sending to your server).
@@ -436,7 +437,7 @@
   function status() {
     const api = M.instance;
     const st = peek(api);
-    const out = { sample: !!(api && api._sample === true), server: st.server, waiting: 0, refused: [], stuck: [], sentAt: st.sentAt, triedAt: st.triedAt,
+    const out = { sample: !!(api && api._sample === true), server: st.outcome === 'not_paired' ? null : st.server, waiting: 0, refused: [], stuck: [], sentAt: st.sentAt, triedAt: st.triedAt,
       outcome: st.outcome, message: st.message || (st.outcome ? MESSAGES[st.outcome] : null), waitUntil: st.waitUntil, running };
     if (!api || out.sample) return out;
     const all = rowsOf(api);
