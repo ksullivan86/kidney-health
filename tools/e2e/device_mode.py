@@ -23,6 +23,7 @@ import argparse
 import functools
 import http.server
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -124,7 +125,8 @@ def walk(browser, base: str, width: int, height: int, scheme: str) -> None:
     entries = [e for b in sent for e in b.get("entries", [])]
     check(f"[{tag}] Send now sends the new entry once", len(entries) == 1 and "builtin" in entries[0]["food"], json.dumps(sent)[:160])
     text = page.locator("#set-device-body").inner_text()
-    check(f"[{tag}] the section says what was sent and what is not", "food.example.org" in text and "Waiting to be sent" in text
+    words = set(re.split(r"[\s,;:()]+", text))  # the server's host shown as a whole word (not a URL check)
+    check(f"[{tag}] the section says what was sent and what is not", "food.example.org" in words and "Waiting to be sent" in text
           and "after a row was sent are not sent" in text, text[:200])
     page.click("#set-server-sync-now")
     page.wait_for_timeout(600)
