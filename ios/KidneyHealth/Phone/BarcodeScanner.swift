@@ -17,7 +17,7 @@ final class BarcodeScanner: NSObject, DataScannerViewControllerDelegate {
     static var available: Bool { DataScannerViewController.isSupported && DataScannerViewController.isAvailable }
 
     /// The page's format names (js/engine/gtin.js FORMATS) for what Vision reports.
-    static func format(_ symbology: VNBarcodeSymbology) -> String? {
+    nonisolated static func format(_ symbology: VNBarcodeSymbology) -> String? {
         switch symbology {
         case .ean13: "ean_13"
         case .ean8: "ean_8"
