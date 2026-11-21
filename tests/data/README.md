@@ -53,6 +53,7 @@ Run the commands from the repository root.
 | `settings_vectors.json` | `python3 tests/data/gen_settings_vectors.py` |
 | `symptoms_vectors.json` | `python3 tests/data/gen_symptoms_vectors.py` |
 | `targets_vectors.json` | `python3 tests/data/gen_targets_vectors.py` |
+| `usda_vectors.json` | `python3 tests/data/gen_usda_vectors.py` |
 
 What to know about the commands:
 
@@ -156,6 +157,9 @@ Top-level keys:
 * `additive_cases`: `{tags: [string] | null, text: string | int | null, name: string | float | null, result: {flags, findings, kidney_notes, additives, notes}}`.
 * `quality_cases`: `{codes: [string], items: [{code: string, message: string}]}`, Open Food Facts data-quality tags and the notes they give.
 * `demo_products`: `{fixture: string, code: string, format: string, row: object, result: object}`. `row` is the stored product. `result` is the server's whole answer to `POST /api/foods/barcode`, with the food id removed.
+* `off_map_cases`: `{id: string, gtin14: string, json: string, trimmed: object, mapped: object, row: object}`. `json` is an Open Food Facts
+  answer as text, as the iPhone app hands it to the page. `trimmed`, `mapped` and `row` are what `KH.off.trimProduct`, `mapProduct` and `row`
+  must give, from the server's `app/off.py`.
 
 What a replayer must get right:
 
@@ -687,6 +691,24 @@ What a replayer must get right:
 * `alerts` are urgent and emergency messages about a lab result. A client must show them.
 * The three refusals (pregnancy, under 18, an early transplant) mean the app gives no suggestion and the person enters targets by hand. A client must not suggest numbers in those cases.
 * `today` is always given. Never read a clock.
+
+## usda_vectors.json
+
+The mapping of USDA FoodData Central answers, which the iPhone app does in the page (design note 38, step 2).
+
+* Server: `app/foods.py` (`map_usda_record`, `usda_search_item`, `usda_provenance`).
+* Browser twin: `app/static/js/engine/usda.js` (`KH.usda.mapRecord`, `row`, `searchItem`).
+* Made by `tests/data/gen_usda_vectors.py`. It is seeded and runs on recorded USDA answers, so it needs no network.
+
+Top-level keys:
+
+* `about`: where the file comes from.
+* `map_cases`: one USDA record as JSON text, with the mapped fields and the row an import stores, or an `error` the twin must throw too.
+* `search_item_cases`: one search hit as JSON text, with the item `GET /api/foods/usda/search` answers.
+
+What a replayer must get right:
+
+* Each input is JSON text. JavaScript reads `208.0` as `208`, so no case writes a whole number as a float where the server turns it into text.
 
 ## webauthn_w3c_vectors.json
 
