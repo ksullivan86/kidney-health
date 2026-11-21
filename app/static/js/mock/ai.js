@@ -58,7 +58,8 @@
     not_opted_in: 'Turn on AI features in Settings → AI features first.', // app/ai/config.py MESSAGES
   };
   const ERROR_TEXT = { ai_failed: 'The AI request failed.', schema: 'The AI answer could not be used.' }; // app/ai/routes.py
-  const TOO_LONG = 'This page has more text than the local AI can take at once. Read it as a picture instead.'; // app/vision.py
+  // app/vision.py says "Read it as a picture instead"; the phone cannot read a picture yet, so it says what can be done here.
+  const TOO_LONG = 'This page has more text than the AI on this iPhone can take at once. Enter its results by hand instead.';
   const DRY_NOTE = 'Nothing leaves this iPhone: the app gives this to Apple\'s on-device model, with the app\'s own fixed instructions.';
   const CONSENT = { host: PROVIDER.host, policy_version: 'device', skip_preview: true, at: null }; // nothing is sent: nothing to agree to
   const ROUTES = { photos: 'Photos (labels and plates)', meal_ideas: 'Meal ideas', describe: 'Describe a meal', chat: 'Ask',
