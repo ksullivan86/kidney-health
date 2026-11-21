@@ -6,7 +6,7 @@ Role: `app-sync-phone`. Branch: the worktree branch (no push, no PR). Server sid
 
 ## Plan / state
 1. [x] Page module `app/static/js/mock/server_sync.js` (queue, batches, answers), loaded after `mock/device.js` (index.html, sw.js).
-   Verified by `node tests/js/server_sync.mjs` (72 checks).
+   Verified by `node tests/js/server_sync.mjs` (75 checks).
 2. [x] Swift: `ios/KidneyHealth/Services/ServerSync.swift`, bridge kinds in `FoodServices.answer`, `Settings.syncURL` in Core (+ an
    XCTest), the pairing question and the "Your server" footer name the iPhone app token. Static checks in `tests/test_ios_app.py`.
    Swift is not compiled here (no toolchain): CI's macOS job builds it.
