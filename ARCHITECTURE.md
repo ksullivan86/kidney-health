@@ -2417,6 +2417,24 @@ any other barcode answers 404 naming the samples. `tools/e2e/parity.py` section 
 `gtin` and ingredient list and every lookup answer (with `reason`, `gtin`, `checked`) against a real server
 with lookups off on both sides.
 
+For the web app inside the iPhone app with no server (design note 38 §5.3), the page maps the providers' raw
+JSON itself, so it has twins of the server's pure mapping:
+
+* `js/engine/off.js`: `KH.off.trimProduct(product)` (`off.trim_product`), `KH.off.mapProduct(product, gtin14)`
+  (`off.map_product`; the fields of `Mapped`), `KH.off.foodKwargs(mapped)` and `KH.off.row(mapped, gtin14)`, the row
+  `barcode.assemble` builds when only Open Food Facts answered, before the stored rounding. `KH.off.py` reads JSON
+  the way Python does (`None`, truthiness, `float()`, `int()`, `str()`).
+* `js/engine/usda.js`: `KH.usda.mapRecord(data, fdcId)` (`foods.map_usda_record`; `{kwargs, gtin14,
+  ingredients_text, additives, quality}`), `KH.usda.row(mapped, fdcId)` (an import's row) and
+  `KH.usda.searchItem(item)` (`foods.usda_search_item`, one hit of `GET /api/foods/usda/search`).
+* `KH.gtin.looseGtin14` twins `gtin.loose_gtin14`.
+
+`tests/data/barcode_vectors.json` (`off_map_cases`) and `tests/data/usda_vectors.json` (generator
+`tests/data/gen_usda_vectors.py`) hold the recorded products and records, hand-made edge cases and seeded variants,
+each kept as JSON text as the app hands it over. One gap cannot be closed: JavaScript reads `208.0` as `208`, so a
+whole number written as a float in a field the server turns into text (a nutrient number, a category) reads as an
+int in the browser.
+
 ### Frontend (`js/scan.js` = `KH.scan`, `css/device.css`; note 03 R7, R8 client side, R9, R11)
 
 * **Add view → Scan** (first action) opens `#sheet-scan` (the live camera starting at once with `food.scan_prefer_camera`,

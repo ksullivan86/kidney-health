@@ -8,7 +8,7 @@
    Parity: tests/data/barcode_vectors.json (tests/data/gen_barcode_vectors.py, from app/gtin.py) is
    replayed by `node tests/js/run_vectors.mjs`; messages are word for word the server's.
 
-   Exposes KH.gtin = { PY_SPACE, FORMATS, GtinError, checkDigit, hasValidCheckDigit, expandUpce, normalize, isGtin8,
+   Exposes KH.gtin = { PY_SPACE, FORMATS, GtinError, checkDigit, hasValidCheckDigit, expandUpce, normalize, isGtin8, looseGtin14,
    classify, offCode, usdaCandidates, CLASS_MESSAGES }. */
 (() => {
   'use strict';
@@ -116,5 +116,16 @@
     return forms;
   }
 
-  KH.gtin = { PY_SPACE, FORMATS, GtinError, CLASS_MESSAGES, checkDigit, hasValidCheckDigit, expandUpce, normalize, isGtin8, classify, offCode, usdaCandidates };
+  // gtin.loose_gtin14: a provider's barcode field (USDA gtinUpc) as 14 digits, or null. Not checked, only
+  // compared. Python reads a whole JSON number as an int; JavaScript cannot tell 123 from 123.0, so both count.
+  function looseGtin14(value) {
+    if (typeof value === 'number' && Number.isInteger(value)) value = BigInt(value).toString();
+    if (typeof value !== 'string') return null;
+    const digits = value.replace(SEPARATORS, '');
+    if (!digits || digits.length > 14 || !DIGITS.test(digits)) return null;
+    return digits.padStart(14, '0');
+  }
+
+  KH.gtin = { PY_SPACE, FORMATS, GtinError, CLASS_MESSAGES, checkDigit, hasValidCheckDigit, expandUpce, normalize, isGtin8, classify, offCode, usdaCandidates,
+    looseGtin14 };
 })();
