@@ -84,6 +84,12 @@ struct ContentView: View {
                         Link("Open the app", destination: url)
                     }
                 }
+
+                Section {
+                    NavigationLink("Storage test") { StorageCheckView() }
+                } footer: {
+                    Text("A test for a later version that works without a server. It keeps only the dates you open it.")
+                }
             }
             .navigationTitle("Kidney Health")
         }

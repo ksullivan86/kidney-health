@@ -62,8 +62,8 @@ def test_no_code_names_another_health_type(word):
 
 def test_no_third_party_packages_and_only_apple_frameworks():
     assert "XCRemoteSwiftPackageReference" not in PROJECT
-    allowed = {"Foundation", "HealthKit", "Security", "SwiftUI", "UIKit", "XCTest", "PackageDescription", "KidneyHealthCore",
-               "KidneyHealth"}
+    allowed = {"Foundation", "HealthKit", "Security", "SwiftUI", "UIKit", "WebKit", "XCTest", "PackageDescription",
+               "KidneyHealthCore", "KidneyHealth"}
     for name, text in SWIFT.items():
         for module in re.findall(r"^(?:@testable )?import (\w+)", text, re.M):
             assert module in allowed, (name, module)
@@ -151,3 +151,23 @@ def test_the_app_is_named_like_the_project():
     names = re.findall(r'INFOPLIST_KEY_CFBundleDisplayName = "([^"]*)";', PROJECT)
     assert names == [brand.NAME, brand.NAME]
     assert f'.navigationTitle("{brand.NAME}")' in APP["KidneyHealth/ContentView.swift"]
+
+
+CHECK = IOS / "KidneyHealth" / "StorageCheck"
+
+
+def test_the_storage_test_page_has_no_inline_script_and_no_network():
+    """Design note 38, step 0: the page is served from the app under its own scheme, runs only its own file, and never reaches
+    the network (CLAUDE.md: no network from the browser, no inline scripts)."""
+    html = (CHECK / "storage-check.html").read_text(encoding="utf-8")
+    assert re.findall(r"<script\b[^>]*>", html) == ['<script src="storage-check.js" defer>']
+    assert re.search(r"\son\w+\s*=", html) is None  # no inline event handlers either
+    js = (CHECK / "storage-check.js").read_text(encoding="utf-8")
+    for word in ("fetch(", "XMLHttpRequest", "WebSocket", "sendBeacon", "EventSource", "innerHTML", "eval(", "import("):
+        assert word not in js, word
+    swift = APP["KidneyHealth/StorageCheck/LocalFiles.swift"]
+    assert "connect-src 'none'" in swift and "unsafe-inline" not in swift
+    assert set(re.findall(r'"(/[\w.-]+)":', swift)) == {"/storage-check.html", "/storage-check.js", "/storage-check.css"}
+    view = APP["KidneyHealth/StorageCheck/StorageCheckView.swift"]
+    assert ": .cancel" in view  # every navigation outside the listed files is cancelled
+    assert "HealthKit" not in view and "Keychain" not in view  # the test keeps dates only
