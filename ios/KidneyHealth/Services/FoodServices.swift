@@ -48,6 +48,7 @@ final class FoodServices: ObservableObject {
         configuration.urlCache = nil
         configuration.httpAdditionalHeaders = ["User-Agent": Self.userAgent, "Accept": "application/json"]
         configuration.timeoutIntervalForRequest = 20
+        // NoRedirects (URLSessionTransport.swift): a service that moves must not take the key or the request somewhere else.
         session = URLSession(configuration: configuration, delegate: NoRedirects(), delegateQueue: nil)
     }
 
@@ -168,14 +169,6 @@ final class FoodServices: ObservableObject {
         } catch {
             return Self.problem("offline")
         }
-    }
-}
-
-/// Refuses every redirect: a service that moves must not take the key or the request somewhere else.
-private final class NoRedirects: NSObject, URLSessionTaskDelegate {
-    func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
-                    newRequest request: URLRequest, completionHandler: @escaping (URLRequest?) -> Void) {
-        completionHandler(nil)
     }
 }
 

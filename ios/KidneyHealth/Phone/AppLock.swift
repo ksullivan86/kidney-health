@@ -1,6 +1,7 @@
 // The optional lock (design note 38, step 3, decision D4): Face ID, Touch ID or the phone's passcode before the app shows anything.
 // Off by default. When on, the app covers itself whenever it goes to the background and asks again when it comes back.
 import LocalAuthentication
+import UIKit
 import SwiftUI
 
 @MainActor
