@@ -116,12 +116,14 @@ jobs:
 
   ios-app:
     name: iOS app (simulator build and tests)
-    runs-on: macos-15
+    # Xcode 27 builds with the iOS 27 SDK, which App Store Connect requires from April 2027. GitHub's "xcode-27" runner image
+    # (macOS 27, arm64) is a public preview: actions/runner-images issue 14404.
+    runs-on: xcode-27
     timeout-minutes: 30
     permissions:
       contents: read
     env:
-      XCODE_VERSION: "26.3"
+      XCODE_VERSION: "27.2"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:

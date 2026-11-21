@@ -5,12 +5,20 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
-## Unreleased
+## 0.24.1 — 2026-11-20
+
+### Upgrading from 0.24.0
+
+* No schema step and no new settings. A host that tracks `:0.24` gets this release on its next pull.
+* The QR code under Settings → Account → Your data → Phone shortcuts now opens the iPhone app called Kidney Health. The test
+  app called Kidney Health Sync no longer opens it; delete that app and install Kidney Health from TestFlight.
 
 ### Added
 
 * The iPhone app can go to TestFlight. A workflow you start by hand builds it, signs it with your App Store Connect key and
   uploads it. Steps are in `ios/README.md`. The app also has its icon now.
+* The iPhone app is built with Xcode 27.2 and the iOS 27 SDK, which App Store Connect requires from April 2027. It still
+  runs on iOS 17 and later.
 * The iPhone app and the handbook give the whole path to make a phone token, Settings → Account → Your data → Phone
   shortcuts, and say that whoever runs the server must turn phone shortcuts on first.
 * The iPhone app is called Kidney Health, like the project, everywhere. Its bundle ID is now

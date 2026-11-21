@@ -35,7 +35,7 @@ How a sync works:
 
 ## Putting it on an iPhone (TestFlight)
 
-The `TestFlight` workflow (`.github/workflows/testflight.yml`) builds the app on GitHub's Mac runner, signs it and uploads it to
+The `TestFlight` workflow (`.github/workflows/testflight.yml`) builds the app with Xcode 27.2 on GitHub's Mac runner, signs it and uploads it to
 TestFlight. No Mac is needed. It runs only when someone starts it from main, under the `release` environment.
 
 Signing is Apple's cloud signing: `xcodebuild` signs in with an App Store Connect API key and makes the certificate and profile
