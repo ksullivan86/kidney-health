@@ -1,7 +1,25 @@
 # The iOS app
 
-A small iPhone app that sends new weights and blood pressure readings from Apple Health to your own server
-([design note 15](../docs/dev/research/15-native-ios-app.md)). The web app stays the place for every screen.
+The iPhone app. It runs the whole web app on the phone with no server ([design note 38](../docs/dev/research/38-iphone-app-without-a-server.md)),
+and it can send new weights and blood pressure readings from Apple Health to your own server
+([design note 15](../docs/dev/research/15-native-ios-app.md)).
+
+## The app with no server
+
+* `KidneyHealth/WebShell/` shows the web app full screen in a web view. It knows nothing about kidneys or food: a second app built
+  on this code changes only `WebShellConfig.swift`.
+* The web files are packed by `python3 scripts/build_preview.py --device ios/WebApp`, which CI and the TestFlight workflow run
+  before Xcode. `ios/WebApp/` is not committed. Run that command once before building in Xcode.
+* The page is served from the app under its own scheme, `kidneyhealth-app://app/`. It loads only those files and never reaches the
+  network. A link to the handbook opens in Safari.
+* The page runs in **device mode**: it starts empty, keeps its data on the phone from the first start, and has one person who is not
+  an admin. The data lives in a web data store with a fixed identifier, so it comes back after every restart.
+* After each change the page sends its export to the app, which writes it to Documents as `Kidney Health safety copy.json`. The
+  Files app shows it under On My iPhone. To get the data back, import that file in Settings → Your data.
+* Export in Settings opens the share sheet, so the person chooses where the file goes.
+* Settings → This device → **Apple Health and server** opens the app's own settings, described below.
+
+## Apple Health and your server
 
 What is here:
 
@@ -9,7 +27,7 @@ What is here:
   day a reading gets, the watch rule, kilogram rounding, the key that stops a reading being added twice, and requests of at most 50 rows.
   It checks each row the way `POST /push/v1/body` does before the app sends it, because one refused row makes the whole request fail.
   It also holds one sync: what to send, when to stop, and the status line. It has no dependencies and no HealthKit code.
-* `KidneyHealth/`: the app, one screen with three parts.
+* `KidneyHealth/`: the app. Its settings screen has three parts.
   * **Your server**: the address (HTTPS only) and the phone token from Settings → Account → Your data → Phone shortcuts. The token is kept in the Keychain
     for this phone only. **Test connection** asks the server whether the saved token works (`GET /push/v1/check`) and sends nothing else.
   * **Pairing by QR code**: Settings → Account → Your data → Phone shortcuts shows a QR code with a new token. The iPhone Camera opens the app with its

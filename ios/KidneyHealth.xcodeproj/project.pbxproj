@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		4B5D00000000000000000022 /* KidneyHealthCore in Frameworks */ = {isa = PBXBuildFile; productRef = 4B5D00000000000000000021 /* KidneyHealthCore */; };
+		4B5D00000000000000000091 /* WebApp in Resources */ = {isa = PBXBuildFile; fileRef = 4B5D00000000000000000090 /* WebApp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -24,6 +25,7 @@
 		4B5D00000000000000000006 /* KidneyHealth.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = KidneyHealth.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4B5D00000000000000000007 /* KidneyHealthTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = KidneyHealthTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4B5D00000000000000000008 /* KidneyHealth.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = KidneyHealth.entitlements; sourceTree = "<group>"; };
+		4B5D00000000000000000090 /* WebApp */ = {isa = PBXFileReference; lastKnownFileType = folder; path = WebApp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -62,6 +64,7 @@
 			isa = PBXGroup;
 			children = (
 				4B5D00000000000000000008 /* KidneyHealth.entitlements */,
+				4B5D00000000000000000090 /* WebApp */,
 				4B5D00000000000000000004 /* KidneyHealth */,
 				4B5D00000000000000000005 /* KidneyHealthTests */,
 				4B5D00000000000000000003 /* Products */,
@@ -171,6 +174,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4B5D00000000000000000091 /* WebApp in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -261,6 +265,7 @@
 				INFOPLIST_FILE = "KidneyHealth-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Kidney Health";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
+				INFOPLIST_KEY_NSCameraUsageDescription = "The camera reads barcodes and takes photos of food labels. Nothing leaves this iPhone unless you send it.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "The app reads your weight and blood pressure from Health and sends them to your own Kidney Health server. It reads nothing else.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "The app never writes to Health. Apple asks every Health app for this sentence; the app only reads your weight and blood pressure.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -293,6 +298,7 @@
 				INFOPLIST_FILE = "KidneyHealth-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = "Kidney Health";
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.healthcare-fitness";
+				INFOPLIST_KEY_NSCameraUsageDescription = "The camera reads barcodes and takes photos of food labels. Nothing leaves this iPhone unless you send it.";
 				INFOPLIST_KEY_NSHealthShareUsageDescription = "The app reads your weight and blood pressure from Health and sends them to your own Kidney Health server. It reads nothing else.";
 				INFOPLIST_KEY_NSHealthUpdateUsageDescription = "The app never writes to Health. Apple asks every Health app for this sentence; the app only reads your weight and blood pressure.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

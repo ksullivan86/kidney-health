@@ -5596,3 +5596,24 @@ insulin, medicines or glucose (a CHECK on `reminders.kind`), never dosing, and t
   answer or the log), `tests/test_reminders_ui.py`, `tests/test_migration_m035.py`; the Chromium walk `tools/e2e/reminders.py`
   (`reminders_app.py`: a fake push service in the app process). Guide: `docs/reminders.md`. Not yet tried on a real iPhone or
   Android phone (ROADMAP).
+
+## Device mode: the web app inside the iPhone app
+
+Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Pages demo's static site with `device-flag.js`, which sets
+`window.KDL_PREVIEW` and `window.KDL_DEVICE`. `KH.flags.DEVICE` is true only when both are set, so a server's page never runs it.
+
+* **The engine** is the demo's in-page API (`js/mock/*`) with three changes: `KH.mock.start({ seed: false })` starts an empty account;
+  `_authState()` has one person, `me`, who is not an admin; and `KH.mock.local.boot()` stores the empty account at the first start with
+  no question and asks the browser to keep it. Everything else, including saving after each write and reading back, is "Keep my data in
+  this browser" (the section above).
+* **The screens** show no demo pill, banner or Keep my data button. Settings has no sign-out and no device list, and This device says
+  the data is kept on this iPhone, with **Apple Health and server**, which posts `settings` to the app's `phone` message handler.
+* **The safety copy**: after each save `persist.js` gets `GET /api/me/export.json` from the in-page API and posts it to the app's
+  `safetyCopy` handler. Nothing else leaves the page.
+* **The iPhone side** (`ios/KidneyHealth/WebShell/`, product-neutral): `WebAppSchemeHandler` serves the packed folder at
+  `kidneyhealth-app://app/` (no `..`, no hidden files, only listed types, resolved inside the folder); `WebAppView` keeps the data in
+  `WKWebsiteDataStore(forIdentifier:)`, cancels every navigation but its own files, opens a tapped `https` link in Safari, accepts
+  messages only from its own origin, writes the safety copy to Documents atomically, and offers a download (Export) with the share sheet.
+* **Tests**: `tests/js/device_mode.mjs` (the engine, against a fake IndexedDB), `tests/test_device_mode.py` (the build and the wiring),
+  `tests/test_ios_app.py` (the shell's rules), `WebShellTests.swift` (the simulator), `tools/e2e/device_mode.py` (Chromium).
+

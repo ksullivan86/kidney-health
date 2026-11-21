@@ -102,6 +102,7 @@
   }
 
   function init() {
+    if (flags.DEVICE) return; // the iPhone app keeps its data from the start (design note 38): no banner button, no sheet
     KH.sheets.setup(dlg);
     keepBtn.addEventListener('click', () => openSheet(keepBtn));
     understand.addEventListener('change', () => render(L.status()));

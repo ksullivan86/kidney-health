@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Decided 2026-11-20 (§10). Nothing built. Step 0 (§9) is a test on a real iPhone before anything else. |
+| Status | Decided 2026-11-20 (§10). Step 0 (§9) built 2026-11-21: the Storage test screen, waiting for the owner's results. Step 1 built 2026-11-21: device mode and the web shell (ARCHITECTURE.md "Device mode"), waiting for a TestFlight check. |
 | Owner's words | "I'd like to have it work locally if connection to the server is lost and sync later, maybe use the iOS AI if possible as well. I'd like to also have users not need a server to use the app." And: "can we also just include the option for a USDA API key to be added to app, it could have its own settings page for keys or APIs." (2026-11-20) |
 | Builds on | [Note 15](15-native-ios-app.md) (the iPhone app, signing, TestFlight), [note 02](02-ios-pwa.md) (the Home Screen web app, the service worker on iOS), [note 12](12-phone-push-tokens.md) (device tokens), [note 14](14-reuse-map.md) (the JavaScript twins and their vectors), [`demo.md`](../../demo.md) ("Keep my data in this browser"), [note 36](36-lab-pdf-text.md) (lab text, local model only), [note 32](32-choose-local-or-cloud-ai.md) (local or cloud AI). |
 | Scope | The iPhone app as a whole food log that works with no server. It keeps data on the phone, looks foods up with the person's own keys, uses Apple's on-device AI, and sends to a server when one is set up and reachable. |

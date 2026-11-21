@@ -3,7 +3,10 @@ import KidneyHealthCore
 import SwiftUI
 
 struct ContentView: View {
+    /// A pairing link the Camera opened the app with while this sheet was closed: asked about as the sheet opens.
+    var openedURL: URL? = nil
     @EnvironmentObject private var model: SyncModel
+    @Environment(\.dismiss) private var dismiss
     @State private var address = ""
     @State private var token = ""
     @State private var problem: String?
@@ -84,18 +87,25 @@ struct ContentView: View {
                         Link("Open the app", destination: url)
                     }
                 }
+
+                Section {
+                    NavigationLink("Storage test") { StorageCheckView() }
+                } footer: {
+                    Text("A test for a later version that works without a server. It keeps only the dates you open it.")
+                }
             }
             .navigationTitle("Kidney Health")
-        }
-        .onAppear { address = model.address }
-        .onOpenURL { url in
-            if let link = Pairing.parse(url.absoluteString) {
-                pairing = link
-            } else {
-                problem = SyncModel.notAPairingLink
-                saved = false
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
             }
         }
+        .onAppear {
+            address = model.address
+            if let url = openedURL { handle(url) }
+        }
+        .onOpenURL { url in handle(url) }
         .alert("Pair with \(pairing?.host ?? "this server")?",
                isPresented: Binding(get: { pairing != nil }, set: { if !$0 { pairing = nil } }), presenting: pairing) { link in
             Button("Pair") {
@@ -109,6 +119,16 @@ struct ContentView: View {
             Button("Cancel", role: .cancel) {}
         } message: { link in
             Text(model.pairingQuestion(link))
+        }
+    }
+
+    /// A pairing link only shows the question: nothing is saved until the person taps Pair.
+    private func handle(_ url: URL) {
+        if let link = Pairing.parse(url.absoluteString) {
+            pairing = link
+        } else {
+            problem = SyncModel.notAPairingLink
+            saved = false
         }
     }
 }

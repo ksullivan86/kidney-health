@@ -95,6 +95,19 @@
       const now = Date.now();
       const ago = (days, hours = 0) => this._stamp(new Date(now - days * 86400000 - hours * 3600000));
       const ua = (() => { try { return navigator.userAgent || 'This browser'; } catch (e) { return 'This browser'; } })();
+      if (KH.flags && KH.flags.DEVICE) {
+        // Device mode (design note 38): one person, on this phone, signed in for good. Not an admin: there is no server to run.
+        this._auth = {
+          signedIn: true, userId: 1, reauthAt: now, nextUserId: 2, nextEventId: 1,
+          users: [{ id: 1, username: 'me', display_name: '', role: 'user', status: 'active', auth_source: 'local', can_use_shared: false,
+            must_change_password: false, has_password: false, created_at: this._stamp(), last_login_at: this._stamp() }],
+          sessions: [{ id: 'this-phone', user_id: 1, created_at: this._stamp(), last_seen_at: this._stamp(),
+            expires_at: this._stamp(new Date(now + 3650 * 86400000)), user_agent: ua, ip_prefix: null }],
+          invites: [],
+          events: [],
+        };
+        return this._auth;
+      }
       this._auth = {
         signedIn: true,
         userId: 1,

@@ -209,9 +209,10 @@
 
   // Build the demo API (main.js calls this only in demo mode) and expose the hooks the
   // verification scripts use; they are absent in the installed app.
-  function start({ hemodialysis = false } = {}) {
+  // seed: false starts the empty account of device mode (design note 38): no sample person and no sample days.
+  function start({ hemodialysis = false, seed = true } = {}) {
     if (M.instance) return M.instance;
-    const mock = new M.MockApi({ foodsData: embeddedFoods(), hemodialysis });
+    const mock = new M.MockApi({ foodsData: embeddedFoods(), hemodialysis, seed });
     M.instance = mock;
     window.__kdlMock = mock;
     window.__kdlEvaluateWarnings = KH.rules.evaluateWarnings;

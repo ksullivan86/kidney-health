@@ -365,10 +365,12 @@
     if (hasLocalPassword() && KH.passkeys) body.append(KH.passkeys.block()); // js/views/passkeys.js (design note 18)
     if (hasLocalPassword() && KH.oidc) body.append(KH.oidc.block()); // js/views/oidc.js (design note 24): hidden without a provider
 
-    body.append(subtitle('Signed-in devices', 'set-devices-h'), h('div', { id: 'set-devices', 'aria-labelledby': 'set-devices-h', role: 'region' }, loading()));
+    // The iPhone app with no server (design note 38): one person on one phone, so no device list and no signing out.
+    const device = !!KH.flags.DEVICE;
+    if (!device) body.append(subtitle('Signed-in devices', 'set-devices-h'), h('div', { id: 'set-devices', 'aria-labelledby': 'set-devices-h', role: 'region' }, loading()));
     body.append(subtitle('Your data', 'set-data-h'), dataBlock(me));
     body.append(activityBlock());
-    if (!none) {
+    if (!none && !device) {
       const out = action('Sign out', 'secondary', async () => { await KH.auth.signOut(); }, { id: 'set-signout' });
       body.append(h('div', { class: 'settings-actions signout-row' }, out,
         h('span', { class: 'hint' }, authMode() === 'proxy' ? 'Signs you out of this app; your sign-in proxy may keep you signed in there.' : 'On a shared computer, sign out when you finish.')));
@@ -560,7 +562,7 @@
       } catch (err) { msg.textContent = ''; throw err; }
     }, { id: 'set-export' })), msg);
     // The online demo only: the way back to the "Keep my data in this browser" sheet once the banner has been dismissed.
-    if (MOCK && PREVIEW && KH.demoLocal && KH.demoLocal.open) {
+    if (MOCK && PREVIEW && !KH.flags.DEVICE && KH.demoLocal && KH.demoLocal.open) {
       wrap.append(h('div', { class: 'settings-actions' }, action(keptHere() ? 'Manage the data kept here' : 'Keep my data in this browser', 'secondary',
         async (btn) => KH.demoLocal.open(btn), { id: 'set-demo-local' })));
     }
@@ -1582,6 +1584,17 @@
       body.replaceChildren(out);
       return true;
     };
+    if (KH.flags.DEVICE) { // the iPhone app with no server (design note 38)
+      out.append(kv([['This app', 'On this iPhone, with no server'], ['App version', APP_VERSION]]),
+        h('p', {}, 'Your data is kept on this iPhone. After each change the app also saves a copy you can find in the Files app, under On My iPhone. Export your data now and then, and keep the file somewhere safe.'));
+      const phone = (() => { try { return window.webkit.messageHandlers.phone; } catch (e) { return null; } })();
+      if (phone) {
+        out.append(h('div', { class: 'settings-actions' }, action('Apple Health and server', 'secondary', async () => { phone.postMessage('settings'); },
+          { id: 'set-phone-settings' })));
+      }
+      show();
+      return;
+    }
     if (!KH.pwa || MOCK) {
       out.append(kv([['This app', PREVIEW ? 'A preview inside this page' : 'Demo mode (?mock=1)'], ['App version', APP_VERSION]]),
         h('p', {}, 'In the installed app this section shows whether the app is on your home screen and works offline, how much it stores on this device, and how to install it. The preview stores nothing on this device.'));

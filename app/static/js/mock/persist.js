@@ -58,6 +58,18 @@
   // The demo build only (scripts/build_preview.py --pages / the self-contained preview set window.KDL_PREVIEW). The installed app,
   // and a development server's ?mock=1 page, never use this.
   function allowed() { return !!(KH.flags && KH.flags.PREVIEW === true && M.instance); }
+  // Device mode (design note 38): the app inside the iPhone app keeps its data from the first start, with no question, and hands
+  // a copy of the export to the app after each save (the safety copy in the Files app). Nothing else changes.
+  function device() { return !!(KH.flags && KH.flags.DEVICE === true); }
+  function safetyCopy() {
+    if (!device()) return;
+    let handler = null;
+    try { handler = window.webkit.messageHandlers.safetyCopy; } catch (e) { return; } // outside the iPhone app there is no one to tell
+    if (!handler) return;
+    KH.request('GET', '/api/me/export.json')
+      .then((doc) => handler.postMessage(`${JSON.stringify(doc, null, 2)}\n`))
+      .catch(() => { /* the next save tries again */ });
+  }
 
   function factory() {
     if (override !== undefined) return override;
@@ -211,7 +223,7 @@
       if (out.conflict) {
         st.conflict = true;
         st.error = 'Another tab changed the data stored in this browser. This page has stopped saving so it cannot overwrite it. Export what you need from here, then reload the page.';
-      } else { st.rev = out.rev; st.savedAt = new Date().toISOString(); st.error = null; }
+      } else { st.rev = out.rev; st.savedAt = new Date().toISOString(); st.error = null; safetyCopy(); }
     } catch (e) {
       st.error = problem(e, 'The data could not be saved in this browser just now. It is still in this page; it will be tried again after the next change.');
       dirty = true;
@@ -238,6 +250,11 @@
         st.on = true; st.rev = Number.isInteger(rec.rev) ? rec.rev : 0; st.savedAt = rec.savedAt || null;
         st.persisted = await knowPersistent();
       } else if (c.kind !== 'none') st.blocked = { code: c.kind, message: c.message };
+      else if (device()) { // the first start on this phone: keep the empty account from now on
+        const out = await writeRecord(buildRecord(M.instance), 'none');
+        if (!out.conflict) { st.on = true; st.rev = out.rev; st.savedAt = new Date().toISOString(); }
+        st.persisted = await askPersistent();
+      }
     } catch (e) {
       st.unavailable = problem(e); // nothing stored is known; stay in memory and say so when asked
     }
@@ -291,7 +308,7 @@
   M.onWrite = (api, method, path) => { if (st.on && api === M.instance && !ASKS_ONLY.test(path)) scheduleSave(); };
   M.local = {
     DB_NAME, STORE, KEY, FORMAT, SCHEMA, SAVE_DELAY_MS,
-    allowed, on: () => st.on, status, boot, probe, enable, disable, flush,
+    allowed, device, on: () => st.on, status, boot, probe, enable, disable, flush,
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     // for the tests: a stand-in for window.indexedDB, and the pure parts
     _useIndexedDB(fake) { override = fake; },

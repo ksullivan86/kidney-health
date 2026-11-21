@@ -1723,6 +1723,13 @@ NOTE37:
   licence: "PolyForm Noncommercial 1.0.0 (project)"
   checked: 2026-11-12
   kind: project
+NOTE38:
+  cite: "kidney-health design note 38: the iPhone app without a server."
+  short: "Design note 38"
+  url: https://github.com/ksullivan86/kidney-health/blob/main/docs/dev/research/38-iphone-app-without-a-server.md
+  licence: "PolyForm Noncommercial 1.0.0 (project)"
+  checked: 2026-11-21
+  kind: project
 INSTACART-IDP:
   cite: "Instacart Developer Platform. Create shopping list page (POST /idp/v1/products/products_link)."
   short: "Instacart Developer Platform"
