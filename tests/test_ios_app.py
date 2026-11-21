@@ -62,8 +62,8 @@ def test_no_code_names_another_health_type(word):
 
 def test_no_third_party_packages_and_only_apple_frameworks():
     assert "XCRemoteSwiftPackageReference" not in PROJECT
-    allowed = {"Foundation", "HealthKit", "LocalAuthentication", "Security", "SwiftUI", "UIKit", "WebKit", "XCTest", "PackageDescription",
-               "KidneyHealthCore", "KidneyHealth"}
+    allowed = {"Foundation", "HealthKit", "LocalAuthentication", "Security", "SwiftUI", "UIKit", "VisionKit", "WebKit", "XCTest",
+               "PackageDescription", "KidneyHealthCore", "KidneyHealth"}
     for name, text in SWIFT.items():
         for module in re.findall(r"^(?:@testable )?import (\w+)", text, re.M):
             assert module in allowed, (name, module)
@@ -200,3 +200,13 @@ def test_the_packed_web_app_is_built_before_every_xcode_build():
     for workflow in ("ci.yml", "testflight.yml"):
         text = (ROOT / ".github" / "workflows" / workflow).read_text(encoding="utf-8")
         assert text.index("python scripts/build_preview.py --device ios/WebApp") < text.index("xcodebuild -version"), workflow
+
+
+def test_the_app_scans_its_pairing_code_and_still_asks_first():
+    """Owner, 2026-11-21: the app scans the pairing QR code itself. The scanner reads QR codes only and hands the text to the
+    same handler as a link from the Camera app, which asks "Pair with …?" before anything is saved."""
+    scanner = APP["KidneyHealth/Phone/QRScanner.swift"]
+    assert "[.barcode(symbologies: [.qr])]" in scanner and "Keychain" not in scanner and ".save(" not in scanner
+    view = APP["KidneyHealth/ContentView.swift"]
+    assert 'Button("Scan the QR code") { scanning = true }' in view
+    assert "if let url = URL(string: text) { handle(url) }" in view

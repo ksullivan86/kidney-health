@@ -233,8 +233,8 @@ The iPhone app sends new weights and blood pressure readings from Apple Health t
    `https://` address, and your phone must be able to reach it, for example at home or over your VPN.
 2. In the web app, open **Settings → Account → Your data → Phone shortcuts** and make a token. Give it a name such as
    "My iPhone".
-3. The page shows the token once, with a QR code. Either point the iPhone Camera at the QR code and tap the link, then tap
-   **Pair**; or open the app, type your server's address, paste the token and tap **Save**.
+3. The page shows the token once, with a QR code. In the app, open **Settings → This device → Apple Health and server**, tap
+   **Scan the QR code**, point it at the code and tap **Pair**. Or type your server's address, paste the token and tap **Save**.
 4. In the app, tap **Test connection**. Then tap **Allow weight and blood pressure** and allow both in the Health screen.
 
 Each person connects with a token from their own account, so their readings go to their own log.

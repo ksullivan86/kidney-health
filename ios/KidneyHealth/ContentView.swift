@@ -14,11 +14,15 @@ struct ContentView: View {
     @State private var saved = false
     /// The address and token of a QR code the Camera opened the app with, until the person says yes or no.
     @State private var pairing: Pairing.Link?
+    @State private var scanning = false
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
+                    if QRScanner.available {
+                        Button("Scan the QR code") { scanning = true }
+                    }
                     TextField("https://kidney.example.org", text: $address)
                         .keyboardType(.URL)
                         .textInputAutocapitalization(.never)
@@ -51,7 +55,7 @@ struct ContentView: View {
                     Text("Your server")
                 } footer: {
                     Text("To connect: in the web app, open Settings → Account → Your data → Phone shortcuts and make a token. "
-                         + "Scan its QR code with the Camera, or type your server's address and paste the token here, then tap Save. "
+                         + "Tap Scan the QR code and point it at the code, or type your server's address and paste the token here, then tap Save. "
                          + "If there is no Phone shortcuts form, ask whoever runs your server to turn phone shortcuts on. "
                          + "The token is kept on this phone only and is never shown again. "
                          + "Test connection checks the saved address and token, and sends nothing else.")
@@ -123,6 +127,13 @@ struct ContentView: View {
             if let url = openedURL { handle(url) }
         }
         .onOpenURL { url in handle(url) }
+        .sheet(isPresented: $scanning) {
+            QRScanner { text in
+                scanning = false
+                if let url = URL(string: text) { handle(url) } else { problem = SyncModel.notAPairingLink }
+            }
+            .ignoresSafeArea()
+        }
         .alert("Pair with \(pairing?.host ?? "this server")?",
                isPresented: Binding(get: { pairing != nil }, set: { if !$0 { pairing = nil } }), presenting: pairing) { link in
             Button("Pair") {
