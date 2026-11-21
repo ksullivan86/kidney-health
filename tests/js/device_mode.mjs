@@ -182,4 +182,151 @@ const ok = (fn, label) => { checks += 1; try { fn(); } catch (e) { e.message = `
   ok(() => assert.deepEqual([...KH.off.FIELDS], serverFields), 'KH.off.FIELDS is app/off.py FIELDS');
 }
 
+// 9. The iPhone's own AI (step 5): describe a meal and a lab report's text, answered by a stand-in for the app's model. The page
+//    asks the app whether the model can answer, sends the server's own cleaned data, checks the answer's shape and runs the server's
+//    checks on it (js/engine/aijudge.js, lab_report.js). A low, an emergency or a dose question never reaches the model.
+{
+  const fresh = createFakeIndexedDB();
+  const KH = loadDemo({ navigator: { userAgent: 'node', onLine: true, storage: {} }, globals: { KDL_PREVIEW: true, KDL_DEVICE: true } });
+  const api = KH.mock.start({ seed: false });
+  KH.mock.local._useIndexedDB(fresh.page(new KH.constructor.constructor(`return ${CLONE_SRC}`)()));
+  await KH.mock.local.boot();
+  const global = new KH.constructor.constructor('return globalThis')();
+  const sent = []; // the 'ai' requests the app got
+  let status = { ok: true, available: false, reason: 'not_enabled' };
+  let next = null; // what the app's model answers next
+  global.webkit = { messageHandlers: { bridge: { postMessage: async (req) => {
+    if (req.kind === 'aiStatus') return status;
+    if (req.kind === 'ai') { sent.push(req); return next; }
+    return { error: 'bad_request' };
+  } } } };
+  const deep = (a, b, m) => assert.deepEqual(JSON.parse(JSON.stringify(a)), b, m); // values from the page's own realm
+  const fails = (promise, code, reason) => assert.rejects(promise, (e) => e.status === code && (!reason || (e.extra && e.extra.reason === reason)));
+  const parse = (text, dry = false) => api.request('POST', `/api/ai/parse-meal${dry ? '?dry_run=true' : ''}`, { text, meal: 'lunch' });
+  const item = (text, search, amount, unit) => ({ text, search, amount, unit });
+
+  // The model cannot answer on this phone: AI is off, as on a server with AI switched off, and the page says why.
+  let me = await api.request('GET', '/api/me/ai');
+  ok(() => assert.equal(me.enabled, false), 'AI is off while the model cannot answer');
+  ok(() => assert.match(me.device.message, /Apple Intelligence/), 'and the page can say why');
+  await fails(api.request('GET', '/api/ai/status'), 404);
+  await fails(parse('2 eggs'), 503, 'not_enabled');
+
+  // It can answer, but the person has not turned the AI features on.
+  status = { ok: true, available: true, reason: null };
+  me = await api.request('GET', '/api/me/ai');
+  ok(() => assert.equal(me.enabled, true), 'AI is on when the model can answer');
+  ok(() => assert.equal(me.settings.opt_in, false), 'and off for the person until they turn it on');
+  let st = await api.request('GET', '/api/ai/status');
+  ok(() => deep([st.available, st.reason, st.features.parse_meal], [false, 'not_opted_in', false]), 'status before opting in');
+  await fails(parse('2 eggs'), 503, 'not_opted_in');
+  ok(() => assert.equal(sent.length, 0), 'nothing was asked');
+  me = await api.request('PATCH', '/api/me/ai', { opt_in: true });
+  ok(() => assert.equal(me.settings.opt_in, true), 'turned on');
+  st = await api.request('GET', '/api/ai/status');
+  ok(() => deep([st.available, st.features.parse_meal, st.features.lab_report_text, st.features.next_meal, st.features.chat],
+    [true, true, true, false, false]), 'only the two on-device features');
+  ok(() => assert.equal(st.provider.label, 'Apple\'s on-device model'), 'the provider is the on-device model');
+  ok(() => assert.equal(st.routes.describe.consent.skip_preview, true), 'no consent sheet: nothing leaves the phone');
+
+  // A low, an emergency or a dose question: the server's card, and the model is not asked.
+  const low = await parse('my sugar is 55, what should I eat');
+  ok(() => assert.equal(low.status, 'treating_a_low'), 'a low gets the Treating a low card');
+  ok(() => assert.equal(low.cards[0].title, 'Treating a low'));
+  const dose = await parse('how much insulin for rice');
+  ok(() => assert.equal(dose.status, 'medicine_question'), 'a dose question gets the Ask your care team card');
+  const emergency = await parse('chest pain after lunch');
+  ok(() => assert.equal(emergency.status, 'red_flag'), 'an emergency gets the Get help now card');
+  ok(() => assert.equal(sent.length, 0), 'none of them reached the model');
+
+  // "What will be sent?": the exact request to the app, and nothing is asked.
+  const dry = await parse('2 eggs and zebrafruit', true);
+  ok(() => assert.equal(dry.dry_run, true));
+  ok(() => deep(dry.body, { kind: 'ai', task: 'parse_meal', text: '{"text":"2 eggs and zebrafruit"}' }), 'the dry run shows the request');
+  ok(() => assert.equal(sent.length, 0), 'a dry run asks nothing');
+
+  // An answer that passes: the server's shape, matches from the in-page food search, servings where the unit allows.
+  next = { ok: true, answer: { status: 'ok', items: [item('2 eggs', 'egg', 2, 'serving'), item('zebrafruit', 'zebrafruit', 1, 'piece'),
+    item('6 units of insulin', 'insulin', 6, 'none')] } };
+  const got = await parse('  2 eggs and​ zebrafruit ');
+  ok(() => deep(sent.at(-1), { kind: 'ai', task: 'parse_meal', text: '{"text":"2 eggs and zebrafruit"}' }), 'the server\'s cleaned data');
+  ok(() => assert.equal(got.status, 'ok'));
+  ok(() => deep(Object.keys(got).sort(), ['audit_id', 'cached', 'dropped', 'feature', 'items', 'mode', 'notes', 'notice', 'prompt_version',
+    'provider', 'repaired', 'retried', 'status', 'trimmed']), 'the server\'s keys');
+  ok(() => assert.equal(got.feature, 'parse_meal'));
+  ok(() => assert.equal(got.audit_id, null), 'nothing is kept about the call');
+  ok(() => assert.equal(got.provider.label, 'Apple\'s on-device model'));
+  ok(() => assert.match(got.notice, /Nothing is logged until you add it/), 'the server\'s notice');
+  ok(() => assert.equal(got.items.length, 2), 'the insulin line is left out');
+  ok(() => deep(got.dropped, [{ index: 2, reason: 'text_policy:blocklist:units' }]), 'and said why');
+  ok(() => assert.ok(got.items[0].matches.length > 0 && got.items[0].matches.length <= 3), 'up to three matches from the food list');
+  ok(() => assert.ok(got.items[0].matches.every((m) => /egg/i.test(m.food.name) && m.servings === 2)), 'egg foods, 2 servings');
+  ok(() => deep(got.items[1].matches, []), 'no match for a food not in the list');
+  await KH.mock.local.flush();
+  ok(() => assert.ok(!JSON.stringify(fresh.read('kdl-demo-local', 'state', 'current')).includes('zebrafruit')), 'the text is not stored');
+
+  // The model refused, or answered "refused": the server's refused text.
+  next = { error: 'refused', message: 'no' };
+  let r = await parse('2 eggs');
+  ok(() => deep([r.status, r.message], ['refused', 'This is outside what the app\'s AI helps with. Your care team can answer it.']), 'refused');
+  next = { ok: true, answer: { status: 'refused', items: [] } };
+  r = await parse('2 eggs');
+  ok(() => deep([r.status, r.items, r.dropped], ['refused', [], []]), 'an answer that refuses');
+  // A shape that does not fit is a failed answer; one bad item is left out.
+  next = { ok: true, answer: { status: 'ok', items: 'eggs' } };
+  r = await parse('2 eggs');
+  ok(() => deep([r.status, r.reason], ['error', 'schema']), 'a malformed answer is not used');
+  next = { ok: true, answer: { status: 'ok', items: [item('eggs', 'egg', 'two', 'serving'), item('egg', 'egg', 1, 'serving')] } };
+  r = await parse('2 eggs');
+  ok(() => deep([r.items.length, r.dropped], [1, [{ index: 0, reason: 'malformed_item' }]]), 'a malformed item is left out');
+  next = { error: 'ai_failed', message: 'x' };
+  r = await parse('2 eggs');
+  ok(() => deep([r.status, r.reason, r.message], ['error', 'ai_failed', 'The AI request failed.']), 'a failed call');
+  next = { error: 'ai_unavailable', message: 'x' };
+  await fails(parse('2 eggs'), 503, 'not_ready');
+
+  // A lab report page's text: a value is kept only when it is written in the text.
+  const lab = (text, dry = false) => api.request('POST', `/api/ai/read-lab-report-text${dry ? '?dry_run=true' : ''}`, { text, page: 2 });
+  const row = (analyte, value, unit, taken_on) => ({ analyte, value, unit, taken_on });
+  const page = 'Patient results\nPotassium 4.6 mmol/L   Collected 2025-10-07\nSodium 140 mmol/L\nCreatinine 1.1 mg/dL';
+  next = { ok: true, answer: { status: 'ok', rows: [row('potassium', 4.6, 'mmol/L', '2025-10-07'), row('creatinine', 9.9, 'mg/dL', null),
+    row('other', 140, 'mmol/L', null), row('creatinine', 1.1, 'mg/dL', '2025-10-08'), row('potassium', '4.6', 'mmol/L', null)] } };
+  let res = await lab(page);
+  ok(() => deep(sent.at(-1), { kind: 'ai', task: 'read_lab_report_text',
+    text: '{"lines":["Patient results","Potassium 4.6 mmol/L Collected 2025-10-07","Sodium 140 mmol/L","Creatinine 1.1 mg/dL"]}' }), 'the lines');
+  ok(() => assert.equal(res.status, 'ok'));
+  ok(() => deep(res.rows.map((x) => [x.analyte, x.value, x.taken_on]), [['potassium', 4.6, '2025-10-07'], ['creatinine', 1.1, null]]),
+    'kept: the written values; a date not in the text is dropped');
+  ok(() => deep(res.dropped, { unknown_analyte: 1, unknown_unit: 0, out_of_range: 0, not_in_text: 1, malformed: 1 }), 'dropped counts');
+  ok(() => assert.equal(res.dropped_notes.length, 3), 'and a note for each');
+  ok(() => assert.match(res.notice, /Check each value against the report/), 'the server\'s notice');
+  ok(() => deep([res.page, res.feature, res.audit_id], [2, 'read_lab_report_text', null]));
+  ok(() => assert.equal(res.demo, undefined), 'not the demo\'s example');
+  next = { ok: true, answer: { status: 'not_a_lab_report', rows: [] } };
+  res = await lab(page);
+  ok(() => deep([res.status, res.rows, res.dropped.not_in_text], ['not_a_lab_report', [], 0]), 'not a lab report');
+  next = { ok: true, answer: { status: 'ok' } };
+  await fails(lab(page), 502, 'schema');
+  next = { error: 'refused', message: 'no' };
+  res = await lab(page);
+  ok(() => deep([res.status, res.rows, Object.keys(res.dropped).length], ['refused', [], 4]), 'refused');
+  const before = sent.length;
+  await fails(lab(`Potassium 4.6\n${'x '.repeat(5000)}`), 413, 'too_long_for_ai');
+  const dryLab = await lab(page, true);
+  ok(() => assert.equal(dryLab.dry_run && dryLab.device, true), 'a dry run of a page');
+  ok(() => assert.equal(sent.length, before), 'neither asked the model');
+}
+
+// 10. Outside device mode the AI is off as before, and the online demo keeps its fixed lab example.
+{
+  const KH = loadDemo({ navigator: { userAgent: 'node', onLine: true, storage: {} }, globals: { KDL_PREVIEW: true } });
+  const api = KH.mock.start({ seed: true });
+  const me = await api.request('GET', '/api/me/ai');
+  ok(() => assert.equal(me.enabled, false), 'AI off in the demo');
+  await assert.rejects(api.request('POST', '/api/ai/parse-meal', { text: '2 eggs' }), (e) => e.status === 404);
+  await assert.rejects(api.request('PATCH', '/api/me/ai', { opt_in: true }), (e) => e.status === 404);
+  const res = await api.request('POST', '/api/ai/read-lab-report-text', { text: 'Potassium 4.6', page: 1 });
+  ok(() => assert.equal(res.demo, true), 'the fixed example');
+}
+
 console.log(`device mode: ${checks} checks passed`);
