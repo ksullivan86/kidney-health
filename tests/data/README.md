@@ -54,6 +54,7 @@ Run the commands from the repository root.
 | `settings_vectors.json` | `python3 tests/data/gen_settings_vectors.py` |
 | `symptoms_vectors.json` | `python3 tests/data/gen_symptoms_vectors.py` |
 | `targets_vectors.json` | `python3 tests/data/gen_targets_vectors.py` |
+| `usda_vectors.json` | `python3 tests/data/gen_usda_vectors.py` |
 
 What to know about the commands:
 
@@ -191,6 +192,8 @@ Top-level keys:
 * `additive_cases`: `{tags: [string] | null, text: string | int | null, name: string | float | null, result: {flags, findings, kidney_notes, additives, notes}}`.
 * `quality_cases`: `{codes: [string], items: [{code: string, message: string}]}`, Open Food Facts data-quality tags and the notes they give.
 * `demo_products`: `{fixture: string, code: string, format: string, row: object, result: object}`. `row` is the stored product. `result` is the server's whole answer to `POST /api/foods/barcode`, with the food id removed.
+* `off_map_cases`: `{id: string, gtin14: string, json: string, trimmed: object, mapped: object, row: object}`. `json` is an Open Food
+  Facts answer as the iPhone app hands it over; `trimmed`, `mapped` and `row` are what `app/off.py` makes of it (design note 38 §5.3).
 
 What a replayer must get right:
 
@@ -722,6 +725,25 @@ What a replayer must get right:
 * `alerts` are urgent and emergency messages about a lab result. A client must show them.
 * The three refusals (pregnancy, under 18, an early transplant) mean the app gives no suggestion and the person enters targets by hand. A client must not suggest numbers in those cases.
 * `today` is always given. Never read a clock.
+
+## usda_vectors.json
+
+FoodData Central records mapped as the server maps them, for the iPhone app, which asks USDA itself (design note 38 §5.3).
+
+* Server: `app/foods.py` (`map_usda_record`, `usda_search_item`).
+* Browser twin: `app/static/js/engine/usda.js` (the demo uses it in `app/static/js/mock/foods.js`).
+* Made by `tests/data/gen_usda_vectors.py`. It is seeded and runs on recorded answers, so it needs no network.
+
+Top-level keys:
+
+* `about`: where the file comes from.
+* `map_cases`: `{id: string, fdc_id: int, json: string, mapped?: object, row?: object, error?: true}`. `json` is the record as the app
+  hands it over; a case with `error` is one the server refuses.
+* `search_item_cases`: `{id: string, json: string, item?: object | null, error?: true}`, one hit of `GET /api/foods/usda/search`.
+
+What a replayer must get right:
+
+* JavaScript reads `208.0` as `208`, so no case writes a whole number as a float where the server turns it into text.
 
 ## webauthn_w3c_vectors.json
 

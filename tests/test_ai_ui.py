@@ -60,9 +60,10 @@ def test_the_demo_answer_has_the_servers_keys(tmp_path, foods_json):
     with TestClient(create_app(settings), base_url=HTTPS_URL) as c:
         sign_in(c)
         server = c.get("/api/me/ai").json()
-    block = MOCK_JS[MOCK_JS.index("route('GET', '/api/me/ai'"):]
-    block = block[block.index("return {") + len("return {"):block.index("    };")]
-    mock_keys = set(re.findall(r"^\s{6}([a-z_]+):", block, re.M))
+    # The demo's answer is OFF_VIEW (a server with AI off); device mode (design note 38 §5.6) answers the same keys and `device`.
+    block = MOCK_JS[MOCK_JS.index("const OFF_VIEW = () => ({"):]
+    block = block[block.index("({") + 2:block.index("\n  });")]
+    mock_keys = set(re.findall(r"^\s{4}([a-z_]+):", block, re.M))
     assert mock_keys == set(server), (mock_keys ^ set(server))
     assert "enabled: false" in block  # the demo is a server with AI off
     settings_keys = set(re.findall(r"([a-z_]+):", block[block.index("settings: {"):block.index("},", block.index("settings: {"))]))
