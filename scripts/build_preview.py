@@ -12,7 +12,9 @@ Usage
 ``--device`` writes the same static site for the iPhone app's web view, in **device mode**: no sample person, no demo
 banner, and the data kept on the phone from the first start (``window.KDL_DEVICE``, js/mock/persist.js). The iPhone app
 serves the folder under its own scheme with the same Content-Security-Policy; Learn links go to the published handbook,
-which the app opens in Safari.
+which the app opens in Safari. It also writes ``ai-prompts.json``, the prompts the iPhone app gives Apple's on-device model, made
+from ``app/ai/prompts.py`` so no prompt is written twice (:func:`ai_prompts`), and packs the vendored pdf.js so a lab report PDF can be
+read on the phone.
 
 ``--pages`` writes the same app as a small static site instead of one fragment (``index.html``, the
 stylesheets and scripts as files under their own paths, ``preview-flag.js``), because a public web page
@@ -228,9 +230,51 @@ def device_flag_js() -> str:
     )
 
 
+AI_PROMPTS = "ai-prompts.json"
+AI_PROMPT_PLACEHOLDER = "{text}"
+# The tasks the iPhone app's model does (design note 38 §5.6): the bridge's task name -> app/ai/prompts.py TASK_LINES key.
+AI_DEVICE_TASKS = {"parse_meal": "parse_meal", "read_lab_report_text": "lab_report_text"}
+PDFJS = "vendor/pdfjs-dist-6.4.299"
+PDFJS_FILES = ("pdf.min.mjs", "pdf.worker.min.mjs", "LICENSE")
+
+
+def ai_prompts() -> dict:
+    """``ai-prompts.json``: what the iPhone app gives Apple's on-device model, taken from ``app/ai/prompts.py``.
+
+    ``system`` is ``TASK_SYSTEM_PROMPT``. Each task's ``template`` is the user message ``prompts.user_message`` builds for a provider
+    that enforces the answer's schema itself (mode ``json_schema``: no schema line, because guided generation enforces the shape),
+    with the data block's JSON replaced by ``{text}``. The page sends that JSON, cleaned and escaped exactly as the server does
+    (``KH.aiJudge.dataPayload``), so filling the template gives the server's message byte for byte."""
+    sys.path.insert(0, str(ROOT))
+    try:
+        from app.ai import prompts
+    finally:
+        sys.path.pop(0)
+    tasks = {}
+    for task, key in AI_DEVICE_TASKS.items():
+        marker = {"marker": "x"}  # a data block whose JSON is found and replaced below
+        message = prompts.user_message(key, marker, mode="json_schema", schema={})
+        block = prompts.data_block(marker)
+        if not message.endswith("\n" + block) or AI_PROMPT_PLACEHOLDER in message:
+            raise SystemExit(f"app/ai/prompts.py: the {key} message is not a task line and one data block")
+        template = message[: -len(block)] + "<data>\n" + AI_PROMPT_PLACEHOLDER + "\n</data>"
+        tasks[task] = {"template": template}
+    return {"system": prompts.TASK_SYSTEM_PROMPT, "tasks": tasks}
+
+
 def build_device(out_dir: Path, static_dir: Path = STATIC, foods_json: Path = FOODS_JSON) -> list[Path]:
-    """The static site of :func:`build_pages` in device mode, for the iPhone app (design note 38, step 1)."""
-    return build_pages(out_dir, static_dir, foods_json, device=True)
+    """The static site of :func:`build_pages` in device mode, for the iPhone app (design note 38, steps 1 and 5), with
+    ``ai-prompts.json`` and the vendored pdf.js (the page loads it from ``/vendor/...``, the root of the app's own scheme)."""
+    written = build_pages(out_dir, static_dir, foods_json, device=True)
+    for name in PDFJS_FILES:
+        target = out_dir / PDFJS / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes((static_dir / PDFJS / name).read_bytes())
+        written.append(target)
+    prompts_file = out_dir / AI_PROMPTS
+    prompts_file.write_text(json.dumps(ai_prompts(), ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    written.append(prompts_file)
+    return written
 
 
 def build_pages(out_dir: Path, static_dir: Path = STATIC, foods_json: Path = FOODS_JSON, *, device: bool = False) -> list[Path]:
