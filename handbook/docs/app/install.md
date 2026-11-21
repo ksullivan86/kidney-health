@@ -136,6 +136,8 @@ phone and needs no server ([design note 38][NOTE38]):
   - **Lock with Face ID or passcode**: off unless you turn it on.
   - Connecting your own server is optional. With a token made for the iPhone app, the app sends each new row you add to your
     server when it can be reached ([Connect the Kidney Health iPhone app](weight-and-blood-pressure.md#connect-the-kidney-health-iphone-app)).
+    You then see it in the web app and on your other devices, and your care team can use it. Using your server's AI and its keys
+    from the phone, and changes made elsewhere coming back to the phone, come later.
 - **Settings → This device → Sending to your server** shows how many rows wait to be sent, when it last sent, and any row your
   server refused. **Send now** tries at once. Changes or deletions you make on the phone after a row was sent are not sent.
 
