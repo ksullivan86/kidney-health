@@ -14,6 +14,7 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * In the iPhone app, Keys and services looks up more foods with your own USDA key or barcodes on Open Food Facts, each off until you
   turn it on. New weights and blood pressure readings from Apple Health go into the log on the phone. An optional Face ID or
   passcode lock covers the app when you switch away (design note 38, steps 2 and 3).
+* In the iPhone app, Scan a barcode uses the iPhone's own scanner. It reads food barcodes only and then looks the code up as before.
 
 ## 0.24.1 — 2026-11-20
 

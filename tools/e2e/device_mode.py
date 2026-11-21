@@ -35,7 +35,9 @@ OUT = Path(tempfile.gettempdir()) / "kidney-health-e2e" / "device-mode"
 RESULTS: list[dict] = []
 STUB = ("window.__kh = { copies: [], phone: [] };"
         "window.webkit = { messageHandlers: { safetyCopy: { postMessage: (t) => window.__kh.copies.push(String(t)) },"
-        " phone: { postMessage: (m) => window.__kh.phone.push(String(m)) } } };")
+        " phone: { postMessage: (m) => window.__kh.phone.push(String(m)) },"
+        " bridge: { postMessage: async (r) => r.kind === 'services' ? { ok: true, off: false, usda: false, scan: true }"
+        " : r.kind === 'scanBarcode' ? { ok: true, code: '3017624010701', format: 'ean_13' } : { error: 'off_off', message: 'off' } } } };")
 
 
 def check(name: str, ok: bool, detail: str = "") -> None:
@@ -102,6 +104,16 @@ def walk(browser, base: str, width: int, height: int, scheme: str) -> None:
         page.wait_for_timeout(100)
     copy = json.loads(page.evaluate("window.__kh.copies[window.__kh.copies.length - 1]"))
     check(f"[{tag}] the safety copy holds the entry", len(copy.get("log_entries", [])) == 1 and copy.get("format") == "kidney-health-export")
+    # The native barcode scanner (owner, 2026-11-21): the Scan sheet offers Apple's scanner, and its code goes to the usual look-up.
+    page.goto(f"{base}/index.html#add")
+    page.wait_for_selector("#view-add:not([hidden])", timeout=30000)
+    page.evaluate("KH.scan.open()")
+    page.wait_for_selector("#scan-camera:not([hidden])", timeout=10000)
+    check(f"[{tag}] Scan offers the iPhone's own scanner", page.locator("#scan-camera").inner_text() == "Scan with the camera")
+    page.wait_for_timeout(1500)
+    check(f"[{tag}] the scanned code goes to the usual look-up", page.locator("#scan-code").input_value() == "3017624010701",
+          page.locator("#scan-status").inner_text()[:120])
+    page.keyboard.press("Escape")
     page.goto(f"{base}/index.html#today")
     page.reload()
     page.wait_for_selector("#view-today:not([hidden])", timeout=30000)

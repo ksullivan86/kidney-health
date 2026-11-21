@@ -5646,6 +5646,10 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
   readings, and hands the rest to `window.KHDevice.addBody` (`js/mock/device.js`), which adds them through the batch routes and
   saves before it answers. The phone's anchors (`phoneAnchors`) move on only after that, so readings that come in while the app is
   closed are added when it opens. The optional lock (`Phone/AppLock.swift`) is off by default and covers the app in the background.
+* **The barcode scanner (native)**: in device mode the Scan sheet asks the bridge for `services`; when `scan` is true its camera
+  button says Scan with the camera and sends `scanBarcode`. `Phone/BarcodeScanner.swift` shows Apple's `DataScannerViewController`
+  for EAN-13, EAN-8 and UPC-E only and answers `{ ok, code, format }` or `{ error: "cancelled" }`. The page then runs its usual
+  look-up, so the food rules stay in one place. It starts on its own when Prefer live camera is on.
 * **Tests**: `tests/js/device_mode.mjs` (the engine, against a fake IndexedDB), `tests/test_device_mode.py` (the build and the wiring), `PhoneTests.swift`,
   `tests/test_ios_app.py` (the shell's rules), `WebShellTests.swift` (the simulator), `tools/e2e/device_mode.py` (Chromium).
 

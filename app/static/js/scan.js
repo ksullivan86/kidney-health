@@ -290,7 +290,24 @@
     };
     session.timer = setTimeout(tick, DETECT_EVERY_MS);
   }
-  $('#scan-camera').addEventListener('click', () => { chose = true; startCamera().catch((e) => { stopCamera(); toastError(e); }); });
+  // The iPhone app (device mode, design note 38): Apple's own scanner reads the code (the app's "scanBarcode"); the look-up and
+  // everything after it stays here, with the server's rules (owner, 2026-11-21: the barcode scanner first to go native).
+  let nativeScan = false;
+  async function nativeScanAvailable() {
+    if (!(KH.flags.DEVICE && KH.mock && KH.mock.device)) return false;
+    try { const s = await KH.mock.device.lookup({ kind: 'services' }); return !!(s && s.scan); } catch (e) { return false; }
+  }
+  async function scanNatively() {
+    const mine = lookupTurn;
+    const answer = await KH.mock.device.lookup({ kind: 'scanBarcode' });
+    if (mine !== lookupTurn || !dlg.open) return; // the sheet was closed or reopened meanwhile
+    if (answer && answer.ok && answer.code) { codeInput.value = answer.code; await lookup(answer.code, answer.format || 'unknown'); return; }
+    if (answer && answer.error && answer.error !== 'cancelled') say(answer.message || 'The scanner could not read a barcode. Type the digits instead.');
+  }
+  $('#scan-camera').addEventListener('click', () => {
+    if (nativeScan) { chose = true; scanNatively().catch(toastError); return; }
+    chose = true; startCamera().catch((e) => { stopCamera(); toastError(e); });
+  });
   $('#scan-camera-stop').addEventListener('click', () => { stopCamera('Camera stopped.'); $('#scan-camera').focus(); });
   dlg.addEventListener('close', () => { lookupTurn += 1; stopCamera(); }); // a lookup still on its way answers nothing now
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && live) stopCamera('The camera stopped while the app was in the background. Tap “Use the camera” to start it again.'); });
@@ -480,6 +497,19 @@
     opening += 1;
     chose = false;
     sheets.open(dlg, from, canLive ? $('#scan-camera') : $('#scan-file'));
+    nativeScan = false;
+    if (!canLive && KH.flags.DEVICE) { // the iPhone app: Apple's scanner instead of the page's camera
+      const mine = opening;
+      nativeScanAvailable().then(async (yes) => {
+        if (!yes || mine !== opening || !dlg.open) return;
+        nativeScan = true;
+        $('#scan-camera-row').hidden = false;
+        $('#scan-camera').hidden = false;
+        $('#scan-camera').textContent = 'Scan with the camera';
+        liveNote.hidden = true;
+        if (await cameraPreferred() && mine === opening && !chose && dlg.open) scanNatively().catch(toastError);
+      }).catch(() => {});
+    }
     if (canLive) {
       const mine = opening;
       cameraPreferred().then((on) => { if (on) return startCamera({ auto: mine }); return null; })

@@ -91,7 +91,9 @@ final class FoodServices: ObservableObject {
         guard let request = body as? [String: Any], let kind = request["kind"] as? String else { return Self.problem("bad_request") }
         switch kind {
         case "services":
-            return ["ok": true, "usda": usdaOn && hasUsdaKey, "off": offOn]
+            return ["ok": true, "usda": usdaOn && hasUsdaKey, "off": offOn, "scan": BarcodeScanner.available]
+        case "scanBarcode": // the native scanner (Phone/BarcodeScanner.swift); the page looks the code up itself
+            return await BarcodeScanner.shared.scan()
         case "enableOff":
             setOn(.openFoodFacts, true) // the page asked the person first, naming the host and what is sent (note 38, D5)
             return ["ok": true]
