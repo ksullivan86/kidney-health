@@ -7,9 +7,12 @@ Two **families** share the ``api_tokens`` table, the hash-only storage, expiry, 
   ``assistant.enabled``): made in Settings → Outside AI apps and given to a chat assistant; accepted only at ``/mcp``.
   ``assistant:log`` lets it save food and recipes; ``assistant:prefs`` lets it remember a taste (``set_food_preference``).
   Each is a separate opt-in when the token is made: neither implies the other, and both imply only ``assistant:read``.
-* **device** (``khd_``, the one scope ``body:write``, instance switch ``push.enabled``): made in Settings → Phone shortcuts
-  and pasted into a phone shortcut; accepted only at ``POST /push/v1/body``, where it can add weights and blood pressure
-  readings and read nothing. The scope of a device token is not the person's choice: it is always exactly ``body:write``.
+* **device** (``khd_``, instance switch ``push.enabled``): made in Settings → Phone shortcuts. Two kinds, chosen when the token
+  is made: a **shortcut** token holds exactly ``body:write`` and is accepted only at ``POST /push/v1/body`` (and its check),
+  where it can add weights and blood pressure readings and read nothing; an **app** token (design note 38 §5.5) holds
+  ``body:write`` and ``app:add`` and is also accepted at ``POST /push/v1/sync`` (:mod:`app.app_sync`), where the iPhone app adds
+  food log entries, its own foods, lab results, symptoms, weights and readings, and reads nothing. ``app:add`` implies
+  ``body:write`` and nothing else; neither kind can read, change or delete a row.
 
 A token is its prefix + 43 base64url characters (32 random bytes). Only the SHA-256 of the whole token is stored, as hex,
 with its first 12 characters for display. The plain token is in the answer to ``POST /api/me/tokens`` once and never again
@@ -77,8 +80,12 @@ READ = "assistant:read"
 LOG = "assistant:log"  # also save food and recipes (part C); a token that has it always has READ too
 PREFS = "assistant:prefs"  # also remember a taste (set_food_preference, note 09 §4.8b); implies READ, never LOG
 BODY_WRITE = "body:write"  # add weights and blood pressure readings at POST /push/v1/body, and nothing else
+APP_ADD = "app:add"  # also add entries, own foods, labs and symptoms at POST /push/v1/sync (note 38 §5.5); implies BODY_WRITE only
 SCOPES: tuple[str, ...] = (READ, LOG, PREFS)  # the assistant family's scopes, in the order they are stored and shown
-DEVICE_SCOPES: tuple[str, ...] = (BODY_WRITE,)  # the device family's: always exactly this one, never the person's choice
+DEVICE_SCOPES: tuple[str, ...] = (BODY_WRITE, APP_ADD)  # the device family's, in the order they are stored and shown
+SHORTCUT_SCOPES: tuple[str, ...] = (BODY_WRITE,)  # a phone Shortcut's token: exactly this
+APP_SCOPES: tuple[str, ...] = (BODY_WRITE, APP_ADD)  # the iPhone app's token
+DEVICE_KINDS: tuple[str, ...] = ("shortcut", "app")
 ALL_SCOPES: tuple[str, ...] = SCOPES + DEVICE_SCOPES
 EXPIRY_DAYS: tuple[int, ...] = tuple(get_args(ExpiryDays))
 DEFAULT_EXPIRY_DAYS = 90
@@ -112,9 +119,9 @@ register_limit("api_tokens", 20, 3600, "Too many new tokens. Try again later.")
 
 MAX_ROW_ID = 2**63 - 1
 
-# SQL for "this row is a device token": the scopes text holds the word body:write. A row that mixes the families is
-# counted as a device row here and grants nothing (:func:`parse_scopes`), so it can never be used at either surface.
-_IS_DEVICE_SQL = f"(' ' || scopes || ' ') LIKE '% {BODY_WRITE} %'"
+# SQL for "this row is a device token": the scopes text holds the word body:write or app:add. A row that mixes the families
+# is counted as a device row here and grants nothing (:func:`parse_scopes`), so it can never be used at either surface.
+_IS_DEVICE_SQL = f"((' ' || scopes || ' ') LIKE '% {BODY_WRITE} %' OR (' ' || scopes || ' ') LIKE '% {APP_ADD} %')"
 
 
 @dataclass(frozen=True)
@@ -158,20 +165,30 @@ def family_of_scope(scope: str) -> str:
 
 
 def family_of_scopes(scopes: str | tuple[str, ...] | list[str] | None) -> str:
-    """The family of a stored ``scopes`` text (or a tuple of scopes): ``device`` when it holds ``body:write``, else
-    ``assistant``. The same rule as the list filter's SQL."""
-    words = scopes.split() if isinstance(scopes, str) or scopes is None else list(scopes)
-    return DEVICE if BODY_WRITE in words else ASSISTANT
+    """The family of a stored ``scopes`` text (or a tuple of scopes): ``device`` when it holds ``body:write`` or ``app:add``,
+    else ``assistant``. The same rule as the list filter's SQL."""
+    words = (scopes or "").split() if isinstance(scopes, str) or scopes is None else list(scopes)
+    return DEVICE if BODY_WRITE in words or APP_ADD in words else ASSISTANT
+
+
+def kind_of_scopes(scopes: str | tuple[str, ...] | list[str] | None) -> str | None:
+    """A device token's kind: ``app`` when it holds ``app:add``, else ``shortcut``; None for an assistant token."""
+    if family_of_scopes(scopes) != DEVICE:
+        return None
+    text = scopes if isinstance(scopes, str) or scopes is None else " ".join(scopes)
+    return "app" if APP_ADD in parse_scopes(text) else "shortcut"
 
 
 def parse_scopes(text: str | None) -> tuple[str, ...]:
     """The known scopes in a stored ``scopes`` text, in :data:`ALL_SCOPES` order. An unknown word grants nothing;
     ``assistant:log`` and ``assistant:prefs`` each imply ``assistant:read`` and nothing else implies anything (``log`` does
     not give ``prefs`` and ``prefs`` does not give ``log``; a device token never gains an assistant scope, an assistant token
-    never gains ``body:write``); a text that names scopes of both families grants nothing."""
+    never gains ``body:write``; ``app:add`` implies ``body:write``); a text that names scopes of both families grants nothing."""
     known = {w for w in (text or "").split() if w in ALL_SCOPES}
     if LOG in known or PREFS in known:
         known.add(READ)
+    if APP_ADD in known:
+        known.add(BODY_WRITE)
     if known.intersection(SCOPES) and known.intersection(DEVICE_SCOPES):
         return ()
     return tuple(s for s in ALL_SCOPES if s in known)
@@ -231,23 +248,46 @@ def _family_sql(family: str | None) -> str:
     return f" AND {'' if _family(family) == DEVICE else 'NOT '}{_IS_DEVICE_SQL}"
 
 
+BODY_SENT_KEYS: tuple[str, ...] = ("weights", "readings")  # what a shortcut token's ``sent`` counts
+APP_SENT_KEYS: tuple[str, ...] = ("entries", "foods", "labs", "symptoms", "weights", "readings")  # an app token's
+
+
+def empty_sent(kind: str | None) -> dict[str, int]:
+    """``sent`` of a token that sent nothing: ``{weights, readings}`` for a shortcut token (as before note 38 step 4), every
+    kind for an app token."""
+    return {k: 0 for k in (APP_SENT_KEYS if kind == "app" else BODY_SENT_KEYS)}
+
+
 def sent_counts(conn: sqlite3.Connection, user_id: int) -> dict[int, dict[str, int]]:
-    """How many weights and blood pressure readings each of the person's device tokens sent and that are still in the log:
-    ``{token_id: {"weights": n, "readings": n}}`` (tokens that sent none are not in the answer). The Settings block names the
-    count before "Delete what it sent" (``DELETE /api/me/tokens/{id}/body-rows``)."""
+    """How many rows each of the person's device tokens sent and that are still in the log: ``{token_id: {"weights": n,
+    "readings": n, …}}`` (tokens that sent none are not in the answer). Weights and readings are found by ``api_token_id``; an
+    app token's entries, own foods, labs and symptoms by its receipts (:func:`app.app_sync.sent_by_tokens`). The Settings block
+    names the count before "Delete what it sent" (``DELETE /api/me/tokens/{id}/body-rows``)."""
     out: dict[int, dict[str, int]] = {}
     for key, table in (("weights", "weights"), ("readings", "blood_pressures")):
         rows = conn.execute(f"SELECT api_token_id, COUNT(*) AS n FROM {table} WHERE user_id = ? AND api_token_id IS NOT NULL "
                             "GROUP BY api_token_id", (int(user_id),))
         for r in rows:
-            out.setdefault(int(r["api_token_id"]), {"weights": 0, "readings": 0})[key] = int(r["n"])
+            out.setdefault(int(r["api_token_id"]), {})[key] = int(r["n"])
+    if table_exists(conn, "app_sync_rows"):
+        from ..app_sync import sent_by_tokens  # the receipts of schema step 37
+
+        for token_id, counts in sent_by_tokens(conn, int(user_id)).items():
+            out.setdefault(token_id, {}).update(counts)
     return out
+
+
+def sent_item(kind: str | None, counts: dict[str, int] | None) -> dict[str, int]:
+    """The ``sent`` of one token's list item: the keys its kind shows, zero where it sent none."""
+    base = empty_sent(kind)
+    return {k: int((counts or {}).get(k, 0)) for k in base}
 
 
 def list_tokens(conn: sqlite3.Connection, user_id: int, family: str | None = None) -> list[dict[str, Any]]:
     """The person's tokens, newest first: active ones and those that ended in the last 30 days. ``family`` keeps one
     family's tokens (the Settings blocks list one family each); ``None`` lists both. A device token's item also holds ``sent``,
-    ``{weights, readings}``: how many rows it sent that are still in the log."""
+    ``{weights, readings}`` (an app token's also ``entries``, ``foods``, ``labs`` and ``symptoms``): how many rows it sent that
+    are still in the log, and ``kind`` (``shortcut`` or ``app``)."""
     now = clock.now()
     cutoff = clock.iso(now - timedelta(days=KEEP_ENDED_DAYS))
     rows = conn.execute(
@@ -260,7 +300,8 @@ def list_tokens(conn: sqlite3.Connection, user_id: int, family: str | None = Non
     if family == DEVICE:
         sent = sent_counts(conn, user_id)
         for item in items:
-            item["sent"] = sent.get(item["id"], {"weights": 0, "readings": 0})
+            item["kind"] = kind_of_scopes(item["scopes"])
+            item["sent"] = sent_item(item["kind"], sent.get(item["id"]))
     return items
 
 
@@ -487,6 +528,14 @@ def device_user(request: Request, conn: Annotated[sqlite3.Connection, Depends(ge
 DeviceUser = Annotated[User, Depends(device_user)]
 
 
+def app_user(request: Request, conn: Annotated[sqlite3.Connection, Depends(get_db)]) -> User:
+    """FastAPI dependency for the iPhone app's surface (``/push/v1/sync``, :mod:`app.app_sync`): a token with ``app:add``."""
+    return authenticate(request, conn, APP_ADD)
+
+
+AppUser = Annotated[User, Depends(app_user)]
+
+
 # --------------------------------------------------------------------------- #
 # /api/me/tokens (cookie session + CSRF, like every /api/me route)
 # --------------------------------------------------------------------------- #
@@ -529,8 +578,9 @@ def create_my_token(body: TokenCreate, request: Request, user: RecentUser,
     """A new token, in this answer only (``token``); needs a recent password, like saving a key. ``family`` is
     ``assistant`` (default) or ``device``. An assistant token is read-only unless ``can_log`` (default false) also lets it
     save food and recipes (``assistant:log``) and ``can_prefs`` (default false) lets it remember tastes (``assistant:prefs``).
-    A device token's scopes are always exactly ``["body:write"]``: the request cannot choose them (``can_log`` and
-    ``can_prefs`` are refused for it). A device token's answer also has ``pair_url``, the link the QR code for the iPhone app
+    A device token's ``kind`` is ``shortcut`` (default; scopes ``["body:write"]``) or ``app`` (``["body:write", "app:add"]``,
+    design note 38 §5.5); the request cannot name scopes (``can_log`` and ``can_prefs`` are refused for it, and ``kind`` for an
+    assistant token). A device token's answer also has ``pair_url``, the link the QR code for the iPhone app
     holds (:mod:`app.pairing`), or null when this server's address is not ``https://`` and a host."""
     ctx = auth_context(request)
     family = body.family
@@ -538,6 +588,9 @@ def create_my_token(body: TokenCreate, request: Request, user: RecentUser,
         if family == DEVICE and ticked:
             raise ApiProblem(400, "A device token can only add weights and blood pressure readings; there is nothing to choose.",
                              field=field)
+    if family != DEVICE and body.kind is not None:
+        raise ApiProblem(400, "Only a phone token has a kind: shortcut or app.", field="kind")
+    kind = (body.kind or "shortcut") if family == DEVICE else None
     if not is_enabled(conn, ctx, family):
         raise ApiProblem(409, DEVICE_SWITCHED_OFF if family == DEVICE else SWITCHED_OFF)
     if body.expires_in_days == NEVER and not never_allowed(conn, ctx):
@@ -548,12 +601,17 @@ def create_my_token(body: TokenCreate, request: Request, user: RecentUser,
     if active_count(conn, user.id, family) >= MAX_ACTIVE:
         conn.rollback()
         raise ApiProblem(400, f"You have {MAX_ACTIVE} active tokens, the most allowed. Revoke one first.")
-    scopes = DEVICE_SCOPES if family == DEVICE else scopes_for(body.can_log, body.can_prefs)
+    if family == DEVICE:
+        scopes = APP_SCOPES if kind == "app" else SHORTCUT_SCOPES
+    else:
+        scopes = scopes_for(body.can_log, body.can_prefs)
     token, item = create(conn, user.id, name, body.expires_in_days, scopes)
     if family == DEVICE:
-        item["sent"] = {"weights": 0, "readings": 0}
+        item["kind"] = kind
+        item["sent"] = empty_sent(kind)
     audit(conn, user.id, "api_token.created", "api_token", item["id"], ip=request_ip(request),
-          expires_in_days=body.expires_in_days, scopes=item["scopes"], family=family)
+          expires_in_days=body.expires_in_days, scopes=item["scopes"], family=family,
+          **({"kind": kind} if kind == "app" else {}))
     conn.commit()
     if family == DEVICE:
         return {**item, "token": token, "pair_url": pairing.link(public_base(request, ctx.settings), token)}

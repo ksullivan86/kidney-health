@@ -859,6 +859,7 @@
     'data.imported': 'Data imported',
     'account.deleted': 'Account deleted', 'secret_key.rotated': 'Secret key rotated', 'backup.created': 'Backup created',
     'api_token.created': 'Assistant token created', 'api_token.revoked': 'Assistant token revoked', 'body.token_rows_deleted': 'Phone shortcut data deleted',
+    'app.rows_added': 'The iPhone app added to your log',
     'assistant.food_logged': 'Assistant saved food', 'assistant.recipe_saved': 'Assistant saved a recipe', 'assistant.preference_set': 'Assistant remembered a taste',
     'ai.trust_changed': 'Trust in the assistant changed', 'ai.route_choice_changed': 'Which AI a feature uses changed',
     'totp.enabled': 'Two-step sign-in turned on', 'totp.disabled': 'Two-step sign-in turned off', 'totp.recovery_codes_renewed': 'New recovery codes made',
@@ -923,7 +924,8 @@
     if (ev.action === 'api_token.created' && d.expires_in_days === 'never') return 'never expires';
     if (ev.action === 'api_token.created' && d.expires_in_days) return `valid for ${EXPIRY_LABEL[d.expires_in_days] || `${d.expires_in_days} days`}`;
     if (ev.action === 'api_token.revoked') return [d.count > 1 ? `${d.count} tokens` : '', TOKEN_REVOKED_WHY[d.reason] || ''].filter(Boolean).join(', ');
-    if (ev.action === 'body.token_rows_deleted') return pushCountsText({ weights: d.weights, readings: d.readings }) || 'nothing was left to delete';
+    if (ev.action === 'body.token_rows_deleted') return pushCountsText(d) || 'nothing was left to delete';
+    if (ev.action === 'app.rows_added') return [pushCountsText(d), d.via ? `with “${d.via}”` : ''].filter(Boolean).join(', ');
     if (ev.action === 'data.imported') {
       return [[d.log_entries, 'entry', 'entries'], [d.custom_foods, 'food', 'foods'], [d.meal_templates, 'saved meal', 'saved meals'], [d.lab_results, 'lab result', 'lab results'], [d.symptoms, 'symptom', 'symptoms'],
         [d.weights, 'weight', 'weights'], [d.blood_pressures, 'blood pressure reading', 'blood pressure readings']]
@@ -1228,14 +1230,22 @@
   let pushHost = null; // the block on screen, so that an admin's change of the switch can draw it again
   function takeUnshownDevice() { const made = unshownDevice; unshownDevice = null; return made && made.token ? made : null; }
 
-  // "2 weights and 1 blood pressure reading" for { weights, readings }; '' when both are none.
+  // A token for the iPhone app (kind "app", design note 38 §5.5) may also add food, lab results and symptoms. It still cannot see,
+  // change or delete anything.
+  const PUSH_APP_INTRO = 'A token for the Kidney Health iPhone app can also add the food, lab results and symptoms you log on the phone. No token can see, change or delete anything.';
+  const PUSH_KINDS = [['shortcut', 'A Shortcut: weight and blood pressure only'], ['app', 'The iPhone app: also food, lab results and symptoms']];
+  // "2 weights and 1 blood pressure reading" for { weights, readings }, and an app token's entries, foods, labs and symptoms
+  // ("3 food entries, 1 lab result and 2 weights"); '' when all are none.
+  const PUSH_WORDS = [['entries', 'food entry', 'food entries'], ['foods', 'food of your own', 'foods of your own'], ['labs', 'lab result', 'lab results'],
+    ['symptoms', 'symptom', 'symptoms'], ['weights', 'weight', 'weights'], ['readings', 'blood pressure reading', 'blood pressure readings']];
   function pushCountsText(c) {
-    const w = Number(c && c.weights) || 0;
-    const r = Number(c && c.readings) || 0;
-    return [w ? pushNumber(w, 'weight', 'weights') : '', r ? pushNumber(r, 'blood pressure reading', 'blood pressure readings') : ''].filter(Boolean).join(' and ');
+    const parts = PUSH_WORDS.map(([key, one, many]) => [Number(c && c[key]) || 0, one, many]).filter(([n]) => n > 0)
+      .map(([n, one, many]) => pushNumber(n, one, many));
+    return parts.length > 2 ? `${parts.slice(0, -1).join(', ')} and ${parts[parts.length - 1]}` : parts.join(' and ');
   }
   function pushTokenSub(t) {
     const parts = [`${t.prefix}…`, `created ${fmtDate(t.created_at)}`, t.last_used_at ? `last used ${relTime(t.last_used_at)}` : 'never used'];
+    if (t.kind === 'app') parts.unshift('for the iPhone app');
     if (t.state === 'revoked') parts.push(`revoked ${fmtDate(t.revoked_at)}`);
     else parts.push(expiryText(t));
     const sent = pushCountsText(t.sent);
@@ -1303,7 +1313,9 @@
       if (sent) {
         const del = h('button', { class: 'btn secondary', type: 'button', 'aria-label': `Delete what ${t.name} sent` }, 'Delete what it sent');
         del.addEventListener('click', () => confirm.inline(actions, del, {
-          message: `Delete the ${sent} that “${t.name}” sent? Weights and readings you typed or imported yourself stay. This cannot be undone.`,
+          message: t.kind === 'app'
+            ? `Delete the ${sent} that “${t.name}” sent? What you typed or imported yourself here stays, and so does a food you also used yourself. This cannot be undone.`
+            : `Delete the ${sent} that “${t.name}” sent? Weights and readings you typed or imported yourself stay. This cannot be undone.`,
           confirmText: 'Delete',
           onConfirm: async () => {
             const res = await A.deleteTokenRows(t.id);
@@ -1329,14 +1341,16 @@
     const name = h('input', { id: 'set-push-name', type: 'text', maxlength: 60, autocomplete: 'off', spellcheck: 'false', 'aria-describedby': 'set-push-name-hint' });
     const expiry = selectEl('set-push-expiry', (res.expiry_days || []).map((d) => [d, EXPIRY_LABEL[d] || `${d} days`]), res.default_expiry_days);
     const neverHint = expiryWarning(expiry, 'set-push-never');
+    const kind = selectEl('set-push-kind', PUSH_KINDS, 'shortcut');
     const err = formError();
     const create = action('Make token', 'primary', async () => {
       clear(err);
       const text = name.value.trim();
       if (!text) { showFormError(err, 'Give the token a name, for example “Morning weight”.'); name.focus(); return; }
       let made;
+      const forApp = kind.value === 'app' ? { kind: 'app' } : {}; // the server sets what each kind may add
       try {
-        made = await A.createToken({ name: text, expires_in_days: expiryValue(expiry), family: 'device' }); // a password prompt opens here when it is needed
+        made = await A.createToken({ name: text, expires_in_days: expiryValue(expiry), family: 'device', ...forApp }); // a password prompt opens here when it is needed
       } catch (e) {
         if (!e.cancelled && !e.handled) showFormError(err, e);
         return;
@@ -1347,6 +1361,8 @@
     return h('div', { class: 'settings-form' },
       h('div', { class: 'field' }, h('label', { for: 'set-push-name' }, 'Name'), name,
         h('span', { class: 'hint', id: 'set-push-name-hint' }, 'For example “Morning weight”, so you know which one to revoke.')),
+      h('div', { class: 'field' }, h('label', { for: 'set-push-kind' }, 'What it is for'), kind,
+        h('span', { class: 'hint', id: 'set-push-kind-hint' }, 'A Shortcut token adds weight and blood pressure. An iPhone app token also adds food, lab results and symptoms.')),
       h('div', { class: 'field' }, h('label', { for: 'set-push-expiry' }, 'Expires after'), expiry, neverHint),
       h('div', { class: 'settings-actions' }, create),
       err);
@@ -1371,7 +1387,7 @@
     if (ticket !== pushDraw) return;
     const tokens = res.tokens || [];
     const active = tokens.filter((t) => t.state === 'active').length;
-    const parts = [h('p', {}, PUSH_INTRO)];
+    const parts = [h('p', {}, PUSH_INTRO), h('p', { class: 'hint', id: 'set-push-app' }, PUSH_APP_INTRO)];
     if (!res.enabled) {
       parts.push(h('p', { class: 'setting-status' }, h('span', { class: 'state-pill off' }, 'Turned off on this server')),
         h('p', { class: 'hint', id: 'set-push-off' }, 'Your admin has not turned this on.'));

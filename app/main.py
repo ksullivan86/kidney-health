@@ -23,6 +23,7 @@ from . import labs  # M2 targets: /api/labs
 from . import symptoms  # schema step 15: /api/symptoms
 from . import body  # schema step 18: /api/body (weight and blood pressure)
 from . import push  # schema step 19: POST /push/v1/body (device tokens) and DELETE /api/me/tokens/{id}/body-rows
+from . import app_sync  # schema step 37: POST /push/v1/sync, the iPhone app sends the rows it made (design note 38 §5.5)
 from .guidance import api as guidance_api  # M2 guidance: /api/guidance
 from . import handbook  # M3: the handbook at /learn and /api/handbook
 from . import barcode  # M2 barcode: POST /api/foods/barcode
@@ -182,6 +183,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(assistant_mcp.router)
     app.include_router(push.router)  # bearer-only like /mcp, outside /api
     app.include_router(push.api_router)
+    app.include_router(app_sync.router)  # schema step 37: POST /push/v1/sync (app tokens, design note 38 §5.5)
     app.include_router(data_import.router)
     app.include_router(meta.router)
     app.include_router(sharing.me_router)
