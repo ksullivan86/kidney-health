@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # app-sync-phone: the phone side of note 38 step 4 (sending to your server)
 
@@ -13,7 +13,17 @@ Role: `app-sync-phone`. Branch: the worktree branch (no push, no PR). Server sid
 3. [x] Settings → This device: "Sending to your server" (`serverSyncBlock` in `views/settings.js`).
 4. [x] Tests: `tests/js/server_sync.mjs`, `tests/test_server_sync_phone.py` (runs it, and posts the page's body to the real route),
    `tests/test_ios_app.py`, `tools/e2e/device_mode.py` (Send now with a stub bridge; 44 PASS).
-5. [ ] Docs: ARCHITECTURE "Device mode", docs/push.md, handbook install page, CHANGELOG, note 38 status.
+5. [x] Docs: ARCHITECTURE "Device mode" (+ file ownership row), docs/push.md ("What the app does", contributors), handbook
+   install and weight-and-blood-pressure pages, CHANGELOG Unreleased, note 38 status and §5.5.
+6. [x] Final run: node server_sync (75), device_mode (44), run_vectors; 894 pytest in the related files; e2e 44 PASS; ruff clean.
+
+## Left for later
+* Swift is not compiled here (no toolchain); CI's macOS job builds and runs the XCTests (`testTheSyncURLIsTheSameServersPushV1Sync`,
+  the changed pairing sentence in `SettingsScreenTests`).
+* Restoring from the safety copy loses the sent marks; rows are sent again and the server finds them by client_id (entries),
+  created_at (labs, symptoms), the Health key or same time (weights, readings) or same content (foods). A hand-typed weight or
+  reading with no time could be added twice.
+* Stuck and refused rows have no "try again" button.
 
 ## Decisions (and why)
 * **USDA and Open Food Facts foods go in `foods`** (source usda/off with fdc_id/gtin) and the entry names them by client_id, as
@@ -31,6 +41,7 @@ Role: `app-sync-phone`. Branch: the worktree branch (no push, no PR). Server sid
 * **When**: 10 s after a save (persist's subscribe), 1 s after the page becomes visible, at start (boot's save status). Only
   when paired (`serverInfo`) and the token check (`GET /push/v1/sync`, cached a day) passed. After a 401, automatic runs check
   again at most once an hour; Send now checks at once. After an unexpected answer, a 5 minute pause.
+* A run that reaches 10 requests schedules the rest a minute later.
 * No change to `KidneyHealthApp.swift`, `WebShell/*` or `main.js` (the main session edits them): all triggers are in the page.
 * Timer `unref()` when present (Node), so the test pages exit promptly.
 

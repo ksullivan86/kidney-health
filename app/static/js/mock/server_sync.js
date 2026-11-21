@@ -386,6 +386,8 @@
       break;
     }
     if (!stopped) {
+      const left = nextBatch(api, { skip });
+      if (left && left.refs.length) soon(60 * 1000); // more than one run's worth: the rest follows in a minute
       const parts = [];
       if (total.added) parts.push(`${total.added} new ${total.added === 1 ? 'row' : 'rows'} sent`);
       if (total.there) parts.push(`${total.there} already there`);

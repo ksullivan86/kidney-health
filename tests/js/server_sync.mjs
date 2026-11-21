@@ -185,6 +185,17 @@ let dumped = null;
   ok(() => assert.deepEqual(Object.keys(server.bodies[1]), ['symptoms']), 'only the new row');
 }
 
+// 3b. One run sends at most MAX_REQUESTS requests; the rest waits for the next run.
+{
+  const { api, S, server } = await page();
+  for (let i = 0; i < 2100; i += 1) api._insertLab(1, { analyte: 'potassium', value: 4, entered_value: 4, entered_unit: 'mmol/L' }, day(-(i % 300)), '');
+  let s = await S.sendNow();
+  ok(() => assert.equal(server.bodies.length, S.MAX_REQUESTS), 'ten requests in one run');
+  ok(() => assert.equal(s.waiting, 100), 'the rest waits');
+  s = await S.run();
+  ok(() => assert.equal(s.waiting, 0), 'and goes with the next run');
+}
+
 // 4. The sample data is never sent.
 {
   const { api, S, asked } = await page();
