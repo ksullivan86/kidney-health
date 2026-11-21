@@ -54,7 +54,8 @@ struct ContentView: View {
                 } header: {
                     Text("Your server")
                 } footer: {
-                    Text("To connect: in the web app, open Settings → Account → Your data → Phone shortcuts and make a token. "
+                    Text("To connect: in the web app, open Settings → Account → Your data → Phone shortcuts and make a token for the iPhone app, "
+                         + "so the app can also send what you add in it. "
                          + "Tap Scan the QR code and point it at the code, or type your server's address and paste the token here, then tap Save. "
                          + "If there is no Phone shortcuts form, ask whoever runs your server to turn phone shortcuts on. "
                          + "The token is kept on this phone only and is never shown again. "

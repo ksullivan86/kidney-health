@@ -223,3 +223,31 @@ def test_the_barcode_scanner_reads_food_codes_only_and_leaves_the_rules_to_the_p
     assert 'case "scanBarcode":' in services and "BarcodeScanner.shared.scan()" in services
     page = (ROOT / "app" / "static" / "js" / "scan.js").read_text(encoding="utf-8")
     assert "kind: 'scanBarcode'" in page or 'kind: "scanBarcode"' in page
+
+
+def test_sending_to_the_server_goes_only_to_the_paired_server_with_the_keychain_token_and_logs_nothing():
+    """Design note 38 step 4: the page owns the queue (js/mock/server_sync.js) and the app only carries its request. The new bridge
+    kinds post only to the paired server's /push/v1/sync over HTTPS, with the token read from the Keychain, through the transport that
+    sends no cookies and follows no redirect. The token never goes back to the page, and nothing is printed or logged."""
+    sync = CODE["KidneyHealth/Services/ServerSync.swift"]
+    assert 'case "serverInfo":' in sync and 'case "serverSyncCheck":' in sync and 'case "serverSync":' in sync
+    assert "Settings.syncURL(SyncModel.shared.address)" in sync and 'url.scheme == "https"' in sync
+    assert "Keychain.read(.token)" in sync and "Settings.isDeviceToken(token)" in sync
+    assert "URLSessionTransport()" in sync and "URLSession(" not in sync  # the transport with no cookies and no redirects
+    assert "transport.get(target.url, token: target.token)" in sync
+    assert "transport.post(body, to: target.url, token: target.token)" in sync
+    assert "body.count <= maxBody" in sync and "maxBody = 256 * 1024" in sync
+    for word in ("print(", "NSLog", "os_log", "Logger(", "debugPrint", "dump("):
+        assert word not in sync, word
+    # what goes back to the page: whether it is paired and the host, or the status, the server's JSON and Retry-After; never the token
+    assert set(re.findall(r'"(\w+)": ', sync)) == {"ok", "paired", "server", "error", "status", "json"}
+    assert 'out["retryAfter"] = wait' in sync and '"server": target.url.host' in sync
+    services = CODE["KidneyHealth/Services/FoodServices.swift"]
+    assert 'case "serverInfo", "serverSyncCheck", "serverSync":' in services and "ServerSync.answer(kind, request)" in services
+    core = SWIFT["KidneyHealthCore/Sources/KidneyHealthCore/Sync.swift"]
+    assert 'push.deletingLastPathComponent().appendingPathComponent("sync")' in core
+    # the page asks with these kinds and never holds a token
+    page = (ROOT / "app" / "static" / "js" / "mock" / "server_sync.js").read_text(encoding="utf-8")
+    for kind in ("serverInfo", "serverSyncCheck", "serverSync"):
+        assert f"kind: '{kind}'" in page, kind
+    assert "khd_" not in page and "Authorization" not in page

@@ -87,7 +87,7 @@ final class SyncModel: ObservableObject {
 
     /// What the app asks before it saves the address and token of a QR code, so a code made by someone else is not taken quietly.
     func pairingQuestion(_ link: Pairing.Link) -> String {
-        var text = "This phone will send your weight and blood pressure to \(link.server). "
+        var text = "This phone will send your weight and blood pressure, and with a token for the iPhone app what you add in the app, to \(link.server). "
             + "Pair only with a QR code from your own server, under Settings → Account → Your data → Phone shortcuts."
         if hasToken { text += " The token saved on this phone now is replaced." }
         return text

@@ -86,7 +86,7 @@ final class FoodServices: ObservableObject {
     // MARK: - The page's requests
 
     /// Answers one request from the page: { kind: "usdaSearch", q } | { kind: "usdaFood", fdcId } | { kind: "offProduct", code } |
-    /// { kind: "services" } | { kind: "enableOff" }.
+    /// { kind: "services" } | { kind: "enableOff" }, and the server kinds of ServerSync.swift.
     func answer(_ body: Any) async -> [String: Any] {
         guard let request = body as? [String: Any], let kind = request["kind"] as? String else { return Self.problem("bad_request") }
         switch kind {
@@ -97,6 +97,8 @@ final class FoodServices: ObservableObject {
         case "enableOff":
             setOn(.openFoodFacts, true) // the page asked the person first, naming the host and what is sent (note 38, D5)
             return ["ok": true]
+        case "serverInfo", "serverSyncCheck", "serverSync": // the page's rows for the person's own server (ServerSync.swift)
+            return await ServerSync.answer(kind, request)
         case "usdaSearch":
             guard let q = (request["q"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines), !q.isEmpty, q.count <= 200 else {
                 return Self.problem("bad_request")
