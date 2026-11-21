@@ -1,26 +1,32 @@
 # Progress: the iPhone app without a server (design note 38)
 
-Status: step 0 built, waiting for the owner's results on a real iPhone.
+Status: steps 0 and 1 built; waiting for a TestFlight build and the owner's results on a real iPhone.
 
 ## Done
 
 * Note 38 written and decided (2026-11-20, §10).
-* Step 0 (2026-11-21): **Storage test** screen in the iPhone app (`ios/KidneyHealth/StorageCheck/`). Each time it opens it adds the
-  time to a file in Application Support (the control), to a web page's IndexedDB and localStorage in WebKit's default store,
-  and to the same in a store with a fixed identifier (`WKWebsiteDataStore(forIdentifier:)`). The page is served by
-  `LocalSchemeHandler` at `kidneyhealth-app://local/`, from a list of three files, with a CSP that has `connect-src 'none'`.
-  Checked by `tests/test_ios_app.py` (no inline script, no network words, the file list) and `LocalFilesTests.swift`
-  (simulator, CI `ios-app` job).
+* Step 0 (2026-11-21): the **Storage test** screen (`ios/KidneyHealth/StorageCheck/`), reached from the app's settings sheet.
+  Each open adds the time to a file in Application Support (the control), and to a test page's IndexedDB and localStorage in
+  WebKit's default store and in a store with a fixed identifier. Checked by `tests/test_ios_app.py` and `LocalFilesTests.swift`.
+* Step 1 (2026-11-21): **device mode** and the **web shell**. See ARCHITECTURE.md "Device mode: the web app inside the iPhone app".
+  * `scripts/build_preview.py --device DIR` (the Pages site with `device-flag.js`); CI and TestFlight pack it into `ios/WebApp`.
+  * Engine: `KH.flags.DEVICE`, an empty start, one person who is not an admin, kept from the first start, the safety copy posted
+    after each save. Screens: no demo pill or banner, no sign-out or device list, This device → Apple Health and server.
+  * iPhone: `ios/KidneyHealth/WebShell/` (product-neutral; a second app changes only `WebShellConfig.swift`), the web app full
+    screen in `RootView`, the old screen as a settings sheet, the safety copy in Documents (Files app), Export via the share sheet.
+  * Verified: `node tests/js/device_mode.mjs` (18 checks), `tests/test_device_mode.py`, `tests/test_ios_app.py`,
+    `python tools/e2e/device_mode.py` (24 checks in Chromium). The Swift code builds only on CI (Xcode 27.2).
 
 ## Next
 
-1. A TestFlight build with the test screen; the owner runs it (steps on the screen) and sends "Copy results" after: a normal
-   reopen, a force-quit, Offload App and reinstall, and more than 7 days unopened.
-2. Read the results into note 38 §3 (F4) and §9: if the web stores keep everything the file keeps, step 1 uses IndexedDB in the
-   app's own store; if not, the log goes in a native SQLite file through the bridge.
-3. Remove the test screen when step 1 starts.
+1. CI on the step 0 + 1 pull request (the simulator build is the first compile of the Swift code), then TestFlight.
+2. The owner: the Storage test (reopen, force-quit, Offload App, more than 7 days) and a first try of the app with no server.
+3. Not yet done in step 1, by choice: barcode camera inside the web view (needs a check on the phone: a custom scheme may not
+   count as a secure context for getUserMedia; photo upload works either way), and hiding the other server-only Settings blocks
+   (Care team, phone shortcuts, connected devices, Outside AI apps), which say "Your admin has not turned this on".
+4. Step 2: Keys and services (USDA key, Open Food Facts) through a native bridge.
 
 ## Commands
 
-* `python -m pytest -q tests/test_ios_app.py`
-* CI runs the Swift tests on the simulator (Xcode 27.2, `xcode-27` runner).
+* `python3 scripts/build_preview.py --device ios/WebApp` before building in Xcode.
+* `python -m pytest -q tests/test_ios_app.py tests/test_device_mode.py`; `node tests/js/device_mode.mjs`; `python tools/e2e/device_mode.py`.

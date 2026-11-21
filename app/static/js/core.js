@@ -15,6 +15,9 @@
   // window.KDL_PREVIEW === true in the self-contained preview built by scripts/build_preview.py
   // (the preview's host does not pass a query string to the page).
   const PREVIEW = window.KDL_PREVIEW === true;
+  // Device mode (design note 38): the app packed inside the iPhone app (scripts/build_preview.py --device) runs the same in-page
+  // API with no server, starts empty, and keeps its data on the phone from the first start. It is always the preview build too.
+  const DEVICE = PREVIEW && window.KDL_DEVICE === true;
   const QUERY = (() => { try { return String(location.search || ''); } catch (e) { return ''; } })();
   const MOCK = PREVIEW || /[?&]mock=1(?:&|$)/.test(QUERY);
   const MOCK_HD = MOCK && /[?&]hd=1(?:&|$)/.test(QUERY); // demo profile on hemodialysis (Mon/Wed/Fri)
@@ -872,7 +875,7 @@
   }
 
   Object.assign(KH, {
-    flags: { PREVIEW, MOCK, MOCK_HD },
+    flags: { PREVIEW, MOCK, MOCK_HD, DEVICE },
     keys: { THEME_KEY, SHOP_KEY },
     ui: {
       KEY_NUMBERS, ROW_NUMBERS, STATUS_ORDER, TREND_ORDER, PLAN_CHIPS, STRIP_KEYS, INTERDIALYTIC_KEYS, WEEKDAYS, WEEKDAYS_LONG,

@@ -22,3 +22,4 @@ deploy/k8s-overlays/*
 # Swift package builds (swift build / swift test in ios/).
 ios/**/.build/
 ios/**/.swiftpm/
+ios/WebApp/

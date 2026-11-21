@@ -91,6 +91,7 @@ def test_the_app_opens_only_its_pairing_links_and_asks_before_it_saves():
 
     info = plistlib.loads((IOS / "KidneyHealth-Info.plist").read_bytes())
     assert info == {"ITSAppUsesNonExemptEncryption": False,  # only standard HTTPS, so no export questions in App Store Connect
+                    "UIFileSharingEnabled": True, "LSSupportsOpeningDocumentsInPlace": True,  # the safety copy shows in Files
                     "CFBundleURLTypes": [{"CFBundleTypeRole": "Viewer", "CFBundleURLName": "io.github.ksullivan86.kidneyhealth.pair",
                                                               "CFBundleURLSchemes": [brand.PAIRING_SCHEME]}]}
     app_configs = [block for block in PROJECT.split("isa = XCBuildConfiguration;") if "PRODUCT_BUNDLE_IDENTIFIER = io.github.ksullivan86.kidneyhealth;" in block]
@@ -171,3 +172,31 @@ def test_the_storage_test_page_has_no_inline_script_and_no_network():
     view = APP["KidneyHealth/StorageCheck/StorageCheckView.swift"]
     assert ": .cancel" in view  # every navigation outside the listed files is cancelled
     assert "HealthKit" not in view and "Keychain" not in view  # the test keeps dates only
+
+SHELL = IOS / "KidneyHealth" / "WebShell"
+
+
+def test_the_web_shell_serves_only_its_packed_files_and_opens_nothing_else():
+    """Design note 38, step 1: the packed web app in a web view, under the app's own scheme, with no network of its own."""
+    files = APP["KidneyHealth/WebShell/WebAppFiles.swift"]
+    assert '"..", ' not in files or '$0 != ".."' in files
+    assert '$0 != ".."' in files and '!$0.hasPrefix(".")' in files and 'file.path.hasPrefix(base + "/")' in files
+    assert "URLSession" not in files and "URLSession" not in APP["KidneyHealth/WebShell/WebAppView.swift"]
+    view = APP["KidneyHealth/WebShell/WebAppView.swift"]
+    # only the packed page may message the app; every other navigation is cancelled, and a tapped https link goes to Safari
+    assert "message.frameInfo.securityOrigin.protocol == WebShellConfig.scheme" in view
+    assert 'url.scheme == "https", action.navigationType == .linkActivated' in view and "UIApplication.shared.open(url)" in view
+    assert view.count("decisionHandler(.cancel)") == 2 and "decisionHandler(.download)" in view
+    assert "WKWebsiteDataStore(forIdentifier: WebShellConfig.storeID)" in view
+    assert ".completeFileProtectionUntilFirstUserAuthentication" in view and ".atomic" in view
+    # the shell is product-neutral: names live in WebShellConfig (a second app changes only that file)
+    for name in ("WebAppFiles.swift", "WebAppView.swift"):
+        assert "kidney" not in APP[f"KidneyHealth/WebShell/{name}"].lower(), name
+
+
+def test_the_packed_web_app_is_built_before_every_xcode_build():
+    assert "lastKnownFileType = folder; path = WebApp;" in PROJECT and "WebApp in Resources" in PROJECT
+    assert "ios/WebApp/" in (ROOT / ".gitignore").read_text(encoding="utf-8")  # built, never committed
+    for workflow in ("ci.yml", "testflight.yml"):
+        text = (ROOT / ".github" / "workflows" / workflow).read_text(encoding="utf-8")
+        assert text.index("python scripts/build_preview.py --device ios/WebApp") < text.index("xcodebuild -version"), workflow

@@ -1,5 +1,5 @@
-// Kidney Health for iPhone: sends new weights and blood pressure readings from Apple Health to the person's own server
-// (design note 15, option A). Every screen of the food log stays in the web app; this app only syncs.
+// Kidney Health for iPhone. The whole app runs inside it with no server (design note 38): the packed web app in a web view
+// (WebShell/). Its own settings, Apple Health and the person's server, open from the web app's Settings (design note 15).
 import SwiftUI
 import UIKit
 
@@ -10,7 +10,7 @@ struct KidneyHealthApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RootView()
                 .environmentObject(model)
         }
     }
@@ -23,5 +23,26 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         Task { @MainActor in SyncModel.shared.startObserving() }
         return true
+    }
+}
+
+/// The web app, full screen. Its Settings → This device → "Apple Health and server" opens the app's own settings as a sheet;
+/// so does a pairing link from the Camera, which the sheet then asks about.
+struct RootView: View {
+    @EnvironmentObject private var model: SyncModel
+    @State private var showSettings = false
+    @State private var openedURL: URL?
+
+    var body: some View {
+        WebAppView(openPhoneSettings: { showSettings = true })
+            .ignoresSafeArea()
+            .onOpenURL { url in
+                openedURL = url
+                showSettings = true
+            }
+            .sheet(isPresented: $showSettings, onDismiss: { openedURL = nil }) {
+                ContentView(openedURL: openedURL)
+                    .environmentObject(model)
+            }
     }
 }

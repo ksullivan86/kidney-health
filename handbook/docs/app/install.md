@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-07
 fact_checked: 2026-10-05
-sources: [NOTE02, WEBKIT-26, CHROME-PWA, MDN-SECURE]
+sources: [NOTE02, NOTE38, WEBKIT-26, CHROME-PWA, MDN-SECURE]
 ---
 
 # Install the app on your phone
@@ -116,6 +116,17 @@ the app kept on the phone ([design note 02][NOTE02]).
     If your glucose is low and the app will not load, treat the low anyway and log it later. Nothing
     in the app has to work before you treat a low ([Treating a low](../t1d/treating-a-low.md)).
 
+## The iPhone app, with no server
+
+There is also a Kidney Health app for iPhone, for now only for testers through TestFlight. It runs the whole app on the
+phone and needs no server ([design note 38][NOTE38]):
+
+- It starts empty. Everything you log stays on the iPhone.
+- After each change it saves a copy of your data that you can find in the **Files** app, under **On My iPhone**. If you ever
+  need your data back, open the app's **Settings → Your data → Import from a file** and choose that copy.
+- Export your data now and then and keep the file somewhere safe. **Settings → Your data → Export** opens the share sheet.
+- Connecting your own server is optional: **Settings → This device → Apple Health and server**.
+
 ## Updates
 
 When the admin upgrades the server, the app notices the next time you open it and shows
@@ -143,6 +154,7 @@ When the admin upgrades the server, the app notices the next time you open it an
 ## Sources
 
 - [Design note 02: home-screen install, offline and HTTPS][NOTE02].
+- [Design note 38: the iPhone app without a server][NOTE38].
 - [WebKit: Safari 26 and Home Screen web apps][WEBKIT-26].
 - [Chrome Help: use web apps][CHROME-PWA].
 - [MDN: secure contexts][MDN-SECURE].

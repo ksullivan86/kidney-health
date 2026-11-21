@@ -5,6 +5,13 @@ follows [semantic versioning](https://semver.org/) from 0.3.0 on; until then min
 the API. Security fixes are released as patch versions of the newest minor version
 ([SECURITY.md](SECURITY.md#supported-versions)).
 
+## Unreleased
+
+### Added
+
+* The iPhone app runs the whole app on the phone with no server (design note 38, step 1). It starts empty, keeps your data on the
+  phone, and saves a copy after each change that the Files app shows under On My iPhone. Connecting a server stays optional.
+
 ## 0.24.1 — 2026-11-20
 
 ### Upgrading from 0.24.0

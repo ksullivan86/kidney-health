@@ -7,6 +7,12 @@ Usage
     python3 scripts/build_preview.py                 # writes build/kidney-diet-log.html (gitignored)
     python3 scripts/build_preview.py --out page.html  # anywhere else
     python3 scripts/build_preview.py --pages DIR      # the GitHub Pages demo: a static site in DIR (v0.3.1)
+    python3 scripts/build_preview.py --device DIR     # the app packed inside the iPhone app (design note 38)
+
+``--device`` writes the same static site for the iPhone app's web view, in **device mode**: no sample person, no demo
+banner, and the data kept on the phone from the first start (``window.KDL_DEVICE``, js/mock/persist.js). The iPhone app
+serves the folder under its own scheme with the same Content-Security-Policy; Learn links go to the published handbook,
+which the app opens in Safari.
 
 ``--pages`` writes the same app as a small static site instead of one fragment (``index.html``, the
 stylesheets and scripts as files under their own paths, ``preview-flag.js``), because a public web page
@@ -200,9 +206,39 @@ def pages_csp(security_py: Path = SECURITY_PY) -> str:
     return "; ".join(d for d in directives if not d.startswith("frame-ancestors"))
 
 
-def build_pages(out_dir: Path, static_dir: Path = STATIC, foods_json: Path = FOODS_JSON) -> list[Path]:
+DEVICE_FLAG = "device-flag.js"
+# The published handbook, which the iPhone app opens in Safari (handbook/mkdocs.pages.yml site_url).
+DEVICE_HANDBOOK = "https://ksullivan86.github.io/kidney-health/"
+
+
+def device_flag_js() -> str:
+    """``device-flag.js``: device mode (design note 38), and where Learn links go (the published handbook, in Safari)."""
+    sys.path.insert(0, str(ROOT))
+    try:
+        from app.guidance.topics import APP_LINKS
+    finally:
+        sys.path.pop(0)
+    handbook = json.dumps({"url": DEVICE_HANDBOOK, "links": APP_LINKS}, ensure_ascii=False, sort_keys=True)
+    return (
+        "/* Written by scripts/build_preview.py --device: the app inside the iPhone app runs against the in-page API\n"
+        "   (js/mock/*) with no server, starts empty and keeps its data on the phone (design note 38). */\n"
+        "window.KDL_PREVIEW = true;\n"
+        "window.KDL_DEVICE = true;\n"
+        f"window.KDL_DEMO_HANDBOOK = {handbook};\n"
+    )
+
+
+def build_device(out_dir: Path, static_dir: Path = STATIC, foods_json: Path = FOODS_JSON) -> list[Path]:
+    """The static site of :func:`build_pages` in device mode, for the iPhone app (design note 38, step 1)."""
+    return build_pages(out_dir, static_dir, foods_json, device=True)
+
+
+def build_pages(out_dir: Path, static_dir: Path = STATIC, foods_json: Path = FOODS_JSON, *, device: bool = False) -> list[Path]:
     """Write the demo as a static site into ``out_dir`` (created or emptied of the files it writes); returns the
-    files written. Same app, same flags and sample data as the fragment; files instead of inline code."""
+    files written. Same app, same flags and sample data as the fragment; files instead of inline code. ``device``: the
+    iPhone app's copy instead (:func:`build_device`)."""
+    flag_name = DEVICE_FLAG if device else PAGES_FLAG
+    prefixes = {"/learn/": DEVICE_HANDBOOK} if device else PAGES_PREFIXES
     index = (static_dir / "index.html").read_text(encoding="utf-8")
     foods = json.loads(foods_json.read_text(encoding="utf-8"))
     if not isinstance(foods, dict) or not isinstance(foods.get("foods"), list):
@@ -238,14 +274,14 @@ def build_pages(out_dir: Path, static_dir: Path = STATIC, foods_json: Path = FOO
         raise SystemExit("index.html: body still references external files")
     for app_path, pages_path in PAGES_LINKS.items():
         markup = markup.replace(f'href="{app_path}"', f'href="{pages_path}"')
-    for app_prefix, pages_prefix in PAGES_PREFIXES.items():
+    for app_prefix, pages_prefix in prefixes.items():
         markup = markup.replace(f'href="{app_prefix}', f'href="{pages_prefix}')
     leftover = re.findall(r'(?:href|src)="(/[^"]*)"', markup)
     if leftover:
         raise SystemExit(f"index.html: absolute paths the Pages demo cannot serve: {sorted(set(leftover))}")
-    flag = out_dir / PAGES_FLAG
+    flag = out_dir / flag_name
     out_dir.mkdir(parents=True, exist_ok=True)
-    flag.write_text(pages_flag_js(), encoding="utf-8")
+    flag.write_text(device_flag_js() if device else pages_flag_js(), encoding="utf-8")
     written.append(flag)
     body_tags = [f'<script src="{copy(path)}"></script>' for _kind, path in body_scripts]
     foods_text = _escape_json_for_script(json.dumps(foods, ensure_ascii=False, separators=(",", ":")))
@@ -257,14 +293,14 @@ def build_pages(out_dir: Path, static_dir: Path = STATIC, foods_json: Path = FOO
         '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">',
         f'<meta http-equiv="Content-Security-Policy" content="{pages_csp()}">',
         '<meta name="referrer" content="no-referrer">',
-        f"<title>{title} (demo)</title>",
+        f"<title>{title}</title>" if device else f"<title>{title} (demo)</title>",
         f'<meta name="description" content="{description}">' if description else "",
         *head_tags,
         "</head>",
         "<body>",
         markup,
         f'<script type="application/json" id="kdl-foods">{foods_text}</script>',
-        f'<script src="{PAGES_FLAG}"></script>',
+        f'<script src="{flag_name}"></script>',
         *body_tags,
         "</body>",
         "</html>",
@@ -280,7 +316,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--out", type=Path, default=DEFAULT_OUT, help=f"output file (default: {DEFAULT_OUT})")
     parser.add_argument("--pages", type=Path, default=None, metavar="DIR",
                         help="write the GitHub Pages demo (a static site) into DIR instead of one fragment")
+    parser.add_argument("--device", type=Path, default=None, metavar="DIR",
+                        help="write the iPhone app's copy (device mode, design note 38) into DIR")
     args = parser.parse_args(argv)
+    if args.device is not None:
+        files = build_device(args.device)
+        total = sum(f.stat().st_size for f in files)
+        print(f"wrote the iPhone app's copy to {args.device} ({len(files)} files, {total:,} bytes)")
+        return 0
     if args.pages is not None:
         files = build_pages(args.pages)
         total = sum(f.stat().st_size for f in files)

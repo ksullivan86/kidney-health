@@ -95,7 +95,7 @@ def test_the_mode_is_off_unless_this_is_the_demo_build():
     # main.js starts it inside the demo branch only
     assert "if (MOCK && KH.mock.local) await KH.mock.local.boot();" in MAIN and "if (MOCK && KH.demoLocal) KH.demoLocal.init();" in MAIN
     # the Settings entry point exists only for the online demo
-    assert "if (MOCK && PREVIEW && KH.demoLocal && KH.demoLocal.open) {" in SETTINGS
+    assert "if (MOCK && PREVIEW && !KH.flags.DEVICE && KH.demoLocal && KH.demoLocal.open) {" in SETTINGS  # and not in the iPhone app (note 38)
     # the demo API, not the real one, is what the mode saves: the hook lives in the mock's request()
     core = (STATIC / "js" / "mock" / "core.js").read_text(encoding="utf-8")
     assert "KH.mock.onWrite(this, method, path)" in core and "KH.mock.onWrite" not in (STATIC / "js" / "core.js").read_text(encoding="utf-8")

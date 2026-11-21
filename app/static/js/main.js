@@ -29,10 +29,10 @@
     const KH = window.KH;
     if (!KH || !KH.flags || !KH.auth) throw new Error('a part of the app did not load');
     const { $, state, toastError, router } = KH;
-    const { PREVIEW, MOCK, MOCK_HD } = KH.flags;
+    const { PREVIEW, MOCK, MOCK_HD, DEVICE } = KH.flags;
 
     // Demo mode: the in-page copy of the server answers every /api call (js/mock/*).
-    if (MOCK) KH.mock.start({ hemodialysis: MOCK_HD });
+    if (MOCK) KH.mock.start({ hemodialysis: MOCK_HD, seed: !DEVICE });
 
     // Runs once per page, for the signed-in person: at boot, or after the sign-in screens.
     async function start(view) {
@@ -59,8 +59,8 @@
     async function init() {
       KH.theme.apply(KH.theme.stored());
       $('#date-input').value = state.date;
-      if (MOCK) {
-        document.title = KH.brand.screenName;
+      if (MOCK) document.title = KH.brand.screenName;
+      if (MOCK && !DEVICE) { // the app on a phone with no server is not a demo: no pill, no banner
         const pill = $('#brand-pill');
         pill.textContent = PREVIEW ? 'Preview' : 'Demo';
         pill.hidden = false;
