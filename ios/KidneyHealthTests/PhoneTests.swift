@@ -48,6 +48,7 @@ final class PhoneTests: XCTestCase {
         XCTAssertTrue(services.offOn)
     }
 
+    @MainActor
     func testAUsdaKeyMustLookLikeOne() {
         XCTAssertTrue(FoodServices.isPlausibleKey("abcdEFGH1234abcdEFGH1234abcdEFGH1234abcd"))
         XCTAssertFalse(FoodServices.isPlausibleKey("short"))
