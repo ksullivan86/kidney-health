@@ -27,6 +27,7 @@ enum WebShellConfig {
     /// The page has loaded / gone: the app's own code that talks to the page hears it here.
     @MainActor static func pageLoaded(_ view: WKWebView) {
         PageBridge.shared.pageLoaded(view)
+        QuickActions.shared.run() // a Home Screen shortcut that opened the app
         Task { await SyncModel.shared.syncToPhone() } // Apple Health readings that came in while the app was closed
     }
 

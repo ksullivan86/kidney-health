@@ -5731,6 +5731,9 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
   button says Scan with the camera and sends `scanBarcode`. `Phone/BarcodeScanner.swift` shows Apple's `DataScannerViewController`
   for EAN-13, EAN-8 and UPC-E only and answers `{ ok, code, format }` or `{ error: "cancelled" }`. The page then runs its usual
   look-up, so the food rules stay in one place. It starts on its own when Prefer live camera is on.
+* **Home Screen shortcuts**: `Phone/QuickActions.swift` sets three shortcuts on the app's icon (Scan a barcode, Add food, Quick
+  add). The scene delegate keeps the chosen one until the page has loaded, then calls `KH.quickAction(name)` (`js/main.js`), which
+  waits for the page to start and only opens that screen. It accepts only those three names, and only in device mode.
 * **Tests**: `tests/js/device_mode.mjs` (the engine, against a fake IndexedDB), `tests/test_device_mode.py` (the build and the wiring), `PhoneTests.swift`,
   `tests/test_ios_app.py` (the shell's rules), `WebShellTests.swift` (the simulator), `tools/e2e/device_mode.py` (Chromium).
 

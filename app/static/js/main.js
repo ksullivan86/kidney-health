@@ -55,8 +55,26 @@
       if (KH.devices) KH.devices.openPending().catch((e) => console.warn('Connected devices:', e));
       // A signed-in visit: on an iPhone or iPad the third one offers the Home Screen tip (js/pwa.js, note 02 R10).
       if (KH.pwa && KH.pwa.countVisit) KH.pwa.countVisit();
+      startedNow();
     }
     KH.app = { start };
+
+    // The iPhone app's Home Screen shortcuts (owner, 2026-11-21: make the most-used parts quicker): the app asks for one of
+    // these by name once the page has started. Each only opens a screen; nothing is saved without the person.
+    let startedNow;
+    const started = new Promise((resolve) => { startedNow = resolve; });
+    const QUICK_ACTIONS = {
+      add: () => router.show('add'),
+      scan: () => { router.show('add'); return KH.scan.open(); },
+      quick: () => { router.show('add'); KH.views.add.openQuick(); },
+    };
+    KH.quickAction = async (name) => {
+      const action = DEVICE && Object.prototype.hasOwnProperty.call(QUICK_ACTIONS, name) ? QUICK_ACTIONS[name] : null;
+      if (!action) return false;
+      await started;
+      await action();
+      return true;
+    };
 
     async function init() {
       KH.theme.apply(KH.theme.stored());

@@ -223,3 +223,20 @@ def test_the_barcode_scanner_reads_food_codes_only_and_leaves_the_rules_to_the_p
     assert 'case "scanBarcode":' in services and "BarcodeScanner.shared.scan()" in services
     page = (ROOT / "app" / "static" / "js" / "scan.js").read_text(encoding="utf-8")
     assert "kind: 'scanBarcode'" in page or 'kind: "scanBarcode"' in page
+
+
+def test_home_screen_shortcuts_only_open_a_screen():
+    """Owner, 2026-11-21: Home Screen shortcuts for the most-used parts. Each one asks the page to open a screen by name
+    (KH.quickAction); the page accepts only its three names, in the iPhone app only, and saves nothing."""
+    actions = CODE["KidneyHealth/Phone/QuickActions.swift"]
+    assert "case scan" in actions and "case add" in actions and "case quick" in actions
+    assert 'window.KH.quickAction(name)' in actions and 'arguments: ["name": action.rawValue]' in actions
+    for word in ("Keychain", "URLSession", "UserDefaults", "FileManager"):
+        assert word not in actions, word
+    assert "configuration.delegateClass = SceneDelegate.self" in CODE["KidneyHealth/KidneyHealthApp.swift"]
+    assert "QuickActions.shared.run()" in CODE["KidneyHealth/WebShell/WebShellConfig.swift"]
+    page = (ROOT / "app" / "static" / "js" / "main.js").read_text(encoding="utf-8")
+    table = page[page.index("const QUICK_ACTIONS = {"):page.index("KH.quickAction = async")]
+    assert re.findall(r"^\s+(\w+): ", table, flags=re.M) == ["add", "scan", "quick"]
+    assert "api." not in table and "request(" not in table  # opens screens only
+    assert "DEVICE && Object.prototype.hasOwnProperty.call(QUICK_ACTIONS, name)" in page
