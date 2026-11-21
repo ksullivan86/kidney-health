@@ -13,6 +13,8 @@ import json
 import re
 from pathlib import Path
 
+from app import off
+
 ROOT = Path(__file__).resolve().parents[1]
 VECTORS = ROOT / "tests" / "data" / "barcode_vectors.json"
 MOCK = ROOT / "app" / "static" / "js" / "mock" / "barcode.js"
@@ -64,3 +66,18 @@ def test_vectors_cover_every_rule_the_twins_implement() -> None:
     for p in doc["demo_products"]:
         assert p["result"]["attribution"]["license"] == "ODbL-1.0"
         assert p["result"]["attribution"]["url"].startswith("https://world.openfoodfacts.org/product/")
+
+
+def test_off_mapping_vectors_cover_every_quality_code() -> None:
+    # Device mode (design note 38 §5.3): js/engine/off.js maps raw Open Food Facts answers itself.
+    doc = json.loads(VECTORS.read_text(encoding="utf-8"))
+    cases = doc["off_map_cases"]
+    mapped = [c["mapped"] for c in cases if "mapped" in c]
+    codes = {q.split(":")[0] for m in mapped for q in m["quality"]}
+    assert codes == set(off.QUALITY_MESSAGES) - {"filled_from_usda", "filled_from_off"}
+    assert {m["status"] for m in mapped} == {"found", "no_nutrition"}
+    flags = {f for m in mapped for f in m["flags"]}
+    assert {"counts_as_fluid", "processed", "high_gi", "alcohol", "phosphate_additive", "avoid_ckd"} <= flags
+    fixtures = {c["id"] for c in cases if c["id"].startswith("fixture:")}
+    assert {f"fixture:{name}" for name in ("diet_coke_v3.4", "kraft_mac_cheese_v3.4", "nutella_v3.4", "nutella_v3.6")} <= fixtures
+    assert all("row" in c for c in cases if c.get("mapped", {}).get("status") == "found")

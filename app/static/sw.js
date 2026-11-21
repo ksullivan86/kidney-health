@@ -78,6 +78,7 @@ const SHELL_URLS = [
   '/js/engine/gtin.js',
   '/js/engine/additives.js',
   '/js/engine/off.js',
+  '/js/engine/usda.js',
   '/js/engine/guidance/rules.js',
   '/js/engine/guidance/messages.js',
   '/js/engine/guidance/budget.js',
