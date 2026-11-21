@@ -161,8 +161,8 @@ def test_the_storage_test_page_has_no_inline_script_and_no_network():
     """Design note 38, step 0: the page is served from the app under its own scheme, runs only its own file, and never reaches
     the network (CLAUDE.md: no network from the browser, no inline scripts)."""
     html = (CHECK / "storage-check.html").read_text(encoding="utf-8")
-    assert re.findall(r"<script\b[^>]*>", html) == ['<script src="storage-check.js" defer>']
-    assert re.search(r"\son\w+\s*=", html) is None  # no inline event handlers either
+    assert re.findall(r"<script\b[^>]*>", html, flags=re.I) == ['<script src="storage-check.js" defer>']  # any case
+    assert re.search(r"\son\w+\s*=", html, flags=re.I) is None  # no inline event handlers either
     js = (CHECK / "storage-check.js").read_text(encoding="utf-8")
     for word in ("fetch(", "XMLHttpRequest", "WebSocket", "sendBeacon", "EventSource", "innerHTML", "eval(", "import("):
         assert word not in js, word

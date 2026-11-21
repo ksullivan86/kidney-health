@@ -44,7 +44,7 @@ def test_the_device_build_is_the_pages_site_in_device_mode(tmp_path):
     assert page.index('<script src="device-flag.js">') < page.index('<script src="js/core.js">')
     # the app's own CSP, as in the Pages demo, and no inline script: every <script> has a src, or is the food list's JSON
     assert '<meta http-equiv="Content-Security-Policy" content="' in page and "connect-src 'self'" in page
-    for tag in re.findall(r"<script\b[^>]*>", page):
+    for tag in re.findall(r"<script\b[^>]*>", page, flags=re.I):  # any case: browsers read <SCRIPT> too
         assert "src=" in tag or 'type="application/json"' in tag, tag
     # Learn links leave the app for the published handbook (opened in Safari); nothing points at a server path
     assert 'href="/learn/' not in page and 'href="https://ksullivan86.github.io/kidney-health/' in page
