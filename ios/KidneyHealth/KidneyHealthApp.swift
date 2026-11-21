@@ -21,8 +21,19 @@ struct KidneyHealthApp: App {
 final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
-        Task { @MainActor in SyncModel.shared.startObserving() }
+        Task { @MainActor in
+            SyncModel.shared.startObserving()
+            QuickActions.install()
+        }
         return true
+    }
+
+    /// The Home Screen shortcuts reach the app through the scene (Phone/QuickActions.swift).
+    func application(_ application: UIApplication, configurationForConnecting session: UISceneSession,
+                     options: UIScene.ConnectionOptions) -> UISceneConfiguration {
+        let configuration = UISceneConfiguration(name: nil, sessionRole: session.role)
+        configuration.delegateClass = SceneDelegate.self
+        return configuration
     }
 }
 

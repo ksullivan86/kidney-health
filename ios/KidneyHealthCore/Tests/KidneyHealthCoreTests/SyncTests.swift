@@ -165,6 +165,12 @@ final class SyncTests: XCTestCase {
         }
     }
 
+    func testTheSyncURLIsTheSameServersPushV1Sync() {
+        XCTAssertEqual(Settings.syncURL("https://example.org:8443/kidney/")?.absoluteString, "https://example.org:8443/kidney/push/v1/sync")
+        XCTAssertEqual(Settings.syncURL("https://kidney.example.org")?.absoluteString, "https://kidney.example.org/push/v1/sync")
+        XCTAssertNil(Settings.syncURL("http://kidney.example.org"))
+    }
+
     func testTestConnectionSaysWhetherTheTokenWorks() async {
         let check = Settings.checkURL("https://example.org:8443/kidney/")!
         XCTAssertEqual(check.absoluteString, "https://example.org:8443/kidney/push/v1/check")
