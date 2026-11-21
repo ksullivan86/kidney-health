@@ -1098,8 +1098,13 @@
   function renderFood(keyMessage = null) {
     const body = $('#set-food-body');
     clear(body);
-    // USDA
-    body.append(subtitle('USDA FoodData Central', 'set-usda-h'),
+    // USDA. In the iPhone app the person's own key lives in the app (Keys and services), never in the page.
+    if (KH.flags && KH.flags.DEVICE) {
+      const phone = (() => { try { return window.webkit.messageHandlers.phone; } catch (e) { return null; } })();
+      body.append(subtitle('USDA FoodData Central and Open Food Facts', 'set-usda-h'),
+        h('p', { class: 'hint' }, 'To look up more foods, add your own USDA key or turn on Open Food Facts in the phone settings: Keys and services. Each is off until you turn it on.'),
+        phone ? h('div', { class: 'settings-actions' }, action('Keys and services', 'secondary', async () => { phone.postMessage('settings'); }, { id: 'set-device-keys' })) : null);
+    } else body.append(subtitle('USDA FoodData Central', 'set-usda-h'),
       h('p', { class: 'hint' }, 'Search hundreds of thousands of foods, including branded products, from the U.S. Department of Agriculture. The server looks them up for you.'));
     const keys = cache.myKeys;
     if (keys instanceof Error) body.append(failed(keys));
@@ -1592,6 +1597,22 @@
         out.append(h('div', { class: 'settings-actions' }, action('Apple Health and server', 'secondary', async () => { phone.postMessage('settings'); },
           { id: 'set-phone-settings' })));
       }
+      // The first-start setup again, and starting over (owner, 2026-11-21: the sample data only as a choice).
+      const foot = h('div', { class: 'sheet-foot settings-actions' });
+      const restart = (sample) => async (btn) => {
+        KH.confirm.inline(foot, btn, {
+          message: sample
+            ? 'Replace everything on this iPhone with the sample data? Your own log is deleted. Export your data first if you want to keep it.'
+            : 'Delete everything on this iPhone and start with an empty log? This cannot be undone. Export your data first if you want to keep it.',
+          confirmText: sample ? 'Use the sample data' : 'Delete and start over',
+          onConfirm: async () => { await KH.mock.local.restart({ sample }); window.location.reload(); },
+        });
+      };
+      foot.append(
+        action('Run the setup again', 'secondary', async () => { if (KH.welcome) KH.welcome.open(); }, { id: 'set-run-setup' }),
+        action('Start over with an empty log', 'secondary', restart(false), { id: 'set-start-empty' }),
+        action('Start over with the sample data', 'secondary', restart(true), { id: 'set-start-sample' }));
+      out.append(h('p', { class: 'hint' }, 'Starting over deletes the log on this iPhone. The sample data is for trying the app; start over with an empty log when you are ready.'), foot);
       show();
       return;
     }
@@ -2527,11 +2548,16 @@
     sec.hidden = !show;
     renderNav();
   }
+  // The iPhone app with no server (design note 38; owner, 2026-11-21: Settings was "all messy"): the sections that need a server
+  // are left out there. CSS hides them (base.css, .device-mode), and the menu does not list them.
+  const DEVICE_LEFT_OUT = KH.flags && KH.flags.DEVICE
+    ? new Set(['set-care', 'set-connected', 'set-lists', 'set-assistant', 'set-reminders', 'set-admin-link', 'set-admin', 'set-admin-ai'])
+    : new Set();
   function renderNav() {
     const nav = $('#settings-nav');
     clear(nav);
     for (const sec of $$('#view-settings .settings-section')) {
-      if (sec.hidden) continue;
+      if (sec.hidden || DEVICE_LEFT_OUT.has(sec.id)) continue;
       const btn = h('button', { class: 'chip nav-chip', type: 'button' }, sec.dataset.title);
       btn.addEventListener('click', () => {
         const head = $('h2', sec);

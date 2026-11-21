@@ -2417,6 +2417,24 @@ any other barcode answers 404 naming the samples. `tools/e2e/parity.py` section 
 `gtin` and ingredient list and every lookup answer (with `reason`, `gtin`, `checked`) against a real server
 with lookups off on both sides.
 
+For the web app inside the iPhone app with no server (design note 38 §5.3), the page maps the providers' raw
+JSON itself, so it has twins of the server's pure mapping:
+
+* `js/engine/off.js`: `KH.off.trimProduct(product)` (`off.trim_product`), `KH.off.mapProduct(product, gtin14)`
+  (`off.map_product`; the fields of `Mapped`), `KH.off.foodKwargs(mapped)` and `KH.off.row(mapped, gtin14)`, the row
+  `barcode.assemble` builds when only Open Food Facts answered, before the stored rounding. `KH.off.py` reads JSON
+  the way Python does (`None`, truthiness, `float()`, `int()`, `str()`).
+* `js/engine/usda.js`: `KH.usda.mapRecord(data, fdcId)` (`foods.map_usda_record`; `{kwargs, gtin14,
+  ingredients_text, additives, quality}`), `KH.usda.row(mapped, fdcId)` (an import's row) and
+  `KH.usda.searchItem(item)` (`foods.usda_search_item`, one hit of `GET /api/foods/usda/search`).
+* `KH.gtin.looseGtin14` twins `gtin.loose_gtin14`.
+
+`tests/data/barcode_vectors.json` (`off_map_cases`) and `tests/data/usda_vectors.json` (generator
+`tests/data/gen_usda_vectors.py`) hold the recorded products and records, hand-made edge cases and seeded variants,
+each kept as JSON text as the app hands it over. One gap cannot be closed: JavaScript reads `208.0` as `208`, so a
+whole number written as a float in a field the server turns into text (a nutrient number, a category) reads as an
+int in the browser.
+
 ### Frontend (`js/scan.js` = `KH.scan`, `css/device.css`; note 03 R7, R8 client side, R9, R11)
 
 * **Add view → Scan** (first action) opens `#sheet-scan` (the live camera starting at once with `food.scan_prefer_camera`,
@@ -5614,6 +5632,24 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
   `kidneyhealth-app://app/` (no `..`, no hidden files, only listed types, resolved inside the folder); `WebAppView` keeps the data in
   `WKWebsiteDataStore(forIdentifier:)`, cancels every navigation but its own files, opens a tapped `https` link in Safari, accepts
   messages only from its own origin, writes the safety copy to Documents atomically, and offers a download (Export) with the share sheet.
-* **Tests**: `tests/js/device_mode.mjs` (the engine, against a fake IndexedDB), `tests/test_device_mode.py` (the build and the wiring),
+* **Food services (step 2)**: `js/mock/device.js` `KH.mock.device.lookup` asks the app's `bridge` reply handler
+  (`ios/KidneyHealth/Services/FoodServices.swift`) for a service's raw JSON; the page maps it with the twins of the server's rules
+  (`KH.off.trimProduct`, `mapProduct`, `row`; `KH.usda.searchItem`, `mapRecord`, `row`; parity in `tests/data/barcode_vectors.json`
+  `off_map_cases` and `tests/data/usda_vectors.json`). In device mode `POST /api/foods/barcode` and `/api/foods/usda/*` answer with
+  the server's statuses and texts, and the mock's `request()` awaits a route that answers later. The app keeps every service off
+  until the person turns it on (Settings → This device → Apple Health and server → Keys and services); the USDA key is in the
+  Keychain, sent as `X-Api-Key`, never shown again; Open Food Facts is asked with the server's API version (3.4) and `KH.off.FIELDS`
+  (`app/off.py` FIELDS). The server's consent question for Open Food Facts turns the app's switch on once the person agrees. Fixed
+  hosts, no cookies, no cache, no redirects, and limits below each service's own (USDA 900 an hour, Open Food Facts 12 a minute).
+* **Apple Health into the phone's log (step 3)**: `SyncModel.syncToPhone()` runs the same `Sync.run` as the server sync with
+  `LocalLogTransport`, which plans each request's rows with `Push.plan` (the server's rules and source keys), leaves out watch
+  readings, and hands the rest to `window.KHDevice.addBody` (`js/mock/device.js`), which adds them through the batch routes and
+  saves before it answers. The phone's anchors (`phoneAnchors`) move on only after that, so readings that come in while the app is
+  closed are added when it opens. The optional lock (`Phone/AppLock.swift`) is off by default and covers the app in the background.
+* **The barcode scanner (native)**: in device mode the Scan sheet asks the bridge for `services`; when `scan` is true its camera
+  button says Scan with the camera and sends `scanBarcode`. `Phone/BarcodeScanner.swift` shows Apple's `DataScannerViewController`
+  for EAN-13, EAN-8 and UPC-E only and answers `{ ok, code, format }` or `{ error: "cancelled" }`. The page then runs its usual
+  look-up, so the food rules stay in one place. It starts on its own when Prefer live camera is on.
+* **Tests**: `tests/js/device_mode.mjs` (the engine, against a fake IndexedDB), `tests/test_device_mode.py` (the build and the wiring), `PhoneTests.swift`,
   `tests/test_ios_app.py` (the shell's rules), `WebShellTests.swift` (the simulator), `tools/e2e/device_mode.py` (Chromium).
 

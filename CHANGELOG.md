@@ -11,6 +11,10 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 * The iPhone app runs the whole app on the phone with no server (design note 38, step 1). It starts empty, keeps your data on the
   phone, and saves a copy after each change that the Files app shows under On My iPhone. Connecting a server stays optional.
+* In the iPhone app, Keys and services looks up more foods with your own USDA key or barcodes on Open Food Facts, each off until you
+  turn it on. New weights and blood pressure readings from Apple Health go into the log on the phone. An optional Face ID or
+  passcode lock covers the app when you switch away (design note 38, steps 2 and 3).
+* In the iPhone app, Scan a barcode uses the iPhone's own scanner. It reads food barcodes only and then looks the code up as before.
 
 ## 0.24.1 — 2026-11-20
 

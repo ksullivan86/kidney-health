@@ -892,6 +892,21 @@ def map_usda_record(data: Mapping[str, Any], fdc_id: int) -> UsdaMapped:
     )
 
 
+def usda_search_item(item: Mapping[str, Any]) -> dict[str, Any] | None:
+    """One hit of a FoodData Central text search as ``GET /api/foods/usda/search`` lists it, or ``None`` when it has
+    no id. Pure; the browser twin is ``KH.usda.searchItem`` (js/engine/usda.js)."""
+    fdc_id = item.get("fdcId")
+    if fdc_id is None:
+        return None
+    return {
+        "fdc_id": int(fdc_id),
+        "description": str(item.get("description") or "").strip() or f"USDA food {fdc_id}",
+        "data_type": item.get("dataType"),
+        "brand": item.get("brandOwner") or item.get("brandName") or None,
+        "category": _usda_category_str(item.get("foodCategory")),
+    }
+
+
 def usda_provenance(mapped: UsdaMapped, *, retrieved_at: str | None = None) -> Provenance:
     """The provenance columns of a FoodData Central row (public domain; attribution requested)."""
     return Provenance(
@@ -1079,18 +1094,9 @@ def usda_search(request: Request, user: CurrentUser, q: str = Query("", max_leng
                      guard=guard_id(cred, user.id), own_key=cred.scope == "own")
     foods = []
     for item in (data or {}).get("foods") or []:
-        fdc_id = item.get("fdcId")
-        if fdc_id is None:
-            continue
-        foods.append(
-            {
-                "fdc_id": int(fdc_id),
-                "description": str(item.get("description") or "").strip() or f"USDA food {fdc_id}",
-                "data_type": item.get("dataType"),
-                "brand": item.get("brandOwner") or item.get("brandName") or None,
-                "category": _usda_category_str(item.get("foodCategory")),
-            }
-        )
+        hit = usda_search_item(item)
+        if hit is not None:
+            foods.append(hit)
     return {"foods": foods}
 
 

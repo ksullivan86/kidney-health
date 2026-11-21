@@ -48,6 +48,7 @@
 
   Object.assign(MockApi.prototype, {
     _listsState() {
+      if (!this._listSync && this._sample !== true) this._listSync = { sent: [], connection: null }; // no sample list app
       if (!this._listSync) {
         this._listSync = { sent: [], connection: { app: 'grocy', base_url: 'http://grocy.example', list_id: '1', list_name: 'Groceries',
           key_set: true, last_test_at: null, last_test_error: null, last_sent_at: null, last_sent_count: null } };

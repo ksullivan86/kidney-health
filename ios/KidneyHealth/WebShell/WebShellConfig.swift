@@ -4,6 +4,7 @@
 // copies the folder and changes only this file: the scheme, the store's identifier and the safety copy's file name. The web
 // app itself takes its names from app/brand.py and js/engine/brand.js.
 import Foundation
+import WebKit
 
 enum WebShellConfig {
     /// The app's own URL scheme for its packed web files (never a scheme another app or the web uses).
@@ -19,6 +20,17 @@ enum WebShellConfig {
     static let storeID = UUID(uuidString: "9C1E4B7A-3D52-4F6B-8A10-5E2C7D9B4F61")!
     /// The safety copy in the app's Documents folder, which the Files app shows under On My iPhone.
     static let safetyCopyName = "Kidney Health safety copy.json"
+
+    /// The app's handler for the page's "bridge" messages (its food services), or nil for an app without one.
+    static func bridge() -> WKScriptMessageHandlerWithReply? { FoodBridgeHandler() }
+
+    /// The page has loaded / gone: the app's own code that talks to the page hears it here.
+    @MainActor static func pageLoaded(_ view: WKWebView) {
+        PageBridge.shared.pageLoaded(view)
+        Task { await SyncModel.shared.syncToPhone() } // Apple Health readings that came in while the app was closed
+    }
+
+    @MainActor static func pageGone() { PageBridge.shared.pageGone() }
 
     static func url(_ path: String) -> URL {
         URL(string: "\(scheme)://\(host)\(path)")!

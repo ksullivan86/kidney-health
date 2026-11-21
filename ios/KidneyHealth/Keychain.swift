@@ -9,6 +9,10 @@ enum Keychain {
     enum Item: String {
         case token
         case anchors
+        /// Where the sync into the log on this phone has got to in Health (design note 38, step 3); separate from the server's.
+        case phoneAnchors
+        /// The person's USDA FoodData Central key (step 2). Written once, never shown again.
+        case usdaKey
     }
 
     struct Failure: Error, Equatable {

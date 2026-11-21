@@ -61,3 +61,26 @@ def test_device_mode_is_wired_only_where_it_should_be():
     assert "window.webkit.messageHandlers.safetyCopy" in persist and "fetch(" not in persist
     demo = (static / "views" / "demo_local.js").read_text(encoding="utf-8")
     assert "if (flags.DEVICE) return;" in demo
+
+
+def test_the_first_start_setup_and_the_tidy_settings_are_device_only():
+    """The owner's feedback on TestFlight build 5 (2026-11-21): a simple setup at the first start, with the optional server; the
+    sample data only as a choice; and Settings without the parts that need a server."""
+    static = ROOT / "app" / "static"
+    welcome = (static / "js" / "views" / "welcome.js").read_text(encoding="utf-8")
+    assert "if (!flags.DEVICE) {" in welcome and "innerHTML" not in welcome
+    for step in ("Welcome to Kidney Health", "About you", "Your own server (optional)", "You are set"):
+        assert step in welcome, step
+    assert "KH.mock.local.restart({ sample: true })" in welcome  # the sample data is a choice, never the default
+    index = (static / "index.html").read_text(encoding="utf-8")
+    assert '<dialog id="sheet-welcome"' in index and '<script src="js/views/welcome.js"></script>' in index
+    assert "'/js/views/welcome.js'," in (static / "sw.js").read_text(encoding="utf-8")
+    main = (static / "js" / "main.js").read_text(encoding="utf-8")
+    assert "if (DEVICE && KH.welcome) KH.welcome.maybeShow()" in main and "classList.add('device-mode')" in main
+    css = (static / "css" / "base.css").read_text(encoding="utf-8")
+    hidden = css[css.index(".device-mode #set-care"):]
+    for section in ("#set-care", "#set-connected", "#set-lists", "#set-assistant", "#set-reminders", "#set-push", "#install-panel"):
+        assert f".device-mode {section}" in hidden, section
+    settings = (static / "js" / "views" / "settings.js").read_text(encoding="utf-8")
+    assert "if (sec.hidden || DEVICE_LEFT_OUT.has(sec.id)) continue;" in settings
+    assert "id: 'set-start-empty'" in settings and "id: 'set-start-sample'" in settings and "id: 'set-run-setup'" in settings

@@ -62,8 +62,8 @@ def test_no_code_names_another_health_type(word):
 
 def test_no_third_party_packages_and_only_apple_frameworks():
     assert "XCRemoteSwiftPackageReference" not in PROJECT
-    allowed = {"Foundation", "HealthKit", "Security", "SwiftUI", "UIKit", "WebKit", "XCTest", "PackageDescription",
-               "KidneyHealthCore", "KidneyHealth"}
+    allowed = {"Foundation", "HealthKit", "LocalAuthentication", "Security", "SwiftUI", "UIKit", "Vision", "VisionKit", "WebKit", "XCTest",
+               "PackageDescription", "KidneyHealthCore", "KidneyHealth"}
     for name, text in SWIFT.items():
         for module in re.findall(r"^(?:@testable )?import (\w+)", text, re.M):
             assert module in allowed, (name, module)
@@ -200,3 +200,26 @@ def test_the_packed_web_app_is_built_before_every_xcode_build():
     for workflow in ("ci.yml", "testflight.yml"):
         text = (ROOT / ".github" / "workflows" / workflow).read_text(encoding="utf-8")
         assert text.index("python scripts/build_preview.py --device ios/WebApp") < text.index("xcodebuild -version"), workflow
+
+
+def test_the_app_scans_its_pairing_code_and_still_asks_first():
+    """Owner, 2026-11-21: the app scans the pairing QR code itself. The scanner reads QR codes only and hands the text to the
+    same handler as a link from the Camera app, which asks "Pair with …?" before anything is saved."""
+    scanner = APP["KidneyHealth/Phone/QRScanner.swift"]
+    assert "[.barcode(symbologies: [.qr])]" in scanner and "Keychain" not in scanner and ".save(" not in scanner
+    view = APP["KidneyHealth/ContentView.swift"]
+    assert 'Button("Scan the QR code") { scanning = true }' in view
+    assert "if let url = URL(string: text) { handle(url) }" in view
+
+
+def test_the_barcode_scanner_reads_food_codes_only_and_leaves_the_rules_to_the_page():
+    """Owner, 2026-11-21: make the barcode scanner native. Apple's scanner reads EAN-13, EAN-8 and UPC-E only and answers the digits;
+    the look-up, the food rules and asking before saving stay in the page (js/scan.js), so the rules live in one place."""
+    scanner = CODE["KidneyHealth/Phone/BarcodeScanner.swift"]
+    assert "[.barcode(symbologies: [.ean13, .ean8, .upce])]" in scanner
+    for word in ("Keychain", "URLSession", "UserDefaults", "FileManager", ".save("):
+        assert word not in scanner, word
+    services = CODE["KidneyHealth/Services/FoodServices.swift"]
+    assert 'case "scanBarcode":' in services and "BarcodeScanner.shared.scan()" in services
+    page = (ROOT / "app" / "static" / "js" / "scan.js").read_text(encoding="utf-8")
+    assert "kind: 'scanBarcode'" in page or 'kind: "scanBarcode"' in page

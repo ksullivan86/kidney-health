@@ -18,7 +18,11 @@ Produced by the server's own code and replayed on the JavaScript side by ``node 
   with (``js/mock/barcode.js``). Each has the stored row (``row``, what the demo embeds between its
   ``DEMO_PRODUCTS`` markers; tests/test_barcode_vectors.py keeps the two equal) and the server's answer
   (``result``, food id removed), produced by the real route over the recorded fixtures with Open Food Facts
-  on and agreed to; the JS runner rebuilds the answer from the row with the browser rules and compares.
+  on and agreed to; the JS runner rebuilds the answer from the row with the browser rules and compares;
+* ``off_map_cases``: ``app.off.trim_product`` and ``map_product`` (and the row ``barcode.assemble`` builds from it)
+  over every recorded product, hand-made edge cases and seeded variants, against ``KH.off.trimProduct``,
+  ``mapProduct`` and ``row`` (device mode, design note 38 §5.3). Each product is kept as JSON text, as the
+  iPhone app hands it to the page.
 
 Deterministic (seeded; no clock in the output). Needs the app's requirements (it runs the app in-process
 with the fixtures; no network).
@@ -26,6 +30,7 @@ with the fixtures; no network).
 from __future__ import annotations
 
 import argparse
+import dataclasses
 import json
 import logging
 import random
@@ -272,6 +277,170 @@ def quality_vectors() -> list[dict]:
 
 
 # --------------------------------------------------------------------------- #
+# Open Food Facts mapping (device mode, design note 38 §5.3)
+# --------------------------------------------------------------------------- #
+
+# Each case keeps the product as JSON text: that is what the iPhone app hands the page, and it carries what a
+# parsed object cannot (1e400, which JSON readers turn into infinity).
+OFF_HAND: list[tuple[str, str, object]] = [  # (id, GTIN-14, product: a dict or raw JSON text)
+    ("empty", "00049000028911", {}),
+    ("no_nutrients", "00049000028911", {"product_name": "Plain water", "serving_quantity": 250, "serving_quantity_unit": "ml"}),
+    ("salt_no_sodium_eu", "03017624010701", {"product_name": "Crisps", "countries_tags": ["en:france"],
+                                             "nutriments": {"energy-kcal_100g": 530, "fat_100g": 33, "carbohydrates_100g": 50,
+                                                            "proteins_100g": 6, "salt_100g": 1.2}}),
+    ("salt_and_sodium_match", "03017624010701", {"countries_tags": ["en:germany"], "serving_quantity": 30, "serving_quantity_unit": "g",
+                                                 "nutriments": {"energy-kcal_100g": 500, "salt_100g": 1.25, "sodium_100g": 0.5,
+                                                                "proteins_100g": 5, "fat_100g": 30, "carbohydrates_100g": 50}}),
+    ("salt_and_sodium_us", "00049000028911", {"countries_tags": ["en:united-states"], "nutriments": {"salt_100g": 1.25, "sodium_100g": 0.5}}),
+    ("per_serving_only", "00049000028911", {"product_name": "Bar", "nutrition_data_per": "serving", "serving_quantity": "40",
+                                           "serving_quantity_unit": "g", "serving_size": "1 bar (40 g)",
+                                           "nutriments": {"energy-kcal_serving": 190, "proteins_serving": 3, "fat_serving": 8,
+                                                          "carbohydrates_serving": 27, "sodium_serving": 0.09, "potassium_serving": 0.11,
+                                                          "energy-kcal_100g": 475}}),
+    ("per_serving_no_weight", "00049000028911", {"product_name": "Mystery", "nutrition_data_per": "serving",
+                                                "nutriments": {"energy-kcal_serving": 190, "proteins_serving": 3}}),
+    ("liquid_per_100ml", "00049000028911", {"product_name": "Juice", "nutrition_data_per": "100ml",
+                                           "categories_tags": ["en:sweetened-beverages"], "nutriments": {"energy-kcal_100g": 45,
+                                           "sugars_100g": 10, "carbohydrates_100g": 11, "potassium_100g": 0.2}}),
+    ("drink_powder", "00049000028911", {"product_name": "Cocoa mix", "categories_tags": ["en:beverages", "en:instant-beverages"],
+                                        "nutriments": {"energy-kcal_100g": 400, "carbohydrates_100g": 80}}),
+    ("alcohol", "00049000028911", {"product_name": "Ale", "categories_tags": ["en:beverages", "en:alcoholic-beverages"],
+                                   "serving_quantity": 330, "serving_quantity_unit": "mL", "nutriments": {"energy-kcal_100g": 43}}),
+    ("prepared_only", "00021000658831", {"product_name": "Box dinner", "serving_quantity": 70.9, "serving_quantity_unit": "g",
+                                         "serving_size": "2.5 oz (70.9 g) makes about 1 cup, a serving size written out long enough to be cut",
+                                         "nutrition_data_prepared_per": "serving",
+                                         "nutriments": {"energy-kcal_prepared_serving": 350, "proteins_prepared_serving": 10,
+                                                        "fat_prepared_serving": 13, "carbohydrates_prepared_serving": 48}}),
+    ("kj_only", "00049000028911", {"nutriments": {"energy-kj_100g": 1000, "proteins_100g": 10}}),
+    ("energy_only", "00049000028911", {"nutriments": {"energy_100g": "2 000,5", "proteins_100g": "1_0"}}),
+    ("energy_mismatch", "00049000028911", {"nutriments": {"energy-kcal_100g": 100, "proteins_100g": 30, "fat_100g": 30,
+                                                          "carbohydrates_100g": 30}}),
+    ("implausible", "00049000028911", {"nutriments": {"energy-kcal_100g": 2000, "sodium_100g": 50, "proteins_100g": -1,
+                                                      "potassium_100g": 70, "phosphorus_100g": 31, "fat_100g": 101}}),
+    ("salt_product", "00049000028911", {"categories_tags": ["en:salts"], "nutriments": {"sodium_100g": 39, "salt_100g": 97.5}}),
+    ("carbs_total", "03017624010701", {"countries_tags": ["en:united-kingdom"], "nutriments": {"carbohydrates-total_100g": 20,
+                                                                                             "carbohydrates_100g": 17}}),
+    ("non_finite_text", "00049000028911", '{"serving_quantity": "NaN", "nutriments": {"energy-kcal_100g": "Infinity", '
+                                          '"proteins_100g": "-inf", "fat_100g": "nan", "sugars_100g": 1e400, '
+                                          '"carbohydrates_100g": "1e400", "fiber_100g": "  3 ", "salt_100g": true}}'),
+    ("odd_numbers", "00049000028911", {"serving_quantity": " ١٢ ", "serving_quantity_unit": " G ",
+                                       "nutriments": {"energy-kcal_100g": "1__0", "proteins_100g": "0x10", "fat_100g": "+.5e1",
+                                                      "carbohydrates_100g": "5.", "fiber_100g": " 2 ", "sugars_100g": "1e",
+                                                      "sodium_100g": [1], "potassium_100g": {"v": 1}, "calcium_100g": None}}),
+    ("long_text", "00049000028911", {"product_name": "Crunchy " * 60, "brands": "Brand " * 50 + ", Other",
+                                     "ingredients_text": "water, " * 700 + "sodium phosphate", "serving_size": "x" * 80,
+                                     "serving_quantity": 25, "serving_quantity_unit": "g", "nutriments": {"proteins_100g": 1}}),
+    ("invisible_text", "00049000028911", {"product_name": "​‮", "product_name_en": "Diet­ Cola", "brands": "​Acme",
+                                          "ingredients_text_en": "sodium phos​phate, potassium­ chloride",
+                                          "nutriments": {"energy-kcal_100g": 1}}),
+    ("generic_name_only", "00000096385074", {"generic_name": "Rice cakes", "brands": 5, "nova_group": "4",
+                                             "nutriments": {"energy-kcal_100g": 380}}),
+    ("nova_4", "00049000028911", {"nova_group": 4, "nutriments": {"energy-kcal_100g": 380}}),
+    ("no_nutrition_flag", "00049000028911", {"no_nutrition_data": "on", "nutriments": {"energy-kcal_100g": 380}}),
+    ("salt_substitute", "00049000028911", {"product_name": "NoSalt Original", "ingredients_text": "potassium chloride, fumaric acid",
+                                           "nutriments": {"potassium_100g": 50, "sodium_100g": 0}}),
+    ("serving_too_big", "00049000028911", {"serving_quantity": 200000, "serving_quantity_unit": "g", "nutriments": {"proteins_100g": 1}}),
+    ("serving_ounces", "00049000028911", {"serving_quantity": 2, "serving_quantity_unit": "oz", "nutriments": {"proteins_100g": 1}}),
+    ("serving_g_tie", "00049000028911", {"serving_quantity": 10000.25, "serving_quantity_unit": "g", "nutriments": {"proteins_100g": 1}}),
+    ("not_a_dict_parts", "00049000028911", {"nutriments": ["energy-kcal_100g"], "categories_tags": "en:beverages",
+                                            "countries_tags": [None, 5, "EN:United-States"], "nutrition": {"aggregated_set": []}}),
+    ("v35_per_serving", "00049000028911", {"serving_quantity": 30, "serving_quantity_unit": "g", "nutriments": {},
+                                           "nutrition": {"aggregated_set": {"per": "SERVING", "preparation": "as_sold", "nutrients": {
+                                               "energy-kcal": {"value": 150, "unit": "kcal"}, "energy": {"value": 600, "unit": "kJ"},
+                                               "proteins": {"value": 2000, "unit": "mg"}, "sodium": {"value": 120000, "unit": "µg"},
+                                               "potassium": {"value": "0,2", "unit": "G"}, "fat": {"value": 5, "unit": "oz"},
+                                               "phosphorus": {"value": 0.0001, "unit": "kg"}, "sugars": {"value": 1}}}}}),
+    ("v35_prepared_100ml", "00049000028911", {"nutrition": {"aggregated_set": {"per": "100ml", "preparation": "prepared", "nutrients": {
+        "energy": {"value": 200, "unit": "kJ"}, "carbohydrates": {"value": 10, "unit": "g"}, "calcium": {"value": 120, "unit": "mg"}}}}}),
+    ("v35_no_serving_per_serving", "00049000028911", {"nutrition": {"aggregated_set": {"per": "serving", "nutrients": {
+        "energy-kj": {"value": 400, "unit": "kcal"}, "proteins": {"value": 3, "unit": "g"}}}}}),
+    ("float_text_numbers", "00049000028911", '{"serving_quantity": 30.0, "serving_quantity_unit": "g", "nova_group": 4.0, '
+                                             '"nutriments": {"energy-kcal_100g": 100.0, "proteins_100g": -0.0, "fat_100g": 1E2}}'),
+]
+OFF_TAGS = ["en:beverages", "en:sweetened-beverages", "en:alcoholic-beverages", "en:dairies", "en:meats", "en:snacks", "en:salts",
+            "en:dried-products-to-be-rehydrated", "en:pizzas", "en:fruits", "EN:Sauces", "en:dehydrated-beverages"]
+OFF_NUMBER_FORMS = [lambda v: v, lambda v: str(v), lambda v: str(v).replace(".", ","), lambda v: f" {v} ", lambda v: "abc",
+                    lambda v: None, lambda v: -v, lambda v: v * 1000, lambda v: "NaN", lambda v: True]
+
+
+def _mutate_off(rng: random.Random, product: dict) -> dict:
+    p = json.loads(json.dumps(product))
+    nutriments = p.get("nutriments") if isinstance(p.get("nutriments"), dict) else {}
+    for key in list(nutriments):
+        r = rng.random()
+        if r < 0.2:
+            del nutriments[key]
+        elif r < 0.3 and isinstance(nutriments[key], (int, float)) and not isinstance(nutriments[key], bool):
+            nutriments[key] = rng.choice(OFF_NUMBER_FORMS)(nutriments[key])
+    if rng.random() < 0.3:
+        p["nutrition_data_per"] = rng.choice(["serving", "100g", "100ml", None, "SERVING"])
+    if rng.random() < 0.3:
+        p["serving_quantity"] = rng.choice([None, 0, -5, "30", 30, 200000, "1e3", 354.9, "12,5", True])
+    if rng.random() < 0.3:
+        p["serving_quantity_unit"] = rng.choice(["g", "ml", "ML", " g ", "oz", None, ""])
+    if rng.random() < 0.3:
+        p["countries_tags"] = rng.choice([[], ["en:united-states"], ["en:france"], None, ["en:canada", "en:france"]])
+    if rng.random() < 0.4:
+        p["categories_tags"] = rng.sample(OFF_TAGS, rng.randrange(0, 4))
+    if rng.random() < 0.2:
+        p["nova_group"] = rng.choice([4, "4", 3, None])
+    if rng.random() < 0.2:
+        p["product_name"] = rng.choice([None, "", "x" * 250, "Cola​ Zero", 12])
+    if rng.random() < 0.2:
+        p["brands"] = rng.choice(["A, B", 5, None, " ,B"])
+    if rng.random() < 0.1:
+        p["no_nutrition_data"] = rng.choice(["on", "off", "ON"])
+    if rng.random() < 0.2:
+        p["additives_tags"] = rng.sample(["en:e338", "en:e451i", "en:e508", "en:e330", "en:e212", "bad"], rng.randrange(0, 4))
+    return p
+
+
+def _off_case(case_id: str, gtin14: str, product_json: str) -> dict:
+    from app import barcode
+
+    product = json.loads(product_json)
+    case: dict = {"id": case_id, "gtin14": gtin14, "json": product_json}
+    try:
+        mapped = off.map_product(product, gtin14)
+    except Exception as exc:  # the twin must fail where the server fails
+        case["error"] = type(exc).__name__
+        return case
+    case["trimmed"] = off.trim_product(product)
+    case["mapped"] = dataclasses.asdict(mapped)
+    if mapped.status == "found":
+        assembled = barcode.assemble(gtin14, barcode.OffOutcome("found", mapped), barcode.UsdaOutcome("skipped"))
+        assert assembled is not None
+        p = assembled.provenance
+        case["row"] = {**assembled.kwargs, "source": assembled.source, "gtin": p.gtin, "source_url": p.source_url,
+                       "source_license": p.source_license, "ingredients_text": p.ingredients_text,
+                       "additives": list(p.additives), "quality": list(p.quality)}
+    return case
+
+
+def off_map_vectors() -> list[dict]:
+    """``off.map_product`` (and ``trim_product``) over every recorded product, hand-made edge cases and seeded
+    variants of the recorded products, against ``KH.off.mapProduct`` / ``trimProduct`` / ``row``."""
+    rng = random.Random(SEED + 38)  # its own stream: the other groups stay as they were
+    cases = []
+    recorded = []
+    for path in sorted((ROOT / "tests" / "fixtures" / "off").glob("*.json")):
+        product = (json.loads(path.read_text(encoding="utf-8")).get("body") or {}).get("product")
+        if not isinstance(product, dict):
+            continue
+        gtin14 = str(product["code"]).zfill(14)
+        recorded.append((path.stem, gtin14, product))
+        cases.append(_off_case(f"fixture:{path.stem}", gtin14, json.dumps(product, ensure_ascii=False)))
+        cases.append(_off_case(f"fixture-trimmed:{path.stem}", gtin14, json.dumps(off.trim_product(product), ensure_ascii=False)))
+    for case_id, gtin14, product in OFF_HAND:
+        text = product if isinstance(product, str) else json.dumps(product, ensure_ascii=False)
+        cases.append(_off_case(case_id, gtin14, text))
+    for n in range(150):
+        stem, gtin14, product = rng.choice(recorded)
+        cases.append(_off_case(f"variant:{n}:{stem}", gtin14, json.dumps(_mutate_off(rng, product), ensure_ascii=False)))
+    return cases
+
+
+# --------------------------------------------------------------------------- #
 # The demo's three products (the real route over the recorded fixtures)
 # --------------------------------------------------------------------------- #
 
@@ -327,6 +496,7 @@ def build() -> dict:
         "additive_cases": additive_vectors(rng),
         "quality_cases": quality_vectors(),
         "demo_products": demo_products(),
+        "off_map_cases": off_map_vectors(),
     }
 
 

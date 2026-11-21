@@ -2068,6 +2068,11 @@
 
 <!-- ===================== DEMO ONLY: KEEP MY DATA IN THIS BROWSER (js/views/demo_local.js, js/mock/persist.js) =====================
      Opened from the demo banner. Off by default: nothing is stored until "I understand" is ticked and the button pressed. -->
+<!-- ===================== THE IPHONE APP ONLY: FIRST-START SETUP (js/views/welcome.js, design note 38) ===================== -->
+<dialog id="sheet-welcome" class="sheet welcome-sheet" aria-labelledby="welcome-title">
+  <div class="sheet-form" id="welcome-body"></div>
+</dialog>
+
 <dialog id="sheet-demo-local" class="sheet" aria-labelledby="sheet-demo-local-title" aria-describedby="sheet-demo-local-sub">
   <div class="sheet-form">
     <div class="sheet-head">
@@ -2581,6 +2586,7 @@
 <script src="js/engine/gtin.js"></script>
 <script src="js/engine/additives.js"></script>
 <script src="js/engine/off.js"></script>
+<script src="js/engine/usda.js"></script>
 <script src="js/engine/guidance/rules.js"></script>
 <script src="js/engine/guidance/messages.js"></script>
 <script src="js/engine/guidance/budget.js"></script>
@@ -2618,6 +2624,7 @@
 <script src="js/mock/export.js"></script>
 <script src="js/mock/import.js"></script>
 <script src="js/mock/persist.js"></script>
+<script src="js/mock/device.js"></script>
 <script src="js/mock/seed.js"></script>
 <script src="js/views/today.js"></script>
 <script src="js/views/add.js"></script>
@@ -2657,6 +2664,7 @@
 <script src="js/views/ask.js"></script>
 <script src="js/views/ask-voice.js"></script>
 <script src="js/views/demo_local.js"></script>
+<script src="js/views/welcome.js"></script>
 <!-- Design note 26: Send feedback and Server administration → Test accounts and Feedback. Not in the preview (no accounts there). -->
 <script src="js/views/feedback.js" data-preview="omit"></script>
 <!-- The barcode ponyfill (vendor/README.md): a static deferred script, never injected (Trusted Types); its 1 MB

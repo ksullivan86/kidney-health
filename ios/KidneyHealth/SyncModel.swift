@@ -18,6 +18,9 @@ final class SyncModel: ObservableObject {
     @Published private(set) var testing = false
     /// The answer of the last **Test connection**, until the settings change.
     @Published private(set) var checkResult: String?
+    /// What the last sync into the log on this phone did (design note 38, step 3).
+    @Published private(set) var phoneStatus: String
+    @Published private(set) var phoneSyncing = false
 
     private let defaults: UserDefaults
     private let health: HealthReading?
@@ -36,6 +39,7 @@ final class SyncModel: ObservableObject {
         hasToken = Keychain.read(.token) != nil
         status = defaults.string(forKey: Key.status) ?? "Nothing sent yet."
         lastSent = defaults.object(forKey: Key.lastSent) as? Date
+        phoneStatus = defaults.string(forKey: Key.phoneStatus) ?? "Nothing added from Health yet."
     }
 
     var appURL: URL? { Settings.appURL(address) }
@@ -138,16 +142,66 @@ final class SyncModel: ObservableObject {
             setStatus("Health access could not be asked for.")
             return
         }
+        defaults.set(true, forKey: Key.healthAsked)
         startObserving()
+        await syncToPhone()
         await syncNow()
     }
 
-    /// Starts the Health observers once the app is set up: a server address and a token. Before that there is nothing to send, and
-    /// nothing of Health is touched.
+    /// Starts the Health observers once there is somewhere to send: the log on this phone, after the person allowed Health, or a
+    /// server. Before that nothing of Health is touched.
     func startObserving() {
-        guard let health, !observing, hasToken, Settings.pushURL(address) != nil else { return }
+        let toServer = hasToken && Settings.pushURL(address) != nil
+        guard let health, !observing, defaults.bool(forKey: Key.healthAsked) || toServer else { return }
         observing = true
-        health.observe { await SyncModel.shared.syncNow() }
+        health.observe {
+            await SyncModel.shared.syncToPhone()
+            await SyncModel.shared.syncNow()
+        }
+    }
+
+    /// Adds what is new in Health to the log on this phone (design note 38, step 3), in rounds like the server sync, through the page
+    /// (LocalLogTransport). A round's anchor is kept only when the page saved all of it; while the app is not open the page is not
+    /// there, and the next sync adds the round. Has its own anchors and start day, so the server sync is not changed.
+    func syncToPhone() async {
+        guard !phoneSyncing, let health, defaults.bool(forKey: Key.healthAsked) else { return }
+        phoneSyncing = true
+        defer { phoneSyncing = false }
+        let today = Self.day(Date())
+        if defaults.string(forKey: Key.phoneSince) == nil {
+            defaults.set(Push.defaultSince(today), forKey: Key.phoneSince)
+        }
+        let since = defaults.string(forKey: Key.phoneSince)
+        let local = LocalLogTransport(today: today)
+        var total = SyncOutcome(state: .done)
+        for _ in 0..<Self.maxRounds {
+            let round: (batch: SampleBatch, more: Bool)
+            do {
+                round = try await health.newSamples(since: Keychain.read(.phoneAnchors))
+            } catch {
+                setPhoneStatus("Health data could not be read. Check that the app may read weight and blood pressure.")
+                return
+            }
+            let outcome = await Sync.run(round.batch, to: LocalLogTransport.url, token: "", today: today, since: since, transport: local)
+            total = Self.adding(outcome, to: total)
+            guard let keep = outcome.anchorToKeep else { break }
+            try? Keychain.save(keep, as: .phoneAnchors)
+            if !round.more { break }
+        }
+        switch total.state {
+        case .offline:
+            setPhoneStatus("New readings are added when the app is open.")
+        case .refused(let text):
+            setPhoneStatus("Some readings were not added: \(text)")
+        default:
+            let added = total.addedWeights + total.addedReadings
+            setPhoneStatus(added == 0 ? "Up to date with Health." : "Added \(total.addedWeights) weights and \(total.addedReadings) readings from Health.")
+        }
+    }
+
+    private func setPhoneStatus(_ text: String) {
+        phoneStatus = text
+        defaults.set(text, forKey: Key.phoneStatus)
     }
 
     /// Sends what is new, in rounds of at most 500 samples of each kind. A round's anchor is kept only when the server took all of
@@ -226,6 +280,9 @@ final class SyncModel: ObservableObject {
         static let waitUntil = "waitUntil"
         static let since = "since"
         static let sendingPaused = "sendingPaused"
+        static let healthAsked = "healthAsked"
+        static let phoneStatus = "phoneStatus"
+        static let phoneSince = "phoneSince"
     }
 }
 

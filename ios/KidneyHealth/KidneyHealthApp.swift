@@ -30,12 +30,27 @@ final class AppDelegate: NSObject, UIApplicationDelegate {
 /// so does a pairing link from the Camera, which the sheet then asks about.
 struct RootView: View {
     @EnvironmentObject private var model: SyncModel
+    @ObservedObject private var lock = AppLock.shared
+    @Environment(\.scenePhase) private var scenePhase
     @State private var showSettings = false
     @State private var openedURL: URL?
 
     var body: some View {
         WebAppView(openPhoneSettings: { showSettings = true })
             .ignoresSafeArea()
+            .overlay { if lock.locked { LockScreen(lock: lock) } } // covers the app, the app switcher's picture included
+            .task { if lock.locked { await lock.unlock() } }
+            .onChange(of: scenePhase) { _, phase in
+                switch phase {
+                case .background: lock.lockIfEnabled()
+                case .active:
+                    Task {
+                        if lock.locked { await lock.unlock() }
+                        await model.syncToPhone()
+                    }
+                default: break
+                }
+            }
             .onOpenURL { url in
                 openedURL = url
                 showSettings = true

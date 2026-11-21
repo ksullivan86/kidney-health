@@ -45,7 +45,10 @@
 
   Object.assign(MockApi.prototype, {
     _activity() {
-      if (!this._activityState) this._activityState = { ...sampleDays(), extra: { enabled: false, share_pct: A.SHARE_DEFAULT, ceiling_kcal: null } };
+      if (!this._activityState) {
+        const days = this._sample === true ? sampleDays() : { days: [], workouts: [] }; // an empty start has no sample Whoop days
+        this._activityState = { ...days, extra: { enabled: false, share_pct: A.SHARE_DEFAULT, ceiling_kcal: null } };
+      }
       return this._activityState;
     },
     _activityView(start, end) {

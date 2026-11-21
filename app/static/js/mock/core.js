@@ -325,6 +325,10 @@
       this._profile = { id: 1, name: '', weight_kg: null, height_cm: null, ckd_stage: '3b', dialysis: 'none', diabetes: 'type1', warn_fraction: 0.8, about_tolerance_pct: 0,
         ckd_stage_chosen: false, diabetes_chosen: false, dialysis_days: [], week_start: 'monday', targets: {}, updated_at: this._stamp() };
       this._importBuiltin(foodsData || KH.mock.fallbackFoods());
+      // Whether this account has the sample data: the sample person and days here, and the sample Care team, connected devices,
+      // activity and list app the other parts make on first use. An empty start (device mode, design note 38; "an empty log of my
+      // own") has none of them. Saved with the rest of the state; a copy saved before this property existed counts as empty.
+      this._sample = !!seed;
       if (seed) KH.mock.seedSampleData(this, { hemodialysis });
     }
 
@@ -351,7 +355,8 @@
     // `headers`: the request headers a route reads (only If-Match, on PUT / DELETE /api/log/{id}); names in any case.
     async request(method, path, body, headers) {
       await new Promise((r) => setTimeout(r, 40));
-      const res = this.handle(method, path, body, headers);
+      // A route may answer later (device mode's food lookups through the iPhone app, js/mock/device.js): wait for it.
+      const res = await this.handle(method, path, body, headers);
       // A write that went through (handle throws an ApiError for one that did not): "Keep my data in this browser" saves after it.
       if (method !== 'GET' && method !== 'HEAD' && typeof KH.mock.onWrite === 'function') KH.mock.onWrite(this, method, path);
       return typeof res === 'string' || res == null ? res : JSON.parse(JSON.stringify(res)); // what the wire would carry
