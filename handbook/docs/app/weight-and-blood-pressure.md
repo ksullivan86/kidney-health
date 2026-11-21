@@ -240,6 +240,12 @@ The iPhone app sends new weights and blood pressure readings from Apple Health t
 
 Each person connects with a token from their own account, so their readings go to their own log.
 
+With a token for the iPhone app, the app also sends what you add in it: food, foods you made, lab results, symptoms, weights
+and blood pressure. It sends each new row once, when your server can be reached, and keeps the rest on the phone until then.
+**Settings → This device → Sending to your server** shows how many rows wait, when it last sent, and any row your server
+refused or could not place. **Send now** tries at once. Changes or deletions you make on the phone after a row was sent are not
+sent, so make those on the server too. The sample data is never sent.
+
 ### The QR code next to the token
 
 When the server has an `https://` address, the page also shows a **QR code** with the new token. It is for the project's

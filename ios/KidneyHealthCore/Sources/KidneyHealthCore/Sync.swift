@@ -320,6 +320,12 @@ public enum Settings {
         return push.deletingLastPathComponent().appendingPathComponent("check")
     }
 
+    /// The URL of `POST /push/v1/sync` (the rows the person adds on the phone, design note 38 step 4), from the same text.
+    public static func syncURL(_ address: String) -> URL? {
+        guard let push = pushURL(address) else { return nil }
+        return push.deletingLastPathComponent().appendingPathComponent("sync")
+    }
+
     /// The address to open the web app, from the same text.
     public static func appURL(_ address: String) -> URL? {
         guard let push = pushURL(address) else { return nil }

@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Decided 2026-11-20 (§10). Steps 0 and 1 built and in TestFlight build 5 (2026-11-21). Steps 2 and 3 built 2026-11-21 (ARCHITECTURE.md "Device mode"). Step 4, the server side, built 2026-11-21: app tokens and `POST /push/v1/sync` (§5.5); the phone side is next. Step 5 next. |
+| Status | Decided 2026-11-20 (§10). Steps 0 and 1 built and in TestFlight build 5 (2026-11-21). Steps 2 and 3 built 2026-11-21 (ARCHITECTURE.md "Device mode"). Step 4 built 2026-11-21: app tokens and `POST /push/v1/sync` on the server, and the phone's queue that sends to it (§5.5). Step 5 next. |
 | Owner's words | "I'd like to have it work locally if connection to the server is lost and sync later, maybe use the iOS AI if possible as well. I'd like to also have users not need a server to use the app." And: "can we also just include the option for a USDA API key to be added to app, it could have its own settings page for keys or APIs." (2026-11-20) |
 | Builds on | [Note 15](15-native-ios-app.md) (the iPhone app, signing, TestFlight), [note 02](02-ios-pwa.md) (the Home Screen web app, the service worker on iOS), [note 12](12-phone-push-tokens.md) (device tokens), [note 14](14-reuse-map.md) (the JavaScript twins and their vectors), [`demo.md`](../../demo.md) ("Keep my data in this browser"), [note 36](36-lab-pdf-text.md) (lab text, local model only), [note 32](32-choose-local-or-cloud-ai.md) (local or cloud AI). |
 | Scope | The iPhone app as a whole food log that works with no server. It keeps data on the phone, looks foods up with the person's own keys, uses Apple's on-device AI, and sends to a server when one is set up and reachable. |
@@ -134,7 +134,7 @@ Three steps, from least to most work:
 3. **Two-way, with edits on both sides.** Real sync, with rules for which change wins. It is large, and it gets its own note
    only if the owner wants it after living with step 2.
 
-**Built on the server (2026-11-21).** Step 2 above is step 4 of §9. The server side is in; the phone's queue is a separate change.
+**Built (2026-11-21).** Step 2 above is step 4 of §9. The server side came first; the phone's queue followed (below).
 
 * **A kind of device token, not a new family.** In Settings → Phone shortcuts the person chooses what a token is for: a Shortcut
   (`body:write`, as before) or the iPhone app (`body:write` and the new scope `app:add`). The app token keeps the `khd_` prefix, the
@@ -148,6 +148,12 @@ Three steps, from least to most work:
   cannot block the queue. The answer is counts only.
 * **Delete what it sent** removes everything the app token added. The contract is in ARCHITECTURE.md ("`POST /push/v1/sync`") and the
   guide in [`docs/push.md`](../../push.md).
+* **The phone's queue.** The page owns the queue and the rules; the app only carries the request, with the token from its Keychain,
+  so the token never reaches the page. The page gives each row a client ID, saves it before the row leaves the phone, and sends new
+  rows 10 seconds after a save, when the app comes to the front, and on **Send now**. The server's answer counts skipped rows without
+  naming them, so the page sends the rows that could have been skipped again in smaller groups until it knows which. A row skipped
+  three times, or refused by the server, stays on the phone and Settings → This device → Sending to your server lists it. A planned
+  entry waits until its day is over. The contract is in ARCHITECTURE.md ("Device mode").
 
 ### 5.6 The iPhone's own AI
 

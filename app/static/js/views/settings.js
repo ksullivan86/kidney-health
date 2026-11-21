@@ -1591,6 +1591,47 @@
   // copy becomes ready (it can say so twice in a row: ready, then in control). Each render builds
   // into a detached fragment and only the newest one, after all of its awaits, replaces the section, so the
   // rows never appear twice and the ids (#set-clear-device, #set-outbox, #set-outbox-h) stay unique.
+  // The iPhone app: sending what the person adds on the phone to their own server (design note 38 step 4; js/mock/server_sync.js
+  // owns the queue). Redrawn live while it sends; `stops` ends the updates when the section is drawn again.
+  function serverSyncBlock(stops) {
+    const S = KH.mock.serverSync;
+    const info = h('div', { id: 'set-server-sync', 'aria-live': 'polite' });
+    const rowsText = (n) => (n === 1 ? '1 row' : `${n} rows`);
+    const stay = (n) => (n === 1 ? 'It stays' : 'They stay');
+    const listOf = (items, id) => h('ul', { class: 'list', id }, ...items.slice(0, 10).map((x) => h('li', {},
+      h('span', { class: 'row-title' }, x.text), x.why ? h('span', { class: 'row-sub' }, x.why) : null)));
+    // The button is drawn once, so it keeps the focus while the lines above it change.
+    const now = h('div', { class: 'settings-actions' }, action('Send now', 'secondary', async () => { await S.sendNow(); }, { id: 'set-server-sync-now' }));
+    const draw = () => {
+      const s = S.status();
+      now.hidden = s.sample;
+      if (s.sample) {
+        info.replaceChildren(h('p', { class: 'setting-status' }, 'This log holds the sample data, so nothing is sent. Start over with an empty log to send your own.'));
+        return;
+      }
+      const parts = [kv([
+        ['Your server', s.server || 'Not paired'],
+        ['Waiting to be sent', s.waiting ? rowsText(s.waiting) : 'Nothing'],
+        ['Last sent', s.sentAt ? fmtDateTime(s.sentAt) : 'Not yet'],
+      ])];
+      if (s.running) parts.push(h('p', { class: 'setting-status' }, 'Sending…'));
+      else if (s.message) parts.push(h('p', { class: 'setting-status', id: 'set-server-sync-msg' }, s.message));
+      if (s.refused.length) {
+        parts.push(h('p', {}, `Your server refused ${rowsText(s.refused.length)}. ${stay(s.refused.length)} on this iPhone and ${s.refused.length === 1 ? 'is' : 'are'} not sent again.`),
+          listOf(s.refused, 'set-server-sync-refused'));
+      }
+      if (s.stuck.length) {
+        parts.push(h('p', {}, `Your server could not place ${rowsText(s.stuck.length)} after several tries. ${stay(s.stuck.length)} on this iPhone and ${s.stuck.length === 1 ? 'is' : 'are'} not sent again.`),
+          listOf(s.stuck, 'set-server-sync-stuck'));
+      }
+      info.replaceChildren(...parts);
+    };
+    draw();
+    stops.push(S.subscribe(draw));
+    const box = h('div', { role: 'region', 'aria-labelledby': 'set-server-sync-h' }, info, now,
+      h('p', { class: 'hint' }, 'New rows you add here are sent to your server when it can be reached: food, foods you made, lab results, symptoms, weight and blood pressure. Changes or deletions made on this iPhone after a row was sent are not sent.'));
+    return [subtitle('Sending to your server', 'set-server-sync-h'), box];
+  }
   let deviceRender = 0;
   let deviceStop = null; // stops the shown outbox list's live updates when a newer render replaces it
   async function renderDevice() {
@@ -1613,6 +1654,7 @@
         out.append(h('div', { class: 'settings-actions' }, action('Apple Health and server', 'secondary', async () => { phone.postMessage('settings'); },
           { id: 'set-phone-settings' })));
       }
+      if (KH.mock && KH.mock.serverSync) out.append(...serverSyncBlock(stops));
       // The first-start setup again, and starting over (owner, 2026-11-21: the sample data only as a choice).
       const foot = h('div', { class: 'sheet-foot settings-actions' });
       const restart = (sample) => async (btn) => {

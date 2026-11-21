@@ -21,6 +21,10 @@ the API. Security fixes are released as patch versions of the newest minor versi
   foods you made, lab results, symptoms, weights and blood pressure. The token can only add, and sending the same row twice adds
   nothing. **Delete what it sent** removes all of it. The route is `POST /push/v1/sync` ([docs/push.md](docs/push.md)). It uses the
   existing switch, `PUSH_ENABLED`.
+* The iPhone app now sends what you add on the phone to your server (design note 38, step 4, the phone side). Pair it with a token
+  made for the iPhone app. Each new row is sent once, when the server can be reached, and waits on the phone until then. Settings →
+  This device → **Sending to your server** shows how many rows wait, when it last sent and any row the server refused, with a
+  **Send now** button. Changes and deletions made on the phone after a row was sent are not sent. The sample data is never sent.
 
 ### Upgrading
 

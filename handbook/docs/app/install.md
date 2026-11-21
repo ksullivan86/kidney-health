@@ -134,7 +134,10 @@ phone and needs no server ([design note 38][NOTE38]):
   - **Keys and services**: look up more foods with your own free USDA key, or barcodes on Open Food Facts. Each is off until you
     turn it on, and sends only the words you type or the barcode you scan.
   - **Lock with Face ID or passcode**: off unless you turn it on.
-  - Connecting your own server is optional.
+  - Connecting your own server is optional. With a token made for the iPhone app, the app sends each new row you add to your
+    server when it can be reached ([Connect the Kidney Health iPhone app](weight-and-blood-pressure.md#connect-the-kidney-health-iphone-app)).
+- **Settings → This device → Sending to your server** shows how many rows wait to be sent, when it last sent, and any row your
+  server refused. **Send now** tries at once. Changes or deletions you make on the phone after a row was sent are not sent.
 
 ## Updates
 
