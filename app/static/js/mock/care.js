@@ -76,6 +76,10 @@
   Object.assign(MockApi.prototype, {
     _care() {
       if (this._careState) return this._careState;
+      if (this._sample !== true) { // an empty start has no sample Care team
+        this._careState = { nextId: 100, mine: [], codes: [], invites: [], people: [], forMe: [], suggestions: [], notes: [], written: [], worlds: {} };
+        return this._careState;
+      }
       this._careState = {
         nextId: 100,
         mine: [{ id: 1, name: 'Jordan', username: 'jordan', areas: ['food', 'labs'], since: iso(-6), until: null, last_viewed_at: iso(0), active: true,

@@ -58,6 +58,10 @@ const ok = (fn, label) => { checks += 1; try { fn(); } catch (e) { e.message = `
   ok(() => assert.equal(user.username, 'me'), 'the one person');
   ok(() => assert.equal(user.role, 'user'), 'not an admin: there is no server to run');
   ok(() => assert.equal(api._authState().users.length, 1), 'no sample second account');
+  ok(() => assert.equal(api._care().mine.length + api._care().people.length + api._care().notes.length, 0), 'no sample Care team');
+  ok(() => assert.deepEqual(Object.keys(api._devices().connections), []), 'no sample connected devices');
+  ok(() => assert.equal(api._activity().days.length, 0), 'no sample activity');
+  ok(() => assert.equal(api._listsState().connection, null), 'no sample list app');
 }
 
 // 2. A write is saved, and the safety copy (the export) goes to the iPhone app after the save.

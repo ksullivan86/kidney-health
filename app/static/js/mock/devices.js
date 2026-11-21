@@ -21,7 +21,7 @@
 
   Object.assign(MockApi.prototype, {
     _devices() {
-      if (!this._devicesState) this._devicesState = { connections: { withings: sample(), whoop: sample() } };
+      if (!this._devicesState) this._devicesState = { connections: this._sample === true ? { withings: sample(), whoop: sample() } : {} };
       return this._devicesState;
     },
     _deviceView(userId, providerId) {

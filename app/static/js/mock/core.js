@@ -325,6 +325,10 @@
       this._profile = { id: 1, name: '', weight_kg: null, height_cm: null, ckd_stage: '3b', dialysis: 'none', diabetes: 'type1', warn_fraction: 0.8, about_tolerance_pct: 0,
         ckd_stage_chosen: false, diabetes_chosen: false, dialysis_days: [], week_start: 'monday', targets: {}, updated_at: this._stamp() };
       this._importBuiltin(foodsData || KH.mock.fallbackFoods());
+      // Whether this account has the sample data: the sample person and days here, and the sample Care team, connected devices,
+      // activity and list app the other parts make on first use. An empty start (device mode, design note 38; "an empty log of my
+      // own") has none of them. Saved with the rest of the state; a copy saved before this property existed counts as empty.
+      this._sample = !!seed;
       if (seed) KH.mock.seedSampleData(this, { hemodialysis });
     }
 
