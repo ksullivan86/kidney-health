@@ -116,6 +116,7 @@ const SHELL_URLS = [
   '/js/mock/export.js',
   '/js/mock/import.js',
   '/js/mock/persist.js',
+  '/js/mock/device.js',
   '/js/mock/seed.js',
   '/js/views/today.js',
   '/js/views/add.js',

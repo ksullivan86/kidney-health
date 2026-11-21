@@ -248,6 +248,51 @@
     },
   });
 
+  // Device mode (design note 38, step 2): the iPhone app asks Open Food Facts, if the person turned it on, and the page maps the
+  // answer with the server's rules (KH.off.trimProduct, mapProduct, row). The answers and errors are the server's (app/barcode.py):
+  // only a found product is stored, a product without nutrition facts is a 404 with its name, a miss a 404, a lookup that could
+  // not be made a 502, and Open Food Facts not yet agreed to is the server's 503 consent question, which turns it on once agreed.
+  const UNREACHABLE = 'The food databases could not be reached just now. Try again in a minute, or enter the food from its label.';
+  const NO_NUTRITION = 'Open Food Facts knows this product but has no nutrition facts for it. Enter them from the label.';
+  const NO_SERVING_WEIGHT = "Open Food Facts lists this product's values per serving but not how much a serving weighs, so they "
+    + 'cannot be used. Enter them from the label.';
+  const NOT_FOUND_OFF = 'No product with this barcode in Open Food Facts. Enter it from the label; the app keeps the barcode for next time.';
+  Object.assign(MockApi.prototype, {
+    async _deviceBarcode(gtin14, row, source) {
+      this._takeBarcodeLookup();
+      const u = this._currentUser();
+      const consent = !!this._effectiveSetting('food.off_consent', u.id).value;
+      const services = await M.device.lookup({ kind: 'services' });
+      if (!services.off) {
+        if (!consent) fail(503, CONSENT_REQUIRED, { reason: 'off_consent_required', gtin: gtin14, checked: { off: 'consent_required', usda: 'skipped' } });
+        await M.device.lookup({ kind: 'enableOff' }); // the person agreed in the page, naming Open Food Facts and the barcode
+      }
+      const answer = await M.device.lookup({ kind: 'offProduct', code: G.offCode(gtin14), fields: KH.off.FIELDS.join(',') });
+      const contribute = KH.off.CONTRIBUTE_URL + G.offCode(gtin14);
+      if (answer.error === 'rate_limited') fail(429, 'Too many barcode lookups just now. Try again in a minute.', { retry_after: 60, gtin: gtin14 });
+      let doc = null;
+      if (!answer.error) { try { doc = JSON.parse(answer.json); } catch (e) { doc = null; } }
+      const missing = answer.error === 'not_found' || (doc && doc.status === 'failure');
+      if (!missing && (answer.error || !doc || typeof doc.product !== 'object' || doc.product === null)) {
+        if (row) return this._barcodeResult(row, gtin14, source, this._attributionsOfRow(row));
+        fail(502, UNREACHABLE, { gtin: gtin14, checked: { off: 'error', usda: 'skipped' } });
+      }
+      if (missing) {
+        if (row) return this._barcodeResult(row, gtin14, source, this._attributionsOfRow(row));
+        fail(404, NOT_FOUND_OFF, { gtin: gtin14, name: null, checked: { off: 'not_found', usda: 'skipped' }, contribute_url: contribute });
+      }
+      const mapped = KH.off.mapProduct(KH.off.trimProduct(doc.product), gtin14);
+      if (mapped.status !== 'found') {
+        if (row) return this._barcodeResult(row, gtin14, source, this._attributionsOfRow(row));
+        const noWeight = (mapped.quality || []).includes('serving_weight_unknown');
+        fail(404, noWeight ? NO_SERVING_WEIGHT : NO_NUTRITION, { gtin: gtin14, name: mapped.name, checked: { off: 'not_found', usda: 'skipped' },
+          contribute_url: contribute });
+      }
+      const stored = this._storeDemoProduct(KH.off.row(mapped, gtin14));
+      return this._barcodeResult(stored, gtin14, 'off', [KH.off.attribution(gtin14)]);
+    },
+  });
+
   route('POST', '/api/foods/barcode', function ({ body }) {
     const b = lookupBody(body);
     let gtin14;
@@ -261,6 +306,7 @@
     const [row, source] = this._barcodeLocal(gtin14);
     if (row && (!b.refresh || source === 'local')) return this._barcodeResult(row, gtin14, source, this._attributionsOfRow(row));
 
+    if (KH.flags && KH.flags.DEVICE && M.device) return this._deviceBarcode(gtin14, row, source);
     this._takeBarcodeLookup();
     const u = this._currentUser();
     const offEnabled = !!this._effectiveSetting('food.off_enabled', null).value;

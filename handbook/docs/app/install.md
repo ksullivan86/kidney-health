@@ -125,7 +125,13 @@ phone and needs no server ([design note 38][NOTE38]):
 - After each change it saves a copy of your data that you can find in the **Files** app, under **On My iPhone**. If you ever
   need your data back, open the app's **Settings → Your data → Import from a file** and choose that copy.
 - Export your data now and then and keep the file somewhere safe. **Settings → Your data → Export** opens the share sheet.
-- Connecting your own server is optional: **Settings → This device → Apple Health and server**.
+- **Settings → This device → Apple Health and server** holds the phone's own settings:
+  - **Apple Health**: allow weight and blood pressure, and new readings are added to the log on the phone when the app is open.
+    Readings from a watch are not added.
+  - **Keys and services**: look up more foods with your own free USDA key, or barcodes on Open Food Facts. Each is off until you
+    turn it on, and sends only the words you type or the barcode you scan.
+  - **Lock with Face ID or passcode**: off unless you turn it on.
+  - Connecting your own server is optional.
 
 ## Updates
 

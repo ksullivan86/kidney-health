@@ -5632,6 +5632,20 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
   `kidneyhealth-app://app/` (no `..`, no hidden files, only listed types, resolved inside the folder); `WebAppView` keeps the data in
   `WKWebsiteDataStore(forIdentifier:)`, cancels every navigation but its own files, opens a tapped `https` link in Safari, accepts
   messages only from its own origin, writes the safety copy to Documents atomically, and offers a download (Export) with the share sheet.
-* **Tests**: `tests/js/device_mode.mjs` (the engine, against a fake IndexedDB), `tests/test_device_mode.py` (the build and the wiring),
+* **Food services (step 2)**: `js/mock/device.js` `KH.mock.device.lookup` asks the app's `bridge` reply handler
+  (`ios/KidneyHealth/Services/FoodServices.swift`) for a service's raw JSON; the page maps it with the twins of the server's rules
+  (`KH.off.trimProduct`, `mapProduct`, `row`; `KH.usda.searchItem`, `mapRecord`, `row`; parity in `tests/data/barcode_vectors.json`
+  `off_map_cases` and `tests/data/usda_vectors.json`). In device mode `POST /api/foods/barcode` and `/api/foods/usda/*` answer with
+  the server's statuses and texts, and the mock's `request()` awaits a route that answers later. The app keeps every service off
+  until the person turns it on (Settings → This device → Apple Health and server → Keys and services); the USDA key is in the
+  Keychain, sent as `X-Api-Key`, never shown again; Open Food Facts is asked with the server's API version (3.4) and `KH.off.FIELDS`
+  (`app/off.py` FIELDS). The server's consent question for Open Food Facts turns the app's switch on once the person agrees. Fixed
+  hosts, no cookies, no cache, no redirects, and limits below each service's own (USDA 900 an hour, Open Food Facts 12 a minute).
+* **Apple Health into the phone's log (step 3)**: `SyncModel.syncToPhone()` runs the same `Sync.run` as the server sync with
+  `LocalLogTransport`, which plans each request's rows with `Push.plan` (the server's rules and source keys), leaves out watch
+  readings, and hands the rest to `window.KHDevice.addBody` (`js/mock/device.js`), which adds them through the batch routes and
+  saves before it answers. The phone's anchors (`phoneAnchors`) move on only after that, so readings that come in while the app is
+  closed are added when it opens. The optional lock (`Phone/AppLock.swift`) is off by default and covers the app in the background.
+* **Tests**: `tests/js/device_mode.mjs` (the engine, against a fake IndexedDB), `tests/test_device_mode.py` (the build and the wiring), `PhoneTests.swift`,
   `tests/test_ios_app.py` (the shell's rules), `WebShellTests.swift` (the simulator), `tools/e2e/device_mode.py` (Chromium).
 

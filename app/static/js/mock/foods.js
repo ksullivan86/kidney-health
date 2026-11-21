@@ -244,15 +244,41 @@
     return { foods: this._foods.filter((f) => f.source === 'builtin' && !f.hidden).sort((a, b) => a.id - b.id).map((f) => this._foodView(f)) };
   });
   // USDA lookups need the server's key: the demo validates like the server, then answers 503.
+  // In device mode (design note 38, step 2) the iPhone app asks USDA with the person's own key, and the page maps the answer with
+  // the server's rules (KH.usda.searchItem, mapRecord, row): one shared usda row per fdc_id, linked to the person.
+  const USDA_DEVICE_ERRORS = { rate_limited: 429, not_found: 404, offline: 502, refused: 502 };
+  async function deviceUsda(request) {
+    const answer = await KH.mock.device.lookup(request);
+    if (answer.error) fail(USDA_DEVICE_ERRORS[answer.error] || 503, answer.message || 'USDA_API_KEY not configured');
+    try { return JSON.parse(answer.json); } catch (e) { return fail(502, 'USDA returned an unexpected record'); }
+  }
+  const device = () => !!(KH.flags && KH.flags.DEVICE && KH.mock.device);
   route('GET', '/api/foods/usda/search', function ({ qp }) {
     if ((qp('q') || '').length > 200) failFields(['q: String should have at most 200 characters']);
-    fail(503, 'USDA_API_KEY not configured');
+    if (!device()) fail(503, 'USDA_API_KEY not configured');
+    const query = (qp('q') || '').trim();
+    if (!query) fail(400, 'q is required');
+    return deviceUsda({ kind: 'usdaSearch', q: query }).then((data) => ({
+      foods: ((data && data.foods) || []).map((item) => KH.usda.searchItem(item)).filter(Boolean) }));
   });
   route('POST', '/api/foods/usda/import', function ({ body }) {
     const c = new Check(body); // UsdaImport
     c.num('fdc_id', { required: true, gt: 0, int: true, nullable: false, maxId: true });
-    c.done();
-    fail(503, 'USDA_API_KEY not configured');
+    const b = c.done();
+    if (!device()) fail(503, 'USDA_API_KEY not configured');
+    return deviceUsda({ kind: 'usdaFood', fdcId: b.fdc_id }).then((data) => {
+      if (!M.isDict(data)) fail(502, 'USDA returned an unexpected record');
+      const r = KH.usda.row(KH.usda.mapRecord(data, b.fdc_id), b.fdc_id);
+      let food = this._foods.find((f) => f.source === 'usda' && f.fdc_id === b.fdc_id) || null;
+      const values = { name: r.name, brand: r.brand, category: r.category, serving_desc: r.serving_desc, serving_g: r.serving_g,
+        nutrients: { ...r.nutrients }, flags: [...r.flags], kidney_notes: r.kidney_notes };
+      const provenance = { gtin: r.gtin, source_url: r.source_url, source_license: r.source_license, ingredients_text: r.ingredients_text,
+        additives: [...r.additives], quality: [...r.quality] };
+      if (food) this._updateFood(food.id, { ...values, hidden: false, provenance });
+      else food = this._food(this._insertFood({ source: 'usda', fdc_id: b.fdc_id, ...values, ...provenance }));
+      this._foodLinks().add(food.id);
+      return this._foodView(food);
+    });
   });
   // The copy keeps the barcode, the ingredient list and the attribution (ODbL travels with copied data), not the quality notes.
   route('POST', '/api/foods/{id}/copy', function ({ id }) {

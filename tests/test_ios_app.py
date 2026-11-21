@@ -62,7 +62,7 @@ def test_no_code_names_another_health_type(word):
 
 def test_no_third_party_packages_and_only_apple_frameworks():
     assert "XCRemoteSwiftPackageReference" not in PROJECT
-    allowed = {"Foundation", "HealthKit", "Security", "SwiftUI", "UIKit", "WebKit", "XCTest", "PackageDescription",
+    allowed = {"Foundation", "HealthKit", "LocalAuthentication", "Security", "SwiftUI", "UIKit", "WebKit", "XCTest", "PackageDescription",
                "KidneyHealthCore", "KidneyHealth"}
     for name, text in SWIFT.items():
         for module in re.findall(r"^(?:@testable )?import (\w+)", text, re.M):

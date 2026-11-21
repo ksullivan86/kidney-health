@@ -17,7 +17,13 @@ and it can send new weights and blood pressure readings from Apple Health to you
 * After each change the page sends its export to the app, which writes it to Documents as `Kidney Health safety copy.json`. The
   Files app shows it under On My iPhone. To get the data back, import that file in Settings → Your data.
 * Export in Settings opens the share sheet, so the person chooses where the file goes.
-* Settings → This device → **Apple Health and server** opens the app's own settings, described below.
+* Settings → This device → **Apple Health and server** opens the app's own settings, described below. There:
+  * **Keys and services** (`Services/`): USDA FoodData Central with the person's own key and Open Food Facts, each off until turned
+    on. The page asks the app through its `bridge` handler; the app fetches from fixed hosts and the page maps the answer with the
+    server's rules.
+  * **Health in this phone's log** (`Phone/LocalLog.swift`): once Health is allowed, new weights and readings go into the log on the
+    phone when the app is open, with the server's rules and source keys.
+  * **Lock with Face ID or passcode** (`Phone/AppLock.swift`): off by default.
 
 ## Apple Health and your server
 

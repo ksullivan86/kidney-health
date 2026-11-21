@@ -15,6 +15,12 @@
   const root = typeof window !== 'undefined' ? window : globalThis;
   const KH = root.KH || (root.KH = {});
 
+  // The fields the server asks Open Food Facts for (app/off.py FIELDS; tests/test_device_mode.py keeps them equal): the iPhone
+  // app asks for the same, so the answer is what mapProduct expects.
+  const FIELDS = ['code', 'product_name', 'product_name_en', 'generic_name', 'brands', 'quantity', 'serving_size',
+    'serving_quantity', 'serving_quantity_unit', 'nutrition_data_per', 'nutrition_data_prepared_per',
+    'no_nutrition_data', 'nutriments', 'ingredients_text', 'ingredients_text_en', 'additives_tags',
+    'categories_tags', 'countries_tags', 'nova_group', 'lang', 'last_modified_t'];
   const LICENSE = 'ODbL-1.0';
   const ATTRIBUTION_TEXT = 'Product data © Open Food Facts contributors, ODbL';
   const LICENSE_URL = 'https://opendatacommons.org/licenses/odbl/1-0/';
@@ -548,5 +554,5 @@
   KH.off = { LICENSE, ATTRIBUTION_TEXT, LICENSE_URL, HOME_URL, PRODUCT_PAGE_PREFIX, CONTRIBUTE_URL, USDA_LICENSE, USDA_HOME_URL,
     USDA_ATTRIBUTION_TEXT, METHOD_URL, QUALITY_MESSAGES, productPage, attribution, usdaAttribution, qualityItems, safeHttpsUrl,
     WEIGHT_UNKNOWN_CODES, WEIGHT_UNKNOWN_DETAIL, weightKnown, py, finiteNumber, trimProduct, parseNutritionV35, isLiquid,
-    mapProduct, foodKwargs, row };
+    mapProduct, foodKwargs, row, FIELDS };
 })();

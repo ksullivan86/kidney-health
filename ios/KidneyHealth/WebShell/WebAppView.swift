@@ -21,6 +21,9 @@ struct WebAppView: UIViewRepresentable {
         configuration.setURLSchemeHandler(WebAppSchemeHandler(), forURLScheme: WebShellConfig.scheme)
         configuration.userContentController.add(context.coordinator, name: "safetyCopy")
         configuration.userContentController.add(context.coordinator, name: "phone")
+        if let bridge = context.coordinator.bridge { // the app's own services for the page (WebShellConfig.bridge)
+            configuration.userContentController.addScriptMessageHandler(bridge, contentWorld: .page, name: "bridge")
+        }
         configuration.allowsInlineMediaPlayback = true // the barcode scanner's camera preview
         let view = WKWebView(frame: .zero, configuration: configuration)
         view.navigationDelegate = context.coordinator
@@ -36,10 +39,13 @@ struct WebAppView: UIViewRepresentable {
     static func dismantleUIView(_ view: WKWebView, coordinator: Coordinator) {
         view.configuration.userContentController.removeScriptMessageHandler(forName: "safetyCopy")
         view.configuration.userContentController.removeScriptMessageHandler(forName: "phone")
+        view.configuration.userContentController.removeScriptMessageHandler(forName: "bridge", contentWorld: .page)
+        Task { @MainActor in WebShellConfig.pageGone() }
     }
 
     final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate, WKDownloadDelegate {
         let openPhoneSettings: () -> Void
+        let bridge: WKScriptMessageHandlerWithReply? = WebShellConfig.bridge()
         private var downloads: [ObjectIdentifier: URL] = [:]
 
         init(openPhoneSettings: @escaping () -> Void) { self.openPhoneSettings = openPhoneSettings }
@@ -77,6 +83,16 @@ struct WebAppView: UIViewRepresentable {
                 UIApplication.shared.open(url) // the handbook and other pages open in Safari, never inside the app
             }
             decisionHandler(.cancel)
+        }
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            Task { @MainActor in WebShellConfig.pageLoaded(webView) }
+        }
+
+        /// The page's process can be stopped by iOS while the app is in the background: load it again.
+        func webViewWebContentProcessDidTerminate(_ webView: WKWebView) {
+            Task { @MainActor in WebShellConfig.pageGone() }
+            webView.load(URLRequest(url: WebShellConfig.url(WebShellConfig.startPath)))
         }
 
         func webView(_ webView: WKWebView, navigationAction: WKNavigationAction, didBecome download: WKDownload) {

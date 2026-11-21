@@ -23,13 +23,14 @@ function scripts() {
     .filter((src) => /^js\/(engine\/|mock\/|core\.js$)/.test(src));
 }
 
-export function loadDemo({ extra = [], navigator = { userAgent: 'node', onLine: true } } = {}) {
+export function loadDemo({ extra = [], navigator = { userAgent: 'node', onLine: true }, globals = {} } = {}) {
   const noop = new Proxy(function () {}, {
     get: (t, k) => (k === Symbol.toPrimitive ? () => '' : k === Symbol.iterator ? function* () {} : k === 'length' ? 0 : noop),
     apply: () => noop,
     construct: () => noop,
   });
   const context = vm.createContext({ console, URL, URLSearchParams, setTimeout, clearTimeout, setInterval, clearInterval, TextEncoder, TextDecoder, crypto });
+  Object.assign(context, globals); // e.g. KDL_PREVIEW and KDL_DEVICE, read by core.js as it loads
   Object.assign(context, { document: noop, navigator, location: new URL('http://localhost/?mock=1'),
     localStorage: { getItem: () => null, setItem() {}, removeItem() {} } });
   vm.runInContext('globalThis.window = globalThis; window.matchMedia = () => ({ matches: false, addEventListener() {} }); '

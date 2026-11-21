@@ -351,7 +351,8 @@
     // `headers`: the request headers a route reads (only If-Match, on PUT / DELETE /api/log/{id}); names in any case.
     async request(method, path, body, headers) {
       await new Promise((r) => setTimeout(r, 40));
-      const res = this.handle(method, path, body, headers);
+      // A route may answer later (device mode's food lookups through the iPhone app, js/mock/device.js): wait for it.
+      const res = await this.handle(method, path, body, headers);
       // A write that went through (handle throws an ApiError for one that did not): "Keep my data in this browser" saves after it.
       if (method !== 'GET' && method !== 'HEAD' && typeof KH.mock.onWrite === 'function') KH.mock.onWrite(this, method, path);
       return typeof res === 'string' || res == null ? res : JSON.parse(JSON.stringify(res)); // what the wire would carry

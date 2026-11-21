@@ -7,6 +7,7 @@ struct ContentView: View {
     var openedURL: URL? = nil
     @EnvironmentObject private var model: SyncModel
     @Environment(\.dismiss) private var dismiss
+    @ObservedObject private var lock = AppLock.shared
     @State private var address = ""
     @State private var token = ""
     @State private var problem: String?
@@ -86,6 +87,22 @@ struct ContentView: View {
                     Section {
                         Link("Open the app", destination: url)
                     }
+                }
+
+                Section {
+                    Text(model.phoneStatus)
+                } header: {
+                    Text("Health in this phone's log")
+                } footer: {
+                    Text("Once you allow Health above, new weights and blood pressure readings are added to the log on this phone when the app is open. Readings from a watch are not added.")
+                }
+
+                Section {
+                    NavigationLink("Keys and services") { KeysView() }
+                    Toggle("Lock with Face ID or passcode", isOn: Binding(get: { lock.enabled },
+                                                                         set: { on in Task { await lock.setEnabled(on) } }))
+                } footer: {
+                    Text("Keys and services finds more foods with your own USDA key or Open Food Facts. The lock asks for Face ID or your passcode each time you come back to the app.")
                 }
 
                 Section {
