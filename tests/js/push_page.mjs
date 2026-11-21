@@ -267,9 +267,42 @@ answers.listError = null;
   out.listFailsAfterCreate = { text: text(block) };
 }
 
+// ---- a token for the iPhone app (design note 38 section 5.5): the kind is chosen, the list and the delete say what it sent
+reset();
+{
+  const appItem = item({ id: 9, name: 'My iPhone', kind: 'app', scopes: ['body:write', 'app:add'],
+    sent: { entries: 3, foods: 1, labs: 0, symptoms: 2, weights: 0, readings: 1 } });
+  answers = { list: () => listOf([appItem]), created: (b) => ({ ...made, id: 9, name: b.name, kind: b.kind || 'shortcut' }),
+    deleted: () => ({ deleted: { weights: 0, readings: 1, entries: 3, foods: 1, labs: 0, symptoms: 2 } }) };
+  const appCtx = build(false);
+  const appBlock = appCtx.pushBlock();
+  await settle();
+  const kind = page.byId['set-push-kind'];
+  const options = kind.children.map((o) => [o.attrs.value, text(o)]);
+  const firstKind = kind.value;
+  kind.value = 'app';
+  page.byId['set-push-name'].value = 'My iPhone';
+  await page.byId['set-push-create'].handlers.click[0]();
+  const created = log.calls.find((c) => c[0] === 'createToken');
+  const list = page.byId['set-push-list'];
+  const del = buttons(list, 'Delete what it sent')[0];
+  log.confirms = [];
+  await del.handlers.click[0]();
+  const ask = log.confirms[0];
+  await ask.onConfirm();
+  out.app = { text: text(appBlock), options, firstKind, created: created && created[1], list: text(list), message: ask.message,
+    toast: log.toasts.filter(([t]) => t === 'ok').map(([, m]) => m) };
+  page.byId['set-push-name'].value = 'Scale';
+  page.byId['set-push-kind'].value = 'shortcut';
+  log.calls = [];
+  await page.byId['set-push-create'].handlers.click[0]();
+  out.app.shortcutCall = log.calls.find((c) => c[0] === 'createToken')[1];
+}
+
 // ---- the helpers
 {
   const c = ctx.pushCountsText;
+  out.appCounts = [c({ entries: 1 }), c({ entries: 2, labs: 1 }), c({ entries: 3, foods: 1, symptoms: 2, readings: 1 }), c({ foods: 2, weights: 1, labs: 0 })];
   out.counts = [c({ weights: 0, readings: 0 }), c({ weights: 1, readings: 0 }), c({ weights: 0, readings: 1 }), c({ weights: 2, readings: 3 }), c(null), c({})];
 }
 

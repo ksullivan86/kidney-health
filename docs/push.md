@@ -7,6 +7,10 @@ A person can make a **device token** in Settings and paste it into a Shortcut on
 weight and blood pressure to their own server, without opening the app and without an export. The token can **only add** weights and
 blood pressure readings to its owner's log: it cannot read anything, change or delete a row, or reach any other route.
 
+A device token can also be made **for the iPhone app**. The app keeps the log on the phone and sends what the person adds there:
+food, foods they made, lab results, symptoms, weights and blood pressure. That token can also only add. See
+[Sending from the iPhone app](#sending-from-the-iphone-app).
+
 This page is for the person who runs the server and for people who change the code. The contract is in
 [`ARCHITECTURE.md`](../ARCHITECTURE.md) ("Device tokens and `/push/v1`") and the design note is
 [`dev/research/12-phone-push-tokens.md`](dev/research/12-phone-push-tokens.md). The person's side is **Settings → Account → Your data →
@@ -28,14 +32,15 @@ off: it says "Your admin has not turned this on", shows no form, and lets a pers
 
 **The phone must reach the server.** On your home network, or through the VPN you reach the server by. A server on a private network is
 not reachable from mobile data without one. If a reverse proxy lists the paths it passes on, add `/push/v1/` next to `/mcp`; the routes
-are `POST /push/v1/body` and the token check `GET /push/v1/check` (below). To let a phone reach them from beyond your LAN without
-opening the rest of the app, use the commented second host name in `deploy/caddy/Caddyfile.example`; it passes only these two
-requests and `POST /mcp` ([assistant.md](assistant.md)). A VPN is simpler and safer.
+are `POST /push/v1/body`, the token check `GET /push/v1/check`, and the iPhone app's `POST` and `GET /push/v1/sync` (below). To let a
+phone reach them from beyond your LAN without opening the rest of the app, use the commented second host name in
+`deploy/caddy/Caddyfile.example`; it passes only these requests and `POST /mcp` ([assistant.md](assistant.md)). A VPN is simpler and safer.
 
 ## What a token is
 
-* Starts with `khd_` ("device"; assistant tokens start with `kha_`) and holds exactly one scope, `body:write`. The person does not choose
-  scopes. The plain token is shown **once**, when it is made; the server keeps only its SHA-256.
+* Starts with `khd_` ("device"; assistant tokens start with `kha_`). A Shortcut's token holds exactly one scope, `body:write`. A token
+  for the iPhone app also holds `app:add`. The person chooses which one it is for, never the scopes. The plain token is shown
+  **once**, when it is made; the server keeps only its SHA-256.
 * A person has at most **5 active device tokens** (5 assistant tokens besides), valid **30, 90 (default) or 365 days**, or until it is revoked when the admin allows tokens that never expire
   (`TOKENS_ALLOW_NEVER_EXPIRING`, on by default). Making one needs a
   recent password (like saving a key) and is limited to 20 tokens an hour in all.
@@ -60,6 +65,7 @@ The screen uses these routes (a signed-in browser session; the switch on), which
 
 ```
 POST /api/me/tokens        {"name": "Morning weight", "family": "device", "expires_in_days": 90}
+POST /api/me/tokens        {"name": "My iPhone", "family": "device", "kind": "app"}      a token for the iPhone app
 GET  /api/me/tokens?family=device
 DELETE /api/me/tokens/{id}                  revoke
 DELETE /api/me/tokens/{id}/body-rows        delete what it sent
@@ -126,6 +132,84 @@ app's **Test connection** button uses it ([`ios/README.md`](../ios/README.md)). 
 curl -sS https://food.example.org/push/v1/check -H "Authorization: Bearer khd_…"
 ```
 
+## Sending from the iPhone app
+
+The iPhone app keeps the log on the phone and works without a server ([design note 38](dev/research/38-iphone-app-without-a-server.md)).
+When a server is set up and can be reached, the app sends the **new** rows the person made on the phone. It never sends an edit or a
+delete, and it reads nothing back. Two-way sync is a later step.
+
+**The token.** In Settings → Account → Your data → Phone shortcuts, choose **What it is for: The iPhone app** and make the token. It
+works where a Shortcut's token works, so the app can keep sending Health readings to `/push/v1/body`, and it also works at
+`/push/v1/sync`. Pair the app with the QR code as before. A Shortcut's token is refused at `/push/v1/sync` with the usual `401`.
+
+**What it can add:** food log entries, the foods those entries need, lab results, symptoms, weights and blood pressure readings.
+Nothing else: not saved meals, preferences, settings or the profile. It cannot read, change or delete anything.
+
+### The request
+
+```
+POST /push/v1/sync
+Authorization: Bearer khd_…
+Content-Type: application/json
+
+{"foods":    [{"client_id": "0f8fad5b-d9cb-469f-a165-70867728950e", "name": "Grandma's rice pudding", "serving_desc": "1 bowl",
+               "serving_g": 150, "nutrients": {"calories_kcal": 210, "potassium_mg": 180}}],
+ "entries":  [{"client_id": "7c9e6679-7425-40de-944b-e07fc1f90ae7", "date": "2026-11-21", "meal": "lunch",
+               "food": {"client_id": "0f8fad5b-d9cb-469f-a165-70867728950e"}, "servings": 1},
+              {"client_id": "16fd2706-8baf-433b-82eb-8c7fada847da", "date": "2026-11-21", "meal": "lunch",
+               "food": {"builtin": {"fdc_id": 173944, "name": "Banana, raw"}}, "grams": 118}],
+ "labs":     [{"client_id": "886313e1-3b8a-4372-9b90-0c9aee199e5d", "analyte": "potassium", "value": 5.1, "unit": "mmol/L",
+               "taken_on": "2026-11-20"}],
+ "symptoms": [{"client_id": "a8098c1a-f86e-41d4-9d28-5d2a8b1e2c3f", "date": "2026-11-21", "symptom": "itching", "severity": 2}],
+ "weights":  [{"client_id": "c56a4180-65aa-42ec-a945-5fd21dec0538", "date": "2026-11-21", "time": "07:15", "kg": 70.2,
+               "context": "morning"}],
+ "readings": [{"client_id": "e4eaaaf2-d142-11e1-b3e4-080027620cdd", "date": "2026-11-21", "time": "07:20", "systolic": 122,
+               "diastolic": 78, "context": "morning"}]}
+```
+
+```
+{"added": {"foods": 1, "entries": 2, "labs": 1, "symptoms": 1, "weights": 1, "readings": 1},
+ "already_there": {"foods": 0, "entries": 0, "labs": 0, "symptoms": 0, "weights": 0, "readings": 0},
+ "skipped": {"food_not_found": 0, "day_full": 0}}
+```
+
+* Every list is optional, but send at least one row. At most **200 rows** in all and **256 KiB** in one request.
+* Each row has the same fields and the same checks as the screen that adds it here (`POST /api/foods`, `/api/log`, `/api/labs`,
+  `/api/symptoms`, `/api/body/weights`, `/api/body/blood-pressure`), plus a **`client_id`**. A row that fails a check is a `400` that
+  names it, such as `entries.1.date: …`, and nothing in the request is stored.
+* **`client_id`** is a UUID the phone makes once for the row and never changes. Sending a row again adds nothing, even if the person
+  deleted it here since. Each list has its own IDs.
+* An entry names its **food** in one of four ways: `{"client_id": …}` for a food in `foods` (in this request or an earlier one),
+  `{"builtin": {"fdc_id": …, "name": …}}` for a food of the built-in list (by `fdc_id`, or by name when it has none), or
+  `{"usda": {"fdc_id": …, "name": …}}` and `{"off": {"gtin": …, "name": …}}` for a USDA or Open Food Facts food this server already
+  holds. A USDA or Open Food Facts food the phone found itself is best sent in `foods` with `"source": "usda"` and its `fdc_id`, or
+  `"source": "off"` and its `gtin`: the server uses its own copy when it has one, and keeps the phone's as the person's own food
+  otherwise, as an import of a file does.
+* Entries, labs and symptoms may carry **`created_at`** (as the export writes it). A row that came here earlier in an exported file is
+  then found and not added twice. Weights and readings may carry the Health **`source_key`**, so a reading already sent to
+  `/push/v1/body` is not added twice.
+* A row the server cannot place is **skipped**, not refused: an entry whose food it cannot find, or a symptom, weight or reading on a
+  day that already holds the most allowed. It is counted, and sending it again tries again.
+* The answer holds **counts only**.
+
+Weights and readings the app sends show "from a shortcut (name)" like a Shortcut's. The person's activity list shows "The iPhone app
+added to your log" with the counts. In the token list the app's token shows what it sent that is still here, and **Delete what it
+sent** removes all of it: entries, lab results, symptoms, weights, readings, and the foods it made that nothing of the person's uses.
+Rows the app found already here, and anything the person typed or imported, stay.
+
+| Answer | Meaning |
+|---|---|
+| `200` | counts, as above |
+| `400` | a row or field is not valid (the text names it); nothing stored |
+| `401` | no valid app token (a Shortcut's token included), or phone shortcuts are off |
+| `403` | a browser page on another site tried it (`Origin`) |
+| `405` | a method other than `GET` or `POST` |
+| `413` / `415` | body over 256 KiB / not `application/json` |
+| `429` | more than 60 requests an hour for this token, more than 2,000 new rows a day for this token, or too many wrong tokens from this address (`Retry-After`) |
+
+`GET /push/v1/sync` with the app token answers `200 {"ok": true}`: the app's test that the token may send rows. It counts toward the
+same 60 an hour.
+
 ## Pairing the iPhone app by QR code
 
 When a device token is made, `POST /api/me/tokens` also answers `pair_url`, and Settings → Account → Your data → Phone shortcuts draws it as a QR code
@@ -160,6 +244,10 @@ delete a row, make or see tokens, or reach any other route (every other route ig
 marked as sent by that token, so the person can see them and delete all of them in one step. Nothing is acted on automatically. Revoke the
 token (and delete what it sent) if a phone is lost or a Shortcut was shared.
 
+A leaked **app** token can also add food entries, foods, lab results and symptoms: at most 200 rows a request, 60 requests an hour and
+2,000 new rows a day, each one checked like a row typed in the app. It still reads nothing and changes nothing that is there. The rows
+are linked to the token, and Delete what it sent removes them.
+
 The server checks the token again before saving the readings. If access ended while the phone was sending,
 the request gets 401 and none of its readings are saved. Readings already saved stay in your log until you delete them.
 
@@ -179,4 +267,7 @@ are never sent to an AI provider or the assistant, like the rest of the weight a
   `tests/test_migration_m019.py`, the two additions in `tests/test_auth_coverage.py`, and `context_cases` / `watch_cases` in
   `tests/data/body_vectors.json` (generated by `tests/data/gen_body_vectors.py`; `node tests/js/run_vectors.mjs` holds the Apple Health
   reader's `contextOf` and `isWatchSource` to the server's `context_for` and `is_watch_source`).
+* The iPhone app's route: `app/app_sync.py`, schema step 37 (`app/migrations/m037_app_sync.py`, the receipts), the food matching it
+  shares with the import (`shared_match`, `builtin_match`, `food_key` in `app/data_import.py`). Tests: `tests/test_app_sync.py`,
+  `tests/test_migration_m037.py`, the app parts of `tests/test_push_ui.py` and `tests/test_auth_coverage.py`.
 * `/push/v1` is a promise: a change that breaks it gets `/push/v2`, and v1 keeps working for at least one release.

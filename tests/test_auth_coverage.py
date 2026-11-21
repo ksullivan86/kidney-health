@@ -215,13 +215,37 @@ BEARER_ROUTES = {("post", "/mcp")}
 # an assistant token, and the instance switch push.enabled (off: the generic 401, not a 404). GET /push/v1/check tests the same token
 # (design note 15 §4.3) and reads and stores nothing.
 PUSH_ROUTES = {("post", "/push/v1/body"), ("get", "/push/v1/check")}
+# The iPhone app's route for the rows it made (design note 38 §5.5; app/app_sync.py): a device token with app:add (an app token), the
+# same switch. GET /push/v1/sync tests that token and reads and stores nothing.
+SYNC_ROUTES = {("post", "/push/v1/sync"), ("get", "/push/v1/sync")}
 
 
 def test_the_bearer_routes_are_the_only_write_routes_outside_the_api(anon_client):
     unsafe = {(m, p) for m, p, _ in _walk(anon_client.app.routes)
               if not p.startswith("/api/") and m in ("post", "put", "patch", "delete")}
-    assert BEARER_ROUTES | {r for r in PUSH_ROUTES if r[0] == "post"} <= unsafe
-    assert {p for _, p in unsafe} == {p for _, p in BEARER_ROUTES | PUSH_ROUTES}, sorted(unsafe)  # the other methods: 405
+    assert BEARER_ROUTES | {r for r in PUSH_ROUTES | SYNC_ROUTES if r[0] == "post"} <= unsafe
+    assert {p for _, p in unsafe} == {p for _, p in BEARER_ROUTES | PUSH_ROUTES | SYNC_ROUTES}, sorted(unsafe)  # the other methods: 405
+
+
+def test_the_sync_route_needs_an_app_token_and_never_takes_a_session(client):
+    body = {"labs": [{"client_id": "6f1c2a9e-3b7d-4e8a-9c0f-1d2e3f4a5b6c", "analyte": "potassium", "value": 5, "unit": "mmol/L",
+                      "taken_on": "2026-10-05"}]}
+    for method, path in sorted(SYNC_ROUTES):
+        r = client.request(method.upper(), path, json=body)  # switched off: the generic 401, whoever asks
+        assert r.status_code == 401 and r.headers["www-authenticate"].startswith("Bearer"), (method, path)
+    assert client.patch("/api/admin/settings", json={"assistant.enabled": True, "push.enabled": True}).status_code == 200
+    assistant = client.post("/api/me/tokens", json={"name": "coverage", "can_log": True}).json()["token"]
+    shortcut = client.post("/api/me/tokens", json={"name": "coverage", "family": "device"}).json()["token"]
+    app = client.post("/api/me/tokens", json={"name": "coverage", "family": "device", "kind": "app"}).json()["token"]
+    for method, path in sorted(SYNC_ROUTES):
+        r = client.request(method.upper(), path, json=body)  # the signed-in admin's cookie, no token
+        assert r.status_code == 401 and r.headers["www-authenticate"].startswith("Bearer"), (method, path)
+        assert TestClient(client.app).request(method.upper(), path, json=body).status_code == 401  # anonymous
+        for wrong in (assistant, shortcut, "khd_" + "A" * 43):
+            r = TestClient(client.app, headers={"Authorization": f"Bearer {wrong}"}).request(method.upper(), path, json=body)
+            assert r.status_code == 401, (method, path, wrong[:4])
+        right = TestClient(client.app, headers={"Authorization": f"Bearer {app}"})
+        assert right.request(method.upper(), path, json=body).status_code == 200, (method, path)
 
 
 def test_the_push_route_needs_a_device_token_and_never_takes_a_session(client):

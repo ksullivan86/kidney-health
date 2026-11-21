@@ -2466,9 +2466,53 @@
       },
       "DeletedRows": {
         "properties": {
+          "entries": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entries"
+          },
+          "foods": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Foods"
+          },
+          "labs": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Labs"
+          },
           "readings": {
             "title": "Readings",
             "type": "integer"
+          },
+          "symptoms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Symptoms"
           },
           "weights": {
             "title": "Weights",
@@ -12927,36 +12971,18 @@
         "title": "SymptomRedFlag",
         "type": "object"
       },
-      "SyncCounts": {
+      "SyncCheck": {
         "properties": {
-          "added": {
-            "$ref": "#/components/schemas/ImportedCounts"
-          },
-          "already_there": {
-            "title": "Already There",
-            "type": "integer"
-          },
-          "left_out": {
-            "title": "Left Out",
-            "type": "integer"
-          },
-          "skipped": {
-            "title": "Skipped",
-            "type": "integer"
-          },
-          "updated": {
-            "default": 0,
-            "title": "Updated",
-            "type": "integer"
+          "ok": {
+            "const": true,
+            "title": "Ok",
+            "type": "boolean"
           }
         },
         "required": [
-          "added",
-          "already_there",
-          "skipped",
-          "left_out"
+          "ok"
         ],
-        "title": "SyncCounts",
+        "title": "SyncCheck",
         "type": "object"
       },
       "SyncOut": {
@@ -12978,7 +13004,7 @@
           "result": {
             "anyOf": [
               {
-                "$ref": "#/components/schemas/SyncCounts"
+                "$ref": "#/components/schemas/app__devices__api__SyncCounts"
               },
               {
                 "type": "null"
@@ -12992,6 +13018,45 @@
           "error"
         ],
         "title": "SyncOut",
+        "type": "object"
+      },
+      "SyncResult": {
+        "description": "Counts only: nothing the app sent is echoed.",
+        "properties": {
+          "added": {
+            "$ref": "#/components/schemas/app__app_sync__SyncCounts"
+          },
+          "already_there": {
+            "$ref": "#/components/schemas/app__app_sync__SyncCounts"
+          },
+          "skipped": {
+            "$ref": "#/components/schemas/SyncSkipped"
+          }
+        },
+        "required": [
+          "added",
+          "already_there",
+          "skipped"
+        ],
+        "title": "SyncResult",
+        "type": "object"
+      },
+      "SyncSkipped": {
+        "properties": {
+          "day_full": {
+            "title": "Day Full",
+            "type": "integer"
+          },
+          "food_not_found": {
+            "title": "Food Not Found",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "food_not_found",
+          "day_full"
+        ],
+        "title": "SyncSkipped",
         "type": "object"
       },
       "TargetsUsed": {
@@ -13142,7 +13207,7 @@
       },
       "TokenCreate": {
         "additionalProperties": false,
-        "description": "``POST /api/me/tokens``. Unknown fields are refused, so a scope cannot be sent by name: ``can_log`` is the one\nway to ask for ``assistant:log`` (it saves food and recipes) and ``can_prefs`` the one way to ask for ``assistant:prefs``\n(it remembers tastes: likes and dislikes); ``assistant:read`` is always included, and neither choice gives the other.\n``family`` is ``assistant`` (default, so the Assistant access screen works unchanged) or ``device`` (a phone shortcut's\ntoken, whose one scope, ``body:write``, is not a choice: ``can_log`` and ``can_prefs`` are refused for it).",
+        "description": "``POST /api/me/tokens``. Unknown fields are refused, so a scope cannot be sent by name: ``can_log`` is the one\nway to ask for ``assistant:log`` (it saves food and recipes) and ``can_prefs`` the one way to ask for ``assistant:prefs``\n(it remembers tastes: likes and dislikes); ``assistant:read`` is always included, and neither choice gives the other.\n``family`` is ``assistant`` (default, so the Assistant access screen works unchanged) or ``device`` (a phone shortcut's\ntoken). A device token's ``kind`` is ``shortcut`` (default: the one scope ``body:write``) or ``app`` (``body:write`` and\n``app:add``: the iPhone app may also add food, labs and symptoms; design note 38 §5.5). ``can_log`` and ``can_prefs`` are\nrefused for a device token, and ``kind: \"app\"`` for an assistant token.",
         "properties": {
           "can_log": {
             "default": false,
@@ -13180,6 +13245,21 @@
             ],
             "title": "Family",
             "type": "string"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "shortcut",
+                  "app"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Kind"
           },
           "name": {
             "maxLength": 60,
@@ -14009,6 +14089,44 @@
         "title": "WorkoutOut",
         "type": "object"
       },
+      "app__app_sync__SyncCounts": {
+        "properties": {
+          "entries": {
+            "title": "Entries",
+            "type": "integer"
+          },
+          "foods": {
+            "title": "Foods",
+            "type": "integer"
+          },
+          "labs": {
+            "title": "Labs",
+            "type": "integer"
+          },
+          "readings": {
+            "title": "Readings",
+            "type": "integer"
+          },
+          "symptoms": {
+            "title": "Symptoms",
+            "type": "integer"
+          },
+          "weights": {
+            "title": "Weights",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "foods",
+          "entries",
+          "labs",
+          "symptoms",
+          "weights",
+          "readings"
+        ],
+        "title": "SyncCounts",
+        "type": "object"
+      },
       "app__devices__api__ConnectionOut": {
         "properties": {
           "connected_at": {
@@ -14065,6 +14183,38 @@
           "imported"
         ],
         "title": "ConnectionOut",
+        "type": "object"
+      },
+      "app__devices__api__SyncCounts": {
+        "properties": {
+          "added": {
+            "$ref": "#/components/schemas/ImportedCounts"
+          },
+          "already_there": {
+            "title": "Already There",
+            "type": "integer"
+          },
+          "left_out": {
+            "title": "Left Out",
+            "type": "integer"
+          },
+          "skipped": {
+            "title": "Skipped",
+            "type": "integer"
+          },
+          "updated": {
+            "default": 0,
+            "title": "Updated",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "added",
+          "already_there",
+          "skipped",
+          "left_out"
+        ],
+        "title": "SyncCounts",
         "type": "object"
       },
       "app__instacart__PreviewOut": {
@@ -14350,7 +14500,7 @@
       },
       "deviceToken": {
         "bearerFormat": "khd_ followed by 43 characters",
-        "description": "A device token (`Authorization: Bearer khd_...`), made in Settings, Phone shortcuts, with the one scope `body:write`. It works only at `POST /push/v1/body` (and `GET /push/v1/check`, which tests it), only while the instance switch `push.enabled` is on, and it can add weights and blood pressure readings and read nothing. No cookie is read there.",
+        "description": "A device token (`Authorization: Bearer khd_...`), made in Settings, Phone shortcuts. A shortcut token has the one scope `body:write` and works only at `POST /push/v1/body` (and `GET /push/v1/check`, which tests it), where it adds weights and blood pressure readings. An app token also has `app:add` and also works at `POST /push/v1/sync` (and `GET /push/v1/sync`, which tests it), where the iPhone app adds the rows it made. Both work only while the instance switch `push.enabled` is on and read nothing. No cookie is read there.",
         "scheme": "bearer",
         "type": "http"
       },
@@ -25070,7 +25220,7 @@
         ]
       },
       "post": {
-        "description": "A new token, in this answer only (``token``); needs a recent password, like saving a key. ``family`` is\n``assistant`` (default) or ``device``. An assistant token is read-only unless ``can_log`` (default false) also lets it\nsave food and recipes (``assistant:log``) and ``can_prefs`` (default false) lets it remember tastes (``assistant:prefs``).\nA device token's scopes are always exactly ``[\"body:write\"]``: the request cannot choose them (``can_log`` and\n``can_prefs`` are refused for it). A device token's answer also has ``pair_url``, the link the QR code for the iPhone app\nholds (:mod:`app.pairing`), or null when this server's address is not ``https://`` and a host.",
+        "description": "A new token, in this answer only (``token``); needs a recent password, like saving a key. ``family`` is\n``assistant`` (default) or ``device``. An assistant token is read-only unless ``can_log`` (default false) also lets it\nsave food and recipes (``assistant:log``) and ``can_prefs`` (default false) lets it remember tastes (``assistant:prefs``).\nA device token's ``kind`` is ``shortcut`` (default; scopes ``[\"body:write\"]``) or ``app`` (``[\"body:write\", \"app:add\"]``,\ndesign note 38 §5.5); the request cannot name scopes (``can_log`` and ``can_prefs`` are refused for it, and ``kind`` for an\nassistant token). A device token's answer also has ``pair_url``, the link the QR code for the iPhone app\nholds (:mod:`app.pairing`), or null when this server's address is not ``https://`` and a host.",
         "operationId": "me_create_my_token",
         "requestBody": {
           "content": {
@@ -25178,7 +25328,7 @@
     },
     "/api/me/tokens/{token_id}/body-rows": {
       "delete": {
-        "description": "Delete every weight and blood pressure reading this person's device token sent (rows whose ``api_token_id`` is the token) and\nnothing else: a row the person typed, imported, or edited afterwards (an edit makes it theirs) stays. The token must be one of\nthe person's own **device** tokens; any other id (another person's, an assistant token, one already purged) is a 404. Works for a\nrevoked or expired token that is still in the list. Audited as ``body.token_rows_deleted`` with the counts. Answers\n``{\"deleted\": {\"weights\": n, \"readings\": n}}``.",
+        "description": "Delete every weight and blood pressure reading this person's device token sent (rows whose ``api_token_id`` is the token) and\nnothing else: a row the person typed, imported, or edited afterwards (an edit makes it theirs) stays. For an **app** token\n(design note 38 §5.5) also the food log entries, lab results and symptoms it added, and the own foods it added that nothing of\nthe person's uses any more (:func:`app.app_sync.delete_sent`); rows it found already here stay. The token must be one of the\nperson's own **device** tokens; any other id (another person's, an assistant token, one already purged) is a 404. Works for a\nrevoked or expired token that is still in the list. Audited as ``body.token_rows_deleted`` with the counts. Answers\n``{\"deleted\": {\"weights\": n, \"readings\": n}}``, plus ``entries``, ``foods``, ``labs`` and ``symptoms`` for an app token.",
         "operationId": "me_delete_token_rows",
         "parameters": [
           {
@@ -29604,6 +29754,130 @@
           }
         },
         "summary": "Not offered: GET only (405)",
+        "tags": [
+          "push"
+        ]
+      }
+    },
+    "/push/v1/sync": {
+      "delete": {
+        "description": "``405`` for every method but GET and POST.",
+        "operationId": "push_sync_delete_not_allowed",
+        "responses": {
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          }
+        },
+        "summary": "Not offered: GET and POST only (405)",
+        "tags": [
+          "push"
+        ]
+      },
+      "get": {
+        "description": "``{\"ok\": true}`` when the token may use ``POST /push/v1/sync``: the same check, the same generic ``401``, and one request of\nthe same 60 an hour. Nothing is read or stored but the token's last use.",
+        "operationId": "push_sync_check",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncCheck"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/BearerUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "deviceToken": []
+          }
+        ],
+        "summary": "Test an app token without sending anything",
+        "tags": [
+          "push"
+        ]
+      },
+      "patch": {
+        "description": "``405`` for every method but GET and POST.",
+        "operationId": "push_sync_patch_not_allowed",
+        "responses": {
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          }
+        },
+        "summary": "Not offered: GET and POST only (405)",
+        "tags": [
+          "push"
+        ]
+      },
+      "post": {
+        "description": "The route the iPhone app posts its new rows to; the module docstring has the whole contract.",
+        "operationId": "push_sync",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SyncResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/BearerUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "deviceToken": []
+          }
+        ],
+        "summary": "Add rows the iPhone app made (app token, add only, counts only)",
+        "tags": [
+          "push"
+        ]
+      },
+      "put": {
+        "description": "``405`` for every method but GET and POST.",
+        "operationId": "push_sync_put_not_allowed",
+        "responses": {
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          }
+        },
+        "summary": "Not offered: GET and POST only (405)",
         "tags": [
           "push"
         ]

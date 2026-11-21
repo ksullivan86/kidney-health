@@ -73,6 +73,7 @@ ACTIONS: set[str] = {
     "api_token.created",  # access tokens of both families, assistant and device (app/auth/api_tokens.py)
     "api_token.revoked",
     "body.token_rows_deleted",  # "Delete what it sent": a device token's weights and readings removed (app/push.py); counts only
+    "app.rows_added",  # the iPhone app added rows with an app token (app/app_sync.py, design note 38 §5.5); counts and the token name only
     "assistant.food_logged",  # a token with assistant:log saved food or a recipe (app/mcp/tools.py)
     "assistant.recipe_saved",
     "assistant.preference_set",  # a token with assistant:prefs remembered a taste (app/mcp/preference_tool.py)
@@ -142,6 +143,7 @@ USER_VISIBLE_ACTIONS = frozenset(
         "api_token.created",
         "api_token.revoked",
         "body.token_rows_deleted",
+        "app.rows_added",
         "assistant.food_logged",
         "assistant.recipe_saved",
         "assistant.preference_set",

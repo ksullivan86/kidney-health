@@ -51,6 +51,8 @@ import test_migration_m032
 import test_reminders
 import test_migration_m035
 import test_care_notes
+import test_app_sync
+import test_migration_m037
 from ai_support import FakeProvider, attach, chat
 from conftest import DAY, HTTPS_URL, TestClient, add_user, find_food, sign_in
 from app.config import AiEnv
@@ -133,6 +135,10 @@ MATRIX: dict[str, tuple[str, ...]] = {
                    "test_oidc.test_deleting_the_account_deletes_its_links"),
     "email_tokens": ("test_reset_email.test_a_link_confirms_only_its_own_account_and_goes_with_it",  # step 34 (note 34)
                      "test_reset_email.test_a_link_for_an_older_address_does_not_confirm_a_newer_one"),
+    "app_sync_rows": ("test_app_sync.test_another_persons_rows_and_client_ids_never_mix",  # the iPhone app's rows, step 37 (note 38)
+                      "test_app_sync.test_deleting_the_account_deletes_its_receipts_and_only_its_own",
+                      "test_app_sync.test_where_each_token_works",
+                      "test_migration_m037.test_a_step_36_database_gains_the_table_checks_and_cascades"),
     "reminders": ("test_reminders.test_another_persons_ids_are_404",  # reminders by phone notification, step 35 (note 35)
                   "test_reminders.test_deleting_the_account_deletes_its_reminders_and_devices",
                   "test_migration_m035.test_a_step_34_database_gains_the_tables_check_and_cascade"),
@@ -176,7 +182,8 @@ MODULES = {"test_reset_email": test_reset_email, "test_isolation": test_isolatio
            "test_whoop": test_whoop, "test_activity": test_activity, "test_migration_m030": test_migration_m030,
            "test_care_team_full": test_care_team_full, "test_migration_m031": test_migration_m031,
            "test_list_sync": test_list_sync, "test_migration_m032": test_migration_m032,
-           "test_reminders": test_reminders, "test_migration_m035": test_migration_m035, "test_care_notes": test_care_notes}
+           "test_reminders": test_reminders, "test_migration_m035": test_migration_m035, "test_care_notes": test_care_notes,
+           "test_app_sync": test_app_sync, "test_migration_m037": test_migration_m037}
 
 
 def _tables_with_people(conn: sqlite3.Connection) -> dict[str, list[str]]:

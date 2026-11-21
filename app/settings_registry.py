@@ -1007,7 +1007,8 @@ register(
         env="PUSH_ENABLED",
         label="Let people send weights and blood pressure from a phone shortcut",
         help="Off by default. When on, each person can make tokens in Settings → Account → Your data → Phone shortcuts; a shortcut on their phone "
-        "can use one to add weights and blood pressure readings to that person's own log. A token can only add: it cannot "
+        "can use one to add weights and blood pressure readings to that person's own log, and a token made for the iPhone app can "
+        "also add the food, lab results and symptoms logged on the phone. A token can only add: it cannot "
         "read or change anything. While off, no token can be made or used; turned on again, tokens that have not expired "
         "or been revoked work again.",
     ),

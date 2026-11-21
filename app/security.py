@@ -21,7 +21,7 @@ the outermost middleware comes first:
 6. :class:`CsrfMiddleware` - ``Sec-Fetch-Site``/``Origin`` checks on unsafe methods, the required
    ``X-Requested-With: kidney-health`` on unsafe ``/api`` requests, and no cross-site or same-site
    reads of ``/api`` at all. The bearer-only paths (:data:`BEARER_PATHS`, exactly ``/mcp``,
-   ``/push/v1/body`` and ``/push/v1/check``) get only the ``Origin`` check, on every method. One exception to the
+   ``/push/v1/body``, ``/push/v1/check`` and ``/push/v1/sync``) get only the ``Origin`` check, on every method. One exception to the
    cross-site read rule: the sign-in provider's way back (:data:`PROVIDER_RETURN_RE`), a top-level ``GET`` navigation only
    (design note 24 §3; its own state and cookie checks stop a forged one).
 
@@ -109,10 +109,11 @@ STATIC_HEADERS: tuple[tuple[str, str], ...] = (
 
 UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 # Bearer-only paths, matched exactly (never as a prefix): the assistant's MCP endpoint (app/mcp; ARCHITECTURE.md
-# "Assistant MCP server"), the phone shortcuts' ingest route and its token check (app/push.py; "Device tokens and /push/v1"). They never
+# "Assistant MCP server"), the phone shortcuts' ingest route and its token check (app/push.py; "Device tokens and /push/v1") and the
+# iPhone app's route for the rows it made (app/app_sync.py, design note 38 §5.5). They never
 # read a session cookie, so the cookie CSRF checks (Sec-Fetch-Site, X-Requested-With) do not apply; the Origin rule does,
 # on every method (the MCP transport's DNS-rebinding rule; a page on another site cannot post to /push/v1/body either).
-BEARER_PATHS = frozenset({"/mcp", "/push/v1/body", "/push/v1/check"})
+BEARER_PATHS = frozenset({"/mcp", "/push/v1/body", "/push/v1/check", "/push/v1/sync"})
 # Where a sign-in provider sends the browser back (design note 24 §3): the provider is another site, so the browser says
 # Sec-Fetch-Site: cross-site (or same-site, for a provider on a sibling host). Allowed only as a top-level GET navigation, matched
 # exactly (the first provider at /api/auth/oidc/callback, a named one at .../callback/<name>, note 24 §13); the route itself

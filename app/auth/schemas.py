@@ -118,6 +118,7 @@ class UserDeleteBody(_Body):
 ExpiryDays = Literal[30, 90, 365]
 Never = Literal["never"]  # a token that never expires (design note 24 §13), when the server allows it
 TokenFamily = Literal["assistant", "device"]
+DeviceKind = Literal["shortcut", "app"]  # a device token for a phone Shortcut (weights and blood pressure) or the iPhone app (note 38 §5.5)
 TOKEN_NAME_MAX = 60
 
 
@@ -126,7 +127,9 @@ class TokenCreate(BaseModel):
     way to ask for ``assistant:log`` (it saves food and recipes) and ``can_prefs`` the one way to ask for ``assistant:prefs``
     (it remembers tastes: likes and dislikes); ``assistant:read`` is always included, and neither choice gives the other.
     ``family`` is ``assistant`` (default, so the Assistant access screen works unchanged) or ``device`` (a phone shortcut's
-    token, whose one scope, ``body:write``, is not a choice: ``can_log`` and ``can_prefs`` are refused for it)."""
+    token). A device token's ``kind`` is ``shortcut`` (default: the one scope ``body:write``) or ``app`` (``body:write`` and
+    ``app:add``: the iPhone app may also add food, labs and symptoms; design note 38 §5.5). ``can_log`` and ``can_prefs`` are
+    refused for a device token, and ``kind: "app"`` for an assistant token."""
 
     model_config = ConfigDict(extra="forbid", str_max_length=4096)
 
@@ -135,4 +138,5 @@ class TokenCreate(BaseModel):
     can_log: bool = False
     can_prefs: bool = False
     family: TokenFamily = "assistant"
+    kind: DeviceKind | None = None
 

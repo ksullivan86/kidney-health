@@ -165,6 +165,31 @@ def test_a_closed_password_prompt_is_quiet_a_refusal_is_shown_and_a_new_token_su
 
 def test_counts_in_words():
     assert page()["counts"] == ["", "1 weight", "1 blood pressure reading", "2 weights and 3 blood pressure readings", "", ""]
+    assert page()["appCounts"] == ["1 food entry", "2 food entries and 1 lab result",
+                                   "3 food entries, 1 food of your own, 2 symptoms and 1 blood pressure reading",
+                                   "2 foods of your own and 1 weight"]
+
+
+def test_a_token_for_the_iphone_app_is_a_choice_that_says_what_it_adds():
+    app = page()["app"]
+    assert app["options"] == [["shortcut", "A Shortcut: weight and blood pressure only"],
+                              ["app", "The iPhone app: also food, lab results and symptoms"]]
+    assert app["firstKind"] == "shortcut"  # a Shortcut's token, as before, unless the person chooses the app
+    assert "A token for the Kidney Health iPhone app can also add the food, lab results and symptoms you log on the phone. " \
+           "No token can see, change or delete anything." in app["text"]
+    assert "A Shortcut token adds weight and blood pressure. An iPhone app token also adds food, lab results and symptoms." in app["text"]
+    assert app["created"] == {"name": "My iPhone", "expires_in_days": 90, "family": "device", "kind": "app"}
+    assert app["shortcutCall"] == {"name": "Scale", "expires_in_days": 90, "family": "device"}  # exactly the call it always made
+    assert "for the iPhone app" in app["list"]
+    assert "sent 3 food entries, 1 food of your own, 2 symptoms and 1 blood pressure reading" in app["list"]
+    assert app["message"] == ("Delete the 3 food entries, 1 food of your own, 2 symptoms and 1 blood pressure reading that “My iPhone” sent? "
+                              "What you typed or imported yourself here stays, and so does a food you also used yourself. This cannot be undone.")
+    assert "Deleted 3 food entries, 1 food of your own, 2 symptoms and 1 blood pressure reading" in app["toast"]
+
+
+def test_the_activity_list_says_what_the_iphone_app_added():
+    assert "'app.rows_added': 'The iPhone app added to your log'" in SETTINGS_JS
+    assert "if (ev.action === 'app.rows_added') return [pushCountsText(d), d.via ? `with “${d.via}”` : ''].filter(Boolean).join(', ');" in SETTINGS_JS
 
 
 # --------------------------------------------------------------------------- the source of the block
@@ -177,7 +202,8 @@ def test_the_block_draws_everything_through_h_and_keeps_nothing_in_the_browser()
     assert "console.warn" in BLOCK and BLOCK.count("console.") == 1  # the one place a failed first draw is reported, never a value
     assert BLOCK.count("made.token") == 2 and "unshownDevice = null; return made" in BLOCK  # read by the check and the one box; forgotten at once
     assert "const pushAddress = () => `${window.location.origin}${PUSH_PATH}`;" in BLOCK and "const PUSH_PATH = '/push/v1/body';" in BLOCK
-    assert "A.createToken({ name: text, expires_in_days: expiryValue(expiry), family: 'device' })" in BLOCK  # scopes are not the person's choice
+    assert "A.createToken({ name: text, expires_in_days: expiryValue(expiry), family: 'device', ...forApp })" in BLOCK  # scopes are not the person's choice
+    assert "const forApp = kind.value === 'app' ? { kind: 'app' } : {};" in BLOCK  # only the kind: the server sets what it may add
     assert "can_log" not in BLOCK and "scopes" not in BLOCK
     assert "Your admin has not turned this on." in BLOCK and "The preview has no server to send readings to." in BLOCK
     assert BLOCK.index("if (MOCK) {") < BLOCK.index("await A.deviceTokens()")  # the demo never asks the server
