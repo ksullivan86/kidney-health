@@ -155,6 +155,14 @@ Safety rules that do not change (CLAUDE.md):
   is kept. The phone never calls a cloud AI.
 * The 4,096-token window (F3) is small, so prompts send only what each task needs.
 
+**What was built (step 5, web side).** Describe a meal and the text of a lab report page. Meal ideas are not built yet. In device
+mode the page asks the app `{kind: 'aiStatus'}` and `{kind: 'ai', task, text}` through `KH.mock.device.lookup`. `text` is the data
+block the server would send, cleaned and escaped the same way, and the app fills it into `ai-prompts.json`, which
+`scripts/build_preview.py --device` writes from `app/ai/prompts.py`. So the prompt exists in one place. The page checks the answer's
+shape, then runs twins of the server's checks (`js/engine/aijudge.js`, `js/engine/lab_report.js`, pinned by
+`tests/data/ai_device_vectors.json`): the prefilter for lows, emergencies and dose questions before anything is asked, the name
+policy, servings, and the lab judge. The answers have the server's shape. A photo of a report is not read on the phone yet.
+
 ## 6. Safety and privacy review
 
 | Concern | Answer |

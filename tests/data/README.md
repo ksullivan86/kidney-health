@@ -33,6 +33,7 @@ Run the commands from the repository root.
 | File | Command |
 |---|---|
 | `activity_vectors.json` | `python3 tests/data/gen_activity_vectors.py` |
+| `ai_device_vectors.json` | `python3 tests/data/gen_ai_device_vectors.py` |
 | `apple_health_vectors.json` | `node tests/js/gen_apple_health_vectors.mjs` |
 | `barcode_vectors.json` | `python3 tests/data/gen_barcode_vectors.py` |
 | `body_vectors.json` | `python3 tests/data/gen_body_vectors.py` |
@@ -90,6 +91,40 @@ What a replayer must get right:
 * Only whole, positive numbers count as days; `true`, fractions, 0 and nulls do not.
 * The extra is never negative, is rounded half up to 10 kcal with whole-number arithmetic, and never passes the ceiling.
 * Only the calorie target changes; both ends of a range move by the same amount.
+
+## ai_device_vectors.json
+
+The server's checks on an AI answer, for the iPhone app's own AI (design note 38 §5.6). In device mode the page asks Apple's
+on-device model and runs these checks on its answer itself.
+
+* Server: `app/ai/features.py` (prefilter, serving amounts, the describe-a-meal judge), `app/ai/guard.py` (name policy),
+  `app/ai/chat.py` (dose and lab words), `app/ai/prompts.py` (the data in a prompt) and `app/ai/lab_report.py`.
+* Browser twins: `app/static/js/engine/aijudge.js` and `app/static/js/engine/lab_report.js` (the demo uses them in `app/static/js/mock/ai.js`).
+* Made by `tests/data/gen_ai_device_vectors.py`.
+
+Top-level keys:
+
+* `about`: where the file comes from.
+* `constants`: `refused_text`, `prompt_version`, `parse_text_chars`, `units`, `max_parse_items` and `max_lab_rows`.
+* `foods`: the food list of the fixed search the parse-meal cases use (a food matches when its name holds every word of the query).
+* `prefilter_cases`: `{text, dose_g, red_flag: boolean, dose_reason: string | null, lab_words: boolean, medicine_question: string | null,
+  output: {status, cards, ai_called} | null}`.
+* `name_policy_cases`: `{text: string | null, limit: int, output: [string | null, string | null]}`.
+* `serving_quantity_cases`: `{desc: string, output: [number, string] | null}`.
+* `servings_for_cases`: `{amount: number | null, unit: string, food: {serving_desc, serving_g}, output: number | null}`.
+* `payload_cases`: `{task: "parse_meal" | "lab_report_text", text, lines?: [string], payload: string, message: string}`. `payload` is
+  the JSON between `<data>` and `</data>`; `message` the whole user message for a provider that enforces the schema.
+* `parse_meal_cases`: `{answer: ParseMealAnswer, output: object}`.
+* `printed_date_cases`: `{text: string | null, clean: string | null, parse: [string | null, string | null]}`.
+* `numbers_in_cases`: `{text: string, numbers: [number]}`, sorted.
+* `lab_judge_cases`: `{answer: LabReportAnswer, output: object}`.
+* `lab_text_cases`: `{answer: LabReportAnswer, text: string, output: object}`.
+
+What a replayer must get right:
+
+* Python's patterns are Unicode-aware: `\w`, `\b`, `\d` and `\s` match letters and digits of every script.
+* Servings round half to even, as Python's `round()` does.
+* No case has a date near today, so "in the future" never depends on the day of the replay.
 
 ## apple_health_vectors.json
 

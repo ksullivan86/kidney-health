@@ -132,6 +132,10 @@ phone and needs no server ([design note 38][NOTE38]):
     turn it on, and sends only the words you type or the barcode you scan.
   - **Lock with Face ID or passcode**: off unless you turn it on.
   - Connecting your own server is optional.
+- On an iPhone with Apple Intelligence, **Describe a meal** and reading the text of a lab report PDF can use Apple's AI on the
+  phone. Turn it on in **Settings → AI features**. Nothing you write or read leaves the iPhone, and the questions and answers are
+  not kept. The app checks every answer, and you check each line before anything is saved. The AI never gives insulin or
+  medicine doses. On other iPhones these buttons do not appear, and everything else works.
 
 ## Updates
 

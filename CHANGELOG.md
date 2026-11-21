@@ -14,6 +14,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * In the iPhone app, Keys and services looks up more foods with your own USDA key or barcodes on Open Food Facts, each off until you
   turn it on. New weights and blood pressure readings from Apple Health go into the log on the phone. An optional Face ID or
   passcode lock covers the app when you switch away (design note 38, steps 2 and 3).
+* In the iPhone app, Describe a meal and reading the text of a lab report PDF can use Apple's AI on the phone, once you turn AI
+  features on in Settings. Nothing leaves the phone and nothing about the question or the answer is kept. The app runs the
+  server's own checks on every answer, and you check each line before saving (design note 38, step 5).
 
 ## 0.24.1 — 2026-11-20
 

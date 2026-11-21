@@ -11,6 +11,9 @@ stands in for the iPhone app's message handlers. At 375x812 light and 1280x800 d
 * the one person is not an admin, and Settings has no sign-out button and no signed-in devices list; This device says the data is
   kept on this iPhone and offers "Apple Health and server", which asks the app to open its settings;
 * an entry is added, the page reloaded: the entry is still on Today; after the save the app was handed the safety copy, which holds it;
+* the iPhone's own AI (step 5), with a stand-in for the app's model: Settings → AI features has one switch; once it is on, Add offers
+  Describe a meal, which sends the server's cleaned data to the app and shows the matches and the server's notice; a low gets the
+  Treating a low card and the model is not asked;
 * no request to any other host, no console or page error (CSP violations included), no sideways scroll.
 
 Nothing leaves the machine. Prints PASS / FAIL lines and writes ``<out>/report.json``; exit status 1 on any failure.
@@ -33,9 +36,14 @@ from playwright.sync_api import sync_playwright
 ROOT = Path(__file__).resolve().parents[2]
 OUT = Path(tempfile.gettempdir()) / "kidney-health-e2e" / "device-mode"
 RESULTS: list[dict] = []
-STUB = ("window.__kh = { copies: [], phone: [] };"
+STUB = ("window.__kh = { copies: [], phone: [], ai: [] };"
         "window.webkit = { messageHandlers: { safetyCopy: { postMessage: (t) => window.__kh.copies.push(String(t)) },"
-        " phone: { postMessage: (m) => window.__kh.phone.push(String(m)) } } };")
+        " phone: { postMessage: (m) => window.__kh.phone.push(String(m)) },"
+        " bridge: { postMessage: async (r) => {"
+        "   if (r.kind === 'aiStatus') return { ok: true, available: true, reason: null };"
+        "   if (r.kind === 'ai') { window.__kh.ai.push(r); return { ok: true, answer: { status: 'ok', items: ["
+        "     { text: '2 eggs', search: 'egg', amount: 2, unit: 'serving' }] } }; }"
+        "   return { error: 'bad_request', message: 'not in this walk' }; } } } };")
 
 
 def check(name: str, ok: bool, detail: str = "") -> None:
@@ -89,11 +97,44 @@ def walk(browser, base: str, width: int, height: int, scheme: str) -> None:
     page.wait_for_selector("#view-today:not([hidden])", timeout=30000)
     page.wait_for_timeout(800)
     check(f"[{tag}] the entry survives a reload", food["name"].split(",")[0].lower() in page.locator("#view-today").inner_text().lower())
+    ai_walk(page, base, tag)
     over = page.evaluate("document.documentElement.scrollWidth > window.innerWidth + 1")
     check(f"[{tag}] no sideways scroll", not over)
     check(f"[{tag}] no request to another host", not others, "; ".join(others[:3]))
     check(f"[{tag}] no console or page error", not errors, "; ".join(errors[:3]))
     ctx.close()
+
+
+def ai_walk(page, base: str, tag: str) -> None:
+    """Design note 38 §5.6: describe a meal on the iPhone's own model (a stand-in answers for it)."""
+    page.goto(f"{base}/index.html#settings")
+    page.wait_for_selector("#view-settings:not([hidden])", timeout=30000)
+    page.wait_for_selector("#set-ai-slot input[type=checkbox]", timeout=30000)
+    text = page.locator("#set-ai-slot").inner_text()
+    check(f"[{tag}] AI settings say it runs on this iPhone", "runs on this iPhone" in text, text[:160])
+    page.locator("#set-ai-slot input[type=checkbox]").check()
+    page.wait_for_timeout(500)
+    page.goto(f"{base}/index.html#add")
+    page.wait_for_selector("#view-add:not([hidden])", timeout=30000)
+    button = page.get_by_role("button", name="Describe a meal (AI)")
+    button.wait_for(timeout=30000)
+    button.click()
+    page.wait_for_selector("#sheet-ai[open] textarea", timeout=10000)
+    page.fill("#sheet-ai textarea", "2 eggs, scrambled")
+    page.get_by_role("button", name="Find foods").click()
+    page.wait_for_selector("#sheet-ai .ai-parse-item", timeout=10000)
+    results = page.locator("#sheet-ai .ai-results").inner_text()
+    sent = page.evaluate("window.__kh.ai")
+    check(f"[{tag}] describe a meal asks the app with the server's data",
+          sent[-1:] == [{"kind": "ai", "task": "parse_meal", "text": '{"text":"2 eggs, scrambled"}'}], json.dumps(sent)[:160])
+    check(f"[{tag}] the matches and the server's notice are shown",
+          "egg" in results.lower() and "Nothing is logged until you add it" in results, results[:160])
+    page.fill("#sheet-ai textarea", "my sugar is 55")
+    page.get_by_role("button", name="Find foods").click()
+    page.wait_for_selector("#sheet-ai .ai-card-alert", timeout=10000)
+    check(f"[{tag}] a low gets the Treating a low card, and the model is not asked",
+          "Treating a low" in page.locator("#sheet-ai .ai-results").inner_text() and len(page.evaluate("window.__kh.ai")) == len(sent))
+    page.keyboard.press("Escape")
 
 
 def main(argv: list[str] | None = None) -> int:
