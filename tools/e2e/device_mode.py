@@ -11,6 +11,8 @@ stands in for the iPhone app's message handlers. At 375x812 light and 1280x800 d
 * the one person is not an admin, and Settings has no sign-out button and no signed-in devices list; This device says the data is
   kept on this iPhone and offers "Apple Health and server", which asks the app to open its settings;
 * an entry is added, the page reloaded: the entry is still on Today; after the save the app was handed the safety copy, which holds it;
+* This device → Sending to your server: Send now hands the new entry to the stand-in app once, and the section names the server and
+  says that changes after sending are not sent;
 * no request to any other host, no console or page error (CSP violations included), no sideways scroll.
 
 Nothing leaves the machine. Prints PASS / FAIL lines and writes ``<out>/report.json``; exit status 1 on any failure.
@@ -33,11 +35,19 @@ from playwright.sync_api import sync_playwright
 ROOT = Path(__file__).resolve().parents[2]
 OUT = Path(tempfile.gettempdir()) / "kidney-health-e2e" / "device-mode"
 RESULTS: list[dict] = []
-STUB = ("window.__kh = { copies: [], phone: [] };"
+# The app's side of sending to a server (step 4): a paired server whose POST /push/v1/sync takes every row it is sent.
+STUB = ("window.__kh = { copies: [], phone: [], sync: [] };"
+        "window.__kh.answer = (text) => { const b = JSON.parse(text); window.__kh.sync.push(b);"
+        " const n = (k) => (b[k] || []).length; const kinds = ['foods', 'entries', 'labs', 'symptoms', 'weights', 'readings'];"
+        " const added = Object.fromEntries(kinds.map((k) => [k, n(k)])); const none = Object.fromEntries(kinds.map((k) => [k, 0]));"
+        " return { ok: true, status: 200, json: JSON.stringify({ added, already_there: none, skipped: { food_not_found: 0, day_full: 0 } }) }; };"
         "window.webkit = { messageHandlers: { safetyCopy: { postMessage: (t) => window.__kh.copies.push(String(t)) },"
         " phone: { postMessage: (m) => window.__kh.phone.push(String(m)) },"
         " bridge: { postMessage: async (r) => r.kind === 'services' ? { ok: true, off: false, usda: false, scan: true }"
-        " : r.kind === 'scanBarcode' ? { ok: true, code: '3017624010701', format: 'ean_13' } : { error: 'off_off', message: 'off' } } } };")
+        " : r.kind === 'scanBarcode' ? { ok: true, code: '3017624010701', format: 'ean_13' }"
+        " : r.kind === 'serverInfo' ? { ok: true, paired: true, server: 'food.example.org' }"
+        " : r.kind === 'serverSyncCheck' ? { ok: true, status: 200, json: '{\"ok\": true}' }"
+        " : r.kind === 'serverSync' ? window.__kh.answer(r.body) : { error: 'off_off', message: 'off' } } } };")
 
 
 def check(name: str, ok: bool, detail: str = "") -> None:
@@ -104,6 +114,21 @@ def walk(browser, base: str, width: int, height: int, scheme: str) -> None:
         page.wait_for_timeout(100)
     copy = json.loads(page.evaluate("window.__kh.copies[window.__kh.copies.length - 1]"))
     check(f"[{tag}] the safety copy holds the entry", len(copy.get("log_entries", [])) == 1 and copy.get("format") == "kidney-health-export")
+    # Sending to your server (step 4): Send now hands the new entry to the app for the paired server, and the section says so.
+    page.click("#set-server-sync-now")
+    for _ in range(100):
+        if page.evaluate("window.__kh.sync.length") and "Nothing" in page.locator("#set-server-sync").inner_text():
+            break
+        page.wait_for_timeout(100)
+    sent = page.evaluate("window.__kh.sync")
+    entries = [e for b in sent for e in b.get("entries", [])]
+    check(f"[{tag}] Send now sends the new entry once", len(entries) == 1 and "builtin" in entries[0]["food"], json.dumps(sent)[:160])
+    text = page.locator("#set-device-body").inner_text()
+    check(f"[{tag}] the section says what was sent and what is not", "food.example.org" in text and "Waiting to be sent" in text
+          and "after a row was sent are not sent" in text, text[:200])
+    page.click("#set-server-sync-now")
+    page.wait_for_timeout(600)
+    check(f"[{tag}] a row is sent once", len([e for b in page.evaluate("window.__kh.sync") for e in b.get("entries", [])]) == 1)
     # The native barcode scanner (owner, 2026-11-21): the Scan sheet offers Apple's scanner, and its code goes to the usual look-up.
     page.goto(f"{base}/index.html#add")
     page.wait_for_selector("#view-add:not([hidden])", timeout=30000)
