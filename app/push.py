@@ -141,29 +141,34 @@ def parse_json(body: bytes) -> Any:
         raise ValueError(str(exc)) from None
 
 
-async def _read_capped(request: Request) -> bytes:
-    """The request body, or a 413 as soon as it is known to pass :data:`MAX_BODY_BYTES` (a declared ``Content-Length`` before
-    anything is read; a body that streams, as it passes the cap)."""
+async def read_capped(request: Request, limit: int = MAX_BODY_BYTES) -> bytes:
+    """The request body, or a 413 as soon as it is known to pass ``limit`` (a declared ``Content-Length`` before anything is
+    read; a body that streams, as it passes the cap). :mod:`app.app_sync` reads its body with it too, with its own limit."""
     declared = request.headers.get("content-length")
     if declared is not None:
         try:
             size = int(declared)
         except ValueError:
             raise ApiProblem(400, "Invalid Content-Length header") from None
-        if size > MAX_BODY_BYTES:
-            raise _too_large()
+        if size > limit:
+            raise _too_large(limit)
     chunks: list[bytes] = []
     total = 0
     async for chunk in request.stream():
         total += len(chunk)
-        if total > MAX_BODY_BYTES:
-            raise _too_large()
+        if total > limit:
+            raise _too_large(limit)
         chunks.append(chunk)
     return b"".join(chunks)
 
 
-def _too_large() -> ApiProblem:
-    return ApiProblem(413, f"The request is too large (at most {MAX_BODY_BYTES // 1024} KiB).")
+async def _read_capped(request: Request) -> bytes:
+    """The body of ``POST /push/v1/body``: at most :data:`MAX_BODY_BYTES`."""
+    return await read_capped(request, MAX_BODY_BYTES)
+
+
+def _too_large(limit: int = MAX_BODY_BYTES) -> ApiProblem:
+    return ApiProblem(413, f"The request is too large (at most {limit // 1024} KiB).")
 
 
 def _is_json_type(request: Request) -> bool:
@@ -623,25 +628,43 @@ TokenId = Annotated[int, Path(ge=1, le=api_tokens.MAX_ROW_ID)]
 class DeletedRows(BaseModel):
     weights: int
     readings: int
+    # An app token's other rows (scope app:add, app/app_sync.py); left out for a shortcut token, whose answer is as before.
+    entries: int | None = None
+    foods: int | None = None
+    labs: int | None = None
+    symptoms: int | None = None
 
 
 class DeleteRowsResult(BaseModel):
     deleted: DeletedRows
 
 
-@api_router.delete("/{token_id}/body-rows", response_model=DeleteRowsResult)
+@api_router.delete("/{token_id}/body-rows", response_model=DeleteRowsResult, response_model_exclude_none=True)
 def delete_token_rows(token_id: TokenId, request: Request, user: CurrentUser,
                       conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     """Delete every weight and blood pressure reading this person's device token sent (rows whose ``api_token_id`` is the token) and
-    nothing else: a row the person typed, imported, or edited afterwards (an edit makes it theirs) stays. The token must be one of
-    the person's own **device** tokens; any other id (another person's, an assistant token, one already purged) is a 404. Works for a
+    nothing else: a row the person typed, imported, or edited afterwards (an edit makes it theirs) stays. For an **app** token
+    (design note 38 §5.5) also the food log entries, lab results and symptoms it added, and the own foods it added that nothing of
+    the person's uses any more (:func:`app.app_sync.delete_sent`); rows it found already here stay. The token must be one of the
+    person's own **device** tokens; any other id (another person's, an assistant token, one already purged) is a 404. Works for a
     revoked or expired token that is still in the list. Audited as ``body.token_rows_deleted`` with the counts. Answers
-    ``{"deleted": {"weights": n, "readings": n}}``."""
+    ``{"deleted": {"weights": n, "readings": n}}``, plus ``entries``, ``foods``, ``labs`` and ``symptoms`` for an app token."""
     row = conn.execute("SELECT id, scopes FROM api_tokens WHERE id = ? AND user_id = ?", (token_id, user.id)).fetchone()
     if row is None or api_tokens.family_of_scopes(row["scopes"]) != api_tokens.DEVICE:
         raise HTTPException(status_code=404, detail="token not found")
-    weights = conn.execute("DELETE FROM weights WHERE user_id = ? AND api_token_id = ?", (user.id, token_id)).rowcount or 0
-    readings = conn.execute("DELETE FROM blood_pressures WHERE user_id = ? AND api_token_id = ?", (user.id, token_id)).rowcount or 0
-    audit(conn, user.id, "body.token_rows_deleted", "api_token", token_id, ip=request_ip(request), weights=weights, readings=readings)
-    conn.commit()
-    return {"deleted": {"weights": int(weights), "readings": int(readings)}}
+    begin_immediate(conn)
+    try:
+        extra: dict[str, int] = {}
+        if api_tokens.kind_of_scopes(row["scopes"]) == "app":
+            from .app_sync import delete_sent  # schema step 37
+
+            extra = delete_sent(conn, user.id, token_id)
+        weights = conn.execute("DELETE FROM weights WHERE user_id = ? AND api_token_id = ?", (user.id, token_id)).rowcount or 0
+        readings = conn.execute("DELETE FROM blood_pressures WHERE user_id = ? AND api_token_id = ?", (user.id, token_id)).rowcount or 0
+        counts = {"weights": int(weights), "readings": int(readings), **extra}
+        audit(conn, user.id, "body.token_rows_deleted", "api_token", token_id, ip=request_ip(request), **counts)
+        conn.commit()
+    except BaseException:
+        conn.rollback()
+        raise
+    return {"deleted": counts}

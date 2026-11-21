@@ -54,6 +54,8 @@ BEARER_OPERATIONS: dict[tuple[str, str], str] = {
     ("post", "/mcp"): ASSISTANT_TOKEN,
     ("post", "/push/v1/body"): DEVICE_TOKEN,
     ("get", "/push/v1/check"): DEVICE_TOKEN,
+    ("post", "/push/v1/sync"): DEVICE_TOKEN,  # an app token (scope app:add, design note 38 §5.5)
+    ("get", "/push/v1/sync"): DEVICE_TOKEN,
 }
 # The stubs that answer 405 for the methods a bearer route does not offer. ``/mcp`` answers 404 first while ``assistant.enabled`` is off.
 NOT_ALLOWED_SUFFIX = "_not_allowed"
@@ -78,7 +80,7 @@ CONFLICT: frozenset[str] = frozenset({
     "list_sync_test_list_sync", "list_sync_send",
 })
 UNSUPPORTED_MEDIA: frozenset[str] = frozenset({
-    "vision_read_label", "vision_plate", "vision_read_lab_report", "ai_transcribe", "me_import_my_data", "push_body",
+    "vision_read_label", "vision_plate", "vision_read_lab_report", "ai_transcribe", "me_import_my_data", "push_body", "push_sync",
 })
 RATE_LIMITED: frozenset[str] = frozenset({
     "auth_login", "auth_setup", "auth_register", "auth_reset_info", "auth_reset", "auth_reauth",
@@ -86,7 +88,7 @@ RATE_LIMITED: frozenset[str] = frozenset({
     "admin_set_shared_key", "admin_probe_ai_provider", "admin_probe_voice", "ai_probe_my_provider",
     "body_create_weights", "body_create_readings", "barcode_lookup", "foods_usda_search", "foods_usda_import",
     "ai_next_meal", "ai_parse_meal", "ai_chat", "ai_transcribe", "vision_read_label", "vision_plate", "vision_read_lab_report",
-    "mcp_post", "push_body", "push_check", "me_enable_totp",
+    "mcp_post", "push_body", "push_check", "push_sync", "push_sync_check", "me_enable_totp",
     "me_passkey_creation_options", "auth_passkey_request_options", "auth_passkey_sign_in", "auth_passkey_reauth_options",
     "auth_passkey_reauth", "shared_share_link_info", "shared_accept_share_link", "me_invite_by_username",
     "shared_send_suggestion", "shared_write_note",
@@ -293,9 +295,10 @@ def _security_schemes() -> dict[str, Any]:
             "scheme": "bearer",
             "bearerFormat": f"{brand.DEVICE_TOKEN_PREFIX} followed by 43 characters",
             "description": (
-                f"A device token (`Authorization: Bearer {brand.DEVICE_TOKEN_PREFIX}...`), made in Settings, Phone shortcuts, with the one scope `body:write`. It works only at "
-                "`POST /push/v1/body` (and `GET /push/v1/check`, which tests it), only while the instance switch `push.enabled` is on, and it can add "
-                "weights and blood pressure readings and read nothing. No cookie is read there."
+                f"A device token (`Authorization: Bearer {brand.DEVICE_TOKEN_PREFIX}...`), made in Settings, Phone shortcuts. A shortcut token has the one scope "
+                "`body:write` and works only at `POST /push/v1/body` (and `GET /push/v1/check`, which tests it), where it adds weights and blood pressure "
+                "readings. An app token also has `app:add` and also works at `POST /push/v1/sync` (and `GET /push/v1/sync`, which tests it), where the "
+                "iPhone app adds the rows it made. Both work only while the instance switch `push.enabled` is on and read nothing. No cookie is read there."
             ),
         },
     }
@@ -419,7 +422,7 @@ def _document_operation(op: dict[str, Any], method: str, path: str, facts: Facts
 
     for status, name in _statuses(method, path, opid, facts, had_validation).items():
         responses.setdefault(status, _ref_response(name))
-    if opid == "push_body":
+    if opid in ("push_body", "push_sync"):
         responses.setdefault("400", _ref_response("BadRequest"))  # raw body: no FastAPI validation, the route's own strict reader
     if opid == "mcp_post":
         responses.setdefault("400", {"description": "The message is not one JSON-RPC 2.0 request object.",

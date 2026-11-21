@@ -123,7 +123,11 @@ def test_scopes_of_the_two_families_never_mix():
     with pytest.raises(ValueError):
         api_tokens.new_token("phone")
     assert api_tokens.new_token("device").startswith("khd_") and api_tokens.new_token().startswith("kha_")
-    assert api_tokens.DEVICE_SCOPES == ("body:write",) and api_tokens.ALL_SCOPES == (*api_tokens.SCOPES, "body:write")
+    # The iPhone app's token (design note 38 §5.5) adds app:add, which implies body:write and nothing of the assistant's.
+    assert api_tokens.SHORTCUT_SCOPES == ("body:write",) and api_tokens.APP_SCOPES == ("body:write", "app:add")
+    assert api_tokens.DEVICE_SCOPES == ("body:write", "app:add") and api_tokens.ALL_SCOPES == (*api_tokens.SCOPES, "body:write", "app:add")
+    assert p("app:add") == ("body:write", "app:add") and p("app:add assistant:read") == () and p("assistant:log app:add") == ()
+    assert api_tokens.family_of_scope("app:add") == "device"
 
 
 def test_a_row_that_mixes_scopes_or_lies_about_its_prefix_opens_nothing(admin):

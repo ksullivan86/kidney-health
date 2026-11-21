@@ -323,7 +323,7 @@ reads are refused, all with `403` (one exception: a top-level `GET` navigation t
 `security.PROVIDER_RETURN_RE`, a sign-in provider's way back; "Sign-in with a provider" below); bodies over `MAX_BODY_BYTES` are `413`; `/api` responses are
 `Cache-Control: no-store`; `/docs` and `/openapi.json` exist only with `ENABLE_API_DOCS=true` (the checked-in
 `docs/api/openapi.json` needs neither: "The API document and `GET /api/meta`" below). The one
-bearer-only paths, exactly `/mcp`, `/push/v1/body` and `/push/v1/check` (`security.BEARER_PATHS`, "Assistant MCP server" and "Device tokens
+bearer-only paths, exactly `/mcp`, `/push/v1/body`, `/push/v1/check` and `/push/v1/sync` (`security.BEARER_PATHS`, "Assistant MCP server" and "Device tokens
 and `/push/v1`" below), skip the cookie checks (`X-Requested-With`, `Sec-Fetch-Site`: they never read a cookie) but answer
 `403` to a foreign `Origin` on every method.
 
@@ -873,6 +873,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | 34 | `m034_reset_email.py` | password reset by email (note 34) | `users.email` (TEXT, NULL, at most 320 characters, stored lower case) and `users.email_confirmed_at`; unique index `users_email_confirmed` on `email` for confirmed addresses only (an address typed but not confirmed blocks nobody); `email_tokens` (id, user_id `ON DELETE CASCADE`, the address it was sent to, SHA-256 of the verifier, 24 h, single use): the confirmation links, in their own table because `auth_tokens.purpose` has a CHECK. Every existing account starts without an address. |
 | 35 | `m035_reminders.py` | reminders by phone notification (note 35) | two new tables, both `user_id` `ON DELETE CASCADE`: `push_subscriptions` (`endpoint` UNIQUE, `p256dh`, `auth` (base64url), `user_agent`, `created_at`, `last_ok_at`, `last_error`) and `reminders` (`kind` CHECK `log_meal`, `plan_tomorrow` or `weigh_in`; `meal` CHECK the four meals or NULL; `time_local` `HH:MM`; `days` bitmask 1–127, bit 0 Monday; `time_zone` (IANA, `''` = the server's time); `enabled`; `created_at`; `last_sent_on`). Nothing else changes. |
 | 36 | `m036_care_notes.py` | notes from the Care team (note 37 §8) | `shares` and `care_invites` each gain `may_note` (`INTEGER NOT NULL DEFAULT 0 CHECK (… IN (0, 1))`); every existing share starts with it off and the `role` column stays (a Clinician is stored `viewer`). `shares.view_hours` (TEXT, JSON `{hour, areas, last}`): the hourly look rows of a share with notes on (note 37 §6), a counter like `helper_changes`. New table `care_notes` (`owner_user_id` `ON DELETE CASCADE`; `author_user_id` and `share_id` `ON DELETE SET NULL`, so the person keeps a note when the author's account goes; `author_name`; `area` one of the five or NULL; `about_date`; `body` 1 to 1,000 characters; `version`, `created_at`, `edited_at`, `read_at`; never the same person on both sides; an edit never after the read). Indexes on the owner, the share and the author. It does not use step 35's tables, so it runs the same after 34 or 35. |
+| 37 | `m037_app_sync.py` | the iPhone app sends to a server (note 38 §5.5, step 4) | New table `app_sync_rows`: one receipt for each row the iPhone app sent with an app token (`POST /push/v1/sync`). `user_id` `ON DELETE CASCADE`; `api_token_id` `ON DELETE SET NULL` (a purged token keeps its receipts); `kind` CHECK `food`, `entry`, `lab`, `symptom`, `weight` or `reading`; `client_id` (36 characters, the phone's UUID); `row_id` (the row in that kind's table; no foreign key, and every one of those tables uses `AUTOINCREMENT`, so an id is never reused); `added` CHECK 0 or 1 (1: this token added the row; 0: it was already here); `created_at`. `UNIQUE (user_id, kind, client_id)`. Indexes on `(api_token_id, created_at)` and `(user_id, kind, row_id)`. Nothing else changes; not in the export ("Device tokens and `/push/v1`" below). |
 | 23 | `m023_passkeys.py` | passkeys (note 18) | `passkeys` (one row per passkey: `credential_id` BLOB, unique, 1 to 1,023 bytes; `public_key`, the COSE key as sent; `alg`; `user_handle`, 32 random bytes shared by one person's passkeys; `sign_count`; `name`; `backed_up`; `created_at`; `last_used_at`). `ON DELETE CASCADE`. Nothing is sealed: a public key is not a secret. Nobody has a passkey after the upgrade. |
 
 ## Backend file ownership
@@ -893,7 +894,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | Keep my data in this browser (demo) | `app/static/js/mock/persist.js`, `mock/export.js`, `mock/import.js`, `js/views/demo_local.js`, `css/demo-local.css`, `#sheet-demo-local` and the banner button in `index.html`, `seed` and `onWrite` in `js/mock/core.js`, `FdcId` in `app/data_import.py`, `tests/data/gen_import_vectors.py`, `tests/data/import_vectors.json`, `tests/js/fake_idb.mjs`, `tests/js/demo_local_storage.mjs`, `tests/test_demo_local_ui.py`, `tests/test_demo_local_storage.py`, `tests/test_import_vectors.py`, `tools/e2e/demo_local.py`, `docs/demo.md` |
 | Visit prep | `js/engine/visitprep.js`, `js/views/visit.js`, `css/visit.css`, the `#view-visit` section and the Trends link in `index.html`, `visit` in `VIEWS` (`js/core.js`), `KH.symptoms.flagEl`, `tests/test_visit_prep_*.py`, `tests/js/visitprep_runner.mjs`, `tools/e2e/visitprep.py` (no route, no table, no server code) |
 | Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*` and `m011_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `app/mcp/**` (the MCP server, part B; `log_food` and `save_recipe`, part C) with `log.day_summary`, `log.insert_logged`, `foods.usda_search_records`, `foods.add_usda_food` and `security.BEARER_PATHS`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py`, `tests/test_migration_m011.py`, `tests/test_mcp.py`, `tests/test_mcp_write.py`, `tools/e2e/mcp_smoke.py` |
-| Phone push (design note 12) | `app/push.py` (`POST /push/v1/body`, `DELETE /api/me/tokens/{id}/body-rows`), the device family in `app/auth/api_tokens.py`, `TokenCreate.family` in `app/auth/schemas.py`, the `push.enabled` key (`app/settings_registry.py`, `js/engine/settings.js`, the "Phone shortcuts" group of `js/views/settings.js`), `app/migrations/m019_body_token.py`, `context_for`, `is_watch_source`, `known_weight_marks` / `known_reading_marks` and `via` in `app/body.py`, `shortcut` in `BodySourceKey`, `security.BEARER_PATHS`, `docs/push.md`, `tests/test_push.py`, `tests/test_device_tokens.py`, `tests/test_migration_m019.py`, `context_cases` / `watch_cases` in `tests/data/body_vectors.json` |
+| Phone push (design note 12; note 38 §5.5) | `app/push.py` (`POST /push/v1/body`, `DELETE /api/me/tokens/{id}/body-rows`), `app/app_sync.py` (`POST /push/v1/sync`), `app/migrations/m037_app_sync.py`, `tests/test_app_sync.py`, `tests/test_migration_m037.py`, the device family in `app/auth/api_tokens.py`, `TokenCreate.family` in `app/auth/schemas.py`, the `push.enabled` key (`app/settings_registry.py`, `js/engine/settings.js`, the "Phone shortcuts" group of `js/views/settings.js`), `app/migrations/m019_body_token.py`, `context_for`, `is_watch_source`, `known_weight_marks` / `known_reading_marks` and `via` in `app/body.py`, `shortcut` in `BodySourceKey`, `security.BEARER_PATHS`, `docs/push.md`, `tests/test_push.py`, `tests/test_device_tokens.py`, `tests/test_migration_m019.py`, `context_cases` / `watch_cases` in `tests/data/body_vectors.json` |
 | iPhone app pairing (design note 15 §4.3) | `app/pairing.py`, `pair_url` in `create_my_token` (`app/auth/api_tokens.py`), `brand.PAIRING_SCHEME`, `pushPairBox` in `js/views/settings.js` with `KH.twoStep.qrSvg`, `ios/KidneyHealthCore/Sources/KidneyHealthCore/Pairing.swift`, `ios/KidneyHealth-Info.plist`, `.onOpenURL` and the pairing alert in `ios/KidneyHealth/ContentView.swift`; tests `tests/test_pairing.py`, `tests/data/pairing_vectors.json`, `PairingVectorTests.swift` |
 | Read-only sharing (design note 19) | `app/sharing.py` (`/api/me/shares`, `/api/shared`, the `shared_owner(area)` check), `app/migrations/m024_shares.py`, `app/migrations/m025_share_time_limit.py`, `sharing.enabled` (`app/settings_registry.py`, `js/engine/settings.js`), the `share.*` audit actions, `shares` and `DELETE /api/admin/users/{id}/shares` in `app/auth/admin_api.py`; screens: `js/views/sharing.js` (Settings block, the `#/share/<code>` sheet, `KH.sharing.reads`), the shared mode of `js/views/visit.js`, the People badge and End sharing in `js/views/settings.js`, the demo's answers in `js/mock/auth.js`; tests `tests/test_sharing.py`, `tests/test_migration_m024.py`, `tests/test_migration_m025.py`, `tests/test_sharing_ui.py`, `tools/e2e/sharing.py` |
 | The full Care team (design note 29) | `app/sharing.py` (switches, `PRESETS`, `role_of`, `PUT /api/me/shares/{id}/switches`, the `care_*` checks, eaten food, saved meals), `app/care_suggestions.py`, `app/migrations/m031_care_team_full.py`, `meals.apply_template`, export key `care_suggestions`; screens: the switches in `js/views/sharing.js`, `js/views/careplan.js`, `js/views/suggestions.js` (`#plan-suggestions`); demo `js/mock/care.js`; tests `tests/test_care_team_full.py`, `tests/test_migration_m031.py`, `tests/data/care_vectors.json` (`gen_care_vectors.py`), `tests/js/care_demo.mjs`, `tools/e2e/sharing.py` |
@@ -1200,7 +1201,7 @@ identity items of note 01 §10. Code: `app/auth/` (`deps`, `routes`, `me`, `admi
   `POST /api/auth/{login,setup,register,reset,reset/info}`, the passkey sign-in (`POST /api/auth/passkey/options`, `POST
   /api/auth/passkey`) and the provider's routes (`GET /api/auth/oidc/start`, `GET /api/auth/oidc/callback`, `POST
   /api/auth/oidc/invite`; 404 unless sign-in with a provider is on). A bearer token is never a sign-in here: the
-  `Authorization` header is read only by the two bearer surfaces, `/mcp` and `/push/v1` (`/push/v1/body` and its check; "Assistant access tokens" and "Device tokens and `/push/v1`" below). Anonymous → `401 {"detail": "Sign in required"}`
+  `Authorization` header is read only by the two bearer surfaces, `/mcp` and `/push/v1` (`/push/v1/body` and its check, and `/push/v1/sync`; "Assistant access tokens" and "Device tokens and `/push/v1`" below). Anonymous → `401 {"detail": "Sign in required"}`
   (dependencies run before body validation, so an invalid body is still 401). Admin routes →
   `403 {"detail": "Admins only"}` for others. `tests/test_auth_coverage.py` checks every route,
   including ones hidden from the OpenAPI schema.
@@ -1335,10 +1336,10 @@ optional HIBP check (`PASSWORD_BREACH_CHECK`, off by default; the k-anonymity ra
 | `DELETE /api/me/keys/{provider}` | user *(re-auth)* | → 204 |
 | `GET /api/me/usage` | user | → `{days: 30, usage: [{provider, scope, today, last_30_days}], by_day: [...]}` |
 | `GET /api/me/activity?before=&limit=` | user | → `{events: [AuditEvent]}` (own sign-in, session, password, key and export events: events about the person's account, whoever acted, and their own actions except those on another account) |
-| `GET /api/me/tokens?family=` | user | `family` is `assistant` (default, so the Assistant access screen is unchanged) or `device` (else 400) → `{family, enabled, max_active: 5, expiry_days: [30, 90, 365, "never"], default_expiry_days: 90, never_allowed, tokens: [TokenItem]}` (`"never"` only while `tokens.allow_never_expiring` is on; a TokenItem has `never_expires`, and `expires_at: null` when it is true) for that family only; `enabled` is that family's switch (`assistant.enabled` / `push.enabled`); works while it is off. A device token's item also holds `sent: {weights, readings}` ("Assistant access tokens", "Device tokens and `/push/v1`") |
-| `POST /api/me/tokens` | user *(re-auth)* | `{name, expires_in_days?: 30\|90\|365\|"never", can_log?: bool = false, can_prefs?: bool = false, family?: "assistant"\|"device" = "assistant"}` → 201 TokenItem + `token` (the only time it is sent); `can_log` adds the scope `assistant:log` (save food and recipes) and `can_prefs` the scope `assistant:prefs` (remember tastes: `set_food_preference`), two separate choices, neither giving the other (both give `assistant:read`); both are a 400 for a device token, whose one scope `body:write` is never chosen; 409 that family's switch is off, 400 five active **in that family**, 429 after 20 in an hour (both families together) |
+| `GET /api/me/tokens?family=` | user | `family` is `assistant` (default, so the Assistant access screen is unchanged) or `device` (else 400) → `{family, enabled, max_active: 5, expiry_days: [30, 90, 365, "never"], default_expiry_days: 90, never_allowed, tokens: [TokenItem]}` (`"never"` only while `tokens.allow_never_expiring` is on; a TokenItem has `never_expires`, and `expires_at: null` when it is true) for that family only; `enabled` is that family's switch (`assistant.enabled` / `push.enabled`); works while it is off. A device token's item also holds `kind` (`shortcut` or `app`) and `sent: {weights, readings}`; an app token's `sent` also has `entries`, `foods`, `labs` and `symptoms` ("Assistant access tokens", "Device tokens and `/push/v1`") |
+| `POST /api/me/tokens` | user *(re-auth)* | `{name, expires_in_days?: 30\|90\|365\|"never", can_log?: bool = false, can_prefs?: bool = false, family?: "assistant"\|"device" = "assistant", kind?: "shortcut"\|"app"}` → 201 TokenItem + `token` (the only time it is sent); `can_log` adds the scope `assistant:log` (save food and recipes) and `can_prefs` the scope `assistant:prefs` (remember tastes: `set_food_preference`), two separate choices, neither giving the other (both give `assistant:read`); both are a 400 for a device token. A device token's `kind` is `shortcut` (default: the one scope `body:write`) or `app` (`body:write` and `app:add`, note 38 §5.5); `kind` is a 400 for an assistant token; 409 that family's switch is off, 400 five active **in that family**, 429 after 20 in an hour (both families together) |
 | `DELETE /api/me/tokens/{id}` | user | → 204 (also while the switch is off; an ended token: no change); 404 if not yours |
-| `DELETE /api/me/tokens/{id}/body-rows` | user | "Delete what it sent": → `{deleted: {weights, readings}}` after deleting every weight and reading the person's **device** token `id` sent (`api_token_id`), nothing else; works for a revoked or expired token still listed; audit `body.token_rows_deleted`; 404 if not yours, not a device token or already purged |
+| `DELETE /api/me/tokens/{id}/body-rows` | user | "Delete what it sent": → `{deleted: {weights, readings}}` after deleting every weight and reading the person's **device** token `id` sent (`api_token_id`), nothing else; for an app token also `{entries, labs, symptoms, foods}`: the rows its receipts say it added (`app_sync_rows`, `added = 1`), and its own foods that nothing of the person's uses any more; works for a revoked or expired token still listed; audit `body.token_rows_deleted`; 404 if not yours, not a device token or already purged |
 | `GET /api/me/export.zip` | user *(re-auth)* | → `application/zip` (`Content-Disposition: attachment; filename="kidney-health-<username>-<date>.zip"`, `Cache-Control: no-store`) with `export.json`, `log.csv`, `foods.csv`, `meals.csv`, `labs.csv`, `symptoms.csv`, `weights.csv`, `blood_pressure.csv`, `README.txt`; no passwords, sessions or keys |
 | `POST /api/me/import?dry_run=&merge=&replace_profile=` | user *(re-auth)* | body: the `export.json` file as `application/json` (up to `MAX_IMPORT_BYTES`, 16 MiB, for this path only) → the report below; 400 the file is refused (naming the record kind and position), 409 the account has data and `merge` was not set, 413 too large, 415 not JSON, 429 after 20 in an hour. See "Import of `export.json`" |
 
@@ -4480,9 +4481,9 @@ Same table `api_tokens`, same hash-only storage, expiry, housekeeping, `revoke_a
 | | assistant | device |
 |---|---|---|
 | prefix and pattern | `kha_` + 43 base64url characters | `khd_` + 43 base64url characters |
-| scopes | `assistant:read`; `assistant:log` and `assistant:prefs` (each implies read only) | exactly `body:write`; never the person's choice |
+| scopes | `assistant:read`; `assistant:log` and `assistant:prefs` (each implies read only) | a **shortcut** token: exactly `body:write`; an **app** token (note 38 §5.5): `body:write` and `app:add` (`app:add` implies `body:write` only). The person chooses the kind, never a scope |
 | instance switch | `assistant.enabled` (`ASSISTANT_ENABLED`) | `push.enabled` (`PUSH_ENABLED`) |
-| accepted at | `POST /mcp` | `POST /push/v1/body`, and `GET /push/v1/check` to test it |
+| accepted at | `POST /mcp` | `POST /push/v1/body`, and `GET /push/v1/check` to test it; an app token also `POST /push/v1/sync`, and `GET /push/v1/sync` to test it |
 | made in | Settings → Assistant access | Settings → Phone shortcuts |
 
 * **Families do not mix.** `authenticate(request, conn, scope)` derives the family from the scope the route asks for and, before any
@@ -4510,6 +4511,79 @@ The iPhone app's **Test connection**. The same checks as `POST /push/v1/body` up
 `BEARER_PATHS`), any method but `GET` (`405`, `Allow: GET`), the device token with `body:write` (the generic `401`; switch off: the same,
 no lookup) and the shared `push_body` hour of the token (`429`). Then `200 {"ok": true}` with `Cache-Control: no-store`. It reads no body,
 stores nothing but the token's `last_used_at`, and names nothing of the person. Tests: the check section of `tests/test_push.py`.
+
+### `POST /push/v1/sync` (the iPhone app sends what it added; note 38 §5.5, schema step 37)
+
+Code `app/app_sync.py`; guide `docs/push.md` ("Sending from the iPhone app"); tests `tests/test_app_sync.py`, `tests/test_migration_m037.py`,
+the app parts of `tests/test_push_ui.py`. The phone keeps the log (note 38 D2, local-first). When the server can be reached, the app sends
+the **new** rows it made, with an **app** token (`khd_`, scopes `body:write app:add`, made in Settings → Phone shortcuts with "What it is
+for: The iPhone app"). Edits and deletes made on the phone are never sent. The token reads nothing and cannot change or delete a row.
+
+Checks, in order: `Origin` (`403`; the path is in `BEARER_PATHS`); any method but `GET` and `POST` (`405`); a device token with `app:add`
+(the generic `401`, also for a shortcut token; switch `push.enabled` off: the same, no lookup); the token's **60 requests an hour**
+(`ratelimit` `push_sync`, its own hour, separate from `push_body`; `GET` counts too) → `429`; `Content-Type: application/json` → `415`;
+at most **256 KiB** → `413`; one JSON object, strict JSON, at most **200 rows** in all lists together, at least one, unknown fields refused
+→ `400`. Every row is checked by its normal create model, so the limits and the words are the same:
+
+| list | model | extra fields | stored as |
+|---|---|---|---|
+| `foods` | `FoodCreate` (`POST /api/foods`, with the additive scan) | `client_id`; `source`: `custom` (default), `usda` (needs `fdc_id`) or `off` (needs `gtin`); `fdc_id`; `source_url`, `source_license` (the values an import accepts) | see below |
+| `entries` | `LogCreate` (`POST /api/log`) without `food_id` | `client_id`, `food` (below), `created_at` (UTC, as the export writes it; optional) | `log.insert_entry`, nutrients recomputed from the food, `client_id` kept in `log_entries.client_id` |
+| `labs` | `LabCreate` (`POST /api/labs`) | `client_id`, `created_at` | as `POST /api/labs` |
+| `symptoms` | `SymptomCreate` (`POST /api/symptoms`) | `client_id`, `created_at` | as `POST /api/symptoms` |
+| `weights` | `WeightCreate` (`POST /api/body/weights`) | `client_id`, `source_key` (the Health key the phone holds; optional) | `source = 'shortcut'`, `api_token_id` = the token |
+| `readings` | `BloodPressureCreate` (`POST /api/body/blood-pressure`) | `client_id`, `source_key` | `source = 'shortcut'`, `api_token_id` = the token |
+
+The first problem is `400 {"detail": "entries.3.date: …", "field": "entries.3.date"}`; nothing is stored. A model-level rule has no
+field name: `labs.0: unit 'x' is not accepted for potassium; …`. A `client_id` is a UUID in its 36-character form, stored lower-case;
+two rows of one list with the same one are a `400`. `food_id` is refused: ids on the phone mean nothing here. Grams for a food whose
+serving weight does not describe its values is the log route's `400` (`entries.N.grams: …`).
+
+**Which food an entry is** (`food`, exactly one key):
+
+* `{"client_id": "<uuid>"}`: a food in `foods`, in this request or an earlier one by any app token of the same person.
+* `{"builtin": {"fdc_id": n, "name": "…"}}`: a built-in food by the keys the built-in list is kept up to date by
+  (`foods.import_builtin_foods`): `fdc_id` when it has one (the curated foods carry a negative one), else its name. `data_import.builtin_match`.
+* `{"usda": {"fdc_id": n, "name": "…", "serving_g"?: g}}` and `{"off": {"gtin": "…", "name": "…", "serving_g"?: g}}`: a shared food this
+  server already holds. One already in the person's list is used by its id or barcode alone; otherwise the shared row must agree on the
+  serving weight (when given) or the name, as an import checks it (`data_import.shared_match`), and is then linked to the person.
+
+A `foods` item with `source: usda` or `off` is the same lookup, with the import's fallback: the person's list, then the server's shared row
+(linked), else the person's own copy made from the item (`fdc_id` or `gtin` and the licence kept), as `POST /api/me/import` keeps a shared
+food this server lacks. A shared row is never made from the phone. A `custom` item is the person's own food: one identical to a food they
+already have is reused (the import's `food_key`), else it is made as `POST /api/foods` makes it.
+
+**Storing**, in one `BEGIN IMMEDIATE` transaction, after `require_current_write` checks the token again (`401` if it ended meanwhile):
+foods, entries, labs, symptoms, weights, readings. For each row:
+
+* A receipt for `(person, kind, client_id)` exists → `already_there`, nothing written. Receipts outlive the row, so a row deleted here is
+  not sent back. (A food whose row was deleted is made again when it comes with the request, and its receipt is moved to the new row.)
+* Already here by its content → `already_there`, a receipt with `added = 0`: an entry with the same `client_id` (the offline outbox), or
+  with `created_at` and the same date, meal, food, amount and status (a file the phone exported was imported here); a lab or symptom with
+  `created_at` and the same content; a weight or reading with the same `source_key`, or the same date, `HH:MM` and numbers of a row that
+  is not `manual` (the `/push/v1/body` rule; no receipt then).
+* Its food cannot be found → `skipped.food_not_found`; the day is full (30 symptoms, 20 weights, 30 readings) → `skipped.day_full`.
+  No receipt, so sending again tries again.
+* Else it is added and gets a receipt with `added = 1` and the token.
+
+At most **2,000 new receipts a token in 24 hours** (counted from the receipts): past it the request is rolled back, `429` with
+`Retry-After` (when the oldest receipt of the day is a day old). Rows already there make no receipt and do not count. One audit row
+`app.rows_added` (target the token, details `via` = its name and the counts added; in the person's activity list as "The iPhone app
+added to your log") when something was added.
+
+**The answer**, `200`, `Cache-Control: no-store`, counts only:
+`{"added": {foods, entries, labs, symptoms, weights, readings}, "already_there": {…the same keys}, "skipped": {food_not_found, day_full}}`.
+`added.foods` counts own foods made and shared foods newly linked. The log line holds the token's id and the totals, never a value.
+`GET /push/v1/sync` with the same token answers `{"ok": true}` (the app's test of an app token; one of the 60 an hour).
+
+**Receipts** (`app_sync_rows`, schema step 37) are server-local, like `api_token_id`: not in the export, removed with the account, kept
+(without the token) when a token is purged. The person sees what a token sent: `sent` in the token list (rows its receipts say it added
+that still exist; weights and readings by `api_token_id`), "from a shortcut (name)" on weights and readings, and the activity row.
+**Delete what it sent** (`DELETE /api/me/tokens/{id}/body-rows`) also deletes the app token's entries, labs and symptoms with `added = 1`,
+and its own foods with `added = 1` that no entry or saved meal of the person uses; rows found already here, and rows the person typed,
+stay. An entry the person edited here is still the token's (unlike a weight, whose edit makes it `manual`).
+
+**Not in this step**: edits and deletes from the phone, anything read back, saved meals and recipes, food preferences, settings.
 
 ### Sharing (`app/sharing.py`, design note 19)
 
@@ -4862,6 +4936,13 @@ sources (`BodySourceKey` accepts it; imported rows have no token). Rows sent by 
   in that answer only**: the page keeps it in one variable until a draw has put it on screen, shows it once with **Copy token** and the
   address to send to (`location.origin` + `/push/v1/body`, with its own Copy address), and a later draw never has it. A token that could not
   be drawn because the list failed to load is still shown. At 5 active tokens the form is replaced by one line.
+* **The iPhone app's token** (note 38 §5.5): the block also says "A token for the Kidney Health iPhone app can also add the food, lab
+  results and symptoms you log on the phone. No token can see, change or delete anything.", and the form has **What it is for**
+  (`set-push-kind`: "A Shortcut: weight and blood pressure only", the default, or "The iPhone app: also food, lab results and symptoms").
+  Choosing the app sends `kind: "app"`; a Shortcut's token is made with exactly the request it always was. An app token's row says
+  "for the iPhone app", its counts name every kind ("sent 3 food entries, 1 lab result and 2 weights"), and its Delete what it sent
+  says that what the person typed or imported stays, and so does a food they also used. The activity list says "The iPhone app added
+  to your log" with the counts and the token's name (`app.rows_added`).
 * **Revoke** asks in the page (`confirm.inline`) and says what stays; **Delete what it sent** is offered for any listed token with rows
   still in the log (an ended token too: the lost-phone order is Revoke, then Delete), asks naming the count and the token ("Delete the 1 weight
   and 1 blood pressure reading that “Morning weight” sent? Weights and readings you typed or imported yourself stay. This cannot be undone."),
@@ -4896,12 +4977,12 @@ sources (`BodySourceKey` accepts it; imported rows have no token). Rows sent by 
 | CSRF / a web page posting | no cookie is read; a cookie-only request is `401`; a foreign `Origin` is `403`; no CORS |
 | A leak through the answer or the log | counts only; the log line holds the token's id and counts |
 | Health-data rules | only weights and blood pressure; every other kind is a `400` by `extra="forbid"`; no glucose, insulin or medicines; nothing goes to an AI provider or the assistant |
+| An app token leaks (`app:add`) | add-only as above, also entries, own foods, labs and symptoms: 200 rows a request, 60 requests an hour, 2,000 new rows a day per token, every row checked by its create model; no route reads, edits or deletes; a shared food row is never made; every added row has a receipt with the token, so Delete what it sent removes it; a low treatment is never refused or warned about |
 
 ### Versioning and what comes later
 
-`/push/v1` is a promise: a breaking change gets `/push/v2` and v1 keeps working for at least one release. Later scopes (`log:write`,
-`labs:write`, `symptoms:write`) would follow the same pattern: one family or scope, one versioned route under `/push/`, add-only, counts-only
-answers. The ROADMAP's native iOS app would post HealthKit samples to this route with a `khd_` token kept in the Keychain. Its rules
+`/push/v1` is a promise: a breaking change gets `/push/v2` and v1 keeps working for at least one release. The app token's `app:add`
+(`POST /push/v1/sync`, above) followed this pattern: one scope, one versioned route under `/push/`, add-only, counts-only answers. The ROADMAP's native iOS app would post HealthKit samples to this route with a `khd_` token kept in the Keychain. Its rules
 are in the Swift package `ios/KidneyHealthCore` (design note 15 §4.1): the ranges, the context, the watch rule, the kilogram rounding, the
 `source_key` and requests of at most 50 rows. It has no dependencies and no HealthKit code, so CI tests it on Linux against
 `tests/data/body_vectors.json`, `apple_health_vectors.json`, `push_vectors.json` and `pairing_vectors.json`. The app checks each row as

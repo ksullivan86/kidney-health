@@ -15,6 +15,17 @@ the API. Security fixes are released as patch versions of the newest minor versi
   turn it on. New weights and blood pressure readings from Apple Health go into the log on the phone. An optional Face ID or
   passcode lock covers the app when you switch away (design note 38, steps 2 and 3).
 * In the iPhone app, Scan a barcode uses the iPhone's own scanner. It reads food barcodes only and then looks the code up as before.
+* A phone token can now be made for the iPhone app (design note 38, step 4, the server side). In Settings → Account → Your data →
+  Phone shortcuts, choose **What it is for: The iPhone app**. The app can then send what you add on the phone to your server: food,
+  foods you made, lab results, symptoms, weights and blood pressure. The token can only add, and sending the same row twice adds
+  nothing. **Delete what it sent** removes all of it. The route is `POST /push/v1/sync` ([docs/push.md](docs/push.md)). It uses the
+  existing switch, `PUSH_ENABLED`.
+
+### Upgrading
+
+* Schema step 37 adds one table, `app_sync_rows`: what the iPhone app sent. It changes nothing else.
+* If a reverse proxy lists the paths it passes on, add `/push/v1/sync` next to `/push/v1/body` (the commented second host name in
+  `deploy/caddy/Caddyfile.example` now passes it).
 
 ## 0.24.1 — 2026-11-20
 

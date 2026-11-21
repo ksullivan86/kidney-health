@@ -772,11 +772,51 @@ class Blocked(Exception):
         self.summary: dict[str, Any] | None = None
 
 
-def _food_key(name: str, brand: str | None, category: str | None, serving_desc: str, serving_g: float,
+def food_key(name: str, brand: str | None, category: str | None, serving_desc: str, serving_g: float,
               values: Mapping[str, Any], flags: Iterable[str], notes: str | None, gtin: str | None, hidden: bool) -> tuple:
     """What makes two own foods the same: everything the person sees (the values at the precision they are stored)."""
     return (name.casefold(), brand or "", category or "", serving_desc, round(float(serving_g), 1),
             tuple(values.get(k) for k in NUTRIENT_KEYS), tuple(sorted(flags)), notes or "", gtin or "", bool(hidden))
+
+
+def own_food_key(row: Mapping[str, Any]) -> tuple:
+    """:func:`food_key` of a stored own food."""
+    return food_key(row["name"], row["brand"], row["category"], row["serving_desc"], row["serving_g"],
+                     foods_module.raw_nutrients(row), foods_module.parse_flags(row["flags_json"]),
+                     row["kidney_notes"], row["gtin"], row["hidden"])
+
+
+def shared_match(conn: sqlite3.Connection, source: str, *, fdc_id: int | None, gtin: str | None, name: str,
+                 serving_g: float | None) -> sqlite3.Row | None:
+    """This server's shared row for the same product (the same FoodData Central id, or the same barcode for Open Food Facts),
+    so the person's link points at data this server already holds. With the food's record (``serving_g``) the serving weight
+    must agree; without it the name must. Also what ``POST /push/v1/sync`` matches the iPhone app's foods with
+    (:mod:`app.app_sync`)."""
+    if source == "usda" and fdc_id is not None:
+        row = conn.execute("SELECT * FROM foods WHERE source = 'usda' AND fdc_id = ? AND owner_user_id IS NULL ORDER BY id LIMIT 1",
+                           (fdc_id,)).fetchone()
+    elif source == "off" and gtin:
+        row = conn.execute("SELECT * FROM foods WHERE source = 'off' AND gtin = ? AND owner_user_id IS NULL LIMIT 1",
+                           (gtin,)).fetchone()
+    else:
+        return None
+    if row is None:
+        return None
+    if serving_g is not None:
+        return row if abs(float(row["serving_g"]) - float(serving_g)) < 0.05 else None
+    return row if row["name"].casefold() == name.casefold() else None
+
+
+def builtin_match(conn: sqlite3.Connection, name: str, fdc_id: int | None, *, food_id: int | None = None) -> sqlite3.Row | None:
+    """A built-in food of this server: by FoodData Central id; without one by name (the keys the built-in list is kept up to
+    date by, :func:`app.foods.import_builtin_foods`); with ``food_id`` (a file with no ``builtin_foods``) by its id. Also what
+    ``POST /push/v1/sync`` finds a built-in food by."""
+    if fdc_id is not None:
+        return conn.execute("SELECT * FROM foods WHERE source = 'builtin' AND fdc_id = ? ORDER BY hidden, id LIMIT 1", (fdc_id,)).fetchone()
+    if food_id is not None:
+        return conn.execute("SELECT * FROM foods WHERE source = 'builtin' AND id = ?", (food_id,)).fetchone()
+    return conn.execute("SELECT * FROM foods WHERE source = 'builtin' AND fdc_id IS NULL AND lower(name) = lower(?) ORDER BY hidden, id LIMIT 1",
+                        (name,)).fetchone()
 
 
 class Importer:
@@ -829,10 +869,7 @@ class Importer:
     def _own_food_index(self) -> dict[tuple, list[int]]:
         index: dict[tuple, list[int]] = {}
         for row in self.conn.execute("SELECT * FROM foods WHERE owner_user_id = ? AND source = 'custom' ORDER BY id", (self.uid,)):
-            key = _food_key(row["name"], row["brand"], row["category"], row["serving_desc"], row["serving_g"],
-                            foods_module.raw_nutrients(row), foods_module.parse_flags(row["flags_json"]),
-                            row["kidney_notes"], row["gtin"], row["hidden"])
-            index.setdefault(key, []).append(row["id"])
+            index.setdefault(own_food_key(row), []).append(row["id"])
         return index
 
     def _own_food(self, food: ImportFood, index: dict[tuple, list[int]]) -> int:
@@ -842,7 +879,7 @@ class Importer:
         flags, notes, ingredients, found = scan_custom_food(food.name, food.flags, food.kidney_notes, food.ingredients_text)
         serving, values = stored_food_values(food.nutrients, flags, food.serving_g)
         gtin = food.gtin
-        key = _food_key(food.name, food.brand, food.category, food.serving_desc, serving,
+        key = food_key(food.name, food.brand, food.category, food.serving_desc, serving,
                         values, flags, notes, gtin, food.hidden)
         same = index.get(key)
         if same:
@@ -858,32 +895,12 @@ class Importer:
         )
 
     def _shared_match(self, linked: ImportLinkedFood) -> sqlite3.Row | None:
-        """This server's shared row for the same product (same FoodData Central id or barcode, and the same name or
-        serving), so the person's link points at data this server already holds."""
-        if linked.source == "usda" and linked.fdc_id is not None:
-            row = self.conn.execute("SELECT * FROM foods WHERE source = 'usda' AND fdc_id = ? AND owner_user_id IS NULL ORDER BY id LIMIT 1",
-                                    (linked.fdc_id,)).fetchone()
-        elif linked.source == "off" and (gtin := linked.gtin or (linked.food.gtin if linked.food else None)):
-            row = self.conn.execute("SELECT * FROM foods WHERE source = 'off' AND gtin = ? AND owner_user_id IS NULL LIMIT 1",
-                                    (gtin,)).fetchone()
-        else:
-            return None
-        if row is None:
-            return None
-        if linked.food is not None:
-            return row if abs(float(row["serving_g"]) - linked.food.serving_g) < 0.05 else None
-        return row if row["name"].casefold() == linked.name.casefold() else None
+        gtin = linked.gtin or (linked.food.gtin if linked.food else None)
+        return shared_match(self.conn, linked.source, fdc_id=linked.fdc_id, gtin=gtin, name=linked.name,
+                            serving_g=linked.food.serving_g if linked.food is not None else None)
 
     def _builtin_match(self, food_id: int, name: str, fdc_id: int | None, *, by_id: bool) -> sqlite3.Row | None:
-        """A built-in food of this server: by FoodData Central id; without one by name (how the built-in list is
-        kept up to date); in a file with no ``builtin_foods`` by its id and name together."""
-        c = self.conn
-        if fdc_id is not None:
-            return c.execute("SELECT * FROM foods WHERE source = 'builtin' AND fdc_id = ? ORDER BY hidden, id LIMIT 1", (fdc_id,)).fetchone()
-        if by_id:
-            return c.execute("SELECT * FROM foods WHERE source = 'builtin' AND id = ?", (food_id,)).fetchone()
-        return c.execute("SELECT * FROM foods WHERE source = 'builtin' AND fdc_id IS NULL AND lower(name) = lower(?) ORDER BY hidden, id LIMIT 1",
-                         (name,)).fetchone()
+        return builtin_match(self.conn, name, fdc_id, food_id=food_id if by_id else None)
 
     def resolve_foods(self) -> None:
         doc, c = self.doc, self.conn
