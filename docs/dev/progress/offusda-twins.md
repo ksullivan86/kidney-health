@@ -1,4 +1,4 @@
-Status: in progress (code and vectors done; committing)
+Status: complete (commit 6b210c9 on branch worktree-agent-adb01ff032e2aff20; not pushed, as asked)
 
 # offusda-twins: JavaScript twins of the Open Food Facts and USDA mapping (design note 38 §5.3)
 
