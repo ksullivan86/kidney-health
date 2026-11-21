@@ -499,7 +499,7 @@ class Sync:
             ).fetchone()
             if row is None:
                 row = shared_match(c, "off", fdc_id=None, gtin=ref.off.gtin, name=ref.off.name, serving_g=ref.off.serving_g)
-        if row is not None:
+        if row is not None and row["source"] in ("usda", "off"):  # a built-in food carrying the fdc_id needs no link
             link_food(c, self.uid, int(row["id"]))
         return row
 

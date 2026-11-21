@@ -337,6 +337,21 @@ def test_an_entry_may_name_a_shared_food_directly_by_fdc_id_or_barcode(admin, ap
     assert ok(admin.app, app_token, {"entries": [entry({"usda": {"fdc_id": 2_000_003, "name": "Lentils"}})]})["added"] == counts(entries=1)
 
 
+def test_a_usda_id_of_a_built_in_food_is_the_built_in_food_and_needs_no_link(admin, app_token):
+    banana = find_food(admin, "banana")
+    as_food = own_food(source="usda", fdc_id=banana["fdc_id"], name="Bananas, raw", serving_g=118)
+    out = ok(admin.app, app_token, {"foods": [as_food], "entries": [entry({"client_id": as_food["client_id"]}),
+                                                                    entry({"usda": {"fdc_id": banana["fdc_id"], "name": "Banana"}})]})
+    assert out["added"] == counts(entries=2) and out["already_there"] == counts(foods=1)
+    assert [e["food_id"] for e in log_rows(admin)] == [banana["id"], banana["id"]]
+    conn = db(admin)
+    try:
+        assert conn.execute("SELECT COUNT(*) FROM user_food_links").fetchone()[0] == 0
+        assert conn.execute("SELECT COUNT(*) FROM foods WHERE owner_user_id IS NOT NULL").fetchone()[0] == 0
+    finally:
+        conn.close()
+
+
 def test_food_that_cannot_be_found_is_skipped_and_tried_again_next_time(admin, app_token):
     lost = entry({"client_id": cid()})
     unknown_builtin = entry({"builtin": {"fdc_id": 424242, "name": "Not in this list"}})

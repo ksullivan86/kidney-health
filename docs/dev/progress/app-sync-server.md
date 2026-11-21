@@ -40,8 +40,17 @@ Role: `app-sync-server`. Branch: the worktree branch `worktree-agent-a9fdde3cc5c
 6. [x] Settings → Phone shortcuts: "What it is for" select, the app sentence, counts in words, app delete words, activity label
    `app.rows_added` (audit action, user-visible). `tests/test_push_ui.py` + `tests/js/push_page.mjs` (31 pass).
 7. [x] `tests/test_app_sync.py` (55 pass), isolation matrix entry `app_sync_rows`.
-8. [ ] Docs: `docs/push.md`, ARCHITECTURE, CHANGELOG, note 38 §5.5, handbook mention.
-9. [ ] Run the related suites, node vectors, ruff; final commit.
+8. [x] Docs: `docs/push.md` ("Sending from the iPhone app"), ARCHITECTURE (route tables, step 37 row, file ownership, the family
+   table, a new subsection "`POST /push/v1/sync`", screens, security review), CHANGELOG (Unreleased: Added + Upgrading), note 38
+   status and §5.5, handbook (weight-and-blood-pressure "Connect the Kidney Health iPhone app", configuration `PUSH_ENABLED`),
+   `deploy/caddy/Caddyfile.example` (the bridge name passes `/push/v1/sync`). The `push.enabled` help text names the app token;
+   `js/engine/settings.js` and `tests/data/settings_vectors.json` follow (`node tests/js/run_vectors.mjs` passes).
+9. [ ] Run the related suites (122 files: names with token/push/isolation/migration/account/import/settings/brand/export/auth/
+   security/openapi/device/body/research/deploy/meta, plus files that mention khd_, /push/v1, api_tokens, data_import,
+   settings_registry), ruff; final commit.
+
+Tests fixed for the new shape: `tests/test_device_tokens.py` (DEVICE_SCOPES), `tests/test_openapi_snapshot.py` (15 stubs, 4 device
+operations), `tests/test_auth_coverage.py` (SYNC_ROUTES + a new test), `tests/test_push_ui.py` (the create call has `...forApp`).
 
 ## Commands
 
