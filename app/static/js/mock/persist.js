@@ -237,6 +237,7 @@
   function applyState(api, state) {
     for (const key of Object.keys(api)) delete api[key];
     Object.assign(api, state);
+    if (typeof api._fillClientIds === 'function') api._fillClientIds(); // a log kept before every row had a client_id (note 39 §8.2)
   }
 
   // Called once by main.js before the first request, in the demo only.

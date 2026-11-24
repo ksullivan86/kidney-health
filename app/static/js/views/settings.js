@@ -1661,7 +1661,7 @@
     const send = action(`Send this iPhone's data to ${host}`, 'primary', async () => { await C.choose('send'); }, { id: 'set-server-ask-send' });
     const replace = action(`Replace this iPhone's data with ${host}'s`, 'danger', async (btn) => {
       KH.confirm.inline(foot, btn, {
-        message: `Replace the log on this iPhone with ${host}'s? A copy of this iPhone's data is saved in the Files app first. Your profile, settings and saved meals stay.`,
+        message: `Replace the log on this iPhone with ${host}'s? A copy of this iPhone's data is saved in the Files app first. This iPhone's own settings stay.`,
         confirmText: 'Replace', onConfirm: async () => { await C.choose('replace'); return true; },
       });
     }, { id: 'set-server-ask-replace' });
@@ -1673,25 +1673,73 @@
         : 'Nothing is sent or read until you choose. Two people\'s data are never mixed without this question.'),
       foot);
   }
+  // Design note 39 §8.7 point 5 (js/mock/server_account.js): this iPhone's profile and targets differed from the server's at the
+  // first sync. The server's is used until the person picks; only the lines that differ are shown.
+  const PROFILE_LABEL = { name: 'Name', weight_kg: 'Weight (kg)', height_cm: 'Height (cm)', ckd_stage: 'Kidney disease stage', dialysis: 'Dialysis',
+    diabetes: 'Diabetes', warn_fraction: 'Warn at', about_tolerance_pct: 'Counts as on target within (%)', dialysis_days: 'Dialysis days',
+    week_start: 'Week starts on', birth_month: 'Born', sex: 'Sex', activity: 'Activity', transplant_date: 'Transplant date',
+    frail_or_sarcopenic: 'Frail', weight_6_months_ago_kg: 'Weight 6 months ago (kg)', pregnant_or_breastfeeding: 'Pregnant or breastfeeding',
+    hyperkalemia_history: 'High potassium before', urine_output_ml: 'Urine a day (ml)', pd_uf_ml: 'PD fluid removed (ml)',
+    pd_dialysate_kcal: 'PD calories (kcal)' };
+  function profileValue(v) {
+    if (v == null || v === '') return 'Not set';
+    if (v === true) return 'Yes';
+    if (v === false) return 'No';
+    if (Array.isArray(v)) return v.length ? v.join(', ') : 'None';
+    if (typeof v === 'object') return v.min != null || v.max != null ? `${v.min == null ? '' : String(v.min)}–${v.max == null ? '' : String(v.max)}` : 'Not set';
+    return String(v);
+  }
+  function profileLines(server, mine) {
+    const out = [];
+    for (const k of Object.keys(PROFILE_LABEL)) {
+      const a = profileValue(server[k]); const b = profileValue(mine[k]);
+      if (a !== b) out.push([PROFILE_LABEL[k], a, b]);
+    }
+    const keys = [...new Set([...Object.keys(server.targets || {}), ...Object.keys(mine.targets || {})])].sort();
+    for (const k of keys) {
+      const label = KH.rules && KH.rules.NUT && KH.rules.NUT[k] ? `Target: ${KH.rules.NUT[k].label}` : `Target: ${k}`;
+      const a = profileValue((server.targets || {})[k]); const b = profileValue((mine.targets || {})[k]);
+      if (a !== b) out.push([label, a, b]);
+    }
+    return out;
+  }
+  function profileCard(P, card) {
+    const lines = profileLines(card.server, card.mine);
+    const keep = action('Keep your server\'s', 'secondary', async () => { await P.decide('server'); }, { id: 'set-server-profile-keep' });
+    const use = action('Keep this iPhone\'s', 'primary', async () => { await P.decide('mine'); }, { id: 'set-server-profile-use' });
+    return h('div', { class: 'outbox-item conflict', id: 'set-server-profile', role: 'group', 'aria-labelledby': 'set-server-profile-h' },
+      h('p', { class: 'outbox-title', id: 'set-server-profile-h' }, 'Your profile and targets differ on this iPhone and your server'),
+      h('p', { class: 'hint' }, 'Your server\'s are used until you choose. A Care team member may have set them there.'),
+      h('div', { class: 'conflict-sides' },
+        reviewSide('On your server', lines.map(([l, a]) => [l, a]), lines.map(([l, , b]) => [l, b])),
+        reviewSide('On this iPhone', lines.map(([l, , b]) => [l, b]), lines.map(([l, a]) => [l, a]))),
+      h('div', { class: 'outbox-actions' }, keep, use));
+  }
   function serverChangesParts(C) {
     const s = C.status();
     const parts = [];
     if (s.ask) { parts.push(askCard(C, s.ask)); return parts; }
     if (!s.active) return parts;
     const changes = (n) => (n === 1 ? '1 change' : `${n} changes`);
+    const P = KH.mock.serverAccount || null;
+    const a = P ? P.status() : null;
+    const review = s.review + (a && a.card ? 1 : 0);
     parts.push(kv([
       ['Sync', 'Both ways'],
       ['Last synced', s.syncedAt ? fmtDateTime(s.syncedAt) : 'Not yet'],
       ['Changes waiting to be sent', s.waiting ? changes(s.waiting) : 'Nothing'],
-      ['To review', s.review ? String(s.review) : 'Nothing'],
-    ]));
+      ['To review', review ? String(review) : 'Nothing'],
+      a ? ['Profile, targets and settings', a.pulledAt ? `From your server, ${fmtDateTime(a.pulledAt)}` : 'Not read yet'] : null,
+    ].filter(Boolean)));
     if (s.message && s.outcome !== 'done') parts.push(h('p', { class: 'setting-status', id: 'set-server-changes-msg' }, s.message));
+    if (a && a.message) parts.push(h('p', { class: 'setting-status', id: 'set-server-account-msg' }, a.message));
+    if (a && a.card) parts.push(profileCard(P, a.card));
     if (s.notices.length) {
       parts.push(h('ul', { class: 'list', id: 'set-server-notices' }, ...s.notices.slice(-10).map((t) => h('li', {}, h('span', { class: 'row-title' }, t)))),
         h('div', { class: 'settings-actions' }, action('OK', 'secondary', async () => { await C.clearNotices(); }, { id: 'set-server-notices-ok' })));
     }
     if (s.items.length) {
-      parts.push(h('h4', { id: 'set-server-review-h' }, `${s.items.length} to review`),
+      parts.push(h('h4', { id: 'set-server-review-h', tabindex: '-1' }, `${s.items.length} to review`),
         h('ul', { class: 'outbox-list', id: 'set-server-review', 'aria-labelledby': 'set-server-review-h' }, ...s.items.map((x) => reviewCard(C, x))));
     }
     if (s.refused.length) {
@@ -1753,10 +1801,13 @@
     stops.push(S.subscribe(draw));
     if (A) { stops.push(A.subscribe(draw)); A.check().then(draw, () => null); }
     if (C) stops.push(C.subscribe(draw));
+    if (KH.mock.serverAccount) stops.push(KH.mock.serverAccount.subscribe(draw));
     const box = h('div', { role: 'region', 'aria-labelledby': 'set-server-sync-h' }, info, both, now,
       h('p', { class: 'hint' }, 'What you add here is sent to your server when it can be reached: food, foods you made, lab results, symptoms, weight and blood pressure. '
         + 'With a token for the iPhone app, both ways, your changes and deletions are sent too, and what is added on your server comes to this iPhone. '
-        + 'If a row was changed in both places, you choose which to keep. Saved meals, your profile and your targets do not sync yet.'));
+        + 'Saved meals and recipes sync the same way. If a row was changed in both places, you choose which to keep. '
+        + 'Your profile, targets, account settings and food preferences come from your server, and you change them here only while it can be reached. '
+        + 'This iPhone\'s own settings, such as the theme, the camera and its keys, stay on this iPhone.'));
     return [subtitle('Your server', 'set-server-sync-h'), box];
   }
   let deviceRender = 0;

@@ -49,6 +49,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_valida
 
 from . import brand, units
 from . import foods as foods_module
+from . import meals as meals_module
 from .audit import audit
 from .auth import api_tokens, clock
 from .auth.accounts import begin_immediate
@@ -63,6 +64,7 @@ from .db import get_db, utcnow
 from .foods import Provenance, fetch_user_food, link_food, scan_custom_food, stored_food_values
 from .log import fetch_entry_by_client_id, insert_entry, resolve_purpose, resolve_servings
 from .models import (
+    MAX_SERVINGS,
     MAX_READINGS_PER_DAY,
     MAX_SOURCE_KEY,
     MAX_SYMPTOMS_PER_DAY,
@@ -71,6 +73,7 @@ from .models import (
     FoodCreate,
     LabCreate,
     LogCreate,
+    MealTemplateCreate,
     SymptomCreate,
     WeightCreate,
     validate_client_id,
@@ -89,12 +92,13 @@ RATE_LIMIT = "push_sync"
 register_limit(RATE_LIMIT, 60, 3600, "Too many requests from this app. Try again later.")
 DAY_CAP_MESSAGE = "This app has sent as much as it may in one day. It sends the rest later."
 
-KINDS: dict[str, str] = {  # the request's list → the receipt's kind
+KINDS: dict[str, str] = {  # the request's list → the receipt's kind (saved meals have no receipts: found by client_id)
     "foods": "food", "entries": "entry", "labs": "lab", "symptoms": "symptom", "weights": "weight", "readings": "reading",
+    "meals": "meal",
 }
 TABLES: dict[str, str] = {  # the receipt's kind → the table its row is in
     "food": "foods", "entry": "log_entries", "lab": "lab_results", "symptom": "symptoms", "weight": "weights",
-    "reading": "blood_pressures",
+    "reading": "blood_pressures", "meal": "meal_templates",
 }
 SKIP_REASONS = ("food_not_found", "day_full")
 
@@ -257,6 +261,34 @@ class SyncReading(BloodPressureCreate):
     _key = field_validator("source_key")(staticmethod(_source_key))
 
 
+class SyncMealItem(BaseModel):
+    """One food of a saved meal: the food as an entry names it (``FoodRef``), and how many servings of it."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    food: FoodRef
+    servings: float = Field(gt=0, le=MAX_SERVINGS, allow_inf_nan=False)
+
+
+class SyncMealFields(MealTemplateCreate):
+    """A saved meal or recipe as ``POST /api/meals`` and ``PUT /api/meals/{id}`` check it, with ``food`` in place of ``food_id``
+    in each item (design note 39 step 8). ``POST /push/v1/changes`` takes it as a saved meal's ``fields``."""
+
+    model_config = ConfigDict(str_strip_whitespace=True, extra="forbid")
+
+    items: list[SyncMealItem] = Field(min_length=1)  # type: ignore[assignment]
+
+
+class SyncMeal(SyncMealFields):
+    """A saved meal the phone made (sent only by a phone that syncs both ways). Found again by its ``client_id``."""
+
+    client_id: str
+    created_at: str | None = Field(default=None, max_length=40)
+
+    _cid = field_validator("client_id")(staticmethod(_client_id))
+    _created = field_validator("created_at")(staticmethod(_created_at))
+
+
 class SyncBody(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
@@ -266,6 +298,7 @@ class SyncBody(BaseModel):
     symptoms: list[SyncSymptom] = Field(default_factory=list)
     weights: list[SyncWeight] = Field(default_factory=list)
     readings: list[SyncReading] = Field(default_factory=list)
+    meals: list[SyncMeal] = Field(default_factory=list)
 
 
 class SyncCounts(BaseModel):
@@ -275,6 +308,7 @@ class SyncCounts(BaseModel):
     symptoms: int
     weights: int
     readings: int
+    meals: int
 
 
 class SyncSkipped(BaseModel):
@@ -400,6 +434,52 @@ def delete_sent(conn: sqlite3.Connection, user_id: int, token_id: int) -> dict[s
 # --------------------------------------------------------------------------- #
 
 
+def food_for_ref(conn: sqlite3.Connection, user_id: int, ref: FoodRef, food_ids: dict[str, int] | None = None) -> sqlite3.Row | None:
+    """The food a ``FoodRef`` names for this person, or None. A ``client_id`` is a food this request sent (``food_ids``), one an
+    app token sent before (its receipt), or the person's own food with that ``client_id`` (design note 39 §8.2: a food made on the
+    server and read by the phone from the change feed). A USDA or Open Food Facts food is linked to the person, as an import does."""
+    c, uid = conn, int(user_id)
+    if ref.client_id is not None:
+        food_id = (food_ids or {}).get(ref.client_id)
+        if food_id is None:
+            old = _receipts(c, uid, "food", [ref.client_id]).get(ref.client_id)
+            food_id = None if old is None else int(old["row_id"])
+        row = None if food_id is None else fetch_user_food(c, uid, food_id)
+        if row is None and any(r[1] == "client_id" for r in c.execute("PRAGMA table_info(foods)")):
+            row = c.execute("SELECT * FROM foods WHERE owner_user_id = ? AND client_id = ?", (uid, ref.client_id)).fetchone()
+        return row
+    if ref.builtin is not None:
+        return builtin_match(c, ref.builtin.name, ref.builtin.fdc_id)
+    if ref.usda is not None:
+        row = foods_module.fetch_user_usda_food(c, uid, ref.usda.fdc_id)
+        if row is None:
+            row = shared_match(c, "usda", fdc_id=ref.usda.fdc_id, gtin=None, name=ref.usda.name, serving_g=ref.usda.serving_g)
+    else:
+        assert ref.off is not None
+        row = c.execute(
+            f"""SELECT f.* FROM foods f WHERE f.source = 'off' AND f.gtin = ? AND f.owner_user_id IS NULL
+                AND {foods_module.access_clause('f')} ORDER BY f.id LIMIT 1""",
+            (ref.off.gtin, *foods_module.access_params(uid)),
+        ).fetchone()
+        if row is None:
+            row = shared_match(c, "off", fdc_id=None, gtin=ref.off.gtin, name=ref.off.name, serving_g=ref.off.serving_g)
+    if row is not None and row["source"] in ("usda", "off"):  # a built-in food carrying the fdc_id needs no link
+        link_food(c, uid, int(row["id"]))
+    return row
+
+
+def meal_items(conn: sqlite3.Connection, user_id: int, items: list[SyncMealItem],
+               food_ids: dict[str, int] | None = None) -> list[dict[str, Any]] | None:
+    """A saved meal's items in the stored shape (``food_id``, ``servings``), or None when a food is not on this server."""
+    out: list[dict[str, Any]] = []
+    for item in items:
+        food = food_for_ref(conn, user_id, item.food, food_ids)
+        if food is None:
+            return None
+        out.append({"food_id": int(food["id"]), "servings": float(item.servings)})
+    return out
+
+
 class Sync:
     """One request's work on ``conn``, inside the caller's transaction."""
 
@@ -490,31 +570,7 @@ class Sync:
         return food_id, True, True
 
     def _food_for(self, ref: FoodRef) -> sqlite3.Row | None:
-        c = self.conn
-        if ref.client_id is not None:
-            food_id = self.food_ids.get(ref.client_id)
-            if food_id is None:
-                old = _receipts(c, self.uid, "food", [ref.client_id]).get(ref.client_id)
-                food_id = None if old is None else int(old["row_id"])
-            return None if food_id is None else fetch_user_food(c, self.uid, food_id)
-        if ref.builtin is not None:
-            return builtin_match(c, ref.builtin.name, ref.builtin.fdc_id)
-        if ref.usda is not None:
-            row = foods_module.fetch_user_usda_food(c, self.uid, ref.usda.fdc_id)
-            if row is None:
-                row = shared_match(c, "usda", fdc_id=ref.usda.fdc_id, gtin=None, name=ref.usda.name, serving_g=ref.usda.serving_g)
-        else:
-            assert ref.off is not None
-            row = c.execute(
-                f"""SELECT f.* FROM foods f WHERE f.source = 'off' AND f.gtin = ? AND f.owner_user_id IS NULL
-                    AND {foods_module.access_clause('f')} ORDER BY f.id LIMIT 1""",
-                (ref.off.gtin, *foods_module.access_params(self.uid)),
-            ).fetchone()
-            if row is None:
-                row = shared_match(c, "off", fdc_id=None, gtin=ref.off.gtin, name=ref.off.name, serving_g=ref.off.serving_g)
-        if row is not None and row["source"] in ("usda", "off"):  # a built-in food carrying the fdc_id needs no link
-            link_food(c, self.uid, int(row["id"]))
-        return row
+        return food_for_ref(self.conn, self.uid, ref, self.food_ids)
 
     # -- entries --------------------------------------------------------------------------------------------------------
     def entries(self, entries: list[SyncEntry]) -> None:
@@ -613,6 +669,27 @@ class Sync:
             self.receipt("symptom", s.client_id, int(cur.lastrowid), True)
 
     # -- weights and readings (stored like a shortcut's: app/push.py) -----------------------------------------------------
+    # -- saved meals and recipes (design note 39 step 8) ---------------------------------------------------------------
+    def meals(self, meals: list[SyncMeal]) -> None:
+        """A saved meal is found again by its ``client_id`` (no receipt); one whose food this server cannot find is skipped."""
+        c = self.conn
+        has_cid = any(r[1] == "client_id" for r in c.execute("PRAGMA table_info(meal_templates)"))
+        for m in meals:
+            if has_cid and c.execute("SELECT 1 FROM meal_templates WHERE user_id = ? AND client_id = ?",
+                                     (self.uid, m.client_id)).fetchone():
+                self.there["meals"] += 1
+                continue
+            items = meal_items(c, self.uid, m.items, self.food_ids)
+            if items is None:
+                self.skipped["food_not_found"] += 1
+                continue
+            meal_id = meals_module.insert_template(
+                c, user_id=self.uid, name=m.name, note=m.note, items=items, meal_hint=m.meal_hint, created_at=m.created_at,
+                servings_made=m.servings_made, steps=m.steps, source_url=m.source_url)
+            if has_cid:
+                c.execute("UPDATE meal_templates SET client_id = ? WHERE id = ? AND user_id = ?", (m.client_id, meal_id, self.uid))
+            self.added["meals"] += 1
+
     def _body(self, key: str, kind: str, rows: list[Any]) -> None:
         c = self.conn
         table = TABLES[kind]
@@ -690,6 +767,7 @@ def store(conn: sqlite3.Connection, user: User, token: api_tokens.TokenInfo, bod
         work.symptoms(body.symptoms)
         work._body("weights", "weight", body.weights)
         work._body("readings", "reading", body.readings)
+        work.meals(body.meals)
         if work.new_receipts:
             count, wait = received_today(conn, token.id)
             if count > MAX_PER_DAY:

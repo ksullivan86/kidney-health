@@ -979,7 +979,49 @@ function rowVersionVectors() {
     expect(`version of ${c.kind} "${c.name}"`, V.version(c.kind, c.row), c.version);
   }
   for (const c of doc.match_cases) expect(`If-Match "${c.header}" (${c.name})`, V.matches(c.header, c.version), c.expected);
-  return [checks, failures, `${doc.cases.length} rows, ${doc.match_cases.length} headers`];
+
+  // The request script: If-Match on the PUT and DELETE routes of js/mock/{foods,meals,symptoms,body,labs}.js, on a fresh demo account
+  // with no sample data. {{id:N}} and {{version:N}} are the id and the version of step N's answer, taken from this demo's own answers.
+  const KH = loadDemo();
+  const RV = KH.rowVersions;
+  const api = new KH.mock.MockApi({ foodsData: JSON.parse(readFileSync(join(ROOT, 'data', 'foods.json'), 'utf8')), seed: false });
+  KH.mock.instance = api;
+  const PLACE = /\{\{(id|version):(\d+)\}\}/g;
+  const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+  const raw = [];
+  const resolve = (text) => text.replace(PLACE, (m, what, n) => (what === 'id' ? String(raw[Number(n)].id) : RV.version(doc.script[Number(n)].kind, raw[Number(n)])));
+  const shown = (kind, row) => {
+    if (!row || typeof row !== 'object') return row;
+    const out = {};
+    for (const name of RV.FIELDS[kind]) {
+      let value = row[name] === undefined ? null : row[name];
+      if (name === 'items') value = (value || []).map((it) => Object.fromEntries(RV.ITEM_FIELDS.map((f) => [f, it[f] === undefined ? null : it[f]])));
+      out[name] = value;
+    }
+    if (kind === 'food') out.nutrients = row.nutrients;
+    out.version = 'version' in row ? row.version : RV.version(kind, row);
+    return out;
+  };
+  doc.script.forEach((step, i) => {
+    let got;
+    let body = null;
+    try {
+      const sent = step.body === undefined ? undefined : JSON.parse(resolve(JSON.stringify(step.body).replace(/"(\{\{id:\d+\}\})"/g, '$1')));
+      const headers = step.if_match === undefined ? undefined : { 'If-Match': resolve(step.if_match) };
+      const res = api.handle(step.method, resolve(step.path), sent, headers);
+      body = res == null ? null : plain(res);
+      got = { ok: true, body: shown(step.kind, body) };
+    } catch (e) {
+      got = e instanceof KH.mock.ApiError ? { ok: false, status: e.status, detail: e.detail } : { exception: String((e && e.stack) || e) };
+      if (got.ok === false && e.extra && e.extra.current) {
+        got.current = shown(step.kind, plain(e.extra.current));
+        got.current_has_client_id = UUID.test(String(e.extra.current.client_id || ''));
+      }
+    }
+    raw.push(body);
+    expect(`step ${i} ${step.kind}: ${step.name} (${step.method} ${step.path})`, got, step.answer);
+  });
+  return [checks, failures, `${doc.cases.length} rows, ${doc.match_cases.length} headers, ${doc.script.length} requests`];
 }
 
 // Import: the edits of a step are applied to a copy of the base file exactly as tests/data/gen_import_vectors.py apply_edits does.

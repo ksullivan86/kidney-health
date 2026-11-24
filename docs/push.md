@@ -145,15 +145,16 @@ curl -sS https://food.example.org/push/v1/check -H "Authorization: Bearer khd_�
 ## Sending from the iPhone app
 
 The iPhone app keeps the log on the phone and works without a server ([design note 38](dev/research/38-iphone-app-without-a-server.md)).
-When a server is set up and can be reached, the app sends the **new** rows the person made on the phone. It never sends an edit or a
-delete, and it reads nothing back. Two-way sync is a later step.
+When a server is set up and can be reached, the app sends the **new** rows the person made on the phone. With this token it never
+sends an edit or a delete, and it reads nothing back. For both ways, see "The iPhone app, both ways" below.
 
 **The token.** In Settings → Account → Your data → Phone shortcuts, choose **What it is for: The iPhone app** and make the token. It
 works where a Shortcut's token works, so the app can keep sending Health readings to `/push/v1/body`, and it also works at
 `/push/v1/sync`. Pair the app with the QR code as before. A Shortcut's token is refused at `/push/v1/sync` with the usual `401`.
 
 **What it can add:** food log entries, the foods those entries need, lab results, symptoms, weights and blood pressure readings.
-Nothing else: not saved meals, preferences, settings or the profile. It cannot read, change or delete anything.
+A phone that syncs both ways also sends its saved meals and recipes here, in `meals` (below). Never preferences, settings or the
+profile. The token cannot read, change or delete anything.
 
 ### The request
 
@@ -270,7 +271,16 @@ phone, the person makes a new token and pairs again.
    | `POST /api/vision/label`, `/api/vision/plate` | label and plate photos |
    | `POST /api/ai/read-lab-report`, `/api/ai/read-lab-report-text` | lab report photos and text: on the local AI only |
    | `GET /api/foods/usda/search`, `POST /api/foods/usda/import`, `POST /api/foods/barcode` | the server's food services, with its keys |
-   | `PATCH /api/me/settings` with only `food.off_consent`, `PATCH /api/me/ai` with only `opt_in` | the person's Open Food Facts consent and AI opt-in. Any other key is `403` and the route does not run |
+   | `PATCH /api/me/settings` with only `food.off_consent`, `user.units.labs`, `user.units.weight`, `body.weight_alarm`, `body.bp_goal` and `guidance`; `PATCH /api/me/ai` with only `opt_in` | the person's Open Food Facts consent, AI opt-in and account settings. Any other key, such as the theme, is `403` and the route does not run |
+   | `GET` and `PUT /api/profile`, `GET /api/me/settings` | the profile and targets, and the settings, which the server owns |
+   | `GET /api/guidance/preferences`, `PUT` and `DELETE /api/guidance/preferences/{food_id}`, `GET /api/foods`, `GET /api/foods/{food_id}` | the food preferences, and finding which food each one is about |
+   | `GET /api/recipe-import`, `POST /api/recipe-import/page` | a recipe from a web page: the server reads the page through its checked connection, as for the web app |
+   | `GET /api/instacart`, `POST /api/instacart/preview`, `/api/instacart/send` | the Plan's shopping list at Instacart, with the server's key |
+   | `GET /api/list-sync`, `POST /api/list-sync/preview`, `/api/list-sync/send` | sending the shopping list to the person's own list app |
+
+   Each service works only while it is on for this server (`RECIPE_IMPORT_ENABLED`, `INSTACART_ENABLED` with its key,
+   `LIST_SYNC_ENABLED`); otherwise its route answers as it does for the web app. The list app is set up only in the web app: its
+   address and key are never sent from the phone, and its key never goes to it.
 
    **Never on it:** anything that needs the password again, admin routes, sign-in, tokens, sessions, keys and AI providers, sharing,
    the import, the `.zip` export, and deleting or changing the account. A test pins the list.
@@ -341,7 +351,8 @@ the latest state of each row:
 **Versions.** Every kind has a version, as entries do: a hash of what the person sees of the row, so the same content has the
 same version everywhere. The browser's copy is `app/static/js/engine/row_versions.js`. Each kind's `PUT` and `DELETE` route in
 `/api` takes `If-Match: "<version>"` and answers `412` with the row as stored when it changed. Without the header they work as
-before. Lab results have no edits, so only their delete takes it.
+before. Lab results have no edits, so only their delete takes it. The page's own copy of these routes, which the demo and the
+iPhone app run, does the same, and gives every new row a `client_id` as the server does.
 
 **`POST /push/v1/changes`** sends edits and deletes made on the phone:
 
@@ -357,6 +368,8 @@ before. Lab results have no edits, so only their delete takes it.
   here; `refused` with the reason. One answer never stops the others. Nothing is ever overwritten without a question.
 * The same edit made on both sides is `done`, not a conflict: send `version` and the server compares.
 * At most 200 changes and 256 KiB a request.
+* A saved meal's `fields` name each food as `POST /push/v1/sync` does (`{"food": {"builtin": {…}}, "servings": 1}`), never by this
+  server's ids. A food the server does not have yet is `refused`; the phone sends the food first.
 
 **`POST /push/v1/match`** helps the first two-way sync of a phone that already sent rows:
 `{"ids": {"entry": ["<phone id>", …], …}}` answers `{"known": {"entry": {"<phone id>": "<server id>"}}, "unknown": {"entry": […]}}`.
@@ -386,8 +399,17 @@ and only these three paths besides the gateway's.
   on the server's current version; if it changed again meanwhile, that is a new card. An edit of a row deleted elsewhere is dropped,
   and the phone says "This entry no longer exists, so your change was dropped". A refused change stays on the phone, is listed, and
   is sent again only after the person changes it.
-* **What syncs** now: food log entries, the person's own foods, lab results (added and deleted), symptoms, weights and blood
-  pressure readings. Saved meals, the profile, targets and settings come in a later step. A low treatment syncs like any entry.
+* **What syncs** both ways: food log entries, the person's own foods, saved meals and recipes, lab results (added and deleted),
+  symptoms, weights and blood pressure readings. A low treatment syncs like any entry. A phone that synced before saved meals did
+  reads the feed once more from `0` for them; a saved meal of the phone with the same name as one of the server's becomes that row
+  (the same: one row; different: the review).
+* **The profile, targets, account settings and food preferences** come from the server, because a Care team member may set them
+  (step 8, `app/static/js/mock/server_account.js`). Each run reads `GET /push/v1/api/profile`, `/api/me/settings` and
+  `/api/guidance/preferences` and copies them to the phone, which works offline from that copy. A change on the phone goes straight
+  to the server's route through the gateway and is kept only when the server took it. Offline the phone says "This needs a
+  connection to your server." The first time, if the phone's own profile and targets differ, one card shows both: **Keep your
+  server's** or **Keep this iPhone's**. The phone's own settings stay on the phone: the theme, the camera, its keys and the lock.
+* **"N to review"**: the sync badge in the header counts what waits for the person, and Today marks such an entry "needs review".
 
 ## Pairing the iPhone app by QR code
 

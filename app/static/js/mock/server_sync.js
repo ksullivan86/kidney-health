@@ -10,15 +10,19 @@
    from its Keychain. The token never reaches the page.
 
    What is sent: every row made on this phone that the server has not taken yet: food log entries, the foods they need, the
-   person's own foods, lab results, symptoms, weights and blood pressure readings. A row is sent once here; with a token both ways
-   its later edits and deletes go through js/mock/server_changes.js (note 39 steps 6 and 7). Never the sample data (`_sample`).
+   person's own foods, lab results, symptoms, weights and blood pressure readings. With a token both ways, saved meals and recipes
+   too (note 39 step 8), once js/mock/server_changes.js has read the server's own saved meals (`mealsReady`), with the foods they
+   need. A row is sent once here; with a token both ways its later edits and deletes go through js/mock/server_changes.js (note 39
+   steps 6 to 8). Never the sample data (`_sample`).
    With a token that only adds, a planned entry waits until its day is over, so marking it eaten is sent; both ways, it is sent at once.
 
    Saved with the rest of the log (js/mock/persist.js saves every property of the demo API), in `_serverSync`:
        { v: 1, server: 'food.example.org' | null,
-         rows: { food | entry | lab | symptom | weight | reading: { <row id>: { c: client_id, s?: 'sent'|'refused'|'stuck',
+         rows: { food | entry | lab | symptom | weight | reading | meal: { <row id>: { c: client_id, s?: 'sent'|'refused'|'stuck',
                                                                                  t?: tries, g?: group, w?: why,
-                                                                                 v?: version when sent, d?: 1 } } },
+                                                                                 v?: version when sent, d?: 1,
+                                                                                 f?: 'server' (a USDA or Open Food
+                                                                                 Facts food read from the server) } } },
          sentAt, triedAt, outcome, message, status, waitUntil, checkOk, checkedAt }
    `c` is a UUID made once for the row (an entry keeps its own `client_id`, which the export carries). Starting over makes a new
    demo API, so the queue starts again with it. A different server (host) sends everything again; the server's receipts and
@@ -26,8 +30,8 @@
 
    What was sent is remembered (design note 39, plan step 1), so the first two-way sync can tell which side changed a row:
    `v` is the row's version when the server took it: for an entry the server's own entry version (log.entry_version, the
-   twin M.entryVersion), for every other kind "b:" and a hash of the row as it was sent, until note 39 step 5 gives each
-   kind its own version. `d: 1` marks a sent row deleted on this phone afterwards; the mark is kept until the server has the row deleted too.
+   twin M.entryVersion), for a saved meal its row version (KH.rowVersions), for every other kind "b:" and a hash of the row as
+   it was sent. `d: 1` marks a sent row deleted on this phone afterwards; the mark is kept until the server has the row deleted too.
 
    The server answers counts only. A row the server cannot place (a food it does not know, a full day) is "skipped": it is counted,
    not named. Per list, rows sent minus (added + already there) are the skipped ones. When that cannot say which rows they were, the
@@ -40,7 +44,8 @@
   const M = KH.mock;
   if (!KH.flags || KH.flags.DEVICE !== true || !M) return;
 
-  const LISTS = [['foods', 'food'], ['entries', 'entry'], ['labs', 'lab'], ['symptoms', 'symptom'], ['weights', 'weight'], ['readings', 'reading']];
+  const LISTS = [['foods', 'food'], ['entries', 'entry'], ['labs', 'lab'], ['symptoms', 'symptom'], ['weights', 'weight'], ['readings', 'reading'],
+    ['meals', 'meal']];
   const KIND_OF = Object.fromEntries(LISTS);
   const LIST_OF = Object.fromEntries(LISTS.map(([l, k]) => [k, l]));
   const MAX_ROWS = 200; // app/app_sync.py MAX_ROWS
@@ -82,7 +87,7 @@
     return `${x.slice(0, 8)}-${x.slice(8, 12)}-${x.slice(12, 16)}-${x.slice(16, 20)}-${x.slice(20)}`;
   }
   function blank() {
-    return { v: 1, server: null, rows: { food: {}, entry: {}, lab: {}, symptom: {}, weight: {}, reading: {} }, sentAt: null, triedAt: null,
+    return { v: 1, server: null, rows: { food: {}, entry: {}, lab: {}, symptom: {}, weight: {}, reading: {}, meal: {} }, sentAt: null, triedAt: null,
       outcome: null, message: null, status: null, waitUntil: null, checkOk: false, checkedAt: null };
   }
   function stateOf(api) {
@@ -101,11 +106,13 @@
   function uidOf(api) { try { return api._currentUser().id; } catch (e) { return 1; } }
 
   // The rows of each kind this phone could send, oldest first. Foods: the person's own foods, and the USDA and Open Food Facts
-  // foods an entry uses (a built-in food is named by the entry instead).
+  // foods an entry or a saved meal uses (a built-in food is named by the entry instead).
   function rowsOf(api) {
     const uid = uidOf(api);
     const entries = (api._entries || []).slice().sort(byId);
+    const meals = (api._templates || []).slice().sort(byId);
     const used = new Set(entries.map((e) => e.food_id));
+    for (const t of meals) for (const it of t.items || []) used.add(Number(it.food_id));
     const foods = (api._foods || []).filter((f) => (f.source === 'custom' && (!f.hidden || used.has(f.id)))
       || ((f.source === 'usda' || f.source === 'off') && used.has(f.id))).sort(byId);
     return {
@@ -115,6 +122,7 @@
       symptom: api._symptomsOf ? api._symptomsOf(uid).slice().sort(byId) : [],
       weight: api._weightsOf ? api._weightsOf(uid).slice().sort(byId) : [],
       reading: api._readingsOf ? api._readingsOf(uid).slice().sort(byId) : [],
+      meal: meals,
     };
   }
 
@@ -142,7 +150,14 @@
         if (kind === 'entry') {
           if (typeof row.client_id !== 'string' || !UUID_RE.test(row.client_id)) { row.client_id = r.c && UUID_RE.test(r.c) ? r.c : uuid(); changed = true; }
           if (r.c !== row.client_id) { r.c = row.client_id; changed = true; }
-        } else if (typeof r.c !== 'string' || !UUID_RE.test(r.c)) { r.c = uuid(); changed = true; }
+        } else {
+          // One ID per row (note 39 §8.2): a row not sent yet takes its own client_id (the export carries it); a row already sent
+          // keeps the ID it was sent with, and the row takes it. USDA and Open Food Facts foods have none of their own.
+          const ownId = kind !== 'food' || row.source === 'custom';
+          const own = ownId && typeof row.client_id === 'string' && UUID_RE.test(row.client_id) ? row.client_id : null;
+          if (typeof r.c !== 'string' || !UUID_RE.test(r.c)) { r.c = own || uuid(); changed = true; } else if (own && r.c !== own && !done(r)) { r.c = own; changed = true; }
+          if (ownId && row.client_id !== r.c) { row.client_id = r.c; changed = true; }
+        }
       }
       for (const id of Object.keys(map)) {
         const r = map[id];
@@ -166,10 +181,34 @@
       source_url: f.source_url || null, source_license: f.source_license || null });
   }
   // FoodRef: a built-in food by its fdc_id (or its name when it has none); any other food by the client ID it is sent with in `foods`.
-  function foodRef(food, foodCid) {
+  // A USDA or Open Food Facts food read from the server (its mark has f: 'server') is named by its own keys: the server has it already.
+  function foodRef(food, foodCid, mark = null) {
     if (food.source === 'builtin') return { builtin: compact({ fdc_id: food.fdc_id == null ? null : food.fdc_id, name: food.name }) };
+    if (mark && mark.f === 'server' && food.source === 'usda' && food.fdc_id != null) {
+      return { usda: { fdc_id: food.fdc_id, name: food.name, serving_g: Number(food.serving_g) } };
+    }
+    if (mark && mark.f === 'server' && food.source === 'off' && food.gtin) return { off: { gtin: food.gtin, name: food.name, serving_g: Number(food.serving_g) } };
     return { client_id: foodCid };
   }
+  // How a saved meal's item or an edit names a food of this phone: { ref } once the server has it, { hold } while it waits to be
+  // sent, { refuse } when it cannot be sent.
+  function refOf(api, food) {
+    if (!food) return { refuse: 'Its food is no longer on this iPhone.' };
+    if (food.source === 'builtin') return { ref: foodRef(food) };
+    const st = stateOf(api);
+    const fr = st.rows.food[food.id];
+    if (!fr || !fr.c) return { hold: true };
+    if (fr.s === 'refused' || fr.s === 'stuck') return { refuse: 'Its food could not be sent to your server.' };
+    if (fr.s !== 'sent') return { hold: true, food, foodState: fr };
+    return { ref: foodRef(food, fr.c, fr) };
+  }
+  // A saved meal or recipe as POST /push/v1/sync takes it (app/app_sync.py SyncMeal). `refs`: the FoodRef of each item.
+  function mealFields(t, refs) {
+    return compact({ name: t.name, note: t.note || null, meal_hint: t.meal_hint || null, servings_made: t.servings_made == null ? null : t.servings_made,
+      steps: t.steps && t.steps.length ? [...t.steps] : null, source_url: t.source_url || null,
+      items: (t.items || []).map((it, i) => ({ food: refs[i], servings: Number(it.servings) })) });
+  }
+  function mealBody(t, cid, refs) { return compact({ client_id: cid, ...mealFields(t, refs), created_at: t.created_at || null }); }
   function entryBody(e, cid, ref) {
     const out = { client_id: cid, date: e.date, meal: e.meal, food: ref, status: e.status || 'eaten', purpose: e.purpose === 'hypo' ? 'hypo' : 'none',
       note: e.note || null, created_at: e.created_at || null };
@@ -213,11 +252,14 @@
     if (kind === 'entry') {
       try { return api._entryView(row).version; } catch (e) { return null; }
     }
+    if (kind === 'meal') {
+      try { return KH.rowVersions.version('meal', api._templateView(row)); } catch (e) { return null; }
+    }
     return body ? bodyHash(body) : null;
   }
   // The version a row has now, to compare with the one it was sent with (null when it cannot be worked out).
   function versionNow(api, kind, row, r) {
-    if (kind === 'entry') return versionOf(api, kind, row, null);
+    if (kind === 'entry' || kind === 'meal') return versionOf(api, kind, row, null);
     if (kind === 'food') return bodyHash(foodBody(row, r.c));
     return bodyHash(BODY[kind](row, r.c));
   }
@@ -237,7 +279,7 @@
       const fr = st.rows.food[food.id];
       if (!fr || !fr.c) return { hold: true };
       if (fr.s === 'refused' || fr.s === 'stuck') return { refuse: 'Its food could not be sent to your server.' };
-      return { ref: foodRef(food, fr.c), food, foodState: fr, maySkip: false };
+      return { ref: foodRef(food, fr.c, fr), food, foodState: fr, maySkip: false };
     };
     const add = (kind, row, body, maySkip) => {
       const list = LIST_OF[kind];
@@ -252,6 +294,19 @@
         if (ref.refuse) { r.s = 'refused'; r.w = ref.refuse; delete r.g; delete r.t; out.changed = true; out.refused.push(row.id); return { hold: true }; }
         if (ref.hold) return { hold: true };
         return { body: entryBody(row, r.c, ref.ref), maySkip: ref.maySkip, needs: ref.foodState && ref.foodState.s !== 'sent' ? ref.food : null };
+      }
+      if (kind === 'meal') { // both ways only, once the server's saved meals were read (js/mock/server_changes.js)
+        if (!mealsReady(api)) return { hold: true };
+        const refs = [];
+        const needs = [];
+        for (const it of row.items || []) {
+          const ref = refOf(api, foodById.get(Number(it.food_id)));
+          if (ref.refuse) { r.s = 'refused'; r.w = ref.refuse.replace('Its food', 'A food in it'); delete r.g; delete r.t; out.changed = true; out.refused.push(row.id); return { hold: true }; }
+          if (ref.hold && !ref.food) return { hold: true };
+          if (ref.hold) { needs.push(ref.food); refs.push({ client_id: ref.foodState.c }); continue; }
+          refs.push(ref.ref);
+        }
+        return { body: mealBody(row, r.c, refs), maySkip: true, needs: needs.length ? needs : null };
       }
       return { body: BODY[kind](row, r.c), maySkip: kind !== 'lab' };
     };
@@ -276,7 +331,7 @@
         if (!r || r.g) continue;
         const b = bodyOf(kind, row, r);
         if (!b.body) continue;
-        if (b.needs && !placed.has(b.needs.id)) continue; // its food waits for a later request (or was given its try already)
+        if (b.needs && [].concat(b.needs).some((f) => !placed.has(f.id))) continue; // its foods wait for a later request (or were given their try)
         const n = bytes(b.body) + 1;
         if (out.refs.length + 1 > maxRows || size + n > MAX_BYTES) {
           if (!out.refs.length) { r.s = 'refused'; r.w = 'It is too large to send.'; out.changed = true; out.refused.push(row.id); continue; }
@@ -327,7 +382,7 @@
   // A 400 that names a row ("entries.3.date: …"): that row is refused. False when the answer names none.
   function refuseNamed(api, batch, json) {
     const field = json && (json.field || (json.detail && typeof json.detail === 'string' ? json.detail.split(':')[0] : null));
-    const m = typeof field === 'string' ? field.match(/^(foods|entries|labs|symptoms|weights|readings)\.(\d+)(?:\.|$)/) : null;
+    const m = typeof field === 'string' ? field.match(/^(foods|entries|labs|symptoms|weights|readings|meals)\.(\d+)(?:\.|$)/) : null;
     if (!m) return false;
     const ref = batch.refs.find((x) => x.list === m[1] && x.index === Number(m[2]));
     if (!ref) return false;
@@ -467,6 +522,7 @@
   // person chooses, and after the new rows are sent the phone sends its edits and deletes and reads the server's changes.
   const both = () => M.serverChanges || null;
   function twoWay(api) { try { return !!(both() && both().active(api)); } catch (e) { return false; } }
+  function mealsReady(api) { try { return !!(both() && both().mealsReady(api)); } catch (e) { return false; } }
   async function run({ force = false } = {}) {
     if (running) { again = true; return status(); }
     running = true; emit();
@@ -475,6 +531,7 @@
       if (go) {
         await runOnce(force);
         if (both()) await both().afterSend({ force });
+        if (M.serverAccount) await M.serverAccount.pull({ force }); // the profile, targets and settings from the server (note 39 step 8)
       }
     } catch (e) { /* the next run tries again */ } finally { running = false; }
     emit();
@@ -494,6 +551,7 @@
     if (kind === 'entry') return `Food log, ${day}: ${row.food_name}`;
     if (kind === 'lab') return `Lab result, ${day}: ${row.analyte}`;
     if (kind === 'symptom') return `Symptom, ${day}`;
+    if (kind === 'meal') return `Saved meal: ${row.name}`;
     if (kind === 'weight') return `Weight, ${day}`;
     return `Blood pressure, ${day}`;
   }
@@ -508,7 +566,7 @@
     for (const [, kind] of LISTS) {
       for (const row of all[kind]) {
         const r = (st.rows[kind] || {})[row.id];
-        if (!done(r)) out.waiting += 1;
+        if (!done(r)) { if (kind !== 'meal' || mealsReady(api)) out.waiting += 1; }
         else if (r.s === 'sent') { if (r.v && r.v !== versionNow(api, kind, row, r)) out.changedSince += 1; }
         else if (r.s === 'refused') out.refused.push({ text: label(api, kind, row), why: r.w || '' });
         else if (r.s === 'stuck') out.stuck.push({ text: label(api, kind, row), why: r.w || '' });
@@ -536,6 +594,6 @@
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     // for the tests: the pure parts
     _assignIds: assignIds, _nextBatch: nextBatch, _applyAnswer: applyAnswer, _refuseNamed: refuseNamed, _foodRef: foodRef, _blank: blank,
-    _versionNow: versionNow,
+    _versionNow: versionNow, _refOf: refOf, _mealFields: mealFields,
   };
 })();

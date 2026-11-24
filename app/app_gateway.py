@@ -2,10 +2,10 @@
 "Device tokens and /push/v1"; guide ``docs/push.md``).
 
 Once the iPhone app is paired with a token of the kind "The iPhone app, both ways" (scope ``app:sync``), it can use some of this
-server's ``/api`` routes as the token's owner: the AI features and the food lookups. ``/api`` itself stays cookie-only. The gateway
-runs the same route the web app calls, so every rule of that route still holds: ``user.id`` scoping, not-yours is ``404``, the AI's
-routing, consent, prefilters, guard, daily limit and activity list, the lab routes' local-only rule, the food services' keys, limits
-and outbound checks.
+server's ``/api`` routes as the token's owner: the AI features, the food lookups, recipe pages, Instacart and the list app. ``/api``
+itself stays cookie-only. The gateway runs the same route the web app calls, so every rule of that route still holds: ``user.id``
+scoping, not-yours is ``404``, the AI's routing, consent, prefilters, guard, daily limit and activity list, the lab routes'
+local-only rule, the services' switches, keys, limits and outbound checks.
 
 Order of checks at ``/push/v1/api/<path>`` (each answers before the next runs):
 
@@ -69,7 +69,7 @@ RATE_LIMIT = "push_gateway"
 register_limit(RATE_LIMIT, 600, 3600, "Too many requests from this app. Try again later.")
 NOT_ON_LIST = "This is not open to the iPhone app."
 
-# The routes the gateway runs (design note 39 §5.2 and §11 step 2): the AI features of §6.4 and the food lookups of §7. Each is
+# The routes the gateway runs (design note 39 §5.2, §11 steps 2 and 9): the AI features of §6.4 and the services of §7. Each is
 # (method, the /api route's template). The list grows step by step; a test fails if one is missing, needs a recent password or is
 # an admin route.
 ALLOWED: frozenset[tuple[str, str]] = frozenset({
@@ -94,15 +94,40 @@ ALLOWED: frozenset[tuple[str, str]] = frozenset({
     # Open Food Facts consent, and their AI opt-in.
     ("PATCH", "/api/me/settings"),
     ("PATCH", "/api/me/ai"),
+    # The other server services (§7, step 9), each only while this server has it on (the route answers 404 otherwise), with this
+    # server's keys, limits and outbound checks: a recipe page read through the SSRF-checked transport, the Plan's shopping list at
+    # Instacart, and sending it to the person's own list app. Setting up the list app (its address and key) stays in the web app.
+    ("GET", "/api/recipe-import"),
+    ("POST", "/api/recipe-import/page"),
+    ("GET", "/api/instacart"),
+    ("POST", "/api/instacart/preview"),
+    ("POST", "/api/instacart/send"),
+    ("GET", "/api/list-sync"),
+    ("POST", "/api/list-sync/preview"),
+    ("POST", "/api/list-sync/send"),
+    # What the server owns and the phone shows (§8.1, D5, step 8): the profile and targets, the account settings (PATCH takes only
+    # the keys in BODY_KEYS) and the food preferences, read on each sync and changed only while connected, through the routes that
+    # check them for the web app. One food the person can use, and the food search, name a preference's food by this server's id.
+    ("GET", "/api/profile"),
+    ("PUT", "/api/profile"),
+    ("GET", "/api/me/settings"),
+    ("GET", "/api/guidance/preferences"),
+    ("PUT", "/api/guidance/preferences/{food_id}"),
+    ("DELETE", "/api/guidance/preferences/{food_id}"),
+    ("GET", "/api/foods"),
+    ("GET", "/api/foods/{food_id}"),
 })
 # Routes on the list that take only some keys through the gateway: the body must be one JSON object holding at least one of these
 # keys and nothing else, or the answer is 403 and the route never runs.
 BODY_KEYS: dict[tuple[str, str], frozenset[str]] = {
-    ("PATCH", "/api/me/settings"): frozenset({"food.off_consent"}),
+    # The Open Food Facts consent (step 3), and the account settings the server owns (step 8): units, the weight alarm, the blood
+    # pressure goal and the meal guidance choices. Never the theme or the camera (this iPhone's own), the AI's trust or route.
+    ("PATCH", "/api/me/settings"): frozenset({"food.off_consent", "user.units.labs", "user.units.weight", "body.weight_alarm", "body.bp_goal",
+                                              "guidance"}),
     ("PATCH", "/api/me/ai"): frozenset({"opt_in"}),
 }
 ONLY_KEYS = "From the iPhone app this can change only: {keys}."
-MAX_KEYS_BODY = 4096
+MAX_KEYS_BODY = 16384  # the meal guidance choices are one object
 
 # Never on the list, whatever it grows into (§5.2): prefixes of /api paths, and single routes.
 NEVER_PREFIXES: tuple[str, ...] = (

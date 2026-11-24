@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Decided 2026-11-24 (§12), with the usual good practice the owner asked for. The plan is §11. Built, server side: step 2 (the gateway, `app:sync`, `GET /push/v1/about`; `app/app_gateway.py`) and step 5 (the change feed, schema step 38; `app/sync_feed.py`). Built on the phone: step 1, the phone side of steps 3 and 4 (the `serverApi` bridge and its allow-list, ARCHITECTURE "Device mode"), and steps 6 and 7 (receive, the first sync's review, the account check, edits and deletes with conflict cards; `js/mock/server_changes.js`). Saved meals wait for step 8. Ask stays off on the phone. |
+| Status | Decided 2026-11-24 (§12), with the usual good practice the owner asked for. The plan is §11. Built, server side: step 2 (the gateway, `app:sync`, `GET /push/v1/about`; `app/app_gateway.py`) and step 5 (the change feed, schema step 38; `app/sync_feed.py`). Built on the phone: step 1, the phone side of steps 3 and 4 (the `serverApi` bridge and its allow-list, ARCHITECTURE "Device mode"), and steps 6 and 7 (receive, the first sync's review, the account check, edits and deletes with conflict cards; `js/mock/server_changes.js`). Step 8 is built on both sides: saved meals and recipes sync both ways; the profile, targets, account settings and food preferences come from the server and are changed through it (`js/mock/server_account.js`); the "N to review" badge and the "needs review" mark on Today. Step 9 is built on both sides: recipe pages, Instacart and the list app through the gateway. The demo's twins of step 5's versions, `If-Match` and `client_id` are built and pinned by vectors. Ask stays off on the phone. |
 | Owner's words | "Connecting a server should let the iPhone app use the server's AI and the other keys and services set up there, and sync between devices." (2026-11-21) And: "finish whatever is left on the roadmap." (2026-11-24) |
 | Builds on | [Note 38](38-iphone-app-without-a-server.md) (the app alone, device mode, step 4's one-way sending, §5.5 and §5.6, D2), [note 02](02-ios-pwa.md) R5 (the outbox, entry versions, "never overwrite another device's change"), [note 12](12-phone-push-tokens.md) (device tokens, `/push/v1`), [note 32](32-choose-local-or-cloud-ai.md) and [note 36](36-lab-pdf-text.md) (AI routing, lab text on the local model only). |
 | Scope | What the iPhone app can do once it is paired with the person's server: read and edit the person's data there, use the server's AI, use the server's food services and keys, and keep the phone and the server in step both ways. This is note 38 §9 step 6. |
@@ -373,6 +373,27 @@ The exact shapes are in [`docs/push.md`](../../push.md) and ARCHITECTURE.md.
   server's, the same edit was made on both sides and the answer is `done`.
 * The feed's answer also has `foods`, the foods its entries and saved meals use, and each entry and saved meal item names its food
   as `POST /push/v1/sync` does.
+* Step 9: the gateway's list also holds `GET /api/recipe-import`, `POST /api/recipe-import/page`, `GET /api/instacart`,
+  `POST /api/instacart/preview` and `/send`, `GET /api/list-sync`, `POST /api/list-sync/preview` and `/send`. The list app is set up
+  only in the web app, and pasted ingredients are read on the phone. The phone matches a page's ingredient lines with its own foods.
+  The server makes the shopping list from its own Plan, so before step 7 sends planned entries at once, plans made on the phone show
+  there only once they are sent. `about.services` says which of the three the server has on.
+* The web app's offline outbox (note 02) queues only food log entries, so it sends `If-Match` for no other kind.
+* Step 8, saved meals: they have no receipts (step 37's table allows six kinds), so `POST /push/v1/sync` finds a saved meal again by
+  its `client_id` and does not count it toward the day cap. A saved meal's items, and its edits in `POST /push/v1/changes`, name
+  foods by reference, as entries do; a food the server does not have yet makes the edit `refused` until the phone sends it. A phone
+  that synced before step 8 reads the feed once more from `0` for saved meals alone. A saved meal of the phone with the same name as
+  one of the server's, never sent, becomes that row, so the first sync does not make two.
+* Step 8, what the server owns: the gateway's list also holds `GET` and `PUT /api/profile`, `GET /api/me/settings`,
+  `GET /api/guidance/preferences`, `PUT` and `DELETE /api/guidance/preferences/{food_id}`, `GET /api/foods` and `GET /api/foods/{food_id}`;
+  `PATCH /api/me/settings` also takes `user.units.labs`, `user.units.weight`, `body.weight_alarm`, `body.bp_goal` and `guidance`. A
+  preference names a food by the server's id, so the phone finds each food (`GET /api/foods/{id}`, or the food search by name) and
+  remembers the pair. The `guidance` lists that name rows by id ("OK to repeat", "Not this meal") stay on each side. Food preferences
+  only the phone had are sent once at the first sync. §8.7 point 5's card is built; the note describes no other card about a Care
+  team's change, so a new target from the server simply shows on the phone.
+* Found while building step 8: an entry on the phone for a food that came from the server (one made there, or a USDA or Open Food
+  Facts food) could not be placed by `POST /push/v1/sync`. The server now also finds an own food by its `client_id`, and the phone
+  names a USDA or Open Food Facts food from the server by its `fdc_id` or barcode.
 
 ## 12. Decisions (2026-11-24)
 

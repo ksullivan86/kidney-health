@@ -341,7 +341,10 @@
 
   // An entry the person has to deal with in Settings → This device first: refused by the server ("not saved"), or changed on
   // another device while a change of theirs waited ("needs review"). Entries that merely wait to sync are edited as usual.
-  const needsReview = (e) => !!(e.conflict || (e.pending && e.failed));
+  // The iPhone app with a server both ways (design note 39 §8.6): an entry whose copy here and on the server differ waits in Settings →
+  // This device → Your server (js/views/server_review.js).
+  const serverReview = (e) => !!(KH.serverReview && KH.serverReview.needsReview('entry', e.client_id));
+  const needsReview = (e) => !!(e.conflict || (e.pending && e.failed) || serverReview(e));
   function entryRow(e) {
     const planned = isPlanned(e);
     const amount = e.grams != null ? `${fmtNum(e.grams, 'fluid_ml')} g (${fmtServings(e.servings)})` : fmtServings(e.servings);
@@ -354,7 +357,7 @@
     }
     // An entry that only this device has, or a change of it that waits (js/offline.js): it is edited like any other and the
     // change waits too; one that needs review or was not saved opens Settings → This device instead.
-    const waiting = e.pending ? (e.conflict ? 'needs review' : e.failed ? 'not saved' : 'waiting to sync') : null;
+    const waiting = serverReview(e) ? 'needs review' : e.pending ? (e.conflict ? 'needs review' : e.failed ? 'not saved' : 'waiting to sync') : null;
     const label = needsReview(e) ? `${e.food_name}, ${amount}, ${waiting}: open This device`
       : `Edit ${planned ? 'planned ' : ''}${e.food_name}, ${amount}${waiting ? `, ${waiting}` : ''}${e.purpose === 'hypo' ? ', used to treat a low' : ''}`
         + `${e.added_by ? `, added by ${e.added_by}` : ''}`;
@@ -362,13 +365,18 @@
       ratingIcon(e.kidney_rating),
       h('div', { class: 'row-main' },
         h('div', { class: 'row-title' }, e.food_name, planned ? h('span', { class: 'badge planned' }, 'planned') : null,
-          waiting ? h('span', { class: `badge ${e.failed || e.conflict ? 'failed' : 'pending'}` }, waiting) : null, KH.guidance ? KH.guidance.lowBadge(e) : null),
+          waiting ? h('span', { class: `badge ${e.failed || e.conflict || serverReview(e) ? 'failed' : 'pending'}` }, waiting) : null, KH.guidance ? KH.guidance.lowBadge(e) : null),
         h('div', { class: 'row-sub' }, h('span', { class: 'entry-servings' }, amount), e.note ? h('span', { class: 'entry-note' }, ` · ${e.note}`) : null,
           // Planned by someone on the person's Care team (design note 25).
           e.added_by ? h('span', { class: 'entry-added-by' }, ` · Added by ${e.added_by}`) : null)),
       nums);
     btn.addEventListener('click', () => {
       if (!needsReview(e)) { views().add.openEntrySheet('edit', { entry: e, trigger: btn }); return; }
+      if (serverReview(e)) {
+        toast('This entry differs on this iPhone and your server. Choose which to keep in Settings → This device.');
+        KH.serverReview.open();
+        return;
+      }
       toast(e.conflict ? 'This entry was changed on another device too. Choose which version to keep in Settings → This device.'
         : 'This entry did not reach your server. Review it in Settings → This device.');
       $('#sync-badge').click();

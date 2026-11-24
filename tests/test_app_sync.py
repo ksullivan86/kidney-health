@@ -60,7 +60,7 @@ def ok(app: Any, token: str, body: Any) -> dict[str, Any]:
 
 
 def counts(**added: int) -> dict[str, int]:
-    return {**NOTHING, **added}
+    return {**NOTHING, "meals": 0, **added}
 
 
 def own_food(client_id: str | None = None, **extra: Any) -> dict[str, Any]:
@@ -222,7 +222,7 @@ def test_every_kind_is_added_once_as_the_owners_and_counted(admin, app_token):
         "readings": [reading(pulse=64)],
     }
     out = ok(admin.app, app_token, body)
-    assert out == {"added": counts(foods=1, entries=3, labs=1, symptoms=2, weights=1, readings=1), "already_there": NOTHING,
+    assert out == {"added": counts(foods=1, entries=3, labs=1, symptoms=2, weights=1, readings=1), "already_there": counts(),
                    "skipped": {"food_not_found": 0, "day_full": 0}}
     rows = {e["food_name"]: e for e in log_rows(admin)}
     assert rows["Grandma's rice pudding"]["servings"] == 2 and rows["Grandma's rice pudding"]["note"] == "after dialysis"
@@ -242,7 +242,7 @@ def test_every_kind_is_added_once_as_the_owners_and_counted(admin, app_token):
     assert len(receipts(admin)) == 9 and all(r["added"] == 1 for r in receipts(admin))
 
     again = ok(admin.app, app_token, body)  # the same request again: nothing new
-    assert again["added"] == NOTHING
+    assert again["added"] == counts()
     assert again["already_there"] == counts(foods=1, entries=3, labs=1, symptoms=2, weights=1, readings=1)
     assert len(log_rows(admin)) == 3 and len(receipts(admin)) == 9
 
@@ -253,7 +253,7 @@ def test_a_row_deleted_here_is_not_sent_back(admin, app_token):
     entry_id = log_rows(admin)[0]["id"]
     assert admin.delete(f"/api/log/{entry_id}").status_code == 204
     out = ok(admin.app, app_token, {"entries": [e]})
-    assert out["already_there"]["entries"] == 1 and out["added"] == NOTHING and log_rows(admin) == []
+    assert out["already_there"]["entries"] == 1 and out["added"] == counts() and log_rows(admin) == []
 
 
 def test_a_food_is_found_again_by_its_client_id_in_a_later_request(admin, app_token):
@@ -397,7 +397,7 @@ def test_created_at_finds_a_row_that_came_by_file(admin, app_token):
     # The same rows under new client IDs (an export imported here, then the phone sends them): found by their content and time.
     copy = {**first, "client_id": cid()}
     out = ok(admin.app, app_token, {"entries": [copy], "labs": [lab(created_at=stamp)], "symptoms": [symptom(created_at=stamp)]})
-    assert out["added"] == NOTHING and out["already_there"] == counts(entries=1, labs=1, symptoms=1)
+    assert out["added"] == counts() and out["already_there"] == counts(entries=1, labs=1, symptoms=1)
     assert log_rows(admin)[0]["created_at"] == stamp
 
 
@@ -650,7 +650,7 @@ def test_delete_what_it_sent_removes_every_kind_the_token_added_and_nothing_else
     deleted = audit_rows(admin, "body.token_rows_deleted")[-1]["details"]
     assert deleted == {"weights": 1, "readings": 1, "entries": 3, "labs": 1, "symptoms": 1, "foods": 1}
     # The phone sending the same rows again adds nothing back.
-    assert ok(admin.app, app_token, {"symptoms": [sent_symptom]})["added"] == NOTHING
+    assert ok(admin.app, app_token, {"symptoms": [sent_symptom]})["added"] == counts()
 
 
 def test_delete_what_it_sent_works_after_revoking_and_a_shortcut_tokens_answer_is_unchanged(admin, app_token):

@@ -4535,6 +4535,7 @@ at most **256 KiB** → `413`; one JSON object, strict JSON, at most **200 rows*
 | `symptoms` | `SymptomCreate` (`POST /api/symptoms`) | `client_id`, `created_at` | as `POST /api/symptoms` |
 | `weights` | `WeightCreate` (`POST /api/body/weights`) | `client_id`, `source_key` (the Health key the phone holds; optional) | `source = 'shortcut'`, `api_token_id` = the token |
 | `readings` | `BloodPressureCreate` (`POST /api/body/blood-pressure`) | `client_id`, `source_key` | `source = 'shortcut'`, `api_token_id` = the token |
+| `meals` (note 39 step 8; the phone sends them only with a token both ways) | `MealTemplateCreate` (`POST /api/meals`) with `items: [{food, servings}]` (`SyncMealFields`) | `client_id`, `created_at` | `meals.insert_template`, its `client_id` the phone's; found again by `client_id` (no receipt, so not in the day cap); a meal whose food this server cannot find is skipped as `food_not_found` |
 
 The first problem is `400 {"detail": "entries.3.date: …", "field": "entries.3.date"}`; nothing is stored. A model-level rule has no
 field name: `labs.0: unit 'x' is not accepted for potassium; …`. A `client_id` is a UUID in its 36-character form, stored lower-case;
@@ -4872,7 +4873,15 @@ Code `app/app_gateway.py`, `GatewayCaller` in `app/auth/deps.py`, `app:sync` in 
   `/api/ai/parse-meal`, `/api/ai/recipes`, `/api/ai/chat`, `/api/ai/transcribe`, `/api/vision/label`, `/api/vision/plate`,
   `/api/ai/read-lab-report`, `/api/ai/read-lab-report-text`, `GET /api/foods/usda/search`, `POST /api/foods/usda/import`,
   `POST /api/foods/barcode`, and `PATCH /api/me/settings` and `PATCH /api/me/ai` with only the keys of `BODY_KEYS` (`food.off_consent`;
-  `opt_in`: any other key is `403` before the route runs). `NEVER_PREFIXES` and `NEVER` name what may never be added (sign-in, admin, tokens, sessions, keys and providers,
+  `opt_in`: any other key is `403` before the route runs); since plan step 8 also `GET` and `PUT /api/profile`, `GET /api/me/settings`,
+  `GET /api/guidance/preferences`, `PUT` and `DELETE /api/guidance/preferences/{food_id}`, `GET /api/foods` and `GET /api/foods/{food_id}`
+  (the profile, targets, account settings and food preferences, which the server owns; the two food reads name a preference's food), with
+  `PATCH /api/me/settings` taking also `user.units.labs`, `user.units.weight`, `body.weight_alarm`, `body.bp_goal` and `guidance` (never the
+  theme, the camera, the AI's trust or route; at most 16 KiB); since plan step 9 also `GET /api/recipe-import`, `POST /api/recipe-import/page`
+  (the page is read by the server's `RecipeFetcher` through the SSRF-checked transport), `GET /api/instacart`, `POST /api/instacart/preview`,
+  `/api/instacart/send`, `GET /api/list-sync`, `POST /api/list-sync/preview` and `/api/list-sync/send`, each answering as for the web app
+  while its switch is off. Never the list app's set-up (`PUT`/`DELETE /api/list-sync`, `POST /api/list-sync/test`) nor
+  `/api/recipe-import/text` (the phone reads pasted text itself). `NEVER_PREFIXES` and `NEVER` name what may never be added (sign-in, admin, tokens, sessions, keys and providers,
   sharing, the import, the `.zip` export, two-step sign-in, passkeys, the account itself). The test pins the list, checks every listed route
   needs `current_user` and neither `require_recent_auth` nor `require_admin`, and runs the isolation matrix through the gateway.
 * **The AI** keeps every rule because it is the same route: routing per feature, opt-in and consent per person, prefilters, guard, daily limit,
@@ -4901,12 +4910,26 @@ Code `app/sync_feed.py`, `app/row_versions.py` (twin `js/engine/row_versions.js`
   `PUT` and `DELETE` routes of foods, saved meals, symptoms, weights and readings, and the `DELETE` of labs, take `If-Match` and answer
   `412 {detail, current: <row with version>}` (`row_versions.check_if_match`, inside the write's transaction). Normal answers do not carry
   the new kinds' versions; the feed, the 412 and the twin do.
+* **The demo's twins** (CLAUDE.md "Parity"): `js/mock/core.js` `checkIfMatch` and `withVersion` (with `js/engine/row_versions.js`) give the
+  same 412 in the same place on the same routes of `js/mock/{foods,meals,symptoms,body,labs}.js`: after the 404 and a food's 409s, before
+  a day's limit and a saved meal's foods. A food's and a saved meal's `current` holds `client_id`, as the server's row does. Every new row
+  gets a `client_id` (`newClientId`, a UUID version 4; entries too; a built-in or shared food none); the export carries it for every kind,
+  the import keeps it when the person has no row with it (`free_id`), and `_fillClientIds`, run when a stored log is read back
+  (`js/mock/persist.js`), gives one to every row without, the one the phone's send queue already used when it has one. Pinned by the
+  request `script` of `tests/data/row_version_vectors.json` (replayed by `node tests/js/run_vectors.mjs`) and `tests/js/row_ids_demo.mjs`.
+  The web app's offline outbox (`js/offline.js`) queues only food log entries; the other kinds need the server, so it sends no
+  `If-Match` for them.
 * **`GET /push/v1/changes?after&limit`** (token with `app:sync`, 120 an hour, `push_changes`): `{changes: [{kind, id, op: put|delete,
   version, row?}], foods: [{ref, food}], next, more}`, one snapshot per page, at most 500. `row` is the export's shape with `client_id`;
   entries and saved meal items carry `food` as `POST /push/v1/sync`'s food reference.
+* **A food reference** (`app_sync.food_for_ref`, used by `POST /push/v1/sync` and by a saved meal's edit): a `client_id` is a food sent in
+  the same request, one an app token sent before (its receipt), or the person's own food with that `client_id` (a food made on the server
+  that the phone read from the feed); a built-in food by `fdc_id` then name; a USDA or Open Food Facts food by `fdc_id` or `gtin`.
 * **`POST /push/v1/changes`** (`push_changes_write`, 120 an hour with match; at most 200 changes, 256 KiB): each `{kind, id, op: edit|delete,
   base, fields?, version?}` calls the kind's route function with `If-Match: "<base>"` and answers `done` (new version), `conflict` (row and
-  version as stored), `gone` or `refused`. An edit whose `version` equals the stored version is `done` with no write.
+  version as stored), `gone` or `refused`. An edit whose `version` equals the stored version is `done` with no write. A saved meal's
+  `fields` are `SyncMealFields`: its items name their foods by reference, never by this server's ids; a food not here yet is `refused`
+  ("A food in this saved meal is not on your server yet"), and the phone sends the food first.
 * **`POST /push/v1/match`**: `{ids: {kind: [ids]}}` → `{known: {kind: {phone: server}}, unknown: {kind: [ids]}}`, by `client_id` and by
   step 37's receipts. At most 2,000 ids.
 * **The reader** is the iPhone app's page (note 39 steps 6 and 7): `js/mock/server_changes.js`, in "Device mode" below. It reaches
@@ -5862,7 +5885,9 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
     `POST /api/foods/usda/import`, `POST /api/foods/barcode`, `PATCH /api/me/settings` (body only `food.off_consent`);
     `GET /api/ai/status`, `PATCH /api/me/ai` (body only `opt_in`), `POST /api/ai/consent`, `next-meal`, `parse-meal`, `recipes`,
     `chat`, `read-lab-report-text` (each with `dry_run`), and the photo routes `POST /api/ai/read-lab-report`, `/api/vision/label`
-    and `/api/vision/plate` (JPEG only), all under `/push/v1/api/`. It sends to the paired HTTPS address with the Keychain token
+    and `/api/vision/plate` (JPEG only), and since step 9 `GET /api/recipe-import`, `POST /api/recipe-import/page`,
+    `GET /api/instacart`, `POST /api/instacart/preview` and `/send`, `GET /api/list-sync`, `POST /api/list-sync/preview` and `/send`,
+    all under `/push/v1/api/`. It sends to the paired HTTPS address with the Keychain token
     through `URLSessionTransport` (no cookies, no cache, no redirects; 180 s for an answer; JSON up to 512 KiB, a photo up to 6 MiB,
     an answer up to 4 MiB). No key of the phone's is ever sent, and nothing is logged.
   * **Which token**: `js/mock/server_api.js` asks `GET /push/v1/about` at most every five minutes: 200 is `both`, 401 or 403
@@ -5890,8 +5915,8 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
 * **Sync both ways (design note 39, steps 6 and 7)**: `js/mock/server_changes.js` (device mode only, `M.serverChanges`) reads the
   change feed and sends the phone's edits and deletes ("The change feed" above), through `M.serverApi.call` and the app's
   `serverApi` message (allow-list: `GET /push/v1/changes` with `after` and `limit`, `POST /push/v1/changes`, `POST /push/v1/match`).
-  Kinds: `entry`, `food` (own), `lab`, `symptom`, `weight`, `reading`; the feed's `meal` rows are skipped until step 8. A row's ID
-  is its `client_id`: an entry's own, every other kind's step-4 mark `c`. Active only with `about` 200, an `account`, and the same
+  Kinds: `entry`, `food` (own), `meal` (step 8), `lab`, `symptom`, `weight`, `reading`. A row's ID is its `client_id`: an entry's
+  own, every other kind's step-4 mark `c`, which is also the row's own `client_id`. Active only with `about` 200, an `account`, and the same
   account as saved.
   * **Saved** with the log in `_serverChanges`: `{ v: 1, account, host, cursor, first, full, rows: { kind: { client_id: { b, l?, r?,
     w? } } }, items: [...], notices: [...], ask, syncedAt, outcome, message, waitUntil }`. `b` is the server's version the phone
@@ -5903,7 +5928,7 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
     and stops everything until the person answers: **Send this iPhone's data to <host>** (step 4's marks cleared, so all is sent as
     new; the receipts and `client_id`s keep it from adding twice; cursor 0), **Replace this iPhone's data with <host>'s** (saved
     first, so the Files app safety copy holds it; then the log's synced rows are removed and read again from cursor 0; profile,
-    settings and saved meals stay), or **Cancel** (nothing changes; sync stays stopped).
+    this iPhone's own settings stay), or **Cancel** (nothing changes; sync stays stopped).
   * **One run** (`afterSend`, §8.5): at the first sync, `POST /push/v1/match` renames the phone's rows to the server's IDs (a
     duplicate with the same version is dropped), then the feed is read from cursor 0 with §8.7's rules. Then the waiting changes go
     out (`POST /push/v1/changes`, at most 200 and 256 KiB a request, 5 requests a run) with `base` = `b` and `version` = the phone's,
@@ -5930,10 +5955,45 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
     "Both ways", when it last synced, the changes waiting, the number to review, each card (both copies side by side, with what
     differs marked), the dropped-change notices (OK clears them) and refused changes. Today reloads when rows came from the server
     (`takeChanged`, `js/main.js`). Nothing looks at `purpose`: a low treatment is synced, edited and reviewed like any entry.
+  * **Saved meals and recipes** (step 8) sync like the other kinds (`meal`; versions over `_templateView`). A phone that synced before
+    step 8 reads the feed once more from cursor 0 for them alone (`meals`, `mcursor`); a saved meal of the phone with the same name as a
+    new one of the server's, never sent, takes the server's ID (the same version: one row; different: the review). Step 4 sends the
+    phone's saved meals (`meals` in `POST /push/v1/sync`) only after that (`mealsReady`), with the foods they use; their items and edits
+    name foods by reference (`M.serverSync._refOf`: a built-in by `fdc_id`/name, an own food by `client_id`, a USDA or Open Food Facts
+    food read from the server, mark `f: 'server'`, by `fdc_id`/`gtin`). An edit whose new food waits to be sent waits too.
+  * **One ID per row**: step 4's mark `c` is the row's own `client_id` while it is not sent (the twins give every row one), a sent row
+    keeps the ID it was sent with and the row takes it; rows from the server, a match or "Keep this iPhone's" set both.
+  * **The profile, targets, account settings and food preferences** (step 8, D5), `js/mock/server_account.js` (`M.serverAccount`):
+    after each run (at most every 5 minutes unless Sync now) it reads `GET /push/v1/api/profile`, `/me/settings` and
+    `/guidance/preferences` and copies them into the phone's profile, its user settings of `ACCOUNT_KEYS` (`user.units.labs`,
+    `user.units.weight`, `body.weight_alarm`, `body.bp_goal`, `guidance`; the `guidance` lists that name this phone's ids,
+    `repeat_ok_foods`, `repeat_ok_meals`, `hidden_usual_meals`, stay as they are here) and its food preferences, each food found by
+    `GET /push/v1/api/foods/{id}` and remembered (`foodIds`). While the phone is paired both ways with an account (offline too), the
+    phone's `PUT /api/profile`, `PATCH /api/me/settings` (the account keys; the theme and the camera stay local), `PUT`/`DELETE
+    /api/guidance/preferences/{id}` and the "Not for me" routes go to the server first (a food's server id by `foodIds` or
+    `GET /push/v1/api/foods?q=`; unknown: `409` "not on your server yet") and are applied here only when it took them; offline they are
+    `503` "This needs a connection to your server." The first read (§8.7 point 5): when the phone had its own profile and it differs,
+    `card` keeps both; the server's is shown; **Keep this iPhone's** sends the phone's with `PUT /push/v1/api/profile` (targets the
+    server has and the phone does not as `null`). Preferences only the phone had are sent once. Saved in `_serverAccount`.
+  * **"N to review"** (§8.6, `js/views/server_review.js`): the header's `#sync-badge` says "N to review" (the review items and the
+    profile card) and opens Settings → This device at the cards; Today marks an entry under review "needs review" and opens the same.
+  * **Recipe pages, Instacart and the list app** (§7, step 9), in `js/mock/lists.js`: in device mode never the demo's stand-ins.
+    With `both` and the service on in `about.services` (`recipe_import`, `instacart`, `list_sync`; one not mentioned is tried), each
+    goes through the gateway; otherwise, and while the server cannot be reached, it answers as a server with it off (`web: false`,
+    `enabled: false`, the other routes `404`; a failed send is `503` "Your server cannot be reached right now"). A page's draft keeps
+    the server's name, steps and lines, and the lines are matched again with the phone's own food search, so the saved recipe uses
+    the phone's foods. Pasted ingredients are read on the phone. The server makes the Instacart and list app lines from its own Plan;
+    the page shows each with the phone's id for the food of that name (or a negative id when the phone has no such planned food), so
+    "ticked on this phone" works, and maps them back to the server's ids on Send (in memory, per range). The list app's set-up routes
+    are `404` on the phone. `views/instacart.js` shows the demo's sentence only when `MOCK && !DEVICE`; on the phone the server's
+    `https` link opens in Safari when pressed.
 * **Tests**: `tests/js/server_sync.mjs` and `tests/test_server_sync_phone.py` (the queue against a stand-in app, and the page's
   body through the real route), `tests/js/server_services.mjs` and `tests/test_server_services_phone.py` (note 39 steps 3 and 4
-  against a fake gateway), `tests/js/server_changes.mjs` (steps 6 and 7 against a fake feed) and `tests/test_server_changes_phone.py`
-  (the same page against the real routes, through the allow-list, playing the web app too), `ServerAPITests.swift` (the allow-list), `tests/js/device_mode.mjs` (the engine, against a fake IndexedDB), `tests/test_device_mode.py` (the build and the wiring), `PhoneTests.swift`,
-  `tests/test_ios_app.py` (the shell's rules), `WebShellTests.swift` (the simulator), `tools/e2e/device_mode.py` (Chromium, with a
-  sync walk: an entry from the server on Today, a conflict card, Use mine).
+  against a fake gateway), `tests/js/server_lists.mjs` (step 9, run by the same pytest file), `tests/js/server_changes.mjs` (steps 6
+  to 8 against a fake feed and gateway) and `tests/test_server_changes_phone.py` (the same page against the real routes, through the
+  allow-list, playing the web app too), `tests/test_sync_meals.py` (saved meals on the server side), `ServerAPITests.swift` (the
+  allow-list), `tests/js/device_mode.mjs` (the engine, against a fake IndexedDB), `tests/test_device_mode.py` (the build and the
+  wiring), `PhoneTests.swift`, `tests/test_ios_app.py` (the shell's rules), `WebShellTests.swift` (the simulator),
+  `tools/e2e/device_mode.py` (Chromium, with a sync walk: an entry from the server on Today, a conflict card, Use mine, the review
+  badge and mark, a saved meal and the profile from the server).
 

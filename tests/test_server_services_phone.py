@@ -55,3 +55,23 @@ def test_only_a_failure_moves_the_ai_on_and_never_to_a_cloud_model():
     # nothing warns against or blocks a low: the safety answers are passed on untouched
     api = (STATIC / "js" / "mock" / "server_api.js").read_text(encoding="utf-8")
     assert "if (isDict(answer) && SAFETY.has(answer.status)) return answer;" in api
+
+
+def test_recipe_pages_instacart_and_the_list_app_go_through_the_server_only_when_it_offers_them():
+    """Note 39 §7, step 9 (``tests/js/server_lists.mjs``): off with no server both ways, as on a server with them off; through the
+    gateway when the server offers them; a page's lines matched with the phone's foods; the server's food ids shown as the phone's
+    and sent back as the server's; the list app never set up from the phone; pasted ingredients stay on the phone."""
+    assert shutil.which("node"), "Node.js 22 is needed (CLAUDE.md, Parity)"
+    done = subprocess.run(["node", str(ROOT / "tests" / "js" / "server_lists.mjs")], capture_output=True, text=True, timeout=300,
+                          check=False)
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "server lists:" in done.stdout and "checks passed" in done.stdout
+    code = (STATIC / "js" / "mock" / "lists.js").read_text(encoding="utf-8")
+    for word in ("fetch(", "XMLHttpRequest", "WebSocket", "sendBeacon", "Authorization", "khd_", "localStorage", "indexedDB"):
+        assert word not in code, word
+    # the device-mode branch asks only routes on the server's gateway list, and never the list app's set-up or pasted text
+    from app.app_gateway import ALLOWED
+
+    asked = set(re.findall(r"(?:viaServer|serverStatus)\('\w+', (?:'(GET|POST)', )?'(/api/[^']+)'", code))
+    assert len(asked) == 8 and {(m or "GET", p) for m, p in asked} <= ALLOWED
+    assert "/api/recipe-import/text" not in {p for _, p in asked}

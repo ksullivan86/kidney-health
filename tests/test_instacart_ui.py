@@ -45,7 +45,8 @@ def test_the_sheet_says_what_is_sent_and_whose_terms_apply() -> None:
 
 
 def test_the_link_opens_in_a_new_tab_without_a_referrer_and_only_https() -> None:
-    assert "if (MOCK || !/^https:\\/\\//i.test(url || ''))" in VIEW
+    assert "if (DEMO || !/^https:\\/\\//i.test(url || ''))" in VIEW
+    assert "const DEMO = MOCK && !KH.flags.DEVICE;" in VIEW  # the iPhone app's link is a real one (design note 39 step 9)
     assert "target: '_blank', rel: 'noopener noreferrer', referrerpolicy: 'no-referrer'" in VIEW
     assert "window.open(url, '_blank', 'noopener,noreferrer')" in VIEW
 
