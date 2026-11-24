@@ -6,7 +6,8 @@
      the sentence that Instacart is another company with its own terms and privacy policy. The person presses Send each time.
    * The server asks Instacart for the page and answers its link; this page never calls Instacart itself. The link opens in a new
      tab and is also shown to press, because a browser may block a tab opened after a wait. Only an https:// link is used.
-   * The demo answers a placeholder that does not leave the page, and says nothing was sent.
+   * The demo answers a placeholder that does not leave the page, and says nothing was sent. The iPhone app asks the person's own
+     server (js/mock/lists.js, design note 39 step 9), and its link opens in Safari when the person presses the button.
 
    All text goes in with h() children (textContent), never as HTML. */
 (() => {
@@ -14,6 +15,7 @@
   const KH = window.KH;
   const { h, $, clear, request, toastError, sheets } = KH;
   const { MOCK } = KH.flags;
+  const DEMO = MOCK && !KH.flags.DEVICE; // the iPhone app runs the in-page API too, but its links are real
 
   const A = {
     get: () => request('GET', '/api/instacart', undefined, { noQueue: true }),
@@ -111,7 +113,7 @@
     countSelected();
     $('#instacart-cancel').textContent = 'Close';
     const body = clear($('#instacart-body'));
-    if (MOCK || !/^https:\/\//i.test(url || '')) {
+    if (DEMO || !/^https:\/\//i.test(url || '')) {
       body.append(h('p', { id: 'instacart-demo' }, `This is the demo, so nothing was sent. On a server, Instacart's page with these ${items(n)} opens now in a new tab.`));
       return;
     }

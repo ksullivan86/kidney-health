@@ -890,5 +890,1052 @@
    "name": "empty",
    "version": "3cb3bbd5237ca15e"
   }
+ ],
+ "script": [
+  {
+   "answer": {
+    "body": {
+     "brand": null,
+     "category": "Family recipes",
+     "flags": [],
+     "gtin": null,
+     "hidden": false,
+     "ingredients_text": null,
+     "kidney_notes": null,
+     "name": "Grandma's rice pudding",
+     "nutrients": {
+      "calcium_mg": null,
+      "calories_kcal": 210.0,
+      "carbs_g": null,
+      "fat_g": null,
+      "fiber_g": null,
+      "fluid_ml": 0,
+      "phosphorus_mg": 120,
+      "potassium_mg": 180,
+      "protein_g": null,
+      "sat_fat_g": null,
+      "sodium_mg": null,
+      "sugar_g": null
+     },
+     "serving_desc": "1 bowl",
+     "serving_g": 150.0,
+     "version": "327a40dc90255632"
+    },
+    "ok": true
+   },
+   "body": {
+    "category": "Family recipes",
+    "name": "Grandma's rice pudding",
+    "nutrients": {
+     "calories_kcal": 210,
+     "phosphorus_mg": 120,
+     "potassium_mg": 180
+    },
+    "serving_desc": "1 bowl",
+    "serving_g": 150
+   },
+   "kind": "food",
+   "method": "POST",
+   "name": "add a food",
+   "path": "/api/foods"
+  },
+  {
+   "answer": {
+    "body": {
+     "brand": null,
+     "category": "Family recipes",
+     "flags": [],
+     "gtin": null,
+     "hidden": false,
+     "ingredients_text": null,
+     "kidney_notes": null,
+     "name": "Rice pudding",
+     "nutrients": {
+      "calcium_mg": null,
+      "calories_kcal": 210.0,
+      "carbs_g": null,
+      "fat_g": null,
+      "fiber_g": null,
+      "fluid_ml": 0,
+      "phosphorus_mg": 120,
+      "potassium_mg": 180,
+      "protein_g": null,
+      "sat_fat_g": null,
+      "sodium_mg": null,
+      "sugar_g": null
+     },
+     "serving_desc": "1 bowl",
+     "serving_g": 150.0,
+     "version": "892dba4359956ce5"
+    },
+    "ok": true
+   },
+   "body": {
+    "category": "Family recipes",
+    "name": "Rice pudding",
+    "nutrients": {
+     "calories_kcal": 210,
+     "phosphorus_mg": 120,
+     "potassium_mg": 180
+    },
+    "serving_desc": "1 bowl",
+    "serving_g": 150
+   },
+   "if_match": "\"{{version:0}}\"",
+   "kind": "food",
+   "method": "PUT",
+   "name": "PUT with the matching version",
+   "path": "/api/foods/{{id:0}}"
+  },
+  {
+   "answer": {
+    "current": {
+     "brand": null,
+     "category": "Family recipes",
+     "flags": [],
+     "gtin": null,
+     "hidden": false,
+     "ingredients_text": null,
+     "kidney_notes": null,
+     "name": "Rice pudding",
+     "nutrients": {
+      "calcium_mg": null,
+      "calories_kcal": 210.0,
+      "carbs_g": null,
+      "fat_g": null,
+      "fiber_g": null,
+      "fluid_ml": 0,
+      "phosphorus_mg": 120,
+      "potassium_mg": 180,
+      "protein_g": null,
+      "sat_fat_g": null,
+      "sodium_mg": null,
+      "sugar_g": null
+     },
+     "serving_desc": "1 bowl",
+     "serving_g": 150.0,
+     "version": "892dba4359956ce5"
+    },
+    "current_has_client_id": true,
+    "detail": "This food was changed on another device",
+    "ok": false,
+    "status": 412
+   },
+   "body": {
+    "brand": "Acme",
+    "category": "Family recipes",
+    "name": "Grandma's rice pudding",
+    "nutrients": {
+     "calories_kcal": 210,
+     "phosphorus_mg": 120,
+     "potassium_mg": 180
+    },
+    "serving_desc": "1 bowl",
+    "serving_g": 150
+   },
+   "if_match": "\"{{version:0}}\"",
+   "kind": "food",
+   "method": "PUT",
+   "name": "PUT with the version it had before (412)",
+   "path": "/api/foods/{{id:0}}"
+  },
+  {
+   "answer": {
+    "detail": "serving_g: Input should be greater than or equal to 0.1",
+    "ok": false,
+    "status": 400
+   },
+   "body": {
+    "category": "Family recipes",
+    "name": "Grandma's rice pudding",
+    "nutrients": {
+     "calories_kcal": 210,
+     "phosphorus_mg": 120,
+     "potassium_mg": 180
+    },
+    "serving_desc": "1 bowl",
+    "serving_g": -1
+   },
+   "if_match": "\"0000000000000000\"",
+   "kind": "food",
+   "method": "PUT",
+   "name": "PUT with a bad body and an old version (400)",
+   "path": "/api/foods/{{id:0}}"
+  },
+  {
+   "answer": {
+    "body": {
+     "brand": null,
+     "category": "Family recipes",
+     "flags": [],
+     "gtin": null,
+     "hidden": false,
+     "ingredients_text": null,
+     "kidney_notes": "Rich in phosphorus",
+     "name": "Rice pudding",
+     "nutrients": {
+      "calcium_mg": null,
+      "calories_kcal": 210.0,
+      "carbs_g": null,
+      "fat_g": null,
+      "fiber_g": null,
+      "fluid_ml": 0,
+      "phosphorus_mg": 120,
+      "potassium_mg": 180,
+      "protein_g": null,
+      "sat_fat_g": null,
+      "sodium_mg": null,
+      "sugar_g": null
+     },
+     "serving_desc": "1 bowl",
+     "serving_g": 150.0,
+     "version": "0e1b2dc25dc57aa5"
+    },
+    "ok": true
+   },
+   "body": {
+    "category": "Family recipes",
+    "kidney_notes": "Rich in phosphorus",
+    "name": "Rice pudding",
+    "nutrients": {
+     "calories_kcal": 210,
+     "phosphorus_mg": 120,
+     "potassium_mg": 180
+    },
+    "serving_desc": "1 bowl",
+    "serving_g": 150
+   },
+   "kind": "food",
+   "method": "PUT",
+   "name": "PUT without the header",
+   "path": "/api/foods/{{id:0}}"
+  },
+  {
+   "answer": {
+    "current": {
+     "brand": null,
+     "category": "Family recipes",
+     "flags": [],
+     "gtin": null,
+     "hidden": false,
+     "ingredients_text": null,
+     "kidney_notes": "Rich in phosphorus",
+     "name": "Rice pudding",
+     "nutrients": {
+      "calcium_mg": null,
+      "calories_kcal": 210.0,
+      "carbs_g": null,
+      "fat_g": null,
+      "fiber_g": null,
+      "fluid_ml": 0,
+      "phosphorus_mg": 120,
+      "potassium_mg": 180,
+      "protein_g": null,
+      "sat_fat_g": null,
+      "sodium_mg": null,
+      "sugar_g": null
+     },
+     "serving_desc": "1 bowl",
+     "serving_g": 150.0,
+     "version": "0e1b2dc25dc57aa5"
+    },
+    "current_has_client_id": true,
+    "detail": "This food was changed on another device",
+    "ok": false,
+    "status": 412
+   },
+   "body": {
+    "category": "Family recipes",
+    "name": "Grandma's rice pudding",
+    "nutrients": {
+     "calories_kcal": 210,
+     "phosphorus_mg": 120,
+     "potassium_mg": 180
+    },
+    "serving_desc": "1 bowl",
+    "serving_g": 150
+   },
+   "if_match": "W/\"{{version:4}}\"",
+   "kind": "food",
+   "method": "PUT",
+   "name": "PUT with a weak tag (412)",
+   "path": "/api/foods/{{id:0}}"
+  },
+  {
+   "answer": {
+    "current": {
+     "brand": null,
+     "category": "Family recipes",
+     "flags": [],
+     "gtin": null,
+     "hidden": false,
+     "ingredients_text": null,
+     "kidney_notes": "Rich in phosphorus",
+     "name": "Rice pudding",
+     "nutrients": {
+      "calcium_mg": null,
+      "calories_kcal": 210.0,
+      "carbs_g": null,
+      "fat_g": null,
+      "fiber_g": null,
+      "fluid_ml": 0,
+      "phosphorus_mg": 120,
+      "potassium_mg": 180,
+      "protein_g": null,
+      "sat_fat_g": null,
+      "sodium_mg": null,
+      "sugar_g": null
+     },
+     "serving_desc": "1 bowl",
+     "serving_g": 150.0,
+     "version": "0e1b2dc25dc57aa5"
+    },
+    "current_has_client_id": true,
+    "detail": "This food was changed on another device",
+    "ok": false,
+    "status": 412
+   },
+   "if_match": "\"{{version:1}}\"",
+   "kind": "food",
+   "method": "DELETE",
+   "name": "DELETE with an old version (412)",
+   "path": "/api/foods/{{id:0}}"
+  },
+  {
+   "answer": {
+    "detail": "food 999999 not found",
+    "ok": false,
+    "status": 404
+   },
+   "body": {
+    "category": "Family recipes",
+    "name": "Grandma's rice pudding",
+    "nutrients": {
+     "calories_kcal": 210,
+     "phosphorus_mg": 120,
+     "potassium_mg": 180
+    },
+    "serving_desc": "1 bowl",
+    "serving_g": 150
+   },
+   "if_match": "\"0000000000000000\"",
+   "kind": "food",
+   "method": "PUT",
+   "name": "PUT of a food that is not there (404)",
+   "path": "/api/foods/999999"
+  },
+  {
+   "answer": {
+    "body": {
+     "items": [
+      {
+       "food_name": "Rice pudding",
+       "servings": 1.0
+      }
+     ],
+     "meal_hint": "snack",
+     "name": "Usual pudding",
+     "note": null,
+     "servings_made": null,
+     "source_url": null,
+     "steps": null,
+     "version": "e94beaa1ed20b8df"
+    },
+    "ok": true
+   },
+   "body": {
+    "items": [
+     {
+      "food_id": "{{id:0}}",
+      "servings": 1
+     }
+    ],
+    "meal_hint": "snack",
+    "name": "Usual pudding"
+   },
+   "kind": "meal",
+   "method": "POST",
+   "name": "save a meal of it",
+   "path": "/api/meals"
+  },
+  {
+   "answer": {
+    "body": {
+     "items": [
+      {
+       "food_name": "Rice pudding",
+       "servings": 2.0
+      }
+     ],
+     "meal_hint": "snack",
+     "name": "Usual pudding",
+     "note": "after dinner",
+     "servings_made": null,
+     "source_url": null,
+     "steps": null,
+     "version": "2d18b4188cbe19de"
+    },
+    "ok": true
+   },
+   "body": {
+    "items": [
+     {
+      "food_id": "{{id:0}}",
+      "servings": 2
+     }
+    ],
+    "name": "Usual pudding",
+    "note": "after dinner"
+   },
+   "if_match": "\"{{version:8}}\"",
+   "kind": "meal",
+   "method": "PUT",
+   "name": "PUT with the matching version",
+   "path": "/api/meals/{{id:8}}"
+  },
+  {
+   "answer": {
+    "current": {
+     "items": [
+      {
+       "food_name": "Rice pudding",
+       "servings": 2.0
+      }
+     ],
+     "meal_hint": "snack",
+     "name": "Usual pudding",
+     "note": "after dinner",
+     "servings_made": null,
+     "source_url": null,
+     "steps": null,
+     "version": "2d18b4188cbe19de"
+    },
+    "current_has_client_id": true,
+    "detail": "This saved meal was changed on another device",
+    "ok": false,
+    "status": 412
+   },
+   "body": {
+    "items": [
+     {
+      "food_id": "{{id:0}}",
+      "servings": 2
+     }
+    ],
+    "name": "Usual pudding",
+    "note": "after dinner"
+   },
+   "if_match": "\"{{version:8}}\"",
+   "kind": "meal",
+   "method": "PUT",
+   "name": "PUT with the version it had before (412)",
+   "path": "/api/meals/{{id:8}}"
+  },
+  {
+   "answer": {
+    "body": {
+     "items": [
+      {
+       "food_name": "Rice pudding",
+       "servings": 2.0
+      }
+     ],
+     "meal_hint": "snack",
+     "name": "Usual pudding",
+     "note": "after dinner",
+     "servings_made": null,
+     "source_url": null,
+     "steps": [
+      "Warm it."
+     ],
+     "version": "d226bc9601463222"
+    },
+    "ok": true
+   },
+   "body": {
+    "items": [
+     {
+      "food_id": "{{id:0}}",
+      "servings": 2
+     }
+    ],
+    "name": "Usual pudding",
+    "note": "after dinner",
+    "steps": [
+     "Warm it."
+    ]
+   },
+   "if_match": "\"0000000000000000\", \"{{version:9}}\"",
+   "kind": "meal",
+   "method": "PUT",
+   "name": "PUT with a list that holds the version",
+   "path": "/api/meals/{{id:8}}"
+  },
+  {
+   "answer": {
+    "current": {
+     "items": [
+      {
+       "food_name": "Rice pudding",
+       "servings": 2.0
+      }
+     ],
+     "meal_hint": "snack",
+     "name": "Usual pudding",
+     "note": "after dinner",
+     "servings_made": null,
+     "source_url": null,
+     "steps": [
+      "Warm it."
+     ],
+     "version": "d226bc9601463222"
+    },
+    "current_has_client_id": true,
+    "detail": "This saved meal was changed on another device",
+    "ok": false,
+    "status": 412
+   },
+   "if_match": "\"{{version:9}}\"",
+   "kind": "meal",
+   "method": "DELETE",
+   "name": "DELETE with an old version (412)",
+   "path": "/api/meals/{{id:8}}"
+  },
+  {
+   "answer": {
+    "body": null,
+    "ok": true
+   },
+   "if_match": "*",
+   "kind": "meal",
+   "method": "DELETE",
+   "name": "DELETE with a star",
+   "path": "/api/meals/{{id:8}}"
+  },
+  {
+   "answer": {
+    "detail": "saved meal 1 not found",
+    "ok": false,
+    "status": 404
+   },
+   "if_match": "*",
+   "kind": "meal",
+   "method": "DELETE",
+   "name": "DELETE again (404)",
+   "path": "/api/meals/{{id:8}}"
+  },
+  {
+   "answer": {
+    "body": {
+     "brand": null,
+     "category": "Family recipes",
+     "flags": [],
+     "gtin": null,
+     "hidden": false,
+     "ingredients_text": null,
+     "kidney_notes": "Rich in phosphorus",
+     "name": "Rice pudding",
+     "nutrients": {
+      "calcium_mg": null,
+      "calories_kcal": 210.0,
+      "carbs_g": null,
+      "fat_g": null,
+      "fiber_g": null,
+      "fluid_ml": 0,
+      "phosphorus_mg": 120,
+      "potassium_mg": 180,
+      "protein_g": null,
+      "sat_fat_g": null,
+      "sodium_mg": null,
+      "sugar_g": null
+     },
+     "serving_desc": "1 bowl",
+     "serving_g": 150.0,
+     "version": "0e1b2dc25dc57aa5"
+    },
+    "ok": true
+   },
+   "kind": "food",
+   "method": "GET",
+   "name": "read the food again",
+   "path": "/api/foods/{{id:0}}"
+  },
+  {
+   "answer": {
+    "body": null,
+    "ok": true
+   },
+   "if_match": "\"{{version:15}}\"",
+   "kind": "food",
+   "method": "DELETE",
+   "name": "DELETE the food with its version",
+   "path": "/api/foods/{{id:0}}"
+  },
+  {
+   "answer": {
+    "body": {
+     "date": "2026-10-05",
+     "label": "",
+     "note": "",
+     "severity": 2,
+     "symptom": "itching",
+     "version": "51382bd1de152909"
+    },
+    "ok": true
+   },
+   "body": {
+    "date": "2026-10-05",
+    "severity": 2,
+    "symptom": "itching"
+   },
+   "kind": "symptom",
+   "method": "POST",
+   "name": "add a symptom",
+   "path": "/api/symptoms"
+  },
+  {
+   "answer": {
+    "body": {
+     "date": "2026-10-05",
+     "label": "",
+     "note": "all night",
+     "severity": 3,
+     "symptom": "itching",
+     "version": "98c3b994d9ca8344"
+    },
+    "ok": true
+   },
+   "body": {
+    "date": "2026-10-05",
+    "note": "all night",
+    "severity": 3,
+    "symptom": "itching"
+   },
+   "if_match": "\"{{version:17}}\"",
+   "kind": "symptom",
+   "method": "PUT",
+   "name": "PUT with the matching version",
+   "path": "/api/symptoms/{{id:17}}"
+  },
+  {
+   "answer": {
+    "current": {
+     "date": "2026-10-05",
+     "label": "",
+     "note": "all night",
+     "severity": 3,
+     "symptom": "itching",
+     "version": "98c3b994d9ca8344"
+    },
+    "current_has_client_id": false,
+    "detail": "This symptom was changed on another device",
+    "ok": false,
+    "status": 412
+   },
+   "body": {
+    "date": "2026-10-05",
+    "severity": 2,
+    "symptom": "itching"
+   },
+   "if_match": "\"{{version:17}}\"",
+   "kind": "symptom",
+   "method": "PUT",
+   "name": "PUT with the version it had before (412)",
+   "path": "/api/symptoms/{{id:17}}"
+  },
+  {
+   "answer": {
+    "current": {
+     "date": "2026-10-05",
+     "label": "",
+     "note": "all night",
+     "severity": 3,
+     "symptom": "itching",
+     "version": "98c3b994d9ca8344"
+    },
+    "current_has_client_id": false,
+    "detail": "This symptom was changed on another device",
+    "ok": false,
+    "status": 412
+   },
+   "body": {
+    "date": "2026-10-05",
+    "severity": 2,
+    "symptom": "itching"
+   },
+   "if_match": "",
+   "kind": "symptom",
+   "method": "PUT",
+   "name": "PUT with an empty header (412)",
+   "path": "/api/symptoms/{{id:17}}"
+  },
+  {
+   "answer": {
+    "current": {
+     "date": "2026-10-05",
+     "label": "",
+     "note": "all night",
+     "severity": 3,
+     "symptom": "itching",
+     "version": "98c3b994d9ca8344"
+    },
+    "current_has_client_id": false,
+    "detail": "This symptom was changed on another device",
+    "ok": false,
+    "status": 412
+   },
+   "if_match": "\"{{version:17}}\"",
+   "kind": "symptom",
+   "method": "DELETE",
+   "name": "DELETE with an old version (412)",
+   "path": "/api/symptoms/{{id:17}}"
+  },
+  {
+   "answer": {
+    "body": null,
+    "ok": true
+   },
+   "if_match": "\"{{version:18}}\"",
+   "kind": "symptom",
+   "method": "DELETE",
+   "name": "DELETE with the version",
+   "path": "/api/symptoms/{{id:17}}"
+  },
+  {
+   "answer": {
+    "detail": "Symptom not found",
+    "ok": false,
+    "status": 404
+   },
+   "if_match": "\"0000000000000000\"",
+   "kind": "symptom",
+   "method": "DELETE",
+   "name": "DELETE of a symptom that is not there (404)",
+   "path": "/api/symptoms/999999"
+  },
+  {
+   "answer": {
+    "body": {
+     "context": "morning",
+     "date": "2026-10-05",
+     "kg": 70.2,
+     "note": "",
+     "time": "07:15",
+     "version": "cf839bf346e77a0e"
+    },
+    "ok": true
+   },
+   "body": {
+    "context": "morning",
+    "date": "2026-10-05",
+    "kg": 70.2,
+    "time": "07:15"
+   },
+   "kind": "weight",
+   "method": "POST",
+   "name": "add a weight",
+   "path": "/api/body/weights"
+  },
+  {
+   "answer": {
+    "body": {
+     "context": "morning",
+     "date": "2026-10-05",
+     "kg": 70.4,
+     "note": "",
+     "time": "07:15",
+     "version": "232543247ec10778"
+    },
+    "ok": true
+   },
+   "body": {
+    "context": "morning",
+    "date": "2026-10-05",
+    "kg": 70.4,
+    "time": "07:15"
+   },
+   "if_match": "{{version:24}}",
+   "kind": "weight",
+   "method": "PUT",
+   "name": "PUT with the matching version, unquoted",
+   "path": "/api/body/weights/{{id:24}}"
+  },
+  {
+   "answer": {
+    "current": {
+     "context": "morning",
+     "date": "2026-10-05",
+     "kg": 70.4,
+     "note": "",
+     "time": "07:15",
+     "version": "232543247ec10778"
+    },
+    "current_has_client_id": false,
+    "detail": "This weight was changed on another device",
+    "ok": false,
+    "status": 412
+   },
+   "body": {
+    "context": "morning",
+    "date": "2026-10-05",
+    "kg": 70.2,
+    "time": "07:15"
+   },
+   "if_match": "\"{{version:24}}\"",
+   "kind": "weight",
+   "method": "PUT",
+   "name": "PUT with the version it had before (412)",
+   "path": "/api/body/weights/{{id:24}}"
+  },
+  {
+   "answer": {
+    "current": {
+     "context": "morning",
+     "date": "2026-10-05",
+     "kg": 70.4,
+     "note": "",
+     "time": "07:15",
+     "version": "232543247ec10778"
+    },
+    "current_has_client_id": false,
+    "detail": "This weight was changed on another device",
+    "ok": false,
+    "status": 412
+   },
+   "if_match": "\"{{version:24}}\"",
+   "kind": "weight",
+   "method": "DELETE",
+   "name": "DELETE with an old version (412)",
+   "path": "/api/body/weights/{{id:24}}"
+  },
+  {
+   "answer": {
+    "body": null,
+    "ok": true
+   },
+   "if_match": "\"{{version:25}}\"",
+   "kind": "weight",
+   "method": "DELETE",
+   "name": "DELETE with the version",
+   "path": "/api/body/weights/{{id:24}}"
+  },
+  {
+   "answer": {
+    "body": {
+     "context": "morning",
+     "date": "2026-10-05",
+     "diastolic": 78,
+     "note": "",
+     "pulse": null,
+     "systolic": 122,
+     "time": "07:20",
+     "version": "7a6c390627125887"
+    },
+    "ok": true
+   },
+   "body": {
+    "context": "morning",
+    "date": "2026-10-05",
+    "diastolic": 78,
+    "systolic": 122,
+    "time": "07:20"
+   },
+   "kind": "reading",
+   "method": "POST",
+   "name": "add a reading",
+   "path": "/api/body/blood-pressure"
+  },
+  {
+   "answer": {
+    "body": {
+     "context": "morning",
+     "date": "2026-10-05",
+     "diastolic": 78,
+     "note": "",
+     "pulse": 64,
+     "systolic": 122,
+     "time": "07:20",
+     "version": "7b78c117e46591d6"
+    },
+    "ok": true
+   },
+   "body": {
+    "context": "morning",
+    "date": "2026-10-05",
+    "diastolic": 78,
+    "pulse": 64,
+    "systolic": 122,
+    "time": "07:20"
+   },
+   "if_match": "\"{{version:29}}\"",
+   "kind": "reading",
+   "method": "PUT",
+   "name": "PUT with the matching version",
+   "path": "/api/body/blood-pressure/{{id:29}}"
+  },
+  {
+   "answer": {
+    "current": {
+     "context": "morning",
+     "date": "2026-10-05",
+     "diastolic": 78,
+     "note": "",
+     "pulse": 64,
+     "systolic": 122,
+     "time": "07:20",
+     "version": "7b78c117e46591d6"
+    },
+    "current_has_client_id": false,
+    "detail": "This blood pressure reading was changed on another device",
+    "ok": false,
+    "status": 412
+   },
+   "body": {
+    "context": "morning",
+    "date": "2026-10-05",
+    "diastolic": 78,
+    "systolic": 122,
+    "time": "07:20"
+   },
+   "if_match": "\"{{version:29}}\"",
+   "kind": "reading",
+   "method": "PUT",
+   "name": "PUT with the version it had before (412)",
+   "path": "/api/body/blood-pressure/{{id:29}}"
+  },
+  {
+   "answer": {
+    "current": {
+     "context": "morning",
+     "date": "2026-10-05",
+     "diastolic": 78,
+     "note": "",
+     "pulse": 64,
+     "systolic": 122,
+     "time": "07:20",
+     "version": "7b78c117e46591d6"
+    },
+    "current_has_client_id": false,
+    "detail": "This blood pressure reading was changed on another device",
+    "ok": false,
+    "status": 412
+   },
+   "if_match": "\"{{version:29}}\"",
+   "kind": "reading",
+   "method": "DELETE",
+   "name": "DELETE with an old version (412)",
+   "path": "/api/body/blood-pressure/{{id:29}}"
+  },
+  {
+   "answer": {
+    "body": null,
+    "ok": true
+   },
+   "if_match": "\"{{version:30}}\"",
+   "kind": "reading",
+   "method": "DELETE",
+   "name": "DELETE with the version",
+   "path": "/api/body/blood-pressure/{{id:29}}"
+  },
+  {
+   "answer": {
+    "body": {
+     "analyte": "potassium",
+     "entered_unit": "mmol/L",
+     "entered_value": 5.1,
+     "note": "",
+     "taken_on": "2026-10-05",
+     "version": "3fb2c9cfe6fb3142"
+    },
+    "ok": true
+   },
+   "body": {
+    "analyte": "potassium",
+    "taken_on": "2026-10-05",
+    "unit": "mmol/L",
+    "value": 5.1
+   },
+   "kind": "lab",
+   "method": "POST",
+   "name": "add a lab result",
+   "path": "/api/labs"
+  },
+  {
+   "answer": {
+    "current": {
+     "analyte": "potassium",
+     "entered_unit": "mmol/L",
+     "entered_value": 5.1,
+     "note": "",
+     "taken_on": "2026-10-05",
+     "version": "3fb2c9cfe6fb3142"
+    },
+    "current_has_client_id": false,
+    "detail": "This lab result was changed on another device",
+    "ok": false,
+    "status": 412
+   },
+   "if_match": "\"0000000000000000\"",
+   "kind": "lab",
+   "method": "DELETE",
+   "name": "DELETE with another version (412)",
+   "path": "/api/labs/{{id:34}}"
+  },
+  {
+   "answer": {
+    "body": null,
+    "ok": true
+   },
+   "if_match": "\"{{version:34}}\"",
+   "kind": "lab",
+   "method": "DELETE",
+   "name": "DELETE with the version",
+   "path": "/api/labs/{{id:34}}"
+  },
+  {
+   "answer": {
+    "detail": "Lab result not found",
+    "ok": false,
+    "status": 404
+   },
+   "if_match": "\"{{version:34}}\"",
+   "kind": "lab",
+   "method": "DELETE",
+   "name": "DELETE again (404)",
+   "path": "/api/labs/{{id:34}}"
+  },
+  {
+   "answer": {
+    "body": {
+     "analyte": "phosphate",
+     "entered_unit": "mg/dL",
+     "entered_value": 4.1,
+     "note": "",
+     "taken_on": "2026-10-05",
+     "version": "4f4b52727422b0f2"
+    },
+    "ok": true
+   },
+   "body": {
+    "analyte": "phosphate",
+    "taken_on": "2026-10-05",
+    "unit": "mg/dL",
+    "value": 4.1
+   },
+   "kind": "lab",
+   "method": "POST",
+   "name": "add another lab result",
+   "path": "/api/labs"
+  },
+  {
+   "answer": {
+    "body": null,
+    "ok": true
+   },
+   "kind": "lab",
+   "method": "DELETE",
+   "name": "DELETE without the header",
+   "path": "/api/labs/{{id:38}}"
+  }
  ]
 }

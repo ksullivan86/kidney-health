@@ -2,10 +2,10 @@
 "Device tokens and /push/v1"; guide ``docs/push.md``).
 
 Once the iPhone app is paired with a token of the kind "The iPhone app, both ways" (scope ``app:sync``), it can use some of this
-server's ``/api`` routes as the token's owner: the AI features and the food lookups. ``/api`` itself stays cookie-only. The gateway
-runs the same route the web app calls, so every rule of that route still holds: ``user.id`` scoping, not-yours is ``404``, the AI's
-routing, consent, prefilters, guard, daily limit and activity list, the lab routes' local-only rule, the food services' keys, limits
-and outbound checks.
+server's ``/api`` routes as the token's owner: the AI features, the food lookups, recipe pages, Instacart and the list app. ``/api``
+itself stays cookie-only. The gateway runs the same route the web app calls, so every rule of that route still holds: ``user.id``
+scoping, not-yours is ``404``, the AI's routing, consent, prefilters, guard, daily limit and activity list, the lab routes'
+local-only rule, the services' switches, keys, limits and outbound checks.
 
 Order of checks at ``/push/v1/api/<path>`` (each answers before the next runs):
 
@@ -69,7 +69,7 @@ RATE_LIMIT = "push_gateway"
 register_limit(RATE_LIMIT, 600, 3600, "Too many requests from this app. Try again later.")
 NOT_ON_LIST = "This is not open to the iPhone app."
 
-# The routes the gateway runs (design note 39 §5.2 and §11 step 2): the AI features of §6.4 and the food lookups of §7. Each is
+# The routes the gateway runs (design note 39 §5.2, §11 steps 2 and 9): the AI features of §6.4 and the services of §7. Each is
 # (method, the /api route's template). The list grows step by step; a test fails if one is missing, needs a recent password or is
 # an admin route.
 ALLOWED: frozenset[tuple[str, str]] = frozenset({
@@ -94,6 +94,17 @@ ALLOWED: frozenset[tuple[str, str]] = frozenset({
     # Open Food Facts consent, and their AI opt-in.
     ("PATCH", "/api/me/settings"),
     ("PATCH", "/api/me/ai"),
+    # The other server services (§7, step 9), each only while this server has it on (the route answers 404 otherwise), with this
+    # server's keys, limits and outbound checks: a recipe page read through the SSRF-checked transport, the Plan's shopping list at
+    # Instacart, and sending it to the person's own list app. Setting up the list app (its address and key) stays in the web app.
+    ("GET", "/api/recipe-import"),
+    ("POST", "/api/recipe-import/page"),
+    ("GET", "/api/instacart"),
+    ("POST", "/api/instacart/preview"),
+    ("POST", "/api/instacart/send"),
+    ("GET", "/api/list-sync"),
+    ("POST", "/api/list-sync/preview"),
+    ("POST", "/api/list-sync/send"),
 })
 # Routes on the list that take only some keys through the gateway: the body must be one JSON object holding at least one of these
 # keys and nothing else, or the answer is 403 and the route never runs.

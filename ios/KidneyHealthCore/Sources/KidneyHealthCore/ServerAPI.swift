@@ -1,8 +1,10 @@
 // The page's requests to the person's own server through the token gateway (design note 39 §5.2 to §5.4, plan steps 3, 4, 6 and 7).
 // The page builds each request and reads each answer; the app only carries it, and only when it is on this list. The list
-// matches what note 39 lets the phone use so far: `GET /push/v1/about`, the server's food lookups (§7), its AI (§6.4), and sync
-// both ways (§8): the change feed, the phone's edits and deletes, and matching the phone's row IDs.
-// Never on it: anything that needs the password, keys and providers, tokens, sessions, admin routes, import and export.
+// matches what note 39 lets the phone use so far: `GET /push/v1/about`, the server's food lookups (§7), its AI (§6.4), its
+// recipe pages, Instacart and list app (§7, step 9), and sync both ways (§8): the change feed, the phone's edits and deletes,
+// matching the phone's row IDs, and the profile, targets, account settings and food preferences (step 8).
+// Never on it: anything that needs the password, keys and providers, tokens, sessions, admin routes, import and export, and setting
+// up the list app (its address and key are typed in the server's web app).
 import Foundation
 
 public enum ServerAPI {
@@ -50,6 +52,16 @@ public enum ServerAPI {
         Route("POST", "/push/v1/api/ai/read-lab-report", query: ["dry_run"], photo: true),
         Route("POST", "/push/v1/api/vision/label", query: ["dry_run"], photo: true),
         Route("POST", "/push/v1/api/vision/plate", query: ["dry_run"], photo: true),
+        // The server's other services (note 39 §7, step 9): a recipe page it reads, the shopping list at Instacart or in the
+        // person's own list app, with the server's keys
+        Route("GET", "/push/v1/api/recipe-import"),
+        Route("POST", "/push/v1/api/recipe-import/page"),
+        Route("GET", "/push/v1/api/instacart"),
+        Route("POST", "/push/v1/api/instacart/preview"),
+        Route("POST", "/push/v1/api/instacart/send"),
+        Route("GET", "/push/v1/api/list-sync"),
+        Route("POST", "/push/v1/api/list-sync/preview"),
+        Route("POST", "/push/v1/api/list-sync/send"),
         // Sync both ways (note 39 §8.4 to §8.7, steps 6 and 7): read the changes since a cursor, send edits and deletes with the
         // version they were made on (the server answers each one: done, conflict, gone or refused), and the server's ID for each
         // of the phone's rows at the first sync. The page owns every rule; the server checks each change as its own route does.

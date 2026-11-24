@@ -171,6 +171,11 @@ phone and needs no server ([design note 38][NOTE38]):
 - An answer from your server is shown as it is. If it says to treat a low or to get help now, the app does not ask another AI.
 - A lab report goes only to an AI on your own network or on the iPhone, never to a company's AI.
 - **Ask** is not on the phone yet.
+- **A recipe from a web page**, **Open in Instacart** and **Send to** your own list app work on the phone when your server has
+  them turned on. Your server reads the page and sends the list, with its own keys, so they need a connection. The recipe's
+  ingredients are matched with the foods on your phone. The shopping list comes from the plan on your server, so plans you made
+  on the phone show there once they are sent. You set up your list app in the web app, not on the phone. Pasting ingredients
+  works offline. Without a token both ways, these buttons do not appear.
 - On an iPhone with Apple Intelligence, **Describe a meal** and reading the text of a lab report PDF can use Apple's AI on the
   phone. Turn it on in **Settings → AI features**. Nothing you write or read leaves the iPhone, and the questions and answers are
   not kept. The app checks every answer, and you check each line before anything is saved. The AI never gives insulin or

@@ -109,20 +109,21 @@
     _weightsOf(userId) { return this._bodyState().filter((r) => r.user_id === userId); },
     _readingsOf(userId) { this._bodyState(); return this._readings.filter((r) => r.user_id === userId); },
     // Store one checked weight / reading (also usable by a demo seed). `data` is what the models give; kg is stored to 0.01.
-    _insertWeight(userId, data, { source = 'manual', sourceKey = null, createdAt = null } = {}) {
+    _insertWeight(userId, data, { source = 'manual', sourceKey = null, createdAt = null, clientId = null } = {}) {
       this._bodyState();
       const at = createdAt || this._stamp();
       const row = { id: this._nextWeightId++, user_id: userId, date: data.date, time: data.time == null ? null : data.time, kg: R.roundKg(data.kg),
-        context: data.context, note: data.note || '', source, source_key: sourceKey, created_at: at, updated_at: at };
+        context: data.context, note: data.note || '', source, source_key: sourceKey, created_at: at, updated_at: at,
+        client_id: clientId || M.newClientId() }; // schema step 38 (design note 39 §8.2)
       this._weights.push(row);
       return row;
     },
-    _insertReading(userId, data, { source = 'manual', sourceKey = null, createdAt = null } = {}) {
+    _insertReading(userId, data, { source = 'manual', sourceKey = null, createdAt = null, clientId = null } = {}) {
       this._bodyState();
       const at = createdAt || this._stamp();
       const row = { id: this._nextReadingId++, user_id: userId, date: data.date, time: data.time == null ? null : data.time, systolic: data.systolic,
         diastolic: data.diastolic, pulse: data.pulse == null ? null : data.pulse, context: data.context, note: data.note || '', source,
-        source_key: sourceKey, created_at: at, updated_at: at };
+        source_key: sourceKey, created_at: at, updated_at: at, client_id: clientId || M.newClientId() };
       this._readings.push(row);
       return row;
     },
@@ -158,26 +159,31 @@
       const n = this._readingsOf(userId).filter((r) => r.date === day && r.id !== exceptId).length;
       if (n >= L.max_readings_per_day) fail(400, `too many blood pressure readings for one day (max ${L.max_readings_per_day})`);
     },
-    _updateWeight(user, id, data) {
+    // `ifMatch`: the request's If-Match (design note 39 §8.3), checked after the 404 and before the day's limit, as the server does.
+    _updateWeight(user, id, data, ifMatch = null) {
       const row = this._weightOf(user.id, id);
+      M.checkIfMatch('weight', ifMatch, R.rowToWeight(row));
       this._checkWeightDay(user.id, data.date, row.id);
       Object.assign(row, { date: data.date, time: data.time, kg: R.roundKg(data.kg), context: data.context, note: data.note, source: 'manual', updated_at: this._stamp() });
       return R.rowToWeight(row);
     },
-    _updateReading(user, id, data) {
+    _updateReading(user, id, data, ifMatch = null) {
       const row = this._readingOf(user.id, id);
+      M.checkIfMatch('reading', ifMatch, R.rowToReading(row));
       this._checkReadingDay(user.id, data.date, row.id);
       Object.assign(row, { date: data.date, time: data.time, systolic: data.systolic, diastolic: data.diastolic, pulse: data.pulse, context: data.context,
         note: data.note, source: 'manual', updated_at: this._stamp() });
       return R.rowToReading(row);
     },
-    _deleteWeight(user, id) {
+    _deleteWeight(user, id, ifMatch = null) {
       const row = this._weightOf(user.id, id);
+      M.checkIfMatch('weight', ifMatch, R.rowToWeight(row));
       this._weights.splice(this._weights.indexOf(row), 1);
       return null;
     },
-    _deleteReading(user, id) {
+    _deleteReading(user, id, ifMatch = null) {
       const row = this._readingOf(user.id, id);
+      M.checkIfMatch('reading', ifMatch, R.rowToReading(row));
       this._readings.splice(this._readings.indexOf(row), 1);
       return null;
     },
@@ -255,15 +261,15 @@
     for (const data of fresh) this._insertWeight(user.id, data, { source: data.source, sourceKey: data.source_key, createdAt: at });
     return { added: fresh.length, skipped: rows.length - fresh.length };
   });
-  route('PUT', '/api/body/weights/{id}', function ({ id, body }) {
+  route('PUT', '/api/body/weights/{id}', function ({ id, body, header }) {
     const user = this._currentUser();
     const data = this._weightBody(body); // the body is checked before the row is looked up, as FastAPI does
-    return this._updateWeight(user, Number(id), data);
+    return this._updateWeight(user, Number(id), data, header('If-Match'));
   });
-  route('DELETE', '/api/body/weights/{id}', function ({ id }) {
-    return this._deleteWeight(this._currentUser(), Number(id));
+  route('DELETE', '/api/body/weights/{id}', function ({ id, header }) {
+    return this._deleteWeight(this._currentUser(), Number(id), header('If-Match'));
   });
-  route('PUT', /^\/api\/body\/weights\/([^/]+)$/, function ({ id, body }) {
+  route('PUT', /^\/api\/body\/weights\/([^/]+)$/, function ({ id, body, header }) {
     const user = this._currentUser();
     const n = pydanticInt(id);
     const errors = n === undefined ? [idError('weight_id')] : [];
@@ -273,13 +279,13 @@
       errors.push(e.detail);
     }
     if (errors.length) failFields(errors);
-    return this._updateWeight(user, n, data);
+    return this._updateWeight(user, n, data, header('If-Match'));
   });
-  route('DELETE', /^\/api\/body\/weights\/([^/]+)$/, function ({ id }) {
+  route('DELETE', /^\/api\/body\/weights\/([^/]+)$/, function ({ id, header }) {
     const user = this._currentUser();
     const n = pydanticInt(id);
     if (n === undefined) failFields([idError('weight_id')]);
-    return this._deleteWeight(user, n);
+    return this._deleteWeight(user, n, header('If-Match'));
   });
 
   // ---- blood pressure
@@ -320,15 +326,15 @@
     for (const data of fresh) this._insertReading(user.id, data, { source: data.source, sourceKey: data.source_key, createdAt: at });
     return { added: fresh.length, skipped: rows.length - fresh.length };
   });
-  route('PUT', '/api/body/blood-pressure/{id}', function ({ id, body }) {
+  route('PUT', '/api/body/blood-pressure/{id}', function ({ id, body, header }) {
     const user = this._currentUser();
     const data = this._readingBody(body);
-    return this._updateReading(user, Number(id), data);
+    return this._updateReading(user, Number(id), data, header('If-Match'));
   });
-  route('DELETE', '/api/body/blood-pressure/{id}', function ({ id }) {
-    return this._deleteReading(this._currentUser(), Number(id));
+  route('DELETE', '/api/body/blood-pressure/{id}', function ({ id, header }) {
+    return this._deleteReading(this._currentUser(), Number(id), header('If-Match'));
   });
-  route('PUT', /^\/api\/body\/blood-pressure\/([^/]+)$/, function ({ id, body }) {
+  route('PUT', /^\/api\/body\/blood-pressure\/([^/]+)$/, function ({ id, body, header }) {
     const user = this._currentUser();
     const n = pydanticInt(id);
     const errors = n === undefined ? [idError('reading_id')] : [];
@@ -338,13 +344,13 @@
       errors.push(e.detail);
     }
     if (errors.length) failFields(errors);
-    return this._updateReading(user, n, data);
+    return this._updateReading(user, n, data, header('If-Match'));
   });
-  route('DELETE', /^\/api\/body\/blood-pressure\/([^/]+)$/, function ({ id }) {
+  route('DELETE', /^\/api\/body\/blood-pressure\/([^/]+)$/, function ({ id, header }) {
     const user = this._currentUser();
     const n = pydanticInt(id);
     if (n === undefined) failFields([idError('reading_id')]);
-    return this._deleteReading(user, n);
+    return this._deleteReading(user, n, header('If-Match'));
   });
 
   // ---- summary

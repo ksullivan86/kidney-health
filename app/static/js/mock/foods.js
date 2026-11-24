@@ -136,12 +136,14 @@
       return [serving, roundNutrients(this._normaliseFluid(nutrients, flags, serving))];
     },
     _insertFood({ name, serving_desc, serving_g, nutrients, source = 'custom', brand = null, category = null, fdc_id = null, flags = [], kidney_notes = null, hidden = false,
-      gtin = null, source_url = null, source_license = null, ingredients_text = null, additives = [], quality = [] }) {
+      gtin = null, source_url = null, source_license = null, ingredients_text = null, additives = [], quality = [], client_id = null }) {
       const now = this._stamp();
       const [servingG, values] = this._storedFoodValues(nutrients, flags, serving_g);
       const row = { id: this._nextFoodId++, name, brand, category, source, fdc_id, serving_desc, serving_g: servingG,
         nutrients: values, flags: [...flags], kidney_notes, hidden: !!hidden, created_at: now, updated_at: now,
-        gtin, source_url, source_license, ingredients_text, additives: [...additives], quality: [...quality] };
+        gtin, source_url, source_license, ingredients_text, additives: [...additives], quality: [...quality],
+        // Schema step 38 (design note 39 §8.2): the person's own food has one ID on every device; a shared row has none.
+        client_id: source === 'custom' ? client_id || M.newClientId() : null };
       this._foods.push(row);
       this._foodById.set(row.id, row);
       return row.id;
@@ -345,13 +347,16 @@
       gtin: row.gtin || null, source_url: row.source_url || null, source_license: row.source_license || null,
       ingredients_text: row.ingredients_text || null, additives: row.additives || [] })));
   });
-  route('*', '/api/foods/{id}', function ({ method, id, body }) {
+  // foods.row_to_food as the 412 shows it: the row with its client_id (the API's Food leaves the ID out).
+  const storedFood = (api, row) => ({ ...api._foodView(row), client_id: row.client_id || null });
+  route('*', '/api/foods/{id}', function ({ method, id, body, header }) {
     const b = method === 'PUT' ? this._foodBody(body) : null; // the body is validated before the lookup
     const row = this._foodOr404(id);
     if (method === 'GET') return this._foodView(row);
     if (method === 'PUT') {
       if (row.source === 'builtin') fail(409, 'Builtin foods cannot be edited; make an editable copy with POST /api/foods/{id}/copy');
       if (row.source !== 'custom') fail(409, 'Shared foods cannot be edited; make an editable copy with POST /api/foods/{id}/copy');
+      M.checkIfMatch('food', header('If-Match'), storedFood(this, row)); // design note 39 §8.3: after the 404 and the 409s
       // A client that does not send gtin / ingredients_text (v0.2) keeps the stored ones.
       const sent = (k) => M.isDict(body) && Object.prototype.hasOwnProperty.call(body, k);
       const ingredientsIn = sent('ingredients_text') ? b.ingredients_text : row.ingredients_text;
@@ -362,6 +367,7 @@
     }
     if (method === 'DELETE') {
       if (row.source === 'builtin') fail(409, 'Builtin foods cannot be deleted');
+      M.checkIfMatch('food', header('If-Match'), storedFood(this, row));
       if (row.source !== 'custom') { // a shared food: only this person's link goes
         if (!this._foodLinks().delete(row.id)) fail(404, `food ${id} not found`);
         return null;

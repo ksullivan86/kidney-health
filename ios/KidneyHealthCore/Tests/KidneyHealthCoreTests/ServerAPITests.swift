@@ -37,6 +37,16 @@ final class ServerAPITests: XCTestCase {
             XCTAssertNil(ServerAPI.route(method: method, path: path), "\(method) \(path)")
         }
         XCTAssertTrue(ServerAPI.route(method: "POST", path: "/push/v1/changes")!.route.allows(["changes": []]))
+        // step 9: recipe pages, Instacart and the list app; never the list app's set-up, and pasted text stays on the phone
+        XCTAssertNotNil(ServerAPI.route(method: "POST", path: "/push/v1/api/recipe-import/page"))
+        XCTAssertNotNil(ServerAPI.route(method: "POST", path: "/push/v1/api/instacart/send"))
+        XCTAssertNotNil(ServerAPI.route(method: "GET", path: "/push/v1/api/list-sync"))
+        for (method, path) in [
+            ("PUT", "/push/v1/api/list-sync"), ("DELETE", "/push/v1/api/list-sync"), ("POST", "/push/v1/api/list-sync/test"),
+            ("POST", "/push/v1/api/recipe-import/text"), ("GET", "/push/v1/api/instacart?x=1"),
+        ] {
+            XCTAssertNil(ServerAPI.route(method: method, path: path), "\(method) \(path)")
+        }
         XCTAssertEqual(ServerAPI.routes.filter(\.photo).map(\.path),
                        ["/push/v1/api/ai/read-lab-report", "/push/v1/api/vision/label", "/push/v1/api/vision/plate"])
         // a settings route takes only its own keys

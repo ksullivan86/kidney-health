@@ -40,10 +40,11 @@
       return out;
     },
     // Store one converted result (also used by the demo seed).
-    _insertLab(userId, conv, takenOn, note, createdAt = null) {
+    _insertLab(userId, conv, takenOn, note, createdAt = null, clientId = null) {
       this._labsState();
       const row = { id: this._nextLabId++, user_id: userId, analyte: conv.analyte, value: conv.value, entered_value: conv.entered_value,
-        entered_unit: conv.entered_unit, taken_on: takenOn, note, created_at: createdAt || this._stamp() };
+        entered_unit: conv.entered_unit, taken_on: takenOn, note, created_at: createdAt || this._stamp(),
+        client_id: clientId || M.newClientId() }; // schema step 38 (design note 39 §8.2)
       this._labs.push(row);
       return row;
     },
@@ -163,12 +164,14 @@
       transplant: T.modeOf(p.dialysis, p.transplant_date) === 'transplant', birth_month: p.birth_month, sex: p.sex,
       pregnant_or_breastfeeding: p.pregnant_or_breastfeeding });
   });
-  route('DELETE', '/api/labs/{id}', function ({ id }) {
+  // A lab result is added and deleted, never edited, so only the delete takes If-Match (design note 39 §8.3).
+  route('DELETE', '/api/labs/{id}', function ({ id, header }) {
     const user = this._currentUser();
     const n = Number(id);
     const labs = this._labsState();
     const i = labs.findIndex((r) => r.id === n && r.user_id === user.id);
     if (i < 0) fail(404, 'Lab result not found');
+    M.checkIfMatch('lab', header('If-Match'), this._labView(labs[i]));
     labs.splice(i, 1);
     return null;
   });

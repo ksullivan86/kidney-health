@@ -299,10 +299,20 @@ def test_the_server_api_bridge_carries_only_its_allow_list():
         ("POST", "/push/v1/api/ai/chat"),
         ("POST", "/push/v1/api/ai/read-lab-report-text"), ("POST", "/push/v1/api/ai/read-lab-report"),
         ("POST", "/push/v1/api/vision/label"), ("POST", "/push/v1/api/vision/plate"),
+        # step 9: the server's recipe pages, Instacart and list app (never the list app's set-up)
+        ("GET", "/push/v1/api/recipe-import"), ("POST", "/push/v1/api/recipe-import/page"),
+        ("GET", "/push/v1/api/instacart"), ("POST", "/push/v1/api/instacart/preview"), ("POST", "/push/v1/api/instacart/send"),
+        ("GET", "/push/v1/api/list-sync"), ("POST", "/push/v1/api/list-sync/preview"), ("POST", "/push/v1/api/list-sync/send"),
         ("GET", "/push/v1/changes"), ("POST", "/push/v1/changes"), ("POST", "/push/v1/match"),
     ]
     # sync both ways (note 39 steps 6 and 7): the feed takes only its cursor and page size
     assert 'Route("GET", "/push/v1/changes", query: ["after", "limit"])' in core
+    # every route the app carries through the gateway is on the server's own gateway list (app/app_gateway.py)
+    from app.app_gateway import ALLOWED
+
+    for method, path in listed[1:]:
+        if path.startswith("/push/v1/api/"):
+            assert (method, "/api" + path.removeprefix("/push/v1/api")) in ALLOWED, (method, path)
     for _, path in listed:
         for word in ("/admin", "/auth", "/tokens", "/sessions", "/provider", "/me/import", "/export", "/keys", "delete", "transcribe"):
             assert word not in path, path
