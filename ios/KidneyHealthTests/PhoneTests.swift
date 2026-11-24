@@ -82,7 +82,7 @@ final class PhoneTests: XCTestCase {
                                    ["method": "POST", "path": "/push/v1/api/vision/label", "body": "{}"],
                                    ["method": "POST", "path": "/push/v1/api/ai/consent", "body": "{}", "ifMatch": "a\nb"],
                                    ["method": "PATCH", "path": "/push/v1/api/me/ai", "body": "{\"provider\": \"own\"}"],
-                                   ["method": "PUT", "path": "/push/v1/api/me/settings", "body": "{\"ai.enabled\": true}"]] {
+                                   ["method": "PATCH", "path": "/push/v1/api/me/settings", "body": "{\"ai.enabled\": true}"]] {
             let answer = await ServerSync.answer("serverApi", bad)
             XCTAssertEqual(answer["error"] as? String, "bad_request", "\(bad)")
         }

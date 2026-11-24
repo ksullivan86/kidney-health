@@ -154,7 +154,7 @@ const about = { json: { account: 'acct-1', api_version: 1, features: { sync: fal
     'POST /push/v1/api/foods/barcode': () => (consentOnServer
       ? { food: offFood(4242), gtin: '03017624010701', source: 'off', attribution: null, attributions: [{ text: '© Open Food Facts contributors' }], quality: [] }
       : { http: 503, json: { detail: 'To look this barcode up, turn on …', reason: 'off_consent_required', gtin: '03017624010701' } }),
-    'PUT /push/v1/api/me/settings': (req) => { consentOnServer = JSON.parse(req.body)['food.off_consent'] === true; return { settings: {} }; } };
+    'PATCH /push/v1/api/me/settings': (req) => { consentOnServer = JSON.parse(req.body)['food.off_consent'] === true; return { settings: {} }; } };
   const { api, sent, gateway } = await page({ gw });
   const scan = () => api.request('POST', '/api/foods/barcode', { code: '3017624010701', format: 'ean_13' });
   await fails(scan(), 503, (e) => e.extra.reason === 'off_consent_required');

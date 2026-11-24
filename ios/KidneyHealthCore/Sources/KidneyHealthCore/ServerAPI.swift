@@ -35,7 +35,7 @@ public enum ServerAPI {
         Route("POST", "/push/v1/api/foods/usda/import"),
         Route("POST", "/push/v1/api/foods/barcode"),
         // Only the person's answer to the server's Open Food Facts question (the consent its barcode lookups ask for)
-        Route("PUT", "/push/v1/api/me/settings", bodyKeys: ["food.off_consent"]),
+        Route("PATCH", "/push/v1/api/me/settings", bodyKeys: ["food.off_consent"]),
         // The server's AI (note 39 §6.4, step 4): status, the person's AI switch, consent, and the features
         Route("GET", "/push/v1/api/ai/status"),
         Route("PATCH", "/push/v1/api/me/ai", bodyKeys: ["opt_in"]),

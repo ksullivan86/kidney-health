@@ -5853,7 +5853,7 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
     `{ error: not_paired | offline | refused | bad_request }`. `path` is the `/push/v1/...` path with its query; `body` is JSON text;
     `jpeg` is a photo in base64. `Services/ServerSync.swift` refuses anything not on the allow-list in
     `KidneyHealthCore/ServerAPI.swift` before it looks for a server: `GET /push/v1/about`; `GET /api/foods/usda/search` (`q`),
-    `POST /api/foods/usda/import`, `POST /api/foods/barcode`, `PUT /api/me/settings` (body only `food.off_consent`);
+    `POST /api/foods/usda/import`, `POST /api/foods/barcode`, `PATCH /api/me/settings` (body only `food.off_consent`);
     `GET /api/ai/status`, `PATCH /api/me/ai` (body only `opt_in`), `POST /api/ai/consent`, `next-meal`, `parse-meal`, `recipes`,
     `chat`, `read-lab-report-text` (each with `dry_run`), and the photo routes `POST /api/ai/read-lab-report`, `/api/vision/label`
     and `/api/vision/plate` (JPEG only), all under `/push/v1/api/`. It sends to the paired HTTPS address with the Keychain token

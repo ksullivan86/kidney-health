@@ -260,7 +260,7 @@
   // Design note 39 §7 (step 3): with a token both ways the person's server looks the barcode up: Open Food Facts after the
   // person agreed there, then USDA Branded, then its shared rows, with its own limits and keys. Its answer is kept on this phone
   // (js/mock/foods.js _storeServerFood). Its consent question is the server's: once the person agrees here, the page tells the
-  // server (PUT /api/me/settings with food.off_consent only) and asks again. When the server cannot be reached, the phone's own
+  // server (PATCH /api/me/settings with food.off_consent only) and asks again. When the server cannot be reached, the phone's own
   // Open Food Facts switch is used if it is on; else the person is told to look it up when the server can be reached.
   const SERVER_OFFLINE = 'Your server could not be reached, so this barcode cannot be looked up now. Look it up when your server '
     + 'can be reached, or enter the food from its label.';
@@ -273,7 +273,7 @@
       let res = await S.call('POST', '/api/foods/barcode', { body });
       const consented = () => !!this._effectiveSetting('food.off_consent', this._currentUser().id).value;
       if (res.status === 503 && res.json && res.json.reason === 'off_consent_required' && consented()) {
-        const told = await S.call('PUT', '/api/me/settings', { body: { 'food.off_consent': true } });
+        const told = await S.call('PATCH', '/api/me/settings', { body: { 'food.off_consent': true } });
         if (told.status >= 200 && told.status < 300) res = await S.call('POST', '/api/foods/barcode', { body });
       }
       if (res.offline) {
