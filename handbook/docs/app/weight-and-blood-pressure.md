@@ -242,9 +242,10 @@ Each person connects with a token from their own account, so their readings go t
 
 With a token for the iPhone app, the app also sends what you add in it: food, foods you made, lab results, symptoms, weights
 and blood pressure. It sends each new row once, when your server can be reached, and keeps the rest on the phone until then.
-**Settings → This device → Sending to your server** shows how many rows wait, when it last sent, and any row your server
-refused or could not place. **Send now** tries at once. Changes or deletions you make on the phone after a row was sent are not
-sent, so make those on the server too. The sample data is never sent.
+**Settings → This device → Your server** shows how many rows wait, when it last sent, and any row your server refused or could
+not place. **Sync now** tries at once. The sample data is never sent. With a token for the iPhone app, both ways, your changes
+and deletions are sent too, and what is added on your server comes to the phone
+([Install the app](install.md#with-a-token-both-ways)). With an older token, make changes on the server too.
 
 ### The QR code next to the token
 

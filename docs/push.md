@@ -226,12 +226,13 @@ The page inside the app keeps the queue and builds each request (`app/static/js/
 the paired server over HTTPS, with the token from its Keychain (`ios/KidneyHealth/Services/ServerSync.swift`). The token never
 reaches the page.
 
-* It sends 10 seconds after a change is saved, when the app comes to the front, and when the person taps **Send now** in
-  Settings → This device → Sending to your server. It first checks the token with `GET /push/v1/sync`, and keeps that answer for a day.
+* It sends 10 seconds after a change is saved, when the app comes to the front, and when the person taps **Sync now** in
+  Settings → This device → Your server. It first checks the token with `GET /push/v1/sync`, and keeps that answer for a day.
 * Each row gets a `client_id` once, saved on the phone before the row is sent. Foods go first, oldest rows first, at most 200 rows
   and 256 KiB a request. The person's own foods, and the USDA and Open Food Facts foods an entry uses, go in `foods`; built-in foods
-  are named with `builtin`. A planned entry waits until its day is over.
-* A row is sent once. After a `200` it is never sent again, so a later change or delete on the phone stays on the phone.
+  are named with `builtin`. With a token that only adds, a planned entry waits until its day is over; both ways it is sent at once.
+* A row is sent once. After a `200` it is never sent again. With a token that only adds, a later change or delete on the phone
+  stays on the phone; both ways, it goes through `POST /push/v1/changes` (below).
 * The answer counts skipped rows without naming them. The app sends the rows that could have been skipped again, in smaller groups,
   until it knows which they were. A row skipped three times stops and the screen lists it.
 * A `400` that names a row (`entries.3.date: …`) marks that row as refused: it stays on the phone, is listed on the screen and is
@@ -361,6 +362,32 @@ before. Lab results have no edits, so only their delete takes it.
 `{"ids": {"entry": ["<phone id>", …], …}}` answers `{"known": {"entry": {"<phone id>": "<server id>"}}, "unknown": {"entry": […]}}`.
 A row the phone sent that matched a row already here is named by that row's ID. At most 2,000 IDs a request. `POST` requests to
 `/changes` and `/match` share 120 an hour for each token.
+
+### What the iPhone app does with it
+
+Steps 6 and 7 of the note (`app/static/js/mock/server_changes.js`). The page owns the rules; the app only carries the requests,
+and only these three paths besides the gateway's.
+
+* **When.** After the new rows are sent (above): 10 seconds after a save, when the app comes to the front, every 15 minutes while
+  it is open, and on **Sync now**. Never while the app is closed.
+* **The account.** The phone keeps `account` from `GET /push/v1/about` with its cursor. A new token for the same account goes on
+  from the same cursor. Another account, or another server, stops everything until the person chooses: send this iPhone's data
+  there, replace this iPhone's data with the server's, or cancel. Two people's data are never mixed without that question.
+* **The first sync** of a phone that already has data calls `POST /push/v1/match`, then reads everything from `0`. A row that only
+  one side changed since the phone sent it takes that side. A row changed on both, or one the phone cannot tell, goes to a review
+  in Settings, **Your iPhone and your server differ**, with **Keep your server's** and **Keep this iPhone's**. A row deleted on the
+  phone after it was sent is listed as **Deleted on this iPhone, still on your server**, with **Delete it there** and **Keep it**.
+  Until the person chooses, the server's copy is shown and the phone's is kept.
+* **Each run** sends the phone's edits and deletes with `base`, the server's version it last agreed on, then reads the feed. The
+  rows and the new cursor are saved together, so a run cut short starts again from the old cursor. `410` reads everything again
+  and removes rows the server no longer has.
+* **Conflicts** follow the web app's rule: nothing is overwritten without a question. A row changed on both sides shows a card,
+  **This entry was changed on another device**, with both copies and **Keep the saved one** or **Use mine**. "Use mine" sends again
+  on the server's current version; if it changed again meanwhile, that is a new card. An edit of a row deleted elsewhere is dropped,
+  and the phone says "This entry no longer exists, so your change was dropped". A refused change stays on the phone, is listed, and
+  is sent again only after the person changes it.
+* **What syncs** now: food log entries, the person's own foods, lab results (added and deleted), symptoms, weights and blood
+  pressure readings. Saved meals, the profile, targets and settings come in a later step. A low treatment syncs like any entry.
 
 ## Pairing the iPhone app by QR code
 
