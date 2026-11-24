@@ -136,6 +136,7 @@ const ACTIVITY_VECTORS = join(ROOT, 'tests', 'data', 'activity_vectors.json');
 const CARE_VECTORS = join(ROOT, 'tests', 'data', 'care_vectors.json');
 const RECIPE_ENGINE = 'app/static/js/engine/recipe_import.js';
 const LISTS_RECIPES_VECTORS = join(ROOT, 'tests', 'data', 'lists_recipes_vectors.json');
+const AI_DEVICE_VECTORS = join(ROOT, 'tests', 'data', 'ai_device_vectors.json');
 
 function loadEngine() {
   const context = vm.createContext({ console });
@@ -1235,6 +1236,66 @@ async function appleHealthVectors() {
   return [checks, failures, `${doc.cases.length} files x ${doc.chunk_sizes.length} chunk sizes (${scans} scans), ${doc.default_since.length} periods, ${doc.sha256.length} digests`];
 }
 
+// The iPhone app's own AI (design note 38 §5.6): app/static/js/engine/aijudge.js and lab_report.js against
+// tests/data/ai_device_vectors.json (app/ai features, guard, chat, prompts and lab_report; tests/data/gen_ai_device_vectors.py).
+function aiDeviceVectors() {
+  const KH = loadDemo();
+  const J = KH.aiJudge;
+  const L = KH.labReport;
+  const doc = JSON.parse(readFileSync(AI_DEVICE_VECTORS, 'utf8'));
+  const failures = [];
+  let checks = 0;
+  const expect = (label, got, want) => {
+    checks += 1;
+    if (!isDeepStrictEqual(plain(got), want)) failures.push({ label, got: plain(got), want });
+  };
+  expect('constants', { refused_text: J.REFUSED_TEXT, prompt_version: KH.aiJudge.PROMPT_VERSION, parse_text_chars: J.PARSE_TEXT_CHARS,
+    units: J.UNITS, max_parse_items: J.MAX_PARSE_ITEMS, max_lab_rows: J.MAX_LAB_ROWS }, doc.constants);
+  for (const c of doc.prefilter_cases) {
+    const label = JSON.stringify(c.text);
+    expect(`red_flag ${label}`, J.redFlag(c.text), c.red_flag);
+    expect(`dose_reason ${label}`, c.text ? J.doseReason(c.text) : null, c.dose_reason);
+    expect(`lab_words ${label}`, J.labWords(c.text), c.lab_words);
+    expect(`medicine_question ${label}`, J.medicineQuestion(c.text), c.medicine_question);
+    expect(`prefilter ${label}`, J.prefilter(c.text, c.dose_g), c.output);
+  }
+  for (const c of doc.name_policy_cases) expect(`name_policy ${JSON.stringify(c.text)} ${c.limit}`, J.namePolicy(c.text, c.limit), c.output);
+  for (const c of doc.serving_quantity_cases) expect(`serving_quantity ${JSON.stringify(c.desc)}`, J.servingQuantity(c.desc), c.output);
+  for (const c of doc.servings_for_cases) {
+    expect(`servings_for ${c.amount} ${c.unit} ${JSON.stringify(c.food)}`, J.servingsFor(c.amount, c.unit, c.food), c.output);
+  }
+  for (const c of doc.payload_cases) {
+    const label = `${c.task} ${JSON.stringify(c.text)}`;
+    if (c.task === 'parse_meal') expect(`payload ${label}`, J.dataPayload(J.parseMealData(c.text)), c.payload);
+    else {
+      expect(`lab_text_lines ${label}`, J.labTextLines(c.text), c.lines);
+      expect(`payload ${label}`, J.dataPayload({ lines: J.labTextLines(c.text) }), c.payload);
+    }
+  }
+  // The fixed food search of the generator: foods whose name holds every word of the query.
+  const search = (query) => doc.foods.filter((f) => query.toLowerCase().split(/\s+/).filter(Boolean).every((w) => f.name.toLowerCase().includes(w)));
+  for (const c of doc.parse_meal_cases) {
+    const checked = J.checkParseMeal(c.answer);
+    expect(`parse_meal answer fits ${JSON.stringify(c.answer)}`, checked.ok && checked.malformed.length === 0, true);
+    expect(`parse_meal judge ${JSON.stringify(c.answer)}`, J.judgeParseMeal(checked.answer, search, checked.malformed), c.output);
+  }
+  for (const c of doc.printed_date_cases) {
+    expect(`clean_printed_date ${JSON.stringify(c.text)}`, L.cleanPrintedDate(c.text), c.clean);
+    expect(`parse_printed_date ${JSON.stringify(c.text)}`, L.parsePrintedDate(c.text), c.parse);
+  }
+  for (const c of doc.numbers_in_cases) expect(`numbers_in ${JSON.stringify(c.text)}`, [...L.numbersIn(c.text)].sort((a, b) => a - b), c.numbers);
+  for (const c of doc.lab_judge_cases) {
+    const checked = J.checkLabReport(c.answer);
+    expect(`lab answer fits ${JSON.stringify(c.answer)}`, checked.ok && checked.malformed === 0, true);
+    expect(`lab judge ${JSON.stringify(c.answer)}`, L.judge(checked.answer), c.output);
+  }
+  for (const c of doc.lab_text_cases) expect(`lab judge_text ${JSON.stringify(c.text)}`, L.judgeText(c.answer, c.text), c.output);
+  const n = (k) => doc[k].length;
+  return [checks, failures, `${n('prefilter_cases')} prefilter, ${n('name_policy_cases')} name policy, ${n('serving_quantity_cases')} serving quantity, `
+    + `${n('servings_for_cases')} servings, ${n('payload_cases')} payload, ${n('parse_meal_cases')} parse-meal, ${n('printed_date_cases')} date, `
+    + `${n('numbers_in_cases')} number, ${n('lab_judge_cases')} lab judge and ${n('lab_text_cases')} lab text cases`];
+}
+
 function report(name, file, [checks, failures, summary]) {
   if (failures.length) {
     for (const f of failures.slice(0, 20)) console.error(`MISMATCH ${f.label}\n   js:     ${JSON.stringify(f.got)}\n   python: ${JSON.stringify(f.want)}`);
@@ -1320,6 +1381,7 @@ function main() {
   status |= report('care', 'tests/data/care_vectors.json vs app/static/js/mock/care.js', careVectors());
   status |= report('lists and recipes', 'tests/data/lists_recipes_vectors.json vs app/static/js/engine/recipe_import.js + js/mock/lists.js',
     listsRecipesVectors());
+  status |= report('ai device', 'tests/data/ai_device_vectors.json vs app/static/js/engine/aijudge.js + lab_report.js', aiDeviceVectors());
   return status;
 }
 
