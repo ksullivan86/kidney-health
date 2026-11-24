@@ -1,4 +1,4 @@
-Status: in progress (all built and tested; full suite running)
+Status: complete
 
 # note39-step8: saved meals, profile, targets, settings and food preferences on the phone (design note 39, step 8)
 
@@ -32,7 +32,7 @@ node tests/js/{server_sync,server_changes,server_services,server_lists,server_ac
 pytest tests/test_server_*_phone.py tests/test_sync_meals.py tests/test_sync_feed.py tests/test_app_sync.py tests/test_app_gateway.py
 tests/test_ios_app.py tests/test_settings_ui.py tests/test_device_ui.py tests/test_device_mode.py tests/test_preview_build.py
 tests/test_security.py tests/test_offline_edits_ui.py tests/test_openapi_snapshot.py tests/test_auth_coverage.py tests/test_isolation.py;
-python tools/e2e/device_mode.py --out <scratch> (76/77 then the last check fixed: CSS upper-cases the badge text).
+python tools/e2e/device_mode.py --out <scratch>: 77 passed. Full `python -m pytest`: one failure (load order of the new script), fixed: server_review.js loads after feedback.js; test_frontend_shell, test_two_step_ui pass.
 
 ## Decisions
 - Saved meals: no receipts (m037 CHECK allows six kinds; migrations are append-only); found by client_id.
