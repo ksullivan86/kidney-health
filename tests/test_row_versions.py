@@ -40,7 +40,7 @@ def test_the_vectors_are_current():
 def test_the_vectors_cover_every_kind_and_the_rules():
     doc = generator().build()
     assert {c["kind"] for c in doc["cases"]} == set(RV.KINDS)
-    by_name = {c["name"]: c["version"] for c in doc["cases"]}
+    by_name = {c["name"]: c["version"] for c in doc["cases"] if c["kind"] != "weight"}  # names repeat only across kinds
     assert by_name["flags in one order"] == by_name["the same flags in the other order"]
     assert by_name["a saved meal"] == by_name["the same items on another server (other food ids)"]
     assert by_name["a saved meal"] != by_name["items in the other order"]

@@ -1,6 +1,6 @@
-# note39-server progress
 
-Status: in progress (steps 2 and 5 built; full suite running)
+Status: complete (steps 2 and 5 built; full suite passes after the last fixes to old migration tests)
+# note39-server progress
 
 Task: server side of design note 39 (docs/dev/research/39-iphone-app-with-a-server.md): plan step 2 (gateway, `app:sync` token kind,
 `push.app_sync`, `GET /push/v1/about`, Settings choice, Caddy), then step 5 (change feed).

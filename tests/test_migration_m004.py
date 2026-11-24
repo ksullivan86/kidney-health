@@ -63,7 +63,7 @@ def test_populated_v3_database_upgrades_and_keeps_every_row(tmp_path):
         for column in ("birth_month", "transplant_date", "weight_6_months_ago_kg", "urine_output_ml", "pd_uf_ml", "pd_dialysate_kcal"):
             assert row[column] is None, column
     assert conn.execute("SELECT COUNT(*) FROM log_entries").fetchone()[0] == 1
-    assert {"id", "user_id", "analyte", "value", "entered_value", "entered_unit", "taken_on", "note", "created_at"} == db.table_columns(
+    assert {"id", "user_id", "analyte", "value", "entered_value", "entered_unit", "taken_on", "note", "created_at", "client_id"} == db.table_columns(
         conn, "lab_results"
     )
     index = conn.execute("SELECT sql FROM sqlite_master WHERE name = 'lab_results_lookup'").fetchone()[0]

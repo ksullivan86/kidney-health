@@ -62,7 +62,8 @@ def test_populated_v14_database_upgrades_keeps_every_row_and_is_idempotent(tmp_p
     assert db.get_schema_version(conn) == db.SCHEMA_VERSION
     assert conn.execute("SELECT COUNT(*) FROM log_entries WHERE user_id = 2").fetchone()[0] == 1
     assert conn.execute("SELECT COUNT(*) FROM lab_results WHERE user_id = 2").fetchone()[0] == 1
-    assert db.table_columns(conn, "symptoms") == {"id", "user_id", "date", "symptom", "label", "severity", "note", "created_at"}
+    assert db.table_columns(conn, "symptoms") == {"id", "user_id", "date", "symptom", "label", "severity", "note", "created_at",
+                                                    "client_id"}  # step 38 (design note 39)
     assert conn.execute("SELECT COUNT(*) FROM symptoms").fetchone()[0] == 0
     indexes = {r["name"]: [c["name"] for c in conn.execute(f"PRAGMA index_info({r['name']})")] for r in conn.execute("PRAGMA index_list(symptoms)")}
     assert indexes["symptoms_user_date"] == ["user_id", "date", "id"]

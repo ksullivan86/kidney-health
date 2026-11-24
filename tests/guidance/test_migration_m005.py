@@ -62,7 +62,8 @@ def test_populated_v4_database_upgrades_and_keeps_every_row(tmp_path):
     assert "meal_hint" in db.table_columns(conn, "meal_templates")
     rows = conn.execute("SELECT user_id, food_name, purpose, client_id FROM log_entries ORDER BY id").fetchall()
     # Existing rows are never guessed to be low treatments.
-    assert [tuple(r) for r in rows] == [(1, "Rice", None, None), (2, "Glucose tablets", None, None)]
+    assert [tuple(r)[:3] for r in rows] == [(1, "Rice", None), (2, "Glucose tablets", None)]
+    assert all(len(r[3]) == 36 for r in rows)  # step 5 leaves client_id empty; step 38 gives every row one (design note 39 §8.2)
     template = conn.execute("SELECT name, meal_hint FROM meal_templates").fetchone()
     assert tuple(template) == ("Usual lunch", None)
     # Step 5 made these four; step 17 added source and updated_at (tests/test_migration_m017.py).
