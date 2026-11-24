@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # note39-twins: the demo's twins of note 39's server rules, and step 9 on the phone
 
@@ -55,6 +55,8 @@ Avoid (another helper's): `app/static/js/mock/server_sync.js`, `ios/KidneyHealth
 5. **Docs**: ARCHITECTURE (the gateway list, "The demo's twins" under the change feed, device mode step 9 and its tests),
    `docs/push.md` (the list table, the services' switches, the page's twins), `docs/privacy.md`, the handbook
    (`app/install.md`, "With a token both ways"), CHANGELOG Unreleased (Added and Fixed), note 39 (status and "as built").
+
+6. **Full suite**: `python -m pytest` passes (one fix on the way: `tests/data/README.md` now lists the vectors' `script`).
 
 ## For the helper on steps 6 and 7 (server_sync.js)
 

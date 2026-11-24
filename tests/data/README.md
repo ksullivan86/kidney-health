@@ -349,9 +349,15 @@ Top-level keys:
 * `cases`: `{kind: string, name: string, row: object, text: string | null, version: string}`. `text` is the canonical text (null for
   an entry, whose text is the one of `entry_version_vectors.json`).
 * `match_cases`: `{name: string, header: string | null, version: string, expected: bool}`.
+* `script`: `{name: string, kind: string, method: string, path: string, body?: object, if_match?: string, answer: object}`, one
+  list of requests run in order on a fresh account with no sample data. `answer` is `{ok: true, body}` or `{ok: false, status,
+  detail}`, and a `412` adds `current` and `current_has_client_id`. A row in an answer holds only the fields its version is made of
+  (a saved meal's items as `food_name` and `servings`) and its `version`.
 
 What a replayer must get right:
 
+* In `script`, `{{id:N}}` in a path or body is the id of step N's answer, and `{{version:N}}` in `if_match` is the version of that
+  answer. Take both from your own answers: the API leaves versions out, so work them out from the row.
 * The pieces are those of `entry_version_vectors.json`. Also: `true` and `false` are the numbers 1 and 0, and a list is its length
   as a number followed by each element.
 * Every kind but an entry starts its text with the kind's name as text.
