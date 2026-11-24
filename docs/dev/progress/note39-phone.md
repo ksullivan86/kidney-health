@@ -27,8 +27,19 @@ node tests/js/server_sync.mjs; node tests/js/server_services.mjs; node tests/js/
 pytest tests/test_ai_ui.py tests/test_ask_ui.py tests/test_device_ui.py tests/test_ios_app.py tests/test_lab_photo_ui.py
 tests/test_ai_device_vectors.py tests/test_device_mode.py tests/test_server_sync_phone.py tests/test_server_services_phone.py
 
+- e2e: tools/e2e/device_mode.py both_ways_walk (63 passed with the two existing walks).
+- Docs: ARCHITECTURE "Device mode" (step 1 in the queue, a new bullet for steps 3 and 4, tests), handbook app/install.md
+  ("With a token both ways"; NOTE39 in handbook/sources.yml, then scripts/build_handbook.py), CHANGELOG Unreleased, note 39 status.
+- ServerAPI keeps the query percent-encoded as the page sent it.
+
 ## Next
-- tools/e2e/device_mode.py case if practical; docs (ARCHITECTURE "Device mode", handbook install page, CHANGELOG, note 39 status).
+- Full `python -m pytest` run (in progress at the time of writing); then the hand-off report.
+
+## Left for later (not in steps 1, 3, 4 as built)
+- Ask (chat) through the server: off on the phone until step 6 (server-side saves, server row ids).
+- Voice (transcribe), withdrawing consent, the AI activity list: not on the allow-list.
+- Recipe import from a page, Instacart, Grocy etc. (step 9).
+- The token's end date and reminder on the phone (§5.1) need the server to say the date (about or check); not built.
 
 ## Decisions
 - `about` shape is not fixed by the note: read leniently (top level or `features`: usda_search/usda, barcodes/barcode, ai.routes).
