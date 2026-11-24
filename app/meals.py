@@ -12,8 +12,10 @@ from typing import Any, Iterable, Mapping
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 
+from .auth.accounts import begin_immediate
 from .auth.deps import CurrentUser, current_user
 from .db import get_db, utcnow
+from .row_versions import IfMatch, check_if_match, precondition_failed
 from .foods import fetch_food, fetch_user_food, get_food_or_404, parse_flags, raw_nutrients
 from .log import fetch_entries, fetch_entry, insert_entry, parse_range, resolve_purpose, row_to_entry
 from .models import (
@@ -151,6 +153,7 @@ def row_to_template(conn: sqlite3.Connection, row: sqlite3.Row) -> dict[str, Any
     servings_made, steps, source_url = recipe_fields(row)
     return {
         "id": row["id"],
+        "client_id": row["client_id"] if "client_id" in row.keys() else None,  # design note 39 §8.2 (the API's model leaves it out)
         "name": row["name"],
         "note": row["note"],
         "meal_hint": row["meal_hint"] if "meal_hint" in row.keys() else None,  # schema step 5
@@ -237,9 +240,13 @@ def get_meal(meal_id: int, user: CurrentUser, conn: sqlite3.Connection = Depends
     return row_to_template(conn, get_template_or_404(conn, user.id, meal_id))
 
 
-@router.put("/{meal_id}", response_model=MealTemplate)
-def update_meal(meal_id: int, body: MealTemplateCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+@router.put("/{meal_id}", response_model=MealTemplate, responses=precondition_failed("saved meal"))
+def update_meal(meal_id: int, body: MealTemplateCreate, user: CurrentUser, if_match: IfMatch = None,
+                conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    if if_match is not None:  # the check and the write see the same row (design note 39 §8.3)
+        begin_immediate(conn)
     row = get_template_or_404(conn, user.id, meal_id)
+    check_if_match("meal", if_match, lambda: row_to_template(conn, row))
     items = resolve_items(conn, user.id, body.items)
     # A client that does not send meal_hint (a v0.2 screen) keeps the stored one; null clears it.
     meal_hint = body.meal_hint if "meal_hint" in body.model_fields_set else row["meal_hint"]
@@ -258,9 +265,12 @@ def update_meal(meal_id: int, body: MealTemplateCreate, user: CurrentUser, conn:
     return row_to_template(conn, fetch_template(conn, user.id, meal_id))
 
 
-@router.delete("/{meal_id}", status_code=204, response_class=Response)
-def delete_meal(meal_id: int, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> Response:
-    get_template_or_404(conn, user.id, meal_id)
+@router.delete("/{meal_id}", status_code=204, response_class=Response, responses=precondition_failed("saved meal"))
+def delete_meal(meal_id: int, user: CurrentUser, if_match: IfMatch = None, conn: sqlite3.Connection = Depends(get_db)) -> Response:
+    if if_match is not None:
+        begin_immediate(conn)
+    row = get_template_or_404(conn, user.id, meal_id)
+    check_if_match("meal", if_match, lambda: row_to_template(conn, row))
     conn.execute("DELETE FROM meal_templates WHERE id = ? AND user_id = ?", (meal_id, user.id))
     conn.commit()
     return Response(status_code=204)

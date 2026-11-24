@@ -43,10 +43,25 @@ Decisions:
 * The gateway's caller has role `user` (dataclasses.replace) so nothing can treat it as admin.
 * `account` = HMAC under keyring subkey; changes if SECRET_KEY is replaced (documented).
 
-## Step 5: next
+## Step 5: in progress
 
-Plan: schema step 38 (`client_id` on foods (own), meal_templates?, lab_results, symptoms, weights, blood_pressures; carry over
-app_sync_rows; `sync_changes` + triggers), versions for every kind + If-Match + JS twins + vectors, `GET/POST /push/v1/changes`,
-`POST /push/v1/match`, tombstones 180 days / 410.
+Done (checkpoint 2):
+* Schema step 38 `app/migrations/m038_change_feed.py`: `client_id` on foods (owned rows only), meal_templates, lab_results, symptoms,
+  weights, blood_pressures; receipts with added=1 carry the phone's ID; others get uuid4; unique per person; AFTER INSERT fill trigger
+  (SQL uuid v4); `sync_changes` (one row per synced row: delete old record + insert, tombstone on delete only while the user exists),
+  `sync_purged`, users AFTER DELETE trigger; seeding. Kinds: food, entry, meal, lab, symptom, weight, reading.
+  Tests `tests/test_migration_m038.py` (6). Isolation MATRIX has sync_changes/sync_purged.
+* `app/row_versions.py` (FIELDS per kind, `row_version`, `check_if_match`, `conflict`, `IfMatch` header, `precondition_failed`).
+  JS twin `app/static/js/engine/row_versions.js` (KH.rowVersions; loaded in index.html and sw.js). Vectors
+  `tests/data/row_version_vectors.json` from `tests/data/gen_row_version_vectors.py`, runner section in tests/js/run_vectors.mjs,
+  README section. Tests `tests/test_row_versions.py`.
+* If-Match on PUT/DELETE foods, meals, symptoms, weights, readings and DELETE labs (412 `{detail, current: row+version}`).
+* Export carries `client_id` for every kind (labs/symptoms/body export rows, row_to_food, row_to_template); import keeps it when free
+  (`Importer.free_id/keep_id`); step 4's `/push/v1/sync` stores the phone's ID on rows it adds (`Sync.free`).
+* Decision: normal API answers do not carry `version` for the new kinds (the 412, the feed and the JS twin give it).
+* Decision: the mock demo's routes (js/mock/*) are not changed (another helper owns them), so the demo has no If-Match for these kinds.
+
+Next: `app/sync_feed.py`: GET /push/v1/changes, POST /push/v1/changes, POST /push/v1/match; tombstone purge (daily housekeeping, 410);
+BEARER_PATHS, openapi BEARER_OPERATIONS, CHANGE_FEED=True, Caddy, docs, tests (tests/test_sync_feed.py + matrix).
 
 Venv: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/venv-new/bin/python; ruff at /root/.local/bin/ruff.

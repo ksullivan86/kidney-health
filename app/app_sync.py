@@ -415,6 +415,16 @@ class Sync:
         self.now = utcnow()  # the rows' created_at, as the normal routes write it
         self.stamp = clock.now_iso()  # the receipts' (the day cap reads it)
 
+    def free(self, kind: str, client_id: str) -> str | None:
+        """The phone's ``client_id`` for a row it adds, when the person has no row of that kind with it (schema step 38): the phone
+        and the server then name the row the same (design note 39 §8.2). Else None, and the row gets an ID of its own."""
+        table = TABLES[kind]
+        owner = "owner_user_id" if table == "foods" else "user_id"
+        if not any(r[1] == "client_id" for r in self.conn.execute(f"PRAGMA table_info({table})")):
+            return None
+        taken = self.conn.execute(f"SELECT 1 FROM {table} WHERE {owner} = ? AND client_id = ?", (self.uid, client_id)).fetchone()
+        return None if taken else client_id
+
     def receipt(self, kind: str, client_id: str, row_id: int, added: bool) -> None:
         self.conn.execute(
             "INSERT INTO app_sync_rows (user_id, api_token_id, kind, client_id, row_id, added, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
@@ -474,6 +484,9 @@ class Sync:
                                   ingredients_text=ingredients, additives=tuple(found)),
         )
         index.setdefault(key, []).append(food_id)
+        cid = self.free("food", food.client_id)
+        if cid is not None:
+            c.execute("UPDATE foods SET client_id = ? WHERE id = ? AND owner_user_id = ?", (cid, food_id, self.uid))
         return food_id, True, True
 
     def _food_for(self, ref: FoodRef) -> sqlite3.Row | None:
@@ -561,10 +574,10 @@ class Sync:
                     self.receipt("lab", lab.client_id, int(same["id"]), False)
                     continue
             cur = c.execute(
-                """INSERT INTO lab_results (user_id, analyte, value, entered_value, entered_unit, taken_on, note, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                """INSERT INTO lab_results (user_id, analyte, value, entered_value, entered_unit, taken_on, note, created_at, client_id)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (self.uid, result["analyte"], result["value"], result["entered_value"], result["entered_unit"], lab.taken_on,
-                 lab.note, lab.created_at or self.now),
+                 lab.note, lab.created_at or self.now, self.free("lab", lab.client_id)),
             )
             self.added["labs"] += 1
             self.receipt("lab", lab.client_id, int(cur.lastrowid), True)
@@ -592,8 +605,8 @@ class Sync:
                 self.skipped["day_full"] += 1
                 continue
             cur = c.execute(
-                "INSERT INTO symptoms (user_id, date, symptom, label, severity, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (self.uid, s.date, s.symptom, s.label, s.severity, s.note, s.created_at or self.now),
+                "INSERT INTO symptoms (user_id, date, symptom, label, severity, note, created_at, client_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (self.uid, s.date, s.symptom, s.label, s.severity, s.note, s.created_at or self.now, self.free("symptom", s.client_id)),
             )
             per_day[s.date] += 1
             self.added["symptoms"] += 1
@@ -630,15 +643,16 @@ class Sync:
             if kind == "weight":
                 cur = c.execute(
                     "INSERT INTO weights (user_id, date, time, kg, context, note, source, source_key, api_token_id, created_at, "
-                    "updated_at) VALUES (?, ?, ?, ?, ?, ?, 'shortcut', ?, ?, ?, ?)",
-                    (self.uid, r.date, r.time, round_kg(r.kg), r.context, r.note, r.source_key, self.token_id, self.now, self.now),
+                    "updated_at, client_id) VALUES (?, ?, ?, ?, ?, ?, 'shortcut', ?, ?, ?, ?, ?)",
+                    (self.uid, r.date, r.time, round_kg(r.kg), r.context, r.note, r.source_key, self.token_id, self.now, self.now,
+                     self.free(kind, r.client_id)),
                 )
             else:
                 cur = c.execute(
                     "INSERT INTO blood_pressures (user_id, date, time, systolic, diastolic, pulse, context, note, source, source_key, "
-                    "api_token_id, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'shortcut', ?, ?, ?, ?)",
+                    "api_token_id, created_at, updated_at, client_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'shortcut', ?, ?, ?, ?, ?)",
                     (self.uid, r.date, r.time, r.systolic, r.diastolic, r.pulse, r.context, r.note, r.source_key, self.token_id,
-                     self.now, self.now),
+                     self.now, self.now, self.free(kind, r.client_id)),
                 )
             if r.source_key is not None:
                 keys[r.source_key] = int(cur.lastrowid)

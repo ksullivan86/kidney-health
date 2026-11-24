@@ -41,6 +41,7 @@ from .db import get_db, utcnow
 from .kidney_function import KIDNEY_ANALYTES, assess
 from .models import MAX_SQLITE_INT, Analyte, KidneyFunction, LabCreate, LabCreated, LabImport, LabImportResult, LabList
 from . import profile as profile_module
+from .row_versions import IfMatch, check_if_match, precondition_failed
 from .security import flatten_validation_errors
 from .targets import Lab, fresh_labs, mode_of, potassium_alert
 
@@ -48,7 +49,7 @@ router = APIRouter(prefix="/api/labs", tags=["labs"], dependencies=[Depends(curr
 
 DEFAULT_LIST_LIMIT = 200
 MAX_LIST_LIMIT = 1000
-COLUMNS = "id, analyte, value, entered_value, entered_unit, taken_on, note, created_at"
+COLUMNS = "id, analyte, value, entered_value, entered_unit, taken_on, note, created_at, client_id"
 # labs.csv in the export archive (app/account.py): the stored row plus the canonical unit.
 CSV_COLUMNS: tuple[str, ...] = ("id", "analyte", "value", "unit", "entered_value", "entered_unit", "taken_on", "note", "created_at")
 
@@ -112,7 +113,7 @@ def export_rows(conn: sqlite3.Connection, user_id: int) -> list[dict[str, Any]]:
             row["unit"] = units.analyte_def(row["analyte"]).canonical_unit
         except units.UnitError:  # a row written by a later version: keep it, unit unknown here
             row["unit"] = ""
-    return [{k: row[k] for k in CSV_COLUMNS} for row in rows]
+    return [{**{k: row[k] for k in CSV_COLUMNS}, "client_id": row.get("client_id")} for row in rows]  # client_id: note 39 §8.2
 
 
 @router.post("", status_code=201, response_model=LabCreated)
@@ -223,10 +224,21 @@ def kidney_function(user: CurrentUser, conn: sqlite3.Connection = Depends(get_db
     )
 
 
-@router.delete("/{lab_id}", status_code=204)
-def delete_lab(lab_id: int, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> Response:
+@router.delete("/{lab_id}", status_code=204, responses=precondition_failed("lab result"))
+def delete_lab(lab_id: int, user: CurrentUser, if_match: IfMatch = None, conn: sqlite3.Connection = Depends(get_db)) -> Response:
     if lab_id < 1 or lab_id > MAX_SQLITE_INT:
         raise HTTPException(status_code=404, detail="Lab result not found")
+    if if_match is not None:  # design note 39 §8.3: labs have add and delete only, so only the delete takes it
+        begin_immediate(conn)
+        row = conn.execute(f"SELECT {COLUMNS} FROM lab_results WHERE id = ? AND user_id = ?", (lab_id, user.id)).fetchone()
+        if row is None:
+            conn.rollback()
+            raise HTTPException(status_code=404, detail="Lab result not found")
+        try:
+            check_if_match("lab", if_match, lambda: row_to_lab(row))
+        except Exception:
+            conn.rollback()
+            raise
     cur = conn.execute("DELETE FROM lab_results WHERE id = ? AND user_id = ?", (lab_id, user.id))
     conn.commit()
     if cur.rowcount == 0:

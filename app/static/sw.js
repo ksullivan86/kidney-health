@@ -73,6 +73,7 @@ const SHELL_URLS = [
   '/js/engine/recipe_import.js',
   '/js/engine/targets.js',
   '/js/engine/settings.js',
+  '/js/engine/row_versions.js',
   '/js/engine/textclean.js',
   '/js/engine/aiguard.js',
   '/js/engine/gtin.js',

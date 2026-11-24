@@ -297,6 +297,33 @@ What a replayer must get right:
 * In `script`, `{{version:N}}` in `if_match` is the `version` of step N's answer, and `{{version:N.I}}` is the version of entry I in that answer's `entries`. Take them from your own answers, not from the file.
 * The entries in the file hold only the fields that are the same on both sides: `id`, `date`, `meal`, `food_name`, `servings`, `grams`, `note`, `status`, `purpose`, `kidney_rating`, `version` and `nutrients`. A `412` answer carries the entry as it now is, in `current`.
 
+## row_version_vectors.json
+
+The version of a row of every kind the iPhone app syncs with its server: the person's own foods, saved meals, lab results,
+symptoms, weights, blood pressure readings, and entries (design note 39 §8.3).
+
+* Server: `app/row_versions.py` (`row_version`, `canonical_text`, `version_matches`).
+* Browser twin: `app/static/js/engine/row_versions.js`.
+* Made by `tests/data/gen_row_version_vectors.py`.
+
+Top-level keys:
+
+* `about`: where the file comes from.
+* `fields`: each kind's field list, in order, and `meal_item`, the fields of a saved meal's item.
+* `kinds`: the kinds, in order.
+* `cases`: `{kind: string, name: string, row: object, text: string | null, version: string}`. `text` is the canonical text (null for
+  an entry, whose text is the one of `entry_version_vectors.json`).
+* `match_cases`: `{name: string, header: string | null, version: string, expected: bool}`.
+
+What a replayer must get right:
+
+* The pieces are those of `entry_version_vectors.json`. Also: `true` and `false` are the numbers 1 and 0, and a list is its length
+  as a number followed by each element.
+* Every kind but an entry starts its text with the kind's name as text.
+* A food's flags are sorted first. A saved meal's items are `[food_name, servings]` each, in order: the food's id is left out, because it
+  differs between servers. A food's 12 nutrient values follow its fields, in registry order.
+* A missing `note` of a lab result, symptom, weight or reading is the empty text, and so is a missing symptom `label`.
+
 ## fhir_labs_vectors.json
 
 Lab results read from FHIR JSON files, the clinical records the iPhone Health app exports.

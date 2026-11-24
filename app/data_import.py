@@ -253,6 +253,11 @@ def _short(n: int, *, min_length: int = 0) -> Any:
     return Annotated[str, StringConstraints(strip_whitespace=True, min_length=min_length, max_length=n)]
 
 
+def table_columns_has_client_id(conn: sqlite3.Connection, table: str) -> bool:
+    """Schema step 38 gave the table its ``client_id`` (always true on a current database)."""
+    return any(r[1] == "client_id" for r in conn.execute(f"PRAGMA table_info({table})"))
+
+
 class _Strict(BaseModel):
     model_config = ConfigDict(extra="forbid", strict=True)
 
@@ -295,6 +300,12 @@ class ImportFood(_Strict):
     quality: Annotated[list[ImportQuality], Field(max_length=30)]
     additives: Annotated[list[_short(40)], Field(max_length=40)]
     ingredients_text: _short(MAX_INGREDIENTS_CHARS) | None = None
+    client_id: str | None = None  # design note 39 §8.2: kept when the person has no row with it yet
+
+    @field_validator("client_id")
+    @classmethod
+    def _cid(cls, v: str | None) -> str | None:
+        return validate_client_id(v)
 
     @field_validator("nutrients")
     @classmethod
@@ -431,6 +442,12 @@ class ImportMeal(_Strict):
     updated_at: Timestamp
 
     check_url = field_validator("source_url")(check_source_url)
+    client_id: str | None = None  # design note 39 §8.2: kept when the person has no row with it yet
+
+    @field_validator("client_id")
+    @classmethod
+    def _cid(cls, v: str | None) -> str | None:
+        return validate_client_id(v)
 
     @field_validator("totals")
     @classmethod
@@ -453,6 +470,12 @@ class ImportLab(_Strict):
     taken_on: str
     note: _short(500) | None = None
     created_at: Timestamp
+    client_id: str | None = None  # design note 39 §8.2: kept when the person has no row with it yet
+
+    @field_validator("client_id")
+    @classmethod
+    def _cid(cls, v: str | None) -> str | None:
+        return validate_client_id(v)
 
     @field_validator("created_at")
     @classmethod
@@ -481,6 +504,12 @@ class ImportSymptom(_Strict):
     severity: Annotated[int, Field(ge=1, le=3)]
     note: _short(MAX_SYMPTOM_NOTE) | None = None
     created_at: Timestamp
+    client_id: str | None = None  # design note 39 §8.2: kept when the person has no row with it yet
+
+    @field_validator("client_id")
+    @classmethod
+    def _cid(cls, v: str | None) -> str | None:
+        return validate_client_id(v)
 
     @field_validator("created_at")
     @classmethod
@@ -515,6 +544,12 @@ class ImportWeight(_Strict):
     source_key: _short(MAX_SOURCE_KEY) | None = None
     created_at: Timestamp
     updated_at: Timestamp
+    client_id: str | None = None  # design note 39 §8.2: kept when the person has no row with it yet
+
+    @field_validator("client_id")
+    @classmethod
+    def _cid(cls, v: str | None) -> str | None:
+        return validate_client_id(v)
 
     @field_validator("created_at", "updated_at")
     @classmethod
@@ -550,6 +585,12 @@ class ImportBloodPressure(_Strict):
     source_key: _short(MAX_SOURCE_KEY) | None = None
     created_at: Timestamp
     updated_at: Timestamp
+    client_id: str | None = None  # design note 39 §8.2: kept when the person has no row with it yet
+
+    @field_validator("client_id")
+    @classmethod
+    def _cid(cls, v: str | None) -> str | None:
+        return validate_client_id(v)
 
     @field_validator("created_at", "updated_at")
     @classmethod
@@ -886,13 +927,31 @@ class Importer:
             self.already["custom_foods"] += 1
             return same.pop(0)
         self.counts["custom_foods"] += 1
-        return foods_module.insert_food(
+        food_id = foods_module.insert_food(
             self.conn, source="custom", owner_user_id=self.uid, name=food.name, brand=food.brand or None,
             category=food.category or None, serving_desc=food.serving_desc, serving_g=food.serving_g,
             nutrients=food.nutrients, flags=flags, kidney_notes=notes, hidden=food.hidden, fdc_id=food.fdc_id,
             provenance=Provenance(gtin=gtin, source_url=food.source_url, source_license=food.source_license,
                                   ingredients_text=ingredients, additives=tuple(found)),
         )
+        self.keep_id("foods", food_id, food.client_id)
+        return food_id
+
+    # -- one ID per row (design note 39 §8.2) -----------------------------------------------------------------------
+    def free_id(self, table: str, client_id: str | None) -> str | None:
+        """``client_id`` when this person has no row of ``table`` with it yet, else None (the row then gets a new one)."""
+        if client_id is None or not table_columns_has_client_id(self.conn, table):
+            return None
+        owner = "owner_user_id" if table == "foods" else "user_id"
+        taken = self.conn.execute(f"SELECT 1 FROM {table} WHERE {owner} = ? AND client_id = ?", (self.uid, client_id)).fetchone()
+        return None if taken else client_id
+
+    def keep_id(self, table: str, row_id: int, client_id: str | None) -> None:
+        """Give a row just made the file's ``client_id`` (the trigger of schema step 38 gave it a new one)."""
+        free = self.free_id(table, client_id)
+        if free is not None:
+            owner = "owner_user_id" if table == "foods" else "user_id"
+            self.conn.execute(f"UPDATE {table} SET client_id = ? WHERE id = ? AND {owner} = ?", (free, int(row_id), self.uid))
 
     def _shared_match(self, linked: ImportLinkedFood) -> sqlite3.Row | None:
         gtin = linked.gtin or (linked.food.gtin if linked.food else None)
@@ -980,7 +1039,7 @@ class Importer:
                 self.already["log_entries"] += 1
                 continue
             insert_entry(self.conn, user_id=self.uid, date=e.date, meal=e.meal, food=food, servings=e.servings, grams=grams,
-                         note=e.note or None, status=e.status, purpose=e.purpose, client_id=None,
+                         note=e.note or None, status=e.status, purpose=e.purpose, client_id=self.free_id("log_entries", e.client_id),
                          created_at=e.created_at, updated_at=e.updated_at)
             self.counts["log_entries"] += 1
 
@@ -1017,9 +1076,10 @@ class Importer:
                 have[key] -= 1
                 self.already["meal_templates"] += 1
                 continue
-            insert_template(self.conn, user_id=self.uid, name=m.name, note=note or None, items=items,
-                            meal_hint=m.meal_hint, created_at=m.created_at, updated_at=m.updated_at,
-                            servings_made=m.servings_made, steps=m.steps, source_url=m.source_url)
+            meal_id = insert_template(self.conn, user_id=self.uid, name=m.name, note=note or None, items=items,
+                                      meal_hint=m.meal_hint, created_at=m.created_at, updated_at=m.updated_at,
+                                      servings_made=m.servings_made, steps=m.steps, source_url=m.source_url)
+            self.keep_id("meal_templates", meal_id, m.client_id)
             self.counts["meal_templates"] += 1
 
     # -- lab results ----------------------------------------------------------------------------------------------
@@ -1037,10 +1097,10 @@ class Importer:
                 self.already["lab_results"] += 1
                 continue
             self.conn.execute(
-                """INSERT INTO lab_results (user_id, analyte, value, entered_value, entered_unit, taken_on, note, created_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                """INSERT INTO lab_results (user_id, analyte, value, entered_value, entered_unit, taken_on, note, created_at, client_id)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (self.uid, result["analyte"], result["value"], result["entered_value"], result["entered_unit"],
-                 lab.taken_on, lab.note or "", lab.created_at),
+                 lab.taken_on, lab.note or "", lab.created_at, self.free_id("lab_results", lab.client_id)),
             )
             self.counts["lab_results"] += 1
 
@@ -1065,8 +1125,8 @@ class Importer:
                           f"that day already has {MAX_SYMPTOMS_PER_DAY} symptoms, the most one day holds")
                 continue
             self.conn.execute(
-                "INSERT INTO symptoms (user_id, date, symptom, label, severity, note, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-                (self.uid, s.date, s.symptom, label, s.severity, note, s.created_at),
+                "INSERT INTO symptoms (user_id, date, symptom, label, severity, note, created_at, client_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                (self.uid, s.date, s.symptom, label, s.severity, note, s.created_at, self.free_id("symptoms", s.client_id)),
             )
             per_day[s.date] += 1
             self.counts["symptoms"] += 1
@@ -1098,9 +1158,10 @@ class Importer:
                 self.skip("weights", index, f"{kg:.2f} kg on {rec.date}", f"that day already has {MAX_WEIGHTS_PER_DAY} weights, the most one day holds")
                 continue
             c.execute(
-                "INSERT INTO weights (user_id, date, time, kg, context, note, source, source_key, created_at, updated_at) "
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (u, rec.date, time, kg, w.context, note, w.source, w.source_key, w.created_at, w.updated_at),
+                "INSERT INTO weights (user_id, date, time, kg, context, note, source, source_key, created_at, updated_at, client_id) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (u, rec.date, time, kg, w.context, note, w.source, w.source_key, w.created_at, w.updated_at,
+                 self.free_id("weights", w.client_id)),
             )
             if w.source_key is not None:
                 keys.add(w.source_key)
@@ -1134,8 +1195,9 @@ class Importer:
                 continue
             c.execute(
                 "INSERT INTO blood_pressures (user_id, date, time, systolic, diastolic, pulse, context, note, source, source_key, "
-                "created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                (u, rec.date, time, b.systolic, b.diastolic, b.pulse, b.context, note, b.source, b.source_key, b.created_at, b.updated_at),
+                "created_at, updated_at, client_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                (u, rec.date, time, b.systolic, b.diastolic, b.pulse, b.context, note, b.source, b.source_key, b.created_at, b.updated_at,
+                 self.free_id("blood_pressures", b.client_id)),
             )
             if b.source_key is not None:
                 keys.add(b.source_key)

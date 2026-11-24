@@ -18898,6 +18898,24 @@
               "title": "Reading Id",
               "type": "integer"
             }
+          },
+          {
+            "description": "The row's `version`, quoted: \"<version>\". When it is not the row's version now the answer is 412 and nothing changes.",
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The row's `version`, quoted: \"<version>\". When it is not the row's version now the answer is 412 and nothing changes.",
+              "title": "If-Match"
+            }
           }
         ],
         "responses": {
@@ -18915,6 +18933,16 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryConflictProblem"
+                }
+              }
+            },
+            "description": "If-Match is not the blood pressure reading's version now: it was changed since the client read it. The body is {detail, current: <the row as stored, with its version>}; nothing was changed."
           },
           "default": {
             "$ref": "#/components/responses/Error"
@@ -18940,6 +18968,24 @@
             "schema": {
               "title": "Reading Id",
               "type": "integer"
+            }
+          },
+          {
+            "description": "The row's `version`, quoted: \"<version>\". When it is not the row's version now the answer is 412 and nothing changes.",
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The row's `version`, quoted: \"<version>\". When it is not the row's version now the answer is 412 and nothing changes.",
+              "title": "If-Match"
             }
           }
         ],
@@ -18975,6 +19021,16 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryConflictProblem"
+                }
+              }
+            },
+            "description": "If-Match is not the blood pressure reading's version now: it was changed since the client read it. The body is {detail, current: <the row as stored, with its version>}; nothing was changed."
           },
           "413": {
             "$ref": "#/components/responses/PayloadTooLarge"
@@ -19237,6 +19293,24 @@
               "title": "Weight Id",
               "type": "integer"
             }
+          },
+          {
+            "description": "The row's `version`, quoted: \"<version>\". When it is not the row's version now the answer is 412 and nothing changes.",
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The row's `version`, quoted: \"<version>\". When it is not the row's version now the answer is 412 and nothing changes.",
+              "title": "If-Match"
+            }
           }
         ],
         "responses": {
@@ -19254,6 +19328,16 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryConflictProblem"
+                }
+              }
+            },
+            "description": "If-Match is not the weight's version now: it was changed since the client read it. The body is {detail, current: <the row as stored, with its version>}; nothing was changed."
           },
           "default": {
             "$ref": "#/components/responses/Error"
@@ -19279,6 +19363,24 @@
             "schema": {
               "title": "Weight Id",
               "type": "integer"
+            }
+          },
+          {
+            "description": "The row's `version`, quoted: \"<version>\". When it is not the row's version now the answer is 412 and nothing changes.",
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The row's `version`, quoted: \"<version>\". When it is not the row's version now the answer is 412 and nothing changes.",
+              "title": "If-Match"
             }
           }
         ],
@@ -19314,6 +19416,16 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryConflictProblem"
+                }
+              }
+            },
+            "description": "If-Match is not the weight's version now: it was changed since the client read it. The body is {detail, current: <the row as stored, with its version>}; nothing was changed."
           },
           "413": {
             "$ref": "#/components/responses/PayloadTooLarge"
@@ -20174,6 +20286,24 @@
               "title": "Food Id",
               "type": "integer"
             }
+          },
+          {
+            "description": "The row's `version`, quoted: \"<version>\". When it is not the row's version now the answer is 412 and nothing changes.",
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The row's `version`, quoted: \"<version>\". When it is not the row's version now the answer is 412 and nothing changes.",
+              "title": "If-Match"
+            }
           }
         ],
         "responses": {
@@ -20194,6 +20324,16 @@
           },
           "409": {
             "$ref": "#/components/responses/Conflict"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryConflictProblem"
+                }
+              }
+            },
+            "description": "If-Match is not the food's version now: it was changed since the client read it. The body is {detail, current: <the row as stored, with its version>}; nothing was changed."
           },
           "default": {
             "$ref": "#/components/responses/Error"
@@ -20270,6 +20410,24 @@
               "title": "Food Id",
               "type": "integer"
             }
+          },
+          {
+            "description": "The row's `version`, quoted: \"<version>\". When it is not the row's version now the answer is 412 and nothing changes.",
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The row's `version`, quoted: \"<version>\". When it is not the row's version now the answer is 412 and nothing changes.",
+              "title": "If-Match"
+            }
           }
         ],
         "requestBody": {
@@ -20307,6 +20465,16 @@
           },
           "409": {
             "$ref": "#/components/responses/Conflict"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryConflictProblem"
+                }
+              }
+            },
+            "description": "If-Match is not the food's version now: it was changed since the client read it. The body is {detail, current: <the row as stored, with its version>}; nothing was changed."
           },
           "413": {
             "$ref": "#/components/responses/PayloadTooLarge"
@@ -21982,6 +22150,24 @@
               "title": "Lab Id",
               "type": "integer"
             }
+          },
+          {
+            "description": "The row's `version`, quoted: \"<version>\". When it is not the row's version now the answer is 412 and nothing changes.",
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The row's `version`, quoted: \"<version>\". When it is not the row's version now the answer is 412 and nothing changes.",
+              "title": "If-Match"
+            }
           }
         ],
         "responses": {
@@ -21999,6 +22185,16 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryConflictProblem"
+                }
+              }
+            },
+            "description": "If-Match is not the lab result's version now: it was changed since the client read it. The body is {detail, current: <the row as stored, with its version>}; nothing was changed."
           },
           "default": {
             "$ref": "#/components/responses/Error"
@@ -25939,6 +26135,24 @@
               "title": "Meal Id",
               "type": "integer"
             }
+          },
+          {
+            "description": "The row's `version`, quoted: \"<version>\". When it is not the row's version now the answer is 412 and nothing changes.",
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The row's `version`, quoted: \"<version>\". When it is not the row's version now the answer is 412 and nothing changes.",
+              "title": "If-Match"
+            }
           }
         ],
         "responses": {
@@ -25956,6 +26170,16 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryConflictProblem"
+                }
+              }
+            },
+            "description": "If-Match is not the saved meal's version now: it was changed since the client read it. The body is {detail, current: <the row as stored, with its version>}; nothing was changed."
           },
           "default": {
             "$ref": "#/components/responses/Error"
@@ -26032,6 +26256,24 @@
               "title": "Meal Id",
               "type": "integer"
             }
+          },
+          {
+            "description": "The row's `version`, quoted: \"<version>\". When it is not the row's version now the answer is 412 and nothing changes.",
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The row's `version`, quoted: \"<version>\". When it is not the row's version now the answer is 412 and nothing changes.",
+              "title": "If-Match"
+            }
           }
         ],
         "requestBody": {
@@ -26066,6 +26308,16 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryConflictProblem"
+                }
+              }
+            },
+            "description": "If-Match is not the saved meal's version now: it was changed since the client read it. The body is {detail, current: <the row as stored, with its version>}; nothing was changed."
           },
           "413": {
             "$ref": "#/components/responses/PayloadTooLarge"
@@ -29362,6 +29614,24 @@
               "title": "Symptom Id",
               "type": "integer"
             }
+          },
+          {
+            "description": "The row's `version`, quoted: \"<version>\". When it is not the row's version now the answer is 412 and nothing changes.",
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The row's `version`, quoted: \"<version>\". When it is not the row's version now the answer is 412 and nothing changes.",
+              "title": "If-Match"
+            }
           }
         ],
         "responses": {
@@ -29379,6 +29649,16 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryConflictProblem"
+                }
+              }
+            },
+            "description": "If-Match is not the symptom's version now: it was changed since the client read it. The body is {detail, current: <the row as stored, with its version>}; nothing was changed."
           },
           "default": {
             "$ref": "#/components/responses/Error"
@@ -29404,6 +29684,24 @@
             "schema": {
               "title": "Symptom Id",
               "type": "integer"
+            }
+          },
+          {
+            "description": "The row's `version`, quoted: \"<version>\". When it is not the row's version now the answer is 412 and nothing changes.",
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "The row's `version`, quoted: \"<version>\". When it is not the row's version now the answer is 412 and nothing changes.",
+              "title": "If-Match"
             }
           }
         ],
@@ -29439,6 +29737,16 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFound"
+          },
+          "412": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EntryConflictProblem"
+                }
+              }
+            },
+            "description": "If-Match is not the symptom's version now: it was changed since the client read it. The body is {detail, current: <the row as stored, with its version>}; nothing was changed."
           },
           "413": {
             "$ref": "#/components/responses/PayloadTooLarge"

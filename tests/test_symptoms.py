@@ -349,6 +349,8 @@ def test_the_export_holds_the_symptoms_in_both_forms(client):
         doc = json.loads(z.read("export.json"))
         rows = list(csv.reader(io.StringIO(z.read("symptoms.csv").decode("utf-8"))))
     assert doc["version"] == 1 and doc["format"] == "kidney-health-export"  # an optional list: the version stays 1
+    ids = [row.pop("client_id") for row in doc["symptoms"]]  # the row's ID on every device (design note 39 §8.2)
+    assert all(isinstance(i, str) and len(i) == 36 for i in ids) and len(set(ids)) == 2
     assert doc["symptoms"] == [
         {"id": a["id"], "date": day(2), "symptom": "swelling", "label": "", "severity": 3, "note": "evening", "created_at": a["created_at"]},
         {"id": b["id"], "date": day(1), "symptom": "other", "label": "=HYPERLINK(\"http://evil\")", "severity": 1, "note": "",
