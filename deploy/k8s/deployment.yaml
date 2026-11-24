@@ -99,6 +99,8 @@ spec:
             #   value: "true"                     # reads, and with "Can also save food and recipes" also saves
             # - name: PUSH_ENABLED                # device tokens for an iPhone Shortcut (docs/push.md): a token can only
             #   value: "true"                     # add weights and blood pressure readings (POST /push/v1/body)
+            # - name: PUSH_APP_SYNC               # under PUSH_ENABLED: the iPhone app both ways (docs/push.md) uses
+            #   value: "true"                     # this server's AI and food services as the person (/push/v1/api/)
             # - name: SHARING_ENABLED             # read-only sharing with someone else who has an account here
             #   value: "true"                     # (docs/accounts.md): they can read, never change
             # - name: SETTINGS_INITIAL_ONLY       # these variables are first values, not locks: written once,

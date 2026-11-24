@@ -149,6 +149,8 @@ Environment=TRUSTED_PROXIES=127.0.0.1,::1
 # Phone shortcuts (docs/push.md): each person may make device tokens (Settings → Phone shortcuts) that an iPhone Shortcut uses to
 # add weights and blood pressure readings to their own log (POST /push/v1/body). A token can only add. Off by default.
 # Environment=PUSH_ENABLED=true
+# The iPhone app both ways (docs/push.md): under PUSH_ENABLED, its token also uses this server's AI and food services. Off by default.
+# Environment=PUSH_APP_SYNC=true
 # Read-only sharing (docs/accounts.md): a person may let someone else with an account here read parts of their log. Off by default.
 # Environment=SHARING_ENABLED=true
 # Test accounts for testers (docs/test-the-full-app.md): tester and tester-helper, never admins. Their one password is a Podman

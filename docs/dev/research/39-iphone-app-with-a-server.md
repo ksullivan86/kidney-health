@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Decided 2026-11-24 (§12), with the usual good practice the owner asked for. The plan is §11. Built on the phone: step 1, and the phone side of steps 3 and 4 (the `serverApi` bridge and its allow-list, ARCHITECTURE "Device mode"). Ask stays off on the phone until step 6. |
+| Status | Decided 2026-11-24 (§12), with the usual good practice the owner asked for. The plan is §11. Built, server side: step 2 (the gateway, `app:sync`, `GET /push/v1/about`; `app/app_gateway.py`) and step 5 (the change feed, schema step 38; `app/sync_feed.py`). Built on the phone: step 1, and the phone side of steps 3 and 4 (the `serverApi` bridge and its allow-list, ARCHITECTURE "Device mode"). Ask stays off on the phone until step 6. |
 | Owner's words | "Connecting a server should let the iPhone app use the server's AI and the other keys and services set up there, and sync between devices." (2026-11-21) And: "finish whatever is left on the roadmap." (2026-11-24) |
 | Builds on | [Note 38](38-iphone-app-without-a-server.md) (the app alone, device mode, step 4's one-way sending, §5.5 and §5.6, D2), [note 02](02-ios-pwa.md) R5 (the outbox, entry versions, "never overwrite another device's change"), [note 12](12-phone-push-tokens.md) (device tokens, `/push/v1`), [note 32](32-choose-local-or-cloud-ai.md) and [note 36](36-lab-pdf-text.md) (AI routing, lab text on the local model only). |
 | Scope | What the iPhone app can do once it is paired with the person's server: read and edit the person's data there, use the server's AI, use the server's food services and keys, and keep the phone and the server in step both ways. This is note 38 §9 step 6. |
@@ -359,6 +359,20 @@ Each step is its own pull request with tests, and each is useful when it lands.
 
 Order: 1, then 2 to 4 (each small to medium, useful at once), then 5 to 7 (the sync itself), then 8 and 9. Step 1 goes first
 because it is small and phone-only, and the sooner it runs the fewer rows the first sync must ask about.
+
+### What the server built differs from the text above in these points (2026-11-24)
+
+The exact shapes are in [`docs/push.md`](../../push.md) and ARCHITECTURE.md.
+
+* The token kind's value is `app_sync`.
+* The gateway's list also holds `PATCH /api/me/settings` with only `food.off_consent` and `PATCH /api/me/ai` with only `opt_in`,
+  for the phone's Open Food Facts consent and AI opt-in. Any other key is `403`.
+* `about` also has `features: {usda_search, barcode, ai, changes}`.
+* `POST /push/v1/changes` answers `{"results": [{kind, id, status, …}]}`. Besides `done`, `conflict` and `gone` there is `refused`,
+  for a change the route does not accept. An edit may carry `version`, the phone's version after the change: when it equals the
+  server's, the same edit was made on both sides and the answer is `done`.
+* The feed's answer also has `foods`, the foods its entries and saved meals use, and each entry and saved meal item names its food
+  as `POST /push/v1/sync` does.
 
 ## 12. Decisions (2026-11-24)
 

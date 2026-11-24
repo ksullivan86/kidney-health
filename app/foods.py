@@ -31,6 +31,7 @@ from .off import quality_items
 from .textclean import clean_label, clean_text
 from .auth.deps import CurrentUser, current_user
 from .auth.errors import ApiProblem
+from .row_versions import IfMatch, check_if_match, precondition_failed
 from .db import get_db, get_meta, set_meta, utcnow
 from .models import Categories, Food, FoodCreate, FoodList, UsdaImport, UsdaSearchResult
 from .nutrients import NUTRIENT_BY_KEY, NUTRIENT_KEYS, food_warnings, kidney_rating, round_nutrients, round_value
@@ -227,7 +228,15 @@ def row_to_food(row: sqlite3.Row) -> dict[str, Any]:
         "quality": quality_items(parse_list(row["quality_json"])),
         "additives": parse_list(row["additives_json"]),
         "ingredients_text": row["ingredients_text"],
+        # Design note 39 §8.2: the person's own food has the same ID on every device (in the export; the API's Food leaves it out).
+        "client_id": row["client_id"] if "client_id" in row.keys() else None,
     }
+
+
+def _begin_immediate(conn: sqlite3.Connection) -> None:
+    from .auth.accounts import begin_immediate
+
+    begin_immediate(conn)
 
 
 def access_clause(alias: str = "f") -> str:
@@ -1156,8 +1165,11 @@ def create_food(body: FoodCreate, user: CurrentUser, conn: sqlite3.Connection = 
     return row_to_food(fetch_food(conn, food_id))
 
 
-@router.put("/{food_id}", response_model=Food)
-def update_food(food_id: int, body: FoodCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+@router.put("/{food_id}", response_model=Food, responses=precondition_failed("food"))
+def update_food(food_id: int, body: FoodCreate, user: CurrentUser, if_match: IfMatch = None,
+                conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+    if if_match is not None:  # the check and the write see the same row (design note 39 §8.3)
+        _begin_immediate(conn)
     row = get_food_or_404(conn, user.id, food_id)
     if row["source"] == "builtin":
         raise HTTPException(
@@ -1169,6 +1181,7 @@ def update_food(food_id: int, body: FoodCreate, user: CurrentUser, conn: sqlite3
             status_code=409,
             detail="Shared foods cannot be edited; make an editable copy with POST /api/foods/{id}/copy",
         )
+    check_if_match("food", if_match, lambda: row_to_food(row))
     # A client that does not send gtin / ingredients_text (v0.2) keeps the stored ones.
     sent = body.model_fields_set
     kept = Provenance.of_row(row)
@@ -1225,13 +1238,16 @@ def copy_food(food_id: int, user: CurrentUser, conn: sqlite3.Connection = Depend
     return row_to_food(fetch_food(conn, new_id))
 
 
-@router.delete("/{food_id}", status_code=204, response_class=Response)
-def delete_food(food_id: int, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> Response:
+@router.delete("/{food_id}", status_code=204, response_class=Response, responses=precondition_failed("food"))
+def delete_food(food_id: int, user: CurrentUser, if_match: IfMatch = None, conn: sqlite3.Connection = Depends(get_db)) -> Response:
     """Own custom food: hidden when your entries or saved meals use it, else deleted. Shared food:
     only your link is removed (other people keep theirs, §9 N5 (2))."""
+    if if_match is not None:
+        _begin_immediate(conn)
     row = get_food_or_404(conn, user.id, food_id)
     if row["source"] == "builtin":
         raise HTTPException(status_code=409, detail="Builtin foods cannot be deleted")
+    check_if_match("food", if_match, lambda: row_to_food(row))
     if row["source"] != "custom":
         cur = conn.execute("DELETE FROM user_food_links WHERE user_id = ? AND food_id = ?", (user.id, food_id))
         if not cur.rowcount:

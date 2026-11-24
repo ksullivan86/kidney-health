@@ -1202,7 +1202,7 @@ identity items of note 01 §10. Code: `app/auth/` (`deps`, `routes`, `me`, `admi
   `POST /api/auth/{login,setup,register,reset,reset/info}`, the passkey sign-in (`POST /api/auth/passkey/options`, `POST
   /api/auth/passkey`) and the provider's routes (`GET /api/auth/oidc/start`, `GET /api/auth/oidc/callback`, `POST
   /api/auth/oidc/invite`; 404 unless sign-in with a provider is on). A bearer token is never a sign-in here: the
-  `Authorization` header is read only by the two bearer surfaces, `/mcp` and `/push/v1` (`/push/v1/body` and its check, and `/push/v1/sync`; "Assistant access tokens" and "Device tokens and `/push/v1`" below). Anonymous → `401 {"detail": "Sign in required"}`
+  `Authorization` header is read only by the two bearer surfaces, `/mcp` and `/push/v1` (`/push/v1/body` and its check, `/push/v1/sync`, and for the iPhone app both ways `/push/v1/about` and the gateway `/push/v1/api/<path>`; "Assistant access tokens" and "Device tokens and `/push/v1`" below). **The gateway** (design note 39 §5.2) runs the `/api/<path>` route of a short allow-list as the owner of a device token with `app:sync`: the request never reaches `/api` with a cookie or the `Authorization` header, `current_user` answers the token's owner with the role `user` (never an admin) only because the gateway's middleware put a `GatewayCaller` in the request's internal state, `require_admin` and `require_recent_auth` refuse it, and every other rule of the route (scoping, 404, limits) is unchanged. Anonymous → `401 {"detail": "Sign in required"}`
   (dependencies run before body validation, so an invalid body is still 401). Admin routes →
   `403 {"detail": "Admins only"}` for others. `tests/test_auth_coverage.py` checks every route,
   including ones hidden from the OpenAPI schema.
@@ -4482,9 +4482,9 @@ Same table `api_tokens`, same hash-only storage, expiry, housekeeping, `revoke_a
 | | assistant | device |
 |---|---|---|
 | prefix and pattern | `kha_` + 43 base64url characters | `khd_` + 43 base64url characters |
-| scopes | `assistant:read`; `assistant:log` and `assistant:prefs` (each implies read only) | a **shortcut** token: exactly `body:write`; an **app** token (note 38 §5.5): `body:write` and `app:add` (`app:add` implies `body:write` only). The person chooses the kind, never a scope |
-| instance switch | `assistant.enabled` (`ASSISTANT_ENABLED`) | `push.enabled` (`PUSH_ENABLED`) |
-| accepted at | `POST /mcp` | `POST /push/v1/body`, and `GET /push/v1/check` to test it; an app token also `POST /push/v1/sync`, and `GET /push/v1/sync` to test it |
+| scopes | `assistant:read`; `assistant:log` and `assistant:prefs` (each implies read only) | a **shortcut** token: exactly `body:write`; an **app** token (note 38 §5.5): `body:write` and `app:add` (`app:add` implies `body:write` only); an **app_sync** token, "The iPhone app, both ways" (note 39 §5.1): also `app:sync` (implies `app:add` and `body:write`; nothing implies it, so an app token is never widened). The person chooses the kind, never a scope |
+| instance switch | `assistant.enabled` (`ASSISTANT_ENABLED`) | `push.enabled` (`PUSH_ENABLED`); `app:sync` also needs `push.app_sync` (`PUSH_APP_SYNC`) |
+| accepted at | `POST /mcp` | `POST /push/v1/body`, and `GET /push/v1/check` to test it; an app token also `POST /push/v1/sync`, and `GET /push/v1/sync` to test it; an app_sync token also `GET /push/v1/about` and the gateway `/push/v1/api/<path>` |
 | made in | Settings → Assistant access | Settings → Phone shortcuts |
 
 * **Families do not mix.** `authenticate(request, conn, scope)` derives the family from the scope the route asks for and, before any
@@ -4847,6 +4847,67 @@ settings and its reply cannot restore anchors, status or a rate-limit wait. Chan
 the Health position and last-send summary; saving identical credentials keeps the position. A refused token
 pauses automatic sending until settings are saved or Test connection succeeds. `HealthReading` is the
 HealthKit boundary used by the simulator tests; `SettingsTransport` checks the generation before each batch request.
+
+### The iPhone app both ways: the gateway and `GET /push/v1/about` (note 39 §5, plan step 2)
+
+Code `app/app_gateway.py`, `GatewayCaller` in `app/auth/deps.py`, `app:sync` in `app/auth/api_tokens.py`, `GATEWAY_PREFIX` in
+`app/security.py`; guide `docs/push.md` ("The iPhone app, both ways"); tests `tests/test_app_gateway.py`, the two-way parts of
+`tests/test_auth_coverage.py` and `tests/test_push_ui.py`.
+
+* **The token kind** `app_sync` ("The iPhone app, both ways"), scopes `body:write app:add app:sync`. `POST /api/me/tokens` with
+  `kind: "app_sync"` answers `409` (`field: "kind"`) while `push.app_sync` is off; `GET /api/me/tokens?family=device` carries
+  `app_sync_enabled`. `authenticate` and `require_current_write` check `push.app_sync` too for `app:sync` (`scope_enabled`), before any
+  lookup. Settings → Phone shortcuts offers the kind only while the switch is on, and then says what the token can do.
+* **The switch** `push.app_sync` (instance, bool, default **false**, env `PUSH_APP_SYNC`), under `push.enabled`.
+* **The gateway** `/push/v1/api/<path>` is a middleware (`GatewayMiddleware`, innermost), not a route. In order: any `Origin`, or a
+  `Sec-Fetch-Site` other than `none` → `403` (`CsrfMiddleware`); the body limit is the `/api` route's own (`BodyLimitMiddleware` maps the
+  path); a device token with `app:sync` → the generic `401`; the token's **600 requests an hour** (`ratelimit` `push_gateway`, shared with
+  `about`) → `429`; the method and path must match a template of `ALLOWED` → else `404 {"detail": "This is not open to the iPhone app."}`.
+  Then the request runs as `/api/<path>`, with `Cookie` and `Authorization` removed and a `GatewayCaller` (the owner with the role `user`,
+  and the token) in `scope["state"]`. An app-wide dependency, `guard`, checks again that the route the router chose is, by identity, one of
+  the listed routes. Every answer has `Cache-Control: no-store`; the log line is `gateway: token <id> <METHOD> <template> -> <status>`.
+  The first gateway request of each token each UTC day writes `app.server_used` (`{via: <token name>}`, "The iPhone app read your data").
+* **The list** (`ALLOWED`): `GET /api/ai/status`, `POST /api/ai/consent`, `DELETE /api/ai/consent/{provider_id}`, `POST /api/ai/next-meal`,
+  `/api/ai/parse-meal`, `/api/ai/recipes`, `/api/ai/chat`, `/api/ai/transcribe`, `/api/vision/label`, `/api/vision/plate`,
+  `/api/ai/read-lab-report`, `/api/ai/read-lab-report-text`, `GET /api/foods/usda/search`, `POST /api/foods/usda/import`,
+  `POST /api/foods/barcode`, and `PATCH /api/me/settings` and `PATCH /api/me/ai` with only the keys of `BODY_KEYS` (`food.off_consent`;
+  `opt_in`: any other key is `403` before the route runs). `NEVER_PREFIXES` and `NEVER` name what may never be added (sign-in, admin, tokens, sessions, keys and providers,
+  sharing, the import, the `.zip` export, two-step sign-in, passkeys, the account itself). The test pins the list, checks every listed route
+  needs `current_user` and neither `require_recent_auth` nor `require_admin`, and runs the isolation matrix through the gateway.
+* **The AI** keeps every rule because it is the same route: routing per feature, opt-in and consent per person, prefilters, guard, daily limit,
+  the AI activity list, lab text and photos on the local AI only (`503 no_local_provider` without one, never a cloud fallback).
+* **`GET /push/v1/about`** (in `BEARER_PATHS`; `405` for other methods): `{account, api_version, app_version, sync: {gateway, changes},
+  gateway: [{method, path}], ai: {enabled, available, routes}, services: {usda_search, barcode, barcode_off, barcode_usda, recipe_import,
+  instacart, list_sync}, capabilities, features: {usda_search, barcode, ai, changes}}`. `account` is the first 32 hex characters of the HMAC-SHA256 of the person's id under the
+  `SECRET_KEY` subkey `kidney-health/v1/app-account` (`brand.HKDF_APP_ACCOUNT_INFO`): stable per person and server, naming neither. `ai.routes`
+  is `routes` of `GET /api/ai/status` (empty while the AI is off for the person); `capabilities` is `GET /api/meta`'s.
+
+### The change feed: `GET` and `POST /push/v1/changes`, `POST /push/v1/match` (note 39 §8, plan step 5, schema step 38)
+
+Code `app/sync_feed.py`, `app/row_versions.py` (twin `js/engine/row_versions.js`), `app/migrations/m038_change_feed.py`; guide
+`docs/push.md` ("The change feed"); tests `tests/test_sync_feed.py`, `tests/test_migration_m038.py`, `tests/test_row_versions.py`.
+
+* **One ID per row.** Schema step 38 adds `client_id` (36 characters, unique per person) to `foods` (owned rows only),
+  `meal_templates`, `lab_results`, `symptoms`, `weights` and `blood_pressures` (`log_entries` has had it since step 5). Step 37's receipts
+  with `added = 1` give their row the phone's ID; every other row gets a random UUID, and an `AFTER INSERT` trigger fills it for every row
+  made later without one. `POST /push/v1/sync` stores the phone's ID on the rows it adds; the export writes `client_id` for every kind and
+  the import keeps it when the person has no row with it yet.
+* **`sync_changes`** (`id` AUTOINCREMENT, `user_id`, `kind`, `row_id`, `client_id`, `deleted`, `at`): one row per synced row, its latest
+  change. Triggers on each synced table replace it on insert and update, and leave a tombstone on delete while the person exists. A trigger
+  on `users` deletes an account's changes. The daily housekeeping (`sync_tombstones`) deletes tombstones older than 180 days and records
+  the highest id removed per person in `sync_purged`; a cursor below it is `410 {"resync": true}`.
+* **Versions** (`row_versions.row_version`): FNV-1a 64 over the canonical text of `FIELDS[kind]` (an entry: `log.entry_version`). The
+  `PUT` and `DELETE` routes of foods, saved meals, symptoms, weights and readings, and the `DELETE` of labs, take `If-Match` and answer
+  `412 {detail, current: <row with version>}` (`row_versions.check_if_match`, inside the write's transaction). Normal answers do not carry
+  the new kinds' versions; the feed, the 412 and the twin do.
+* **`GET /push/v1/changes?after&limit`** (token with `app:sync`, 120 an hour, `push_changes`): `{changes: [{kind, id, op: put|delete,
+  version, row?}], foods: [{ref, food}], next, more}`, one snapshot per page, at most 500. `row` is the export's shape with `client_id`;
+  entries and saved meal items carry `food` as `POST /push/v1/sync`'s food reference.
+* **`POST /push/v1/changes`** (`push_changes_write`, 120 an hour with match; at most 200 changes, 256 KiB): each `{kind, id, op: edit|delete,
+  base, fields?, version?}` calls the kind's route function with `If-Match: "<base>"` and answers `done` (new version), `conflict` (row and
+  version as stored), `gone` or `refused`. An edit whose `version` equals the stored version is `done` with no write.
+* **`POST /push/v1/match`**: `{ids: {kind: [ids]}}` → `{known: {kind: {phone: server}}, unknown: {kind: [ids]}}`, by `client_id` and by
+  step 37's receipts. At most 2,000 ids.
 
 ### `POST /push/v1/body` (`app/push.py`, router outside `/api`, like `/mcp`)
 

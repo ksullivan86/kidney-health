@@ -299,6 +299,36 @@ reset();
   out.app.shortcutCall = log.calls.find((c) => c[0] === 'createToken')[1];
 }
 
+// ---- the iPhone app both ways (design note 39 section 5.1): offered only while the server allows it, and said plainly
+reset();
+{
+  const syncItem = item({ id: 11, name: 'Both ways', kind: 'app_sync', scopes: ['body:write', 'app:add', 'app:sync'],
+    sent: { entries: 1, foods: 0, labs: 0, symptoms: 0, weights: 0, readings: 0 } });
+  answers = { list: () => listOf([syncItem], { app_sync_enabled: true }), created: (b) => ({ ...made, id: 12, name: b.name, kind: b.kind || 'shortcut' }) };
+  const onCtx = build(false);
+  const onBlock = onCtx.pushBlock();
+  await settle();
+  const kind = page.byId['set-push-kind'];
+  const options = kind.children.map((o) => [o.attrs.value, text(o)]);
+  kind.value = 'app_sync';
+  page.byId['set-push-name'].value = 'Both ways';
+  log.calls = [];
+  await page.byId['set-push-create'].handlers.click[0]();
+  const created = log.calls.find((c) => c[0] === 'createToken');
+  const del = buttons(page.byId['set-push-list'], 'Delete what it sent')[0];
+  log.confirms = [];
+  await del.handlers.click[0]();
+  out.sync = { options, text: text(onBlock), created: created && created[1], list: text(page.byId['set-push-list']),
+    message: log.confirms[0] && log.confirms[0].message };
+  reset();
+  isAdmin = true;
+  answers = { list: () => listOf([], { app_sync_enabled: false }) };
+  const offBlock = build(false).pushBlock();
+  await settle();
+  out.sync.off = { options: page.byId['set-push-kind'].children.map((o) => o.attrs.value), text: text(offBlock) };
+  isAdmin = false;
+}
+
 // ---- the helpers
 {
   const c = ctx.pushCountsText;

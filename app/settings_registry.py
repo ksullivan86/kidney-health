@@ -1013,6 +1013,22 @@ register(
         "or been revoked work again.",
     ),
 )
+# Design note 39 §5.1: the iPhone app both ways (app/app_gateway.py). Under push.enabled: an admin can let phones add without letting
+# them read.
+register(
+    SettingDef(
+        key="push.app_sync",
+        model=bool,
+        default=False,
+        scope="instance",
+        env="PUSH_APP_SYNC",
+        label="Let the iPhone app read and change the person's data and use this server's AI and food services",
+        help="Off by default, and it works only while phone shortcuts are on. When on, a person can make a token for the iPhone app "
+        "both ways in Settings → Phone shortcuts. With it, the app can read and change that person's own log, use this server's AI "
+        "and food lookups as that person, and keep the phone and the server in step. It can never change a password, a key, a token "
+        "or the account, and it is never an admin. While off, such tokens do not work; tokens that only add still do.",
+    ),
+)
 # Connected devices (design notes 27 and 28; read by app/devices/). The provider apps (WITHINGS_*, WHOOP_*) are env only (app/config.py), never
 # settings: what the server connects to is never changed at run time, and the client secret is a file.
 register(

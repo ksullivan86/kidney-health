@@ -74,6 +74,7 @@ PINNED = {
     "HKDF_DEVICE_INFO": "kidney-health/v1/device",
     "HKDF_OPENAI_SAFETY_ID_INFO": "kidney-health/v1/openai-safety-id",
     "HKDF_AI_KEY_FINGERPRINT_INFO": "kidney-health/v1/ai-key-fingerprint",
+    "HKDF_APP_ACCOUNT_INFO": "kidney-health/v1/app-account",
 }
 
 

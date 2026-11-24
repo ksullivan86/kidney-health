@@ -213,6 +213,13 @@ For contributors: `app/ai/privacy_filter.py`, design note 31 (`docs/dev/research
 set `tests/data/redaction_cases.json`. A named-entity model (Presidio, GLiNER) would find more names without cue words; it is a
 new dependency and waits for the owner's decision (note 31 §5).
 
+### From the iPhone app
+
+With a token **for the iPhone app, both ways** ([push.md](push.md#the-iphone-app-both-ways)), the iPhone app calls the same AI
+routes as the web app, through `/push/v1/api/`. Nothing about the AI changes: the admin's choice of local or cloud AI for each
+feature, your opt-in and consent, the checks before and after, the daily limit and your AI activity list all apply as on the web.
+Lab report text and photos go only to the local AI, and never fall back to a cloud model. The phone keeps no prompt and no answer.
+
 ## For people using the app
 
 * **The AI is told what your profile says, not that you have type 1 diabetes.** For meal ideas and Ask, *Diabetes: None*

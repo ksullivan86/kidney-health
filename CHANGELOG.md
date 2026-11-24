@@ -37,12 +37,29 @@ the API. Security fixes are released as patch versions of the newest minor versi
   your own network or on the phone. **Use only this iPhone's AI** in Settings → AI features keeps everything away from your
   server's AI. The server address screen says which kind of token is saved, and an older token keeps working as before. Ask is
   not on the phone yet.
+* A new kind of phone token, **The iPhone app, both ways** (design note 39, step 2, the server side). With it, the iPhone app can use
+  your server's AI and food services as you: meal ideas, describe a meal, recipes, Ask, label, plate and lab report photos, lab report
+  text, USDA search and barcodes. It goes through `/push/v1/api/`, which runs only a short list of the server's routes, never as an
+  admin, and never anything that needs your password. Lab reports still go only to a local AI. `GET /push/v1/about` tells the app what
+  the server offers. An admin turns it on with a new switch, off by default. Tokens made for the iPhone app before are not changed
+  ([docs/push.md](docs/push.md)).
+* The server keeps a list of changes for the iPhone app (design note 39, step 5, the server side). Every row of your log has one ID
+  on every device. The app can read what changed since it last asked, and send its edits and deletes. A change made on another
+  device is never overwritten without asking you. Foods, saved meals, lab results, symptoms, weights and blood pressure readings now
+  have versions like food log entries, and their change and delete routes accept `If-Match`. The export carries each row's ID, and
+  an import keeps it.
 
 ### Upgrading
 
 * Schema step 37 adds one table, `app_sync_rows`: what the iPhone app sent. It changes nothing else.
 * If a reverse proxy lists the paths it passes on, add `/push/v1/sync` next to `/push/v1/body` (the commented second host name in
   `deploy/caddy/Caddyfile.example` now passes it).
+* New setting `PUSH_APP_SYNC` (Server administration → Server settings → Phone shortcuts), off by default. It works only while
+  `PUSH_ENABLED` is on. Nothing changes until you turn it on. If a reverse proxy lists paths, also pass `/push/v1/about` and
+  `/push/v1/api/` (the Caddy example does).
+* Schema step 38 gives every food of your own, saved meal, lab result, symptom, weight and blood pressure reading an ID, and adds
+  the list of changes (`sync_changes`, `sync_purged`). It runs once at start and changes no value. Proxies that list paths also pass
+  `/push/v1/changes` and `/push/v1/match`.
 
 ## 0.24.1 — 2026-11-20
 

@@ -128,6 +128,7 @@ services:
       AI_EVAL_REPORTS_DIR: ${AI_EVAL_REPORTS_DIR:-}   # a path inside the container; mount the reports under volumes: below
       ASSISTANT_ENABLED: ${ASSISTANT_ENABLED:-}
       PUSH_ENABLED: ${PUSH_ENABLED:-}
+      PUSH_APP_SYNC: ${PUSH_APP_SYNC:-}
       TOKENS_ALLOW_NEVER_EXPIRING: ${TOKENS_ALLOW_NEVER_EXPIRING:-}
       SHARING_ENABLED: ${SHARING_ENABLED:-}
       CARE_NOTES_ENABLED: ${CARE_NOTES_ENABLED:-}

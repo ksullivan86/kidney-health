@@ -128,6 +128,8 @@ const MENU_LINK_VECTORS = join(ROOT, 'tests', 'data', 'menu_link_vectors.json');
 const SYMPTOMS_VECTORS = join(ROOT, 'tests', 'data', 'symptoms_vectors.json');
 const BODY_VECTORS = join(ROOT, 'tests', 'data', 'body_vectors.json');
 const ENTRY_VERSION_VECTORS = join(ROOT, 'tests', 'data', 'entry_version_vectors.json');
+const ROW_VERSION_ENGINE = 'app/static/js/engine/row_versions.js';
+const ROW_VERSION_VECTORS = join(ROOT, 'tests', 'data', 'row_version_vectors.json');
 const IMPORT_VECTORS = join(ROOT, 'tests', 'data', 'import_vectors.json');
 const META_VECTORS = join(ROOT, 'tests', 'data', 'meta_vectors.json');
 const EMAIL_VECTORS = join(ROOT, 'tests', 'data', 'email_vectors.json');
@@ -958,6 +960,28 @@ function entryVersionVectors() {
   return [checks, failures, `${doc.cases.length} entries, ${doc.match_cases.length} headers, ${doc.script.length} requests`];
 }
 
+// Versions for every synced kind (design note 39 §8.3): js/engine/row_versions.js against app/row_versions.py.
+function rowVersionVectors() {
+  const context = vm.createContext({ console });
+  vm.runInContext(readFileSync(join(ROOT, ROW_VERSION_ENGINE), 'utf8'), context, { filename: ROW_VERSION_ENGINE });
+  const V = vm.runInContext('globalThis.KH.rowVersions', context);
+  const doc = JSON.parse(readFileSync(ROW_VERSION_VECTORS, 'utf8'));
+  const failures = [];
+  let checks = 0;
+  const expect = (label, got, want) => {
+    checks += 1;
+    if (!isDeepStrictEqual(plain(got), want)) failures.push({ label, got: plain(got), want });
+  };
+  expect('the fields', { ...V.FIELDS, meal_item: V.ITEM_FIELDS }, doc.fields);
+  expect('the kinds', V.KINDS, doc.kinds);
+  for (const c of doc.cases) {
+    if (c.text !== null) expect(`text of ${c.kind} "${c.name}"`, V.canonicalText(c.kind, c.row), c.text);
+    expect(`version of ${c.kind} "${c.name}"`, V.version(c.kind, c.row), c.version);
+  }
+  for (const c of doc.match_cases) expect(`If-Match "${c.header}" (${c.name})`, V.matches(c.header, c.version), c.expected);
+  return [checks, failures, `${doc.cases.length} rows, ${doc.match_cases.length} headers`];
+}
+
 // Import: the edits of a step are applied to a copy of the base file exactly as tests/data/gen_import_vectors.py apply_edits does.
 function applyEdits(doc, edits) {
   let out = doc;
@@ -1374,6 +1398,7 @@ function main() {
   status |= report('symptoms', 'tests/data/symptoms_vectors.json vs app/static/js/engine/symptoms.js + js/mock/symptoms.js', symptomsVectors());
   status |= report('body', 'tests/data/body_vectors.json vs app/static/js/engine/body.js + js/mock/body.js', bodyVectors());
   status |= report('entry version', 'tests/data/entry_version_vectors.json vs app/static/js/mock/log.js', entryVersionVectors());
+  status |= report('row version', 'tests/data/row_version_vectors.json vs app/static/js/engine/row_versions.js', rowVersionVectors());
   status |= report('import', 'tests/data/import_vectors.json vs app/static/js/mock/import.js', importVectors());
   status |= report('meta', 'tests/data/meta_vectors.json vs app/static/js/mock/meta.js', metaVectors());
   status |= report('email', 'tests/data/email_vectors.json vs app/static/js/mock/auth.js', emailVectors());
