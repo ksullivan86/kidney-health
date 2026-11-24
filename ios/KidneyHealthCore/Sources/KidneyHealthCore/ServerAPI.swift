@@ -21,6 +21,23 @@ public enum ServerAPI {
             self.method = method; self.path = path; self.query = query; self.photo = photo; self.bodyKeys = bodyKeys
         }
 
+        /// True when `plain` (a path with no query) is this route's path. A segment `{food_id}` stands for one food's id here: 1 to 18
+        /// digits and nothing else.
+        public func matches(_ plain: String) -> Bool {
+            guard path.contains("{") else { return path == plain }
+            let want = path.split(separator: "/", omittingEmptySubsequences: false)
+            let got = plain.split(separator: "/", omittingEmptySubsequences: false)
+            guard want.count == got.count else { return false }
+            for (w, g) in zip(want, got) {
+                if w == "{food_id}" {
+                    guard (1...18).contains(g.count), g.allSatisfy({ ("0"..."9").contains($0) }) else { return false }
+                } else if w != g {
+                    return false
+                }
+            }
+            return true
+        }
+
         /// True when a JSON body may go with this route: an object, and only the keys a settings route allows.
         public func allows(_ body: [String: Any]) -> Bool {
             guard let bodyKeys else { return true }
@@ -37,8 +54,10 @@ public enum ServerAPI {
         Route("GET", "/push/v1/api/foods/usda/search", query: ["q"]),
         Route("POST", "/push/v1/api/foods/usda/import"),
         Route("POST", "/push/v1/api/foods/barcode"),
-        // Only the person's answer to the server's Open Food Facts question (the consent its barcode lookups ask for)
-        Route("PATCH", "/push/v1/api/me/settings", bodyKeys: ["food.off_consent"]),
+        // The person's answer to the server's Open Food Facts question (the consent its barcode lookups ask for), and the account
+        // settings the server owns (step 8). Never this iPhone's own: its theme, its camera, the AI's trust.
+        Route("PATCH", "/push/v1/api/me/settings",
+              bodyKeys: ["food.off_consent", "user.units.labs", "user.units.weight", "body.weight_alarm", "body.bp_goal", "guidance"]),
         // The server's AI (note 39 §6.4, step 4): status, the person's AI switch, consent, and the features
         Route("GET", "/push/v1/api/ai/status"),
         Route("PATCH", "/push/v1/api/me/ai", bodyKeys: ["opt_in"]),
@@ -68,6 +87,16 @@ public enum ServerAPI {
         Route("GET", "/push/v1/changes", query: ["after", "limit"]),
         Route("POST", "/push/v1/changes"),
         Route("POST", "/push/v1/match"),
+        // What the server owns and the phone shows (note 39 §8.1, step 8): the profile and targets, the account settings and the food
+        // preferences, read on each sync and changed only while connected. One food, and the food search, find a preference's food.
+        Route("GET", "/push/v1/api/profile"),
+        Route("PUT", "/push/v1/api/profile"),
+        Route("GET", "/push/v1/api/me/settings"),
+        Route("GET", "/push/v1/api/guidance/preferences"),
+        Route("PUT", "/push/v1/api/guidance/preferences/{food_id}"),
+        Route("DELETE", "/push/v1/api/guidance/preferences/{food_id}"),
+        Route("GET", "/push/v1/api/foods", query: ["q", "source", "limit"]),
+        Route("GET", "/push/v1/api/foods/{food_id}"),
     ]
 
     /// The longest path the page may send, query included.
@@ -81,7 +110,7 @@ public enum ServerAPI {
         guard path.count <= maxPath, !plain.contains("%"), !path.contains("\\"), !path.contains("#"),
               let parts = URLComponents(string: path), parts.scheme == nil, parts.host == nil, parts.fragment == nil,
               parts.percentEncodedPath == plain,
-              let found = routes.first(where: { $0.method == method && $0.path == plain }) else { return nil }
+              let found = routes.first(where: { $0.method == method && $0.matches(plain) }) else { return nil }
         let items = parts.queryItems ?? []
         guard Set(items.map(\.name)).count == items.count else { return nil } // one value per name
         for item in items {

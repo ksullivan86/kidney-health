@@ -105,15 +105,29 @@ ALLOWED: frozenset[tuple[str, str]] = frozenset({
     ("GET", "/api/list-sync"),
     ("POST", "/api/list-sync/preview"),
     ("POST", "/api/list-sync/send"),
+    # What the server owns and the phone shows (§8.1, D5, step 8): the profile and targets, the account settings (PATCH takes only
+    # the keys in BODY_KEYS) and the food preferences, read on each sync and changed only while connected, through the routes that
+    # check them for the web app. One food the person can use, and the food search, name a preference's food by this server's id.
+    ("GET", "/api/profile"),
+    ("PUT", "/api/profile"),
+    ("GET", "/api/me/settings"),
+    ("GET", "/api/guidance/preferences"),
+    ("PUT", "/api/guidance/preferences/{food_id}"),
+    ("DELETE", "/api/guidance/preferences/{food_id}"),
+    ("GET", "/api/foods"),
+    ("GET", "/api/foods/{food_id}"),
 })
 # Routes on the list that take only some keys through the gateway: the body must be one JSON object holding at least one of these
 # keys and nothing else, or the answer is 403 and the route never runs.
 BODY_KEYS: dict[tuple[str, str], frozenset[str]] = {
-    ("PATCH", "/api/me/settings"): frozenset({"food.off_consent"}),
+    # The Open Food Facts consent (step 3), and the account settings the server owns (step 8): units, the weight alarm, the blood
+    # pressure goal and the meal guidance choices. Never the theme or the camera (this iPhone's own), the AI's trust or route.
+    ("PATCH", "/api/me/settings"): frozenset({"food.off_consent", "user.units.labs", "user.units.weight", "body.weight_alarm", "body.bp_goal",
+                                              "guidance"}),
     ("PATCH", "/api/me/ai"): frozenset({"opt_in"}),
 }
 ONLY_KEYS = "From the iPhone app this can change only: {keys}."
-MAX_KEYS_BODY = 4096
+MAX_KEYS_BODY = 16384  # the meal guidance choices are one object
 
 # Never on the list, whatever it grows into (§5.2): prefixes of /api paths, and single routes.
 NEVER_PREFIXES: tuple[str, ...] = (

@@ -270,11 +270,21 @@ def test_the_allow_list_is_pinned(anon_client):
         ("GET", "/api/recipe-import"), ("POST", "/api/recipe-import/page"),
         ("GET", "/api/instacart"), ("POST", "/api/instacart/preview"), ("POST", "/api/instacart/send"),
         ("GET", "/api/list-sync"), ("POST", "/api/list-sync/preview"), ("POST", "/api/list-sync/send"),
+        # step 8: the profile, targets, account settings and food preferences, which the server owns; one food and the food search
+        ("GET", "/api/profile"), ("PUT", "/api/profile"), ("GET", "/api/me/settings"),
+        ("GET", "/api/guidance/preferences"), ("PUT", "/api/guidance/preferences/{food_id}"), ("DELETE", "/api/guidance/preferences/{food_id}"),
+        ("GET", "/api/foods"), ("GET", "/api/foods/{food_id}"),
     }
+    # never a food's edit or delete, a saved meal's (those go through the change feed), the suggested targets or the AI's trust
+    for method, path in (("PUT", "/api/foods/{food_id}"), ("DELETE", "/api/foods/{food_id}"), ("POST", "/api/foods"), ("PUT", "/api/meals/{meal_id}"),
+                         ("GET", "/api/profile/suggested-targets"), ("PUT", "/api/me/ai/route-choice")):
+        assert (method, path) not in ALLOWED
     for method in ("PUT", "DELETE"):
         assert (method, "/api/list-sync") not in ALLOWED
     assert ("POST", "/api/list-sync/test") not in ALLOWED
-    assert app_gateway.BODY_KEYS == {("PATCH", "/api/me/settings"): {"food.off_consent"}, ("PATCH", "/api/me/ai"): {"opt_in"}}
+    assert app_gateway.BODY_KEYS == {
+        ("PATCH", "/api/me/settings"): {"food.off_consent", "user.units.labs", "user.units.weight", "body.weight_alarm", "body.bp_goal", "guidance"},
+        ("PATCH", "/api/me/ai"): {"opt_in"}}
     from app.auth.deps import current_user
 
     by_op = {(m, p): r for m, p, r in app_gateway.walk_routes(anon_client.app.routes)}
@@ -299,13 +309,14 @@ def test_the_allow_list_is_pinned(anon_client):
 
 
 def test_two_settings_and_only_those_keys(admin, token):
-    """The phone may set the person's Open Food Facts consent and AI opt-in, and nothing else of the settings."""
+    """The phone may set the person's Open Food Facts consent, AI opt-in and account settings (step 8), and nothing else of the settings."""
     r = call(admin.app, token, "PATCH", f"{GATEWAY}/me/settings", json={"food.off_consent": True})
     assert r.status_code == 200, r.text
     assert admin.get("/api/me/settings").json()["settings"]["food.off_consent"]["value"] is True
     for body in ({"food.off_consent": True, "ui.theme": "dark"}, {"ui.theme": "dark"}, {}, [], "x"):
         r = call(admin.app, token, "PATCH", f"{GATEWAY}/me/settings", json=body)
-        assert r.status_code == 403 and r.json()["detail"] == "From the iPhone app this can change only: food.off_consent.", body
+        assert r.status_code == 403 and r.json()["detail"] == ("From the iPhone app this can change only: body.bp_goal, body.weight_alarm, food.off_consent, guidance, user.units.labs, "
+                                                               "user.units.weight."), body
     r = call(admin.app, token, "PATCH", f"{GATEWAY}/me/settings", content=b"{not json", headers={"Content-Type": "application/json"})
     assert r.status_code == 403
     assert admin.get("/api/me/settings").json()["settings"]["ui.theme"]["value"] == "system"

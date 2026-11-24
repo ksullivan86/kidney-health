@@ -37,6 +37,27 @@ final class ServerAPITests: XCTestCase {
             XCTAssertNil(ServerAPI.route(method: method, path: path), "\(method) \(path)")
         }
         XCTAssertTrue(ServerAPI.route(method: "POST", path: "/push/v1/changes")!.route.allows(["changes": []]))
+        // step 8: the profile, settings and food preferences; a food by its id, digits only
+        XCTAssertNotNil(ServerAPI.route(method: "GET", path: "/push/v1/api/profile"))
+        XCTAssertNotNil(ServerAPI.route(method: "PUT", path: "/push/v1/api/profile"))
+        XCTAssertNotNil(ServerAPI.route(method: "GET", path: "/push/v1/api/me/settings"))
+        XCTAssertNotNil(ServerAPI.route(method: "PUT", path: "/push/v1/api/guidance/preferences/42"))
+        XCTAssertNotNil(ServerAPI.route(method: "DELETE", path: "/push/v1/api/guidance/preferences/42"))
+        XCTAssertNotNil(ServerAPI.route(method: "GET", path: "/push/v1/api/foods/7"))
+        XCTAssertEqual(ServerAPI.route(method: "GET", path: "/push/v1/api/foods?q=rice&source=builtin&limit=25")?.query.map(\.name), ["q", "source", "limit"])
+        let settings = ServerAPI.route(method: "PATCH", path: "/push/v1/api/me/settings")!.route
+        XCTAssertTrue(settings.allows(["body.bp_goal": ["systolic": 130]]))
+        XCTAssertFalse(settings.allows(["ui.theme": "dark"]))
+        XCTAssertFalse(settings.allows(["ai": [:]]))
+        for (method, path) in [
+            ("PUT", "/push/v1/api/foods/7"), ("DELETE", "/push/v1/api/foods/7"), ("POST", "/push/v1/api/foods"),
+            ("GET", "/push/v1/api/foods/usda"), ("GET", "/push/v1/api/foods/7/copy"), ("GET", "/push/v1/api/foods/-1"),
+            ("PUT", "/push/v1/api/guidance/preferences/x"), ("PUT", "/push/v1/api/guidance/preferences/"),
+            ("PUT", "/push/v1/api/guidance/preferences/1/2"), ("GET", "/push/v1/api/profile/suggested-targets"),
+            ("PATCH", "/push/v1/api/profile"), ("GET", "/push/v1/api/foods/1234567890123456789"),
+        ] {
+            XCTAssertNil(ServerAPI.route(method: method, path: path), "\(method) \(path)")
+        }
         // step 9: recipe pages, Instacart and the list app; never the list app's set-up, and pasted text stays on the phone
         XCTAssertNotNil(ServerAPI.route(method: "POST", path: "/push/v1/api/recipe-import/page"))
         XCTAssertNotNil(ServerAPI.route(method: "POST", path: "/push/v1/api/instacart/send"))

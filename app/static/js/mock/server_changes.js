@@ -228,6 +228,7 @@
     const q = queue(ctx.api);
     if (!q) return;
     const mark = { c: cid, s: 'sent' };
+    if (kind !== 'food' || row.source === 'custom') row.client_id = cid; // one ID for the row everywhere (note 39 §8.2)
     if (from) mark.f = from; // a USDA or Open Food Facts food the server has: step 4 names it by its own keys
     q.rows[kind][row.id] = mark;
     try { const v = M.serverSync._versionNow(ctx.api, kind, row, mark); if (v) mark.v = v; } catch (e) { /* kept without */ }
@@ -512,7 +513,7 @@
       if (String(t.name || '').trim().toLowerCase() !== name || st.rows.meal[cid] || itemOf(st, 'meal', cid)) continue;
       const mark = markOf(api, 'meal', t);
       if (!mark || mark.s) continue; // sent, refused or stuck: not this phone's unsent copy
-      mark.c = c.id;
+      mark.c = c.id; t.client_id = c.id;
       idx.meal.delete(cid); idx.meal.set(c.id, t);
       if (q) ctx.changed += 1;
       return;
@@ -630,7 +631,7 @@
           const other = idx[kind].get(theirs);
           if (other && versionOf(api, kind, other) === versionOf(api, kind, row)) { removeRow(ctx, kind, mine); continue; } // one row each
           if (other) continue; // two different rows here: both stay; this one keeps its own ID
-          if (kind === 'entry') row.client_id = theirs;
+          if (kind !== 'food' || row.source === 'custom') row.client_id = theirs;
           const mark = markOf(api, kind, row);
           if (mark) mark.c = theirs;
           idx[kind].delete(mine); idx[kind].set(theirs, row);
@@ -856,9 +857,9 @@
       const row = ctx.idx[kind].get(id);
       if (row) {
         if (kind === 'food') row.hidden = false;
-        if (kind === 'entry') row.client_id = uuid();
+        if (kind !== 'food' || row.source === 'custom') row.client_id = uuid();
         const q = queue(api);
-        if (q && q.rows[kind]) q.rows[kind][row.id] = kind === 'entry' ? { c: row.client_id } : { c: uuid() };
+        if (q && q.rows[kind]) q.rows[kind][row.id] = { c: kind !== 'food' || row.source === 'custom' ? row.client_id : uuid() };
       }
       delete st.rows[kind][id];
     } else if (item.type === 'conflict') {

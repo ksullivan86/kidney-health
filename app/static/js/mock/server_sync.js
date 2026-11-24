@@ -150,7 +150,14 @@
         if (kind === 'entry') {
           if (typeof row.client_id !== 'string' || !UUID_RE.test(row.client_id)) { row.client_id = r.c && UUID_RE.test(r.c) ? r.c : uuid(); changed = true; }
           if (r.c !== row.client_id) { r.c = row.client_id; changed = true; }
-        } else if (typeof r.c !== 'string' || !UUID_RE.test(r.c)) { r.c = uuid(); changed = true; }
+        } else {
+          // One ID per row (note 39 §8.2): a row not sent yet takes its own client_id (the export carries it); a row already sent
+          // keeps the ID it was sent with, and the row takes it. USDA and Open Food Facts foods have none of their own.
+          const ownId = kind !== 'food' || row.source === 'custom';
+          const own = ownId && typeof row.client_id === 'string' && UUID_RE.test(row.client_id) ? row.client_id : null;
+          if (typeof r.c !== 'string' || !UUID_RE.test(r.c)) { r.c = own || uuid(); changed = true; } else if (own && r.c !== own && !done(r)) { r.c = own; changed = true; }
+          if (ownId && row.client_id !== r.c) { row.client_id = r.c; changed = true; }
+        }
       }
       for (const id of Object.keys(map)) {
         const r = map[id];
@@ -524,6 +531,7 @@
       if (go) {
         await runOnce(force);
         if (both()) await both().afterSend({ force });
+        if (M.serverAccount) await M.serverAccount.pull({ force }); // the profile, targets and settings from the server (note 39 step 8)
       }
     } catch (e) { /* the next run tries again */ } finally { running = false; }
     emit();

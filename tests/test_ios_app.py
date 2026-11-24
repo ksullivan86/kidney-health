@@ -304,7 +304,15 @@ def test_the_server_api_bridge_carries_only_its_allow_list():
         ("GET", "/push/v1/api/instacart"), ("POST", "/push/v1/api/instacart/preview"), ("POST", "/push/v1/api/instacart/send"),
         ("GET", "/push/v1/api/list-sync"), ("POST", "/push/v1/api/list-sync/preview"), ("POST", "/push/v1/api/list-sync/send"),
         ("GET", "/push/v1/changes"), ("POST", "/push/v1/changes"), ("POST", "/push/v1/match"),
+        # step 8: the profile, targets, account settings and food preferences the server owns; a food by its id or by the search
+        ("GET", "/push/v1/api/profile"), ("PUT", "/push/v1/api/profile"), ("GET", "/push/v1/api/me/settings"),
+        ("GET", "/push/v1/api/guidance/preferences"), ("PUT", "/push/v1/api/guidance/preferences/{food_id}"),
+        ("DELETE", "/push/v1/api/guidance/preferences/{food_id}"),
+        ("GET", "/push/v1/api/foods"), ("GET", "/push/v1/api/foods/{food_id}"),
     ]
+    # a path placeholder is only {food_id}: digits, matched segment by segment
+    assert 'if w == "{food_id}"' in core and '$0.matches(plain)' in core
+    assert set(re.findall(r"\{[a-z_]+\}", "".join(p for _, p in listed))) == {"{food_id}"}
     # sync both ways (note 39 steps 6 and 7): the feed takes only its cursor and page size
     assert 'Route("GET", "/push/v1/changes", query: ["after", "limit"])' in core
     # every route the app carries through the gateway is on the server's own gateway list (app/app_gateway.py)
@@ -317,7 +325,12 @@ def test_the_server_api_bridge_carries_only_its_allow_list():
         for word in ("/admin", "/auth", "/tokens", "/sessions", "/provider", "/me/import", "/export", "/keys", "delete", "transcribe"):
             assert word not in path, path
     # a settings route takes only its own key; the person's AI switch only opt_in
-    assert 'Route("PATCH", "/push/v1/api/me/settings", bodyKeys: ["food.off_consent"])' in core
+    assert ('bodyKeys: ["food.off_consent", "user.units.labs", "user.units.weight", "body.weight_alarm", "body.bp_goal", "guidance"]'
+            in core)
+    from app.app_gateway import BODY_KEYS
+
+    assert BODY_KEYS[("PATCH", "/api/me/settings")] == {"food.off_consent", "user.units.labs", "user.units.weight", "body.weight_alarm",
+                                                       "body.bp_goal", "guidance"}  # the app and the server agree
     assert 'Route("PATCH", "/push/v1/api/me/ai", bodyKeys: ["opt_in"])' in core
     sync = CODE["KidneyHealth/Services/ServerSync.swift"]
     assert 'case "serverApi":' in sync
