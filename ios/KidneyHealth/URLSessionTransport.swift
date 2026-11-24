@@ -10,14 +10,15 @@ struct URLSessionTransport: PushTransport {
         self.session = session
     }
 
-    static func makeSession(protocolClasses: [AnyClass]? = nil) -> URLSession {
+    /// `wait`: how long one answer may take. The server's AI can take minutes (design note 39, the serverApi bridge).
+    static func makeSession(protocolClasses: [AnyClass]? = nil, wait: TimeInterval = 30) -> URLSession {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.httpCookieStorage = nil
         configuration.httpShouldSetCookies = false
         configuration.urlCache = nil
         configuration.requestCachePolicy = .reloadIgnoringLocalCacheData
-        configuration.timeoutIntervalForRequest = 30
-        configuration.timeoutIntervalForResource = 60
+        configuration.timeoutIntervalForRequest = wait
+        configuration.timeoutIntervalForResource = max(60, wait * 2)
         if let protocolClasses { configuration.protocolClasses = protocolClasses }
         return URLSession(configuration: configuration, delegate: NoRedirects(), delegateQueue: nil)
     }
@@ -33,6 +34,19 @@ struct URLSessionTransport: PushTransport {
     func get(_ url: URL, token: String) async throws -> HTTPReply {
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
+        return try await send(request, token: token)
+    }
+
+    /// One request of the page to its server's gateway (design note 39 §5.4): any method the allow-list has, a JSON or JPEG body,
+    /// and `If-Match` when the page sends one.
+    func send(_ method: String, to url: URL, body: Data?, contentType: String?, ifMatch: String?, token: String) async throws -> HTTPReply {
+        var request = URLRequest(url: url)
+        request.httpMethod = method
+        if let body {
+            request.httpBody = body
+            request.setValue(contentType ?? "application/json", forHTTPHeaderField: "Content-Type")
+        }
+        if let ifMatch { request.setValue(ifMatch, forHTTPHeaderField: "If-Match") }
         return try await send(request, token: token)
     }
 

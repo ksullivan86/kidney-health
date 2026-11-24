@@ -21,6 +21,8 @@ final class SyncModel: ObservableObject {
     /// What the last sync into the log on this phone did (design note 38, step 3).
     @Published private(set) var phoneStatus: String
     @Published private(set) var phoneSyncing = false
+    /// What the saved token can do on its server (design note 39 §5.1): both ways, add only, or not known yet.
+    @Published private(set) var tokenKind: ServerAPI.TokenKind
 
     private let defaults: UserDefaults
     private let health: HealthReading?
@@ -40,7 +42,11 @@ final class SyncModel: ObservableObject {
         status = defaults.string(forKey: Key.status) ?? "Nothing sent yet."
         lastSent = defaults.object(forKey: Key.lastSent) as? Date
         phoneStatus = defaults.string(forKey: Key.phoneStatus) ?? "Nothing added from Health yet."
+        tokenKind = ServerAPI.TokenKind(rawValue: defaults.string(forKey: Key.tokenKind) ?? "") ?? .unknown
     }
+
+    /// The pairing screen's line about the saved token, or nil while it is not known.
+    var tokenKindText: String? { hasToken ? ServerAPI.text(tokenKind) : nil }
 
     var appURL: URL? { Settings.appURL(address) }
 
@@ -72,6 +78,7 @@ final class SyncModel: ObservableObject {
             defaults.removeObject(forKey: Key.lastSent)
             lastSent = nil
             setStatus("Nothing sent yet.")
+            setTokenKind(.unknown)
         }
         settingsGeneration &+= 1
         defaults.removeObject(forKey: Key.sendingPaused)
@@ -79,6 +86,7 @@ final class SyncModel: ObservableObject {
         defaults.set(cleaned, forKey: Key.address)
         checkResult = nil
         startObserving()
+        if hasToken { Task { await checkTokenKind() } }
         return nil
     }
 
@@ -88,6 +96,7 @@ final class SyncModel: ObservableObject {
     /// What the app asks before it saves the address and token of a QR code, so a code made by someone else is not taken quietly.
     func pairingQuestion(_ link: Pairing.Link) -> String {
         var text = "This phone will send your weight and blood pressure, and with a token for the iPhone app what you add in the app, to \(link.server). "
+            + "With a token for the iPhone app, both ways, the app also uses that server's AI and food services. "
             + "Pair only with a QR code from your own server, under Settings → Account → Your data → Phone shortcuts."
         if hasToken { text += " The token saved on this phone now is replaced." }
         return text
@@ -103,7 +112,24 @@ final class SyncModel: ObservableObject {
         defaults.removeObject(forKey: Key.sendingPaused)
         hasToken = false
         checkResult = nil
+        setTokenKind(.unknown)
         setStatus("The token was removed from this phone.")
+    }
+
+    /// Asks the saved server what the saved token may do (`GET /push/v1/about`, design note 39 §5.3). Sends only the token. With no
+    /// answer (offline) what was known stays.
+    func checkTokenKind() async {
+        guard let url = ServerAPI.url(address, route: ServerAPI.about),
+              let tokenData = Keychain.read(.token), let token = String(data: tokenData, encoding: .utf8) else { return }
+        let generation = settingsGeneration
+        let reply = try? await transport.get(url, token: token)
+        guard generationIsCurrent(generation), let reply else { return }
+        setTokenKind(ServerAPI.tokenKind(reply))
+    }
+
+    private func setTokenKind(_ kind: ServerAPI.TokenKind) {
+        tokenKind = kind
+        defaults.set(kind.rawValue, forKey: Key.tokenKind)
     }
 
     /// Asks the saved server whether the saved token works (`GET /push/v1/check`). Nothing of Health is read or sent.
@@ -129,6 +155,7 @@ final class SyncModel: ObservableObject {
             defaults.set(Date().addingTimeInterval(TimeInterval(seconds)), forKey: Key.waitUntil)
         }
         checkResult = result.text
+        if result == .ok { await checkTokenKind() }
     }
 
     func requestHealthAccess() async {
@@ -283,6 +310,7 @@ final class SyncModel: ObservableObject {
         static let healthAsked = "healthAsked"
         static let phoneStatus = "phoneStatus"
         static let phoneSince = "phoneSince"
+        static let tokenKind = "tokenKind"
     }
 }
 
