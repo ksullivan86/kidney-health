@@ -10,8 +10,9 @@
    from its Keychain. The token never reaches the page.
 
    What is sent: every row made on this phone that the server has not taken yet: food log entries, the foods they need, the
-   person's own foods, lab results, symptoms, weights and blood pressure readings. Never an edit or a delete (note 38 §5.5): a row
-   is sent once. Never the sample data (`_sample`). A planned entry waits until its day is over, so marking it eaten is sent.
+   person's own foods, lab results, symptoms, weights and blood pressure readings. A row is sent once here; with a token both ways
+   its later edits and deletes go through js/mock/server_changes.js (note 39 steps 6 and 7). Never the sample data (`_sample`).
+   With a token that only adds, a planned entry waits until its day is over, so marking it eaten is sent; both ways, it is sent at once.
 
    Saved with the rest of the log (js/mock/persist.js saves every property of the demo API), in `_serverSync`:
        { v: 1, server: 'food.example.org' | null,
@@ -26,7 +27,7 @@
    What was sent is remembered (design note 39, plan step 1), so the first two-way sync can tell which side changed a row:
    `v` is the row's version when the server took it: for an entry the server's own entry version (log.entry_version, the
    twin M.entryVersion), for every other kind "b:" and a hash of the row as it was sent, until note 39 step 5 gives each
-   kind its own version. `d: 1` marks a sent row deleted on this phone afterwards; the mark is kept. Neither is sent yet.
+   kind its own version. `d: 1` marks a sent row deleted on this phone afterwards; the mark is kept until the server has the row deleted too.
 
    The server answers counts only. A row the server cannot place (a food it does not know, a full day) is "skipped": it is counted,
    not named. Per list, rows sent minus (added + already there) are the skipped ones. When that cannot say which rows they were, the
@@ -246,7 +247,7 @@
     const bodyOf = (kind, row, r) => {
       if (kind === 'food') return { body: foodBody(row, r.c), maySkip: false };
       if (kind === 'entry') {
-        if (row.status === 'planned' && row.date >= today) return { hold: true };
+        if (row.status === 'planned' && row.date >= today && !twoWay(api)) return { hold: true }; // both ways: sent at once (note 39 §8.5)
         const ref = entryRef(row);
         if (ref.refuse) { r.s = 'refused'; r.w = ref.refuse; delete r.g; delete r.t; out.changed = true; out.refused.push(row.id); return { hold: true }; }
         if (ref.hold) return { hold: true };
@@ -462,10 +463,20 @@
     return false;
   }
 
+  // Design note 39 (js/mock/server_changes.js): with a token both ways, a different account or server stops everything until the
+  // person chooses, and after the new rows are sent the phone sends its edits and deletes and reads the server's changes.
+  const both = () => M.serverChanges || null;
+  function twoWay(api) { try { return !!(both() && both().active(api)); } catch (e) { return false; } }
   async function run({ force = false } = {}) {
     if (running) { again = true; return status(); }
     running = true; emit();
-    try { await runOnce(force); } catch (e) { /* the next run tries again */ } finally { running = false; }
+    try {
+      const go = both() ? await both().gate({ force }) : true;
+      if (go) {
+        await runOnce(force);
+        if (both()) await both().afterSend({ force });
+      }
+    } catch (e) { /* the next run tries again */ } finally { running = false; }
     emit();
     if (again) { again = false; soon(1000); }
     return status();

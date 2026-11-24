@@ -51,6 +51,14 @@
       if (KH.sharing) KH.sharing.openPending().catch((e) => console.warn('Share link:', e));
       // The iPhone app with no server (design note 38): the first-start setup, until it was finished (js/views/welcome.js).
       if (DEVICE && KH.welcome) KH.welcome.maybeShow().catch((e) => console.warn('Setup:', e));
+      // With a server both ways (design note 39 step 6): rows that came from the server show on Today without a reload.
+      if (DEVICE && KH.mock && KH.mock.serverChanges) {
+        KH.mock.serverChanges.subscribe(() => {
+          if (!KH.mock.serverChanges.takeChanged()) return;
+          state.dayLoadedFor = null; state.plan = null; state.trends = null; state.summary = null;
+          if (state.view === 'today' && KH.views.today && typeof KH.views.today.loadDay === 'function') KH.views.today.loadDay();
+        });
+      }
       // Back from a device company (#/devices/<word>/<provider>, js/views/devices.js): Settings → Connected devices says how it went.
       if (KH.devices) KH.devices.openPending().catch((e) => console.warn('Connected devices:', e));
       // A signed-in visit: on an iPhone or iPad the third one offers the Home Screen tip (js/pwa.js, note 02 R10).
