@@ -284,7 +284,14 @@
   }
 
   // ---- edits on the phone: through the server only ----
-  function needServer() { if (!active()) return false; return true; }
+  // Whether the server owns these now: this phone synced both ways with an account, nothing waits for the account question, and
+  // the app has not learned since that the token only adds or was unpaired. Being offline does not hand them back to the phone.
+  function needServer(api = M.instance) {
+    const saved = api && isDict(api._serverChanges) ? api._serverChanges : null;
+    if (!saved || !saved.account || saved.ask) return false;
+    const k = M.serverApi ? M.serverApi.status() : null;
+    return !(k && ['add_only', 'old_server', 'not_paired', 'no_app'].includes(k.state));
+  }
   async function send(method, path, body) {
     const res = await M.serverApi.call(method, path, body === undefined ? {} : { body });
     if (res.offline) M.fail(503, NEEDS_SERVER);
