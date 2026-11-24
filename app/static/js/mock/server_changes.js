@@ -14,8 +14,11 @@
    Note 02's rule holds throughout: another device's change is never overwritten silently. A conflict waits for the person:
    "Keep the saved one" or "Use mine". A low treatment is synced like any other entry; nothing here looks at `purpose`.
 
-   What syncs here: food log entries, the person's own foods, lab results (added and deleted only), symptoms, weights and blood
-   pressure readings. Saved meals, the profile, targets and settings follow in note 39 step 8 (the feed's `meal` rows are skipped).
+   What syncs here: food log entries, the person's own foods, saved meals and recipes (note 39 step 8), lab results (added and
+   deleted only), symptoms, weights and blood pressure readings. A phone that synced before step 8 skipped the feed's saved meals:
+   it reads the feed once more from the start for them (`meals`, `mcursor`), and a saved meal of this phone with the same name as
+   one of the server's, never sent, is matched to it (the same: one row; different: the review). Step 4 sends this phone's saved
+   meals only after that (`mealsReady`). The profile, targets and settings come from the server through js/mock/server_account.js.
 
    The page owns every rule and builds every request; the app only carries it through the `serverApi` bridge message
    (js/mock/server_api.js call(); ios/KidneyHealthCore/Sources/KidneyHealthCore/ServerAPI.swift has the allow-list).
@@ -23,7 +26,8 @@
    Saved with the rest of the log (js/mock/persist.js saves every property of the demo API), in `_serverChanges`:
        { v: 1, account: '<about.account>' | null, host: 'food.example.org' | null,
          cursor: '<next>' , first: true once the first two-way sync finished, full: true while everything is read again,
-         rows: { food | entry | lab | symptom | weight | reading: { <client_id>: { b: server version, l?: this phone's version
+         meals: true once the server's saved meals were read, mcursor: where that reading is,
+         rows: { food | entry | meal | lab | symptom | weight | reading: { <client_id>: { b: server version, l?: this phone's version
                  when the two agreed (when it differs from b), r?: the phone's version the server refused (or 'delete'),
                  w?: why } } },
          items: [{ key: 'kind:id', type: 'conflict' | 'differ' | 'deleted_here' | 'deleted_there', kind, id, op?: 'edit' |
@@ -39,7 +43,7 @@
   const M = KH.mock;
   if (!KH.flags || KH.flags.DEVICE !== true || !M) return;
 
-  const KINDS = ['food', 'entry', 'lab', 'symptom', 'weight', 'reading'];
+  const KINDS = ['food', 'entry', 'meal', 'lab', 'symptom', 'weight', 'reading'];
   const PAGE = 500; // app/sync_feed.py MAX_PAGE
   const MAX_PAGES = 20; // in one run; the rest follows in a minute
   const MAX_CHANGES = 200; // app/sync_feed.py MAX_CHANGES
@@ -54,7 +58,7 @@
   const isDict = (v) => v != null && typeof v === 'object' && !Array.isArray(v);
   const RV = () => KH.rowVersions;
 
-  const WHAT = { food: 'food', entry: 'entry', lab: 'lab result', symptom: 'symptom', weight: 'weight', reading: 'blood pressure reading' };
+  const WHAT = { food: 'food', entry: 'entry', meal: 'saved meal', lab: 'lab result', symptom: 'symptom', weight: 'weight', reading: 'blood pressure reading' };
   const MESSAGES = {
     offline: 'Your server could not be reached. Changes wait on this iPhone and are sent later.',
     token: 'Your server did not accept the token for syncing both ways. Make a token for the iPhone app, both ways, and pair again.',
@@ -72,7 +76,7 @@
 
   // ---- the saved state ----
   function blank() {
-    return { v: 1, account: null, host: null, cursor: '0', first: false, full: false, rows: Object.fromEntries(KINDS.map((k) => [k, {}])),
+    return { v: 1, account: null, host: null, cursor: '0', first: false, full: false, meals: false, mcursor: '0', rows: Object.fromEntries(KINDS.map((k) => [k, {}])),
       items: [], notices: [], ask: null, syncedAt: null, outcome: null, message: null, waitUntil: null };
   }
   function stateOf(api) {
@@ -107,6 +111,7 @@
     const uid = uidOf(api);
     if (kind === 'entry') return api._entries || [];
     if (kind === 'food') return (api._foods || []).filter((f) => f.source !== 'builtin');
+    if (kind === 'meal') return api._templates || [];
     if (kind === 'lab') return api._labsState ? api._labsState().filter((r) => r.user_id === uid) : [];
     if (kind === 'symptom') return api._symptomsState ? api._symptomsState().filter((r) => r.user_id === uid) : [];
     if (kind === 'weight') return api._weightsOf ? api._weightsOf(uid) : [];
@@ -139,6 +144,7 @@
   function viewOf(api, kind, row) {
     if (kind === 'entry') return api._entryView(row);
     if (kind === 'food') return api._foodView(row);
+    if (kind === 'meal') return api._templateView(row);
     return row;
   }
   function versionOf(api, kind, row) {
@@ -157,6 +163,11 @@
       return { name: row.name, brand: row.brand || null, category: row.category || null, serving_desc: row.serving_desc, serving_g: Number(row.serving_g),
         nutrients: { ...(row.nutrients || {}) }, flags: [...(row.flags || [])], kidney_notes: row.kidney_notes || null, hidden: !!row.hidden,
         gtin: row.gtin || null, ingredients_text: row.ingredients_text || null, source_url: row.source_url || null, source_license: row.source_license || null };
+    }
+    if (kind === 'meal') {
+      return { name: row.name, note: row.note == null ? null : row.note, meal_hint: row.meal_hint || null,
+        servings_made: row.servings_made == null ? null : Number(row.servings_made), steps: Array.isArray(row.steps) && row.steps.length ? [...row.steps] : null,
+        source_url: row.source_url || null };
     }
     if (kind === 'lab') {
       return { analyte: row.analyte, value: row.value, entered_value: row.entered_value, entered_unit: row.entered_unit, taken_on: row.taken_on,
@@ -200,7 +211,7 @@
       const rec = record((r) => (usda ? isDict(r.usda) && r.usda.fdc_id === key : isDict(r.off) && r.off.gtin === key));
       if (rec) {
         const row = api._storeServerFood({ ...rec, source: usda ? 'usda' : 'off' });
-        markSent(ctx, 'food', row, uuid());
+        markSent(ctx, 'food', row, uuid(), 'server');
         return row;
       }
     }
@@ -213,10 +224,11 @@
     return row;
   }
   // Step 4's mark for a row that came from the server: it is never sent as new.
-  function markSent(ctx, kind, row, cid) {
+  function markSent(ctx, kind, row, cid, from = null) {
     const q = queue(ctx.api);
     if (!q) return;
     const mark = { c: cid, s: 'sent' };
+    if (from) mark.f = from; // a USDA or Open Food Facts food the server has: step 4 names it by its own keys
     q.rows[kind][row.id] = mark;
     try { const v = M.serverSync._versionNow(ctx.api, kind, row, mark); if (v) mark.v = v; } catch (e) { /* kept without */ }
   }
@@ -226,8 +238,20 @@
     mark.s = 'sent'; delete mark.d; delete mark.t; delete mark.g; delete mark.w;
     try { const v = M.serverSync._versionNow(ctx.api, kind, row, mark); if (v) mark.v = v; } catch (e) { /* kept as it was */ }
   }
+  // A saved meal's items as the phone keeps them: each food found or kept as the feed names it.
+  function mealItems(ctx, server) {
+    return (Array.isArray(server.items) ? server.items : []).filter(isDict).map((it) => {
+      const food = resolveFood(ctx, it.food, { food_name: it.food_name, servings: it.servings, nutrients: it.nutrients });
+      return { food_id: food.id, servings: Number(it.servings) };
+    });
+  }
   function setFields(ctx, kind, row, server) {
     const shape = shapeOf(kind, server);
+    if (kind === 'meal') {
+      Object.assign(row, shape, { items: mealItems(ctx, server), updated_at: server.updated_at || ctx.api._stamp() });
+      ctx.changed += 1;
+      return row;
+    }
     if (kind === 'entry') {
       const food = resolveFood(ctx, server.food, server);
       Object.assign(row, shape, { food_id: food.id, updated_at: server.updated_at || ctx.api._stamp() });
@@ -252,6 +276,10 @@
     } else if (kind === 'food') {
       row = api._food(api._insertFood({ ...s, source: 'custom' }));
       Object.assign(row, { serving_g: s.serving_g, nutrients: s.nutrients });
+    } else if (kind === 'meal') {
+      row = api._insertTemplate({ name: s.name, note: s.note, items: mealItems(ctx, server), mealHint: s.meal_hint, createdAt: server.created_at || null,
+        servingsMade: s.servings_made, steps: s.steps, sourceUrl: s.source_url });
+      if (server.updated_at) row.updated_at = server.updated_at;
     } else if (kind === 'lab') {
       row = api._insertLab(uid, { analyte: s.analyte, value: s.value, entered_value: s.entered_value, entered_unit: s.entered_unit }, s.taken_on, s.note,
         server.created_at || null);
@@ -280,7 +308,8 @@
       if (row.source !== 'custom') { api._foodLinks().delete(row.id); gone = false; } else if (api._foodReferenced(row.id)) { row.hidden = true; gone = false; } else {
         drop(api._foods); api._foodById.delete(row.id);
       }
-    } else if (kind === 'lab') drop(api._labsState());
+    } else if (kind === 'meal') drop(api._templates);
+    else if (kind === 'lab') drop(api._labsState());
     else if (kind === 'symptom') drop(api._symptomsState());
     else if (kind === 'weight') drop(api._weights);
     else drop(api._readings);
@@ -309,6 +338,7 @@
     if (!row) return `this ${WHAT[kind]}`;
     if (kind === 'entry') return row.food_name || 'this entry';
     if (kind === 'food') return row.name || 'this food';
+    if (kind === 'meal') return row.name || 'this saved meal';
     if (kind === 'lab') { const a = KH.kidney && KH.kidney.ANALYTES ? KH.kidney.ANALYTES[row.analyte] : null; return `${(a && a.label) || row.analyte} on ${row.taken_on}`; }
     if (kind === 'symptom') { const n = KH.symptomRules && KH.symptomRules.NAMES ? KH.symptomRules.NAMES[row.symptom] : null; return `${row.label || n || row.symptom} on ${row.date}`; }
     if (kind === 'weight') return `weight on ${row.date}`;
@@ -325,6 +355,13 @@
     if (kind === 'food') {
       return [['Name', row.name], ['Serving', `${row.serving_desc} (${Number(row.serving_g)} g)`], ['Brand', row.brand || 'None'], ['Notes', note(row.kidney_notes)],
         ['Deleted', row.hidden ? 'Yes' : 'No']];
+    }
+    if (kind === 'meal') {
+      const api = M.instance;
+      const foodName = (it) => it.food_name || (api && api._foodById && api._foodById.get(Number(it.food_id)) ? api._foodById.get(Number(it.food_id)).name : 'A food');
+      const items = (row.items || []).map((it) => `${foodName(it)} × ${Number(it.servings)}`).join(', ');
+      return [['Name', row.name], ['Foods', items || 'None'], ['Servings it makes', row.servings_made == null ? 'Not set' : String(row.servings_made)],
+        ['Steps', row.steps && row.steps.length ? String(row.steps.length) : 'None'], ['Note', note(row.note)]];
     }
     if (kind === 'lab') return [['Test', nameOf('lab', row).replace(/ on .*$/, '')], ['Value', `${row.entered_value} ${row.entered_unit || ''}`.trim()], ['Day', row.taken_on], ['Note', note(row.note)]];
     if (kind === 'symptom') {
@@ -464,13 +501,32 @@
   }
 
   // One change of the feed. `first`: the first two-way sync (§8.7), for rows this phone has no agreed version of yet.
-  function applyChange(ctx, c, { first = false, seen = null } = {}) {
+  // A saved meal of this phone, never sent, with the same name as the server's new one: it becomes that row (§8.7: the same
+  // version is one row; a different one goes to the review). Saved meals did not sync before note 39 step 8.
+  function matchMealByName(ctx, c) {
+    const { api, st, idx } = ctx;
+    if (idx.meal.has(c.id)) return;
+    const name = String(c.row.name || '').trim().toLowerCase();
+    const q = queue(api);
+    for (const [cid, t] of idx.meal) {
+      if (String(t.name || '').trim().toLowerCase() !== name || st.rows.meal[cid] || itemOf(st, 'meal', cid)) continue;
+      const mark = markOf(api, 'meal', t);
+      if (!mark || mark.s) continue; // sent, refused or stuck: not this phone's unsent copy
+      mark.c = c.id;
+      idx.meal.delete(cid); idx.meal.set(c.id, t);
+      if (q) ctx.changed += 1;
+      return;
+    }
+  }
+  function applyChange(ctx, c, { first = false, seen = null, only = null } = {}) {
     const { api, st, idx } = ctx;
     const kind = c.kind;
-    if (!KINDS.includes(kind) || typeof c.id !== 'string' || !UUID_RE.test(c.id)) return; // a saved meal waits for step 8
+    if (!KINDS.includes(kind) || typeof c.id !== 'string' || !UUID_RE.test(c.id)) return;
+    if (only && kind !== only) return; // reading the feed again for saved meals alone
     if (seen) seen.add(keyOf(kind, c.id));
     const put = c.op === 'put';
     if (put && (!isDict(c.row) || !VERSION_RE.test(String(c.version)))) return;
+    if (put && kind === 'meal' && !st.rows.meal[c.id]) matchMealByName(ctx, c);
     const row = idx[kind].get(c.id) || null;
     const here = present(api, kind, row);
     const rs = st.rows[kind][c.id] || null;
@@ -520,7 +576,7 @@
         }
         if (lv === c.version) { agree(ctx, kind, c.id, c.version, row); return; }
         if (sent) {
-          const serverChanged = kind === 'entry' ? c.version !== sent.v
+          const serverChanged = kind === 'entry' || kind === 'meal' ? c.version !== sent.v
             : M.serverSync._versionNow(api, kind, { ...row, ...shapeOf(kind, c.row), created_at: row.created_at }, mark) !== sent.v;
           const mineChanged = phoneChanged();
           if (mineChanged && !serverChanged) { st.rows[kind][c.id] = { b: c.version }; ctx.changed += 1; return; } // sent as an edit
@@ -585,16 +641,19 @@
     return true;
   }
 
-  // Reads the feed from the saved cursor. `mode`: 'first' (§8.7), 'full' (after 410: rows not in the answer are gone) or 'steady'.
+  // Reads the feed from the saved cursor. `mode`: 'first' (§8.7), 'full' (after 410: rows not in the answer are gone), 'meals'
+  // (once, from the start, for the saved meals a phone skipped before note 39 step 8) or 'steady'.
   async function receive(ctx, mode) {
     const { api, st } = ctx;
     const seen = mode === 'full' ? new Set() : null;
     let after = mode === 'steady' ? st.cursor : '0';
     if (mode === 'first') after = st.cursor; // a first sync cut short goes on from where it was
+    if (mode === 'meals') after = typeof st.mcursor === 'string' ? st.mcursor : '0';
     for (let page = 0; page < MAX_PAGES; page += 1) {
       const res = await M.serverApi.call('GET', `/push/v1/changes?after=${encodeURIComponent(after)}&limit=${PAGE}`);
       if (!res.offline && !res.error && res.status === 410) {
         if (mode === 'full') { setOutcome(st, 'error'); return false; }
+        if (mode === 'meals') { st.meals = true; st.full = true; st.cursor = '0'; await save(api); return receive(ctx, 'full'); }
         st.full = true; st.cursor = '0';
         await save(api);
         return receive(ctx, 'full');
@@ -603,9 +662,11 @@
       const answer = res.json;
       const changes = Array.isArray(answer.changes) ? answer.changes : [];
       ctx.foods = Array.isArray(answer.foods) ? answer.foods : [];
-      for (const c of changes) if (isDict(c)) applyChange(ctx, c, { first: mode === 'first', seen });
+      for (const c of changes) if (isDict(c)) applyChange(ctx, c, { first: mode === 'first' || mode === 'meals', seen, only: mode === 'meals' ? 'meal' : null });
       if (typeof answer.next === 'string' && /^(0|[1-9][0-9]{0,18})$/.test(answer.next)) after = answer.next;
-      if (mode !== 'full') st.cursor = after; // the rows and the cursor in one save
+      if (mode === 'meals') st.mcursor = after;
+      else if (mode !== 'full') st.cursor = after; // the rows and the cursor in one save
+      if (mode === 'meals' && !answer.more) st.meals = true;
       st.syncedAt = iso();
       if (!(await save(api))) { setOutcome(st, 'unsaved'); return false; }
       if (ctx.changed) { changedRows += ctx.changed; ctx.changed = 0; emit(); }
@@ -628,6 +689,15 @@
 
   // ---- sending edits and deletes (step 7) ----
   function editBody(api, kind, row) {
+    if (kind === 'meal') { // each food named as the server knows it; null while one still waits to be sent (step 4 sends it first)
+      const refs = [];
+      for (const it of row.items || []) {
+        const r = M.serverSync._refOf(api, api._foodById.get(Number(it.food_id)));
+        if (!r.ref) return null;
+        refs.push(r.ref);
+      }
+      return M.serverSync._mealFields(row, refs);
+    }
     if (kind === 'entry') {
       const out = { date: row.date, meal: row.meal, status: row.status || 'eaten', note: row.note == null ? null : row.note, purpose: row.purpose === 'hypo' ? 'hypo' : 'none' };
       if (row.grams != null) out.grams = row.grams; else out.servings = row.servings;
@@ -660,7 +730,9 @@
         const lv = versionOf(api, kind, row);
         if (!lv || lv === (rs.l || rs.b) || rs.r === lv) continue;
         if (kind === 'lab') { rs.l = lv; continue; } // lab results are only added and deleted
-        const change = { kind, id: cid, op: 'edit', base: rs.b, fields: editBody(api, kind, row) };
+        const fields = editBody(api, kind, row);
+        if (!fields) continue; // a saved meal whose new food waits to be sent
+        const change = { kind, id: cid, op: 'edit', base: rs.b, fields };
         if (VERSION_RE.test(lv)) change.version = lv;
         out.push({ change, lv });
       }
@@ -747,8 +819,13 @@
         if (!(await match(ctx))) return status();
         if (ctx.changed && !(await save(api))) { setOutcome(st, 'unsaved'); return status(); }
         if (!(await receive(ctx, 'first'))) return status();
-        st.first = true;
+        st.first = true; st.meals = true;
         await save(api);
+      }
+      if (!st.meals) { // a phone that synced before note 39 step 8: the server's saved meals, once
+        if (!(await receive(ctx, 'meals'))) return status();
+        await save(api);
+        if (st.meals && M.serverSync) M.serverSync.soon(1000); // this phone's own saved meals are sent next
       }
       if (!(await send(ctx))) return status();
       if (!(await receive(ctx, st.full ? 'full' : 'steady'))) return status();
@@ -831,6 +908,14 @@
   }
   // The views ask whether rows came from the server since they last drew (Today reloads its day).
   function takeChanged() { const n = changedRows; changedRows = 0; return n; }
+  // Step 4 sends this phone's saved meals only once the server's were read (above).
+  function mealsReady(api = M.instance) { return active(api) && peek(api).meals === true; }
+  // Whether a row waits for the person in the review (Today marks such an entry "needs review", design note 39 §8.6).
+  function needsReview(kind, id) {
+    const api = M.instance;
+    if (!api || !id || !isDict(api._serverChanges) || !Array.isArray(api._serverChanges.items)) return false;
+    return api._serverChanges.items.some((x) => x.key === keyOf(kind, String(id)));
+  }
 
   // Every 15 minutes while the app is open (and step 4's own times: after a save, at the front, at the start).
   try {
@@ -840,7 +925,8 @@
 
   M.serverChanges = {
     KINDS, PAGE, MAX_CHANGES, EVERY_MS,
-    gate, afterSend, active, status, decide, choose, clearNotices, takeChanged,
+    gate, afterSend, active, status, decide, choose, clearNotices, takeChanged, mealsReady, needsReview,
+    _touched() { changedRows += 1; emit(); }, // js/mock/server_account.js copied the server's profile or settings: the views redraw
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     // for the tests: the pure parts
     _blank: blank, _applyChange: (api, c, opts) => { const ctx = context(api); ctx.foods = (opts && opts.foods) || []; applyChange(ctx, c, opts || {}); return ctx; },
