@@ -105,7 +105,9 @@ const about = { json: { account: 'acct-1', api_version: 1, features: { sync: fal
   // the lenient reading: a flag at the top, or under features; one it does not mention is null
   const read = both.KH.mock.serverApi.readAbout;
   ok(() => assert.deepEqual(plain(read({ usda: false, ai: { routes: { describe: { available: true }, labs: false } } })),
-    { account: null, version: null, sync: null, usda: false, barcode: null, ai: null, aiRoutes: { describe: true, labs: false } }));
+    { account: null, version: null, sync: null, usda: false, barcode: null, ai: null, aiRoutes: { describe: true, labs: false }, changes: null }));
+  ok(() => assert.equal(read({ sync: { gateway: true, changes: false } }).changes, false), 'the change feed, as the server says it (note 39 step 5)');
+  ok(() => assert.equal(read({ features: { changes: true } }).changes, true));
   // an add-only token keeps today's behaviour: USDA with the phone's own key
   await addOnly.api.request('GET', '/api/foods/usda/search?q=rice');
   ok(() => assert.equal(addOnly.sent('usdaSearch').length, 1), 'add only: the phone\'s own USDA key');

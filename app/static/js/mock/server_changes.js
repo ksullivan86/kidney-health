@@ -119,8 +119,8 @@
     return mark && typeof mark.c === 'string' ? mark.c : null;
   }
   // kind → Map(client_id → the phone's row), built once a run and kept current by every change below.
-  function indexOf(api) {
-    if (M.serverSync) M.serverSync._assignIds(api);
+  function indexOf(api, { assign = true } = {}) {
+    if (assign && M.serverSync) M.serverSync._assignIds(api);
     const out = {};
     for (const kind of KINDS) {
       const map = new Map();
@@ -726,7 +726,8 @@
   function active(api = M.instance) {
     const A = M.serverApi;
     const k = A ? A.status() : null;
-    if (!api || api._sample === true || !k || k.state !== 'both' || !k.about || !k.about.account || k.about.sync === false) return false;
+    if (!api || api._sample === true || !k || k.state !== 'both' || !k.about || !k.about.account || k.about.sync === false
+      || k.about.changes === false) return false;
     const st = peek(api);
     return !st.ask && st.account === k.about.account;
   }
@@ -818,7 +819,7 @@
       notices: st.notices.map((n) => n.text), review: st.items.length };
     if (!api || !out.active) return out;
     try {
-      const ctx = { api, st, idx: indexOf(api), foods: [], changed: 0 };
+      const ctx = { api, st, idx: indexOf(api, { assign: false }), foods: [], changed: 0 }; // drawing changes nothing
       out.waiting = waiting(ctx).length;
       for (const kind of KINDS) {
         for (const [cid, rs] of Object.entries(st.rows[kind])) {

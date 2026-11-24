@@ -474,6 +474,21 @@ async function fakeRuns() {
   }
 }
 
+// 14. A server whose `about` says the change feed is off: step 4 goes on as before, and the feed is never asked.
+async function feedOff() {
+  let server;
+  const p = await page({ bridge: (req) => server.handle(req) });
+  server = fakeServer(p.KH);
+  server.setKept(keeper(p));
+  server.state.script.push(...Array.from({ length: 5 }, () => ({ when: (r) => r.path === '/push/v1/about',
+    answer: { ok: true, status: 200, json: JSON.stringify({ account: ACCOUNT, api_version: 1, sync: { gateway: true, changes: false } }) } })));
+  await p.api.request('POST', '/api/log', { date: D, meal: 'lunch', food_id: builtin(p.api).id, servings: 1 });
+  const st = await syncNow(p);
+  ok(() => assert.equal(st.active, false), 'feed off: not both ways');
+  ok(() => assert.equal(server.list('entry').length, 1), 'feed off: the new entry is still sent');
+  ok(() => assert.ok(!server.calls.some((c) => c.includes('/push/v1/changes') || c.includes('/push/v1/match'))), 'feed off: never asked');
+}
+
 // ---------------------------------------------------------------------------------------------------------------- the real server
 // Each line "@@ {json}" asks the pytest driver: { bridge: request } → the app's answer; { web: { method, path, json } } → the web app.
 function relay() {
@@ -576,6 +591,6 @@ async function realRuns() {
   await ask({ done: true });
 }
 
-if (RELAY) await realRuns(); else await fakeRuns();
+if (RELAY) await realRuns(); else { await fakeRuns(); await feedOff(); }
 console.log(`server changes${RELAY ? ' (real server)' : ''}: ${checks} checks passed`);
 process.exit(0);
