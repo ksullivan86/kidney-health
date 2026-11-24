@@ -1,4 +1,4 @@
-Status: in progress (code and tests done; e2e, docs left)
+Status: complete
 
 # note39-phone: the phone side of design note 39 (steps 1, 3, 4)
 
@@ -33,7 +33,7 @@ tests/test_ai_device_vectors.py tests/test_device_mode.py tests/test_server_sync
 - ServerAPI keeps the query percent-encoded as the page sent it.
 
 ## Next
-- Full `python -m pytest` run (in progress at the time of writing); then the hand-off report.
+- Nothing. Full `python -m pytest` passed (exit 0, no network).
 
 ## Left for later (not in steps 1, 3, 4 as built)
 - Ask (chat) through the server: off on the phone until step 6 (server-side saves, server row ids).
