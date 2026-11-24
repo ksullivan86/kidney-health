@@ -23,6 +23,20 @@ final class ServerAPITests: XCTestCase {
         ] {
             XCTAssertNil(ServerAPI.route(method: method, path: path), "\(method) \(path)")
         }
+        // sync both ways (note 39 steps 6 and 7): the feed with its cursor, the phone's changes, and match
+        let feed = ServerAPI.route(method: "GET", path: "/push/v1/changes?after=120&limit=500")
+        XCTAssertEqual(feed?.query.map(\.name), ["after", "limit"])
+        XCTAssertNotNil(ServerAPI.route(method: "GET", path: "/push/v1/changes"))
+        XCTAssertNotNil(ServerAPI.route(method: "POST", path: "/push/v1/changes"))
+        XCTAssertNotNil(ServerAPI.route(method: "POST", path: "/push/v1/match"))
+        for (method, path) in [
+            ("GET", "/push/v1/changes?after=1&since=2"), ("DELETE", "/push/v1/changes"), ("PUT", "/push/v1/changes"),
+            ("GET", "/push/v1/match"), ("POST", "/push/v1/match?after=1"), ("GET", "/push/v1/changes?after=1&after=2"),
+            ("GET", "/push/v1/changes/"), ("POST", "/push/v1/api/changes"),
+        ] {
+            XCTAssertNil(ServerAPI.route(method: method, path: path), "\(method) \(path)")
+        }
+        XCTAssertTrue(ServerAPI.route(method: "POST", path: "/push/v1/changes")!.route.allows(["changes": []]))
         XCTAssertEqual(ServerAPI.routes.filter(\.photo).map(\.path),
                        ["/push/v1/api/ai/read-lab-report", "/push/v1/api/vision/label", "/push/v1/api/vision/plate"])
         // a settings route takes only its own keys

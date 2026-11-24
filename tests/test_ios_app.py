@@ -299,7 +299,10 @@ def test_the_server_api_bridge_carries_only_its_allow_list():
         ("POST", "/push/v1/api/ai/chat"),
         ("POST", "/push/v1/api/ai/read-lab-report-text"), ("POST", "/push/v1/api/ai/read-lab-report"),
         ("POST", "/push/v1/api/vision/label"), ("POST", "/push/v1/api/vision/plate"),
+        ("GET", "/push/v1/changes"), ("POST", "/push/v1/changes"), ("POST", "/push/v1/match"),
     ]
+    # sync both ways (note 39 steps 6 and 7): the feed takes only its cursor and page size
+    assert 'Route("GET", "/push/v1/changes", query: ["after", "limit"])' in core
     for _, path in listed:
         for word in ("/admin", "/auth", "/tokens", "/sessions", "/provider", "/me/import", "/export", "/keys", "delete", "transcribe"):
             assert word not in path, path

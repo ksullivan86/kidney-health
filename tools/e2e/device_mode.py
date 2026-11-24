@@ -11,8 +11,8 @@ stands in for the iPhone app's message handlers. At 375x812 light and 1280x800 d
 * the one person is not an admin, and Settings has no sign-out button and no signed-in devices list; This device says the data is
   kept on this iPhone and offers "Apple Health and server", which asks the app to open its settings;
 * an entry is added, the page reloaded: the entry is still on Today; after the save the app was handed the safety copy, which holds it;
-* This device → Sending to your server: Send now hands the new entry to the stand-in app once, and the section names the server and
-  says that changes after sending are not sent;
+* This device → Your server: Sync now hands the new entry to the stand-in app once, and the section names the server and says
+  that changes are sent too with a token both ways;
 * the iPhone's own AI (step 5), with a stand-in for the app's model: Settings → AI features has one switch; once it is on, Add offers
   Describe a meal, which sends the server's cleaned data to the app and shows the matches and the server's notice; a low gets the
   Treating a low card and the model is not asked;
@@ -21,6 +21,9 @@ stands in for the iPhone app's message handlers. At 375x812 light and 1280x800 d
   device says the token works both ways, Food data says the server's food services are used, Settings → AI features lists Describe
   a meal on the server's AI and offers "Use only this iPhone's AI"; Describe a meal goes to the server and its answer is shown with
   its food named by the phone's own id; with "Use only this iPhone's AI" on, the iPhone's model answers and the server is not asked.
+* sync both ways (design note 39, steps 6 and 7; 375x812 light), with a stand-in for the change feed: Sync now brings an entry made
+  on the server to Today; the phone's edit of an entry also changed on the server shows the conflict card with "Keep the saved one"
+  and "Use mine"; "Use mine" sends the edit again on the server's version; Settings says it syncs both ways.
 
 Nothing leaves the machine. Prints PASS / FAIL lines and writes ``<out>/report.json``; exit status 1 on any failure.
 """
@@ -155,7 +158,7 @@ def walk(browser, base: str, width: int, height: int, scheme: str) -> None:
         page.wait_for_timeout(100)
     copy = json.loads(page.evaluate("window.__kh.copies[window.__kh.copies.length - 1]"))
     check(f"[{tag}] the safety copy holds the entry", len(copy.get("log_entries", [])) == 1 and copy.get("format") == "kidney-health-export")
-    # Sending to your server (step 4): Send now hands the new entry to the app for the paired server, and the section says so.
+    # Your server (step 4): Sync now hands the new entry to the app for the paired server, and the section says so.
     page.click("#set-server-sync-now")
     for _ in range(100):
         if page.evaluate("window.__kh.sync.length") and "Nothing" in page.locator("#set-server-sync").inner_text():
@@ -163,11 +166,11 @@ def walk(browser, base: str, width: int, height: int, scheme: str) -> None:
         page.wait_for_timeout(100)
     sent = page.evaluate("window.__kh.sync")
     entries = [e for b in sent for e in b.get("entries", [])]
-    check(f"[{tag}] Send now sends the new entry once", len(entries) == 1 and "builtin" in entries[0]["food"], json.dumps(sent)[:160])
+    check(f"[{tag}] Sync now sends the new entry once", len(entries) == 1 and "builtin" in entries[0]["food"], json.dumps(sent)[:160])
     text = page.locator("#set-device-body").inner_text()
     shows_host = any(word == "food.example.org" for word in re.split(r"[\s,;:()]+", text))  # a whole word on screen, not a URL check
     check(f"[{tag}] the section says what was sent and what is not", shows_host and "Waiting to be sent" in text
-          and "after a row was sent are not sent" in text, text[:200])
+          and "your changes and deletions are sent too" in text, text[:200])
     page.click("#set-server-sync-now")
     page.wait_for_timeout(600)
     check(f"[{tag}] a row is sent once", len([e for b in page.evaluate("window.__kh.sync") for e in b.get("entries", [])]) == 1)
@@ -289,6 +292,96 @@ def both_ways_walk(browser, base: str) -> None:
     ctx.close()
 
 
+# Design note 39, steps 6 and 7: a stand-in for the change feed. The first read brings one entry made on the server (a built-in food,
+# with the version the page's own twin works out); POST /push/v1/changes answers what `window.__kh.next` says, else "done".
+SYNC = ("window.__kh = { copies: [], phone: [], api: [], sent: [], feed: [], next: null, seq: 0 };"
+        "window.__kh.entry = (extra) => { const api = KH.mock.instance; const f = api._foods.find((x) => x.source === 'builtin' && /banana/i.test(x.name));"
+        " const row = { id: 7, date: KH.state.date, meal: 'lunch', food_id: 7, food_name: f.name, servings: 1, grams: null, note: null, status: 'eaten',"
+        " nutrients: api._foodView(f).nutrients, purpose: null, client_id: '0f8fad5b-d9cb-469f-a165-70867728950e', created_at: '2026-11-20T08:00:00Z',"
+        " updated_at: '2026-11-20T08:00:00Z', food: { builtin: { fdc_id: f.fdc_id, name: f.name } }, ...(extra || {}) };"
+        " return { kind: 'entry', id: row.client_id, op: 'put', version: KH.rowVersions.version('entry', row), row }; };"
+        "window.__kh.gateway = (r) => { window.__kh.api.push({ method: r.method, path: r.path });"
+        " const reply = (json) => ({ ok: true, status: 200, json: JSON.stringify(json) });"
+        " if (r.path === '/push/v1/about') return reply({ account: 'acct-1', api_version: 1, sync: { gateway: true, changes: true } });"
+        " if (r.path.startsWith('/push/v1/changes') && r.method === 'GET') { const changes = window.__kh.feed.splice(0);"
+        "   window.__kh.seq += changes.length; return reply({ changes, foods: [], next: String(window.__kh.seq), more: false }); }"
+        " if (r.path === '/push/v1/changes') { const body = JSON.parse(r.body); window.__kh.sent.push(body); const next = window.__kh.next; window.__kh.next = null;"
+        "   return reply({ results: body.changes.map((c) => next ? { kind: c.kind, id: c.id, ...next } : { kind: c.kind, id: c.id, status: 'done', version: c.version }) }); }"
+        " if (r.path === '/push/v1/match') return reply({ known: {}, unknown: {} });"
+        " return { ok: true, status: 404, json: '{\"detail\": \"Not Found\"}' }; };"
+        "window.webkit = { messageHandlers: { safetyCopy: { postMessage: (t) => window.__kh.copies.push(String(t)) },"
+        " phone: { postMessage: (m) => window.__kh.phone.push(String(m)) },"
+        " bridge: { postMessage: async (r) => r.kind === 'services' ? { ok: true, off: false, usda: false, scan: false }"
+        " : r.kind === 'serverInfo' ? { ok: true, paired: true, server: 'food.example.org' }"
+        " : r.kind === 'serverSyncCheck' ? { ok: true, status: 200, json: '{\"ok\": true}' }"
+        " : r.kind === 'serverApi' ? window.__kh.gateway(r)"
+        " : { error: 'off_off', message: 'off' } } } };")
+
+
+def sync_walk(browser, base: str) -> None:
+    """Design note 39, steps 6 and 7: an entry made on the server reaches Today; a conflict shows note 02's card; "Use mine"."""
+    tag = "sync"
+    ctx = browser.new_context(viewport={"width": 375, "height": 812}, color_scheme="light")
+    ctx.add_init_script(SYNC)
+    page = ctx.new_page()
+    errors: list[str] = []
+    others: list[str] = []
+    page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.on("request", lambda r: others.append(r.url) if not r.url.startswith(base) else None)
+    page.goto(f"{base}/index.html#today")
+    page.wait_for_selector("#view-today:not([hidden])", timeout=30000)
+    page.wait_for_timeout(800)
+    page.evaluate("KH.request('PUT', '/api/device/setup', { done: true }).then(() => KH.mock.local.flush())")  # past the first-start setup
+    page.reload()
+    page.wait_for_selector("#view-today:not([hidden])", timeout=30000)
+    page.wait_for_timeout(800)
+    page.evaluate("window.__kh.feed.push(window.__kh.entry())")
+    page.evaluate("KH.mock.serverApi.forget(); KH.mock.serverSync.sendNow()")
+    for _ in range(100):
+        if page.evaluate("KH.mock.instance._entries.length"):
+            break
+        page.wait_for_timeout(100)
+    page.wait_for_timeout(500)
+    today = page.locator("#view-today").inner_text().lower()
+    check(f"[{tag}] an entry made on the server shows on Today", "banana" in today, today[:200])
+    # the phone changes it, and so did the server: the conflict card, and nothing overwritten
+    entry_id = page.evaluate("KH.mock.instance._entries[0].id")
+    page.evaluate(f"KH.request('PUT', '/api/log/{entry_id}', {{ servings: 2 }})")
+    page.evaluate("window.__kh.next = { status: 'conflict', version: window.__kh.entry({ note: 'from the web' }).version,"
+                  " row: window.__kh.entry({ note: 'from the web' }).row }")
+    page.goto(f"{base}/index.html#settings")
+    page.wait_for_selector("#set-server-sync-now", timeout=30000)
+    page.click("#set-server-sync-now")
+    page.wait_for_selector("#set-server-review .conflict", timeout=10000)
+    card = page.locator("#set-server-review").inner_text()
+    check(f"[{tag}] the conflict card shows both copies", "changed on another device" in card and "from the web" in card
+          and "2 servings" in card, card[:240])
+    check(f"[{tag}] with note 02's two answers", page.get_by_role("button", name=re.compile("^Keep the saved one")).count() == 1
+          and page.get_by_role("button", name=re.compile("^Use mine")).count() == 1)
+    first = page.evaluate("window.__kh.sent[window.__kh.sent.length - 1].changes[0]")
+    page.get_by_role("button", name=re.compile("^Use mine")).click()
+    page.wait_for_timeout(300)
+    page.click("#set-server-sync-now")
+    for _ in range(50):
+        if len(page.evaluate("window.__kh.sent")) >= 2:
+            break
+        page.wait_for_timeout(100)
+    again = page.evaluate("window.__kh.sent[window.__kh.sent.length - 1].changes[0]")
+    server_version = page.evaluate("window.__kh.entry({ note: 'from the web' }).version")
+    check(f"[{tag}] Use mine sends the edit again on the server's version", again["base"] == server_version and again["fields"]["servings"] == 2
+          and first["base"] != server_version, json.dumps([first, again])[:240])
+    page.wait_for_timeout(500)
+    text = page.locator("#set-device-body").inner_text()
+    check(f"[{tag}] Settings says it syncs both ways, with nothing left to review", "Both ways" in text and page.locator("#set-server-review").count() == 0,
+          text[:240])
+    over = page.evaluate("document.documentElement.scrollWidth > window.innerWidth + 1")
+    check(f"[{tag}] no sideways scroll", not over)
+    check(f"[{tag}] no request to another host", not others, "; ".join(others[:3]))
+    check(f"[{tag}] no console or page error", not errors, "; ".join(errors[:3]))
+    ctx.close()
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n", 1)[0])
     ap.add_argument("--out", type=Path, default=OUT)
@@ -306,6 +399,7 @@ def main(argv: list[str] | None = None) -> int:
                 for width, height, scheme in ((375, 812, "light"), (1280, 800, "dark")):
                     walk(browser, base, width, height, scheme)
                 both_ways_walk(browser, base)
+                sync_walk(browser, base)
             finally:
                 browser.close()
     finally:

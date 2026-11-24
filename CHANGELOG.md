@@ -48,6 +48,13 @@ the API. Security fixes are released as patch versions of the newest minor versi
   device is never overwritten without asking you. Foods, saved meals, lab results, symptoms, weights and blood pressure readings now
   have versions like food log entries, and their change and delete routes accept `If-Match`. The export carries each row's ID, and
   an import keeps it.
+* Paired with a token for the iPhone app, both ways, the iPhone app now syncs both ways (design note 39, steps 6 and 7, the phone
+  side). What you or your care team add or change on the server comes to the phone, and what you change or delete on the phone goes
+  to the server: food log entries, your own foods, lab results, symptoms, weights and blood pressure. Planned entries are sent at
+  once. If a row was changed in two places, Settings → This device → **Your server** shows both copies and you choose: **Keep the
+  saved one** or **Use mine**. The first sync of a phone that already has data asks only about rows changed on both sides. Pairing
+  with another server or another person's token asks before anything moves. Saved meals, the profile and targets do not sync yet.
+  The section was called **Sending to your server**, and its button is now **Sync now**.
 
 ### Upgrading
 

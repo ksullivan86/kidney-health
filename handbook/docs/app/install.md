@@ -136,17 +136,31 @@ phone and needs no server ([design note 38][NOTE38]):
   - **Lock with Face ID or passcode**: off unless you turn it on.
   - Connecting your own server is optional. With a token made for the iPhone app, the app sends each new row you add to your
     server when it can be reached ([Connect the Kidney Health iPhone app](weight-and-blood-pressure.md#connect-the-kidney-health-iphone-app)).
-    You then see it in the web app and on your other devices, and your care team can use it. Changes made elsewhere coming back
-    to the phone come later.
-  - A token made for **the iPhone app, both ways** does that too, and lets the app use your server's food services and AI
-    ([design note 39][NOTE39]). The server's address screen says which kind of token is saved. An older token keeps working
-    for sending what you add.
-- **Settings → This device → Sending to your server** shows how many rows wait to be sent, when it last sent, and any row your
-  server refused. **Send now** tries at once. Changes or deletions you make on the phone after a row was sent are not sent yet.
-  The app keeps note of them and says how many there are.
+    You then see it in the web app and on your other devices, and your care team can use it.
+  - A token made for **the iPhone app, both ways** does that too. It also keeps the phone and your server in step both ways,
+    and lets the app use your server's food services and AI ([design note 39][NOTE39]). The server's address screen says which
+    kind of token is saved. An older token keeps working for sending what you add.
+- **Settings → This device → Your server** shows how many rows wait to be sent, when the app last synced, and any row your
+  server refused. **Sync now** tries at once. With an older token, changes or deletions you make on the phone after a row was
+  sent stay on the phone. The app keeps note of them and says how many there are.
 
 ### With a token both ways
 
+- **Sync both ways.** What you or your care team add or change on your server comes to the phone, and what you change or delete
+  on the phone goes to your server. This covers food you logged, your own foods, lab results, symptoms, weight and blood
+  pressure. Saved meals, your profile and your targets do not sync yet. The app syncs while it is open: after a change, when you
+  open it, every 15 minutes, and when you tap **Sync now**.
+- **The first sync** of a phone that already has data compares each row with your server. If only one side changed a row, that
+  side is kept. If both changed it, the row is listed in **Settings → This device → Your server** under **Your iPhone and your
+  server differ**: choose **Keep your server's** or **Keep this iPhone's**. A row you deleted on the phone but that is still on
+  your server is listed too: choose **Delete it there** or **Keep it**. Until you choose, the app shows your server's copy and
+  keeps the phone's.
+- **Changed in two places.** If you change an entry on the phone and it was also changed somewhere else, the app never picks one
+  for you. The row is listed with both copies side by side: **Keep the saved one** keeps your server's, **Use mine** sends yours.
+  If you change something on the phone that was deleted elsewhere, the app says your change was dropped.
+- **A different server or account.** If you pair the app with another server, or with another person's token, the app asks
+  before anything moves: **Send this iPhone's data** there, **Replace this iPhone's data** with the server's (a copy is saved in
+  the Files app first), or **Cancel**.
 - **Food look-ups** go through your server while it can be reached, with the key your server uses for you. A food it finds is
   saved on the phone at once, so it works offline. When your server cannot be reached, the phone uses its own keys from Keys and
   services, if you added them, and otherwise the food list it already has. No key ever moves between the phone and the server.
@@ -156,7 +170,7 @@ phone and needs no server ([design note 38][NOTE38]):
 - **Use only this iPhone's AI** in Settings → AI features keeps everything you write away from any AI but the iPhone's own.
 - An answer from your server is shown as it is. If it says to treat a low or to get help now, the app does not ask another AI.
 - A lab report goes only to an AI on your own network or on the iPhone, never to a company's AI.
-- **Ask** is not on the phone yet. It comes with two-way sync, because the assistant can save to your log on the server.
+- **Ask** is not on the phone yet.
 - On an iPhone with Apple Intelligence, **Describe a meal** and reading the text of a lab report PDF can use Apple's AI on the
   phone. Turn it on in **Settings → AI features**. Nothing you write or read leaves the iPhone, and the questions and answers are
   not kept. The app checks every answer, and you check each line before anything is saved. The AI never gives insulin or

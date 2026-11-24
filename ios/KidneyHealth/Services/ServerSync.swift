@@ -8,8 +8,9 @@
 // * { kind: "serverSync", body: "<json>" }  → POST /push/v1/sync with that body
 // * { kind: "serverApi", method, path, body?: "<json>", jpeg?: "<base64>", ifMatch? }
 //                                           → that request on the paired server, only when ServerAPI.route allows the method and
-//                                             path (KidneyHealthCore/ServerAPI.swift): GET /push/v1/about, the food lookups and
-//                                             the AI routes. Anything else answers { error: "refused" } and nothing is sent.
+//                                             path (KidneyHealthCore/ServerAPI.swift): GET /push/v1/about, the food lookups,
+//                                             the AI routes, and sync both ways (GET and POST /push/v1/changes, POST
+//                                             /push/v1/match). Anything else answers { error: "refused" } and nothing is sent.
 //
 // Every request goes only to the paired server, over HTTPS (Settings refuses anything else), with the token from the Keychain,
 // through URLSessionTransport: no cookies, no cache, no redirects. They answer { ok, status, json, retryAfter? } or

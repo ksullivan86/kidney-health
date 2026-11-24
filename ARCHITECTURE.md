@@ -896,6 +896,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | Assistant step 1 | `app/auth/api_tokens.py` (tokens, `/api/me/tokens`, the bearer dependency), `app/migrations/m010_*` and `m011_*`, the `assistant.enabled` key, Settings → Assistant access in `js/views/settings.js`, `app/mcp/**` (the MCP server, part B; `log_food` and `save_recipe`, part C) with `log.day_summary`, `log.insert_logged`, `foods.usda_search_records`, `foods.add_usda_food` and `security.BEARER_PATHS`, `docs/assistant.md`, `tests/test_api_tokens.py`, `tests/test_migration_m010.py`, `tests/test_migration_m011.py`, `tests/test_mcp.py`, `tests/test_mcp_write.py`, `tools/e2e/mcp_smoke.py` |
 | Phone push (design note 12; note 38 §5.5) | `app/push.py` (`POST /push/v1/body`, `DELETE /api/me/tokens/{id}/body-rows`), `app/app_sync.py` (`POST /push/v1/sync`), `app/migrations/m037_app_sync.py`, `tests/test_app_sync.py`, `tests/test_migration_m037.py`, the device family in `app/auth/api_tokens.py`, `TokenCreate.family` in `app/auth/schemas.py`, the `push.enabled` key (`app/settings_registry.py`, `js/engine/settings.js`, the "Phone shortcuts" group of `js/views/settings.js`), `app/migrations/m019_body_token.py`, `context_for`, `is_watch_source`, `known_weight_marks` / `known_reading_marks` and `via` in `app/body.py`, `shortcut` in `BodySourceKey`, `security.BEARER_PATHS`, `docs/push.md`, `tests/test_push.py`, `tests/test_device_tokens.py`, `tests/test_migration_m019.py`, `context_cases` / `watch_cases` in `tests/data/body_vectors.json` |
 | iPhone app sends to a server (note 38 step 4, the phone side) | `app/static/js/mock/server_sync.js`, `serverSyncBlock` in `js/views/settings.js`, `ios/KidneyHealth/Services/ServerSync.swift`, the server kinds in `FoodServices.answer`, `Settings.syncURL` in `ios/KidneyHealthCore/Sources/KidneyHealthCore/Sync.swift`; tests `tests/js/server_sync.mjs`, `tests/test_server_sync_phone.py`, the step 4 check in `tests/test_ios_app.py`, Send now in `tools/e2e/device_mode.py` |
+| iPhone app syncs both ways (note 39 steps 6 and 7, the phone side) | `app/static/js/mock/server_changes.js`, `serverChangesParts` in `js/views/settings.js`, the sync routes in `ios/KidneyHealthCore/Sources/KidneyHealthCore/ServerAPI.swift`; tests `tests/js/server_changes.mjs`, `tests/test_server_changes_phone.py`, `ServerAPITests.swift`, `sync_walk` in `tools/e2e/device_mode.py` |
 | iPhone app pairing (design note 15 §4.3) | `app/pairing.py`, `pair_url` in `create_my_token` (`app/auth/api_tokens.py`), `brand.PAIRING_SCHEME`, `pushPairBox` in `js/views/settings.js` with `KH.twoStep.qrSvg`, `ios/KidneyHealthCore/Sources/KidneyHealthCore/Pairing.swift`, `ios/KidneyHealth-Info.plist`, `.onOpenURL` and the pairing alert in `ios/KidneyHealth/ContentView.swift`; tests `tests/test_pairing.py`, `tests/data/pairing_vectors.json`, `PairingVectorTests.swift` |
 | Read-only sharing (design note 19) | `app/sharing.py` (`/api/me/shares`, `/api/shared`, the `shared_owner(area)` check), `app/migrations/m024_shares.py`, `app/migrations/m025_share_time_limit.py`, `sharing.enabled` (`app/settings_registry.py`, `js/engine/settings.js`), the `share.*` audit actions, `shares` and `DELETE /api/admin/users/{id}/shares` in `app/auth/admin_api.py`; screens: `js/views/sharing.js` (Settings block, the `#/share/<code>` sheet, `KH.sharing.reads`), the shared mode of `js/views/visit.js`, the People badge and End sharing in `js/views/settings.js`, the demo's answers in `js/mock/auth.js`; tests `tests/test_sharing.py`, `tests/test_migration_m024.py`, `tests/test_migration_m025.py`, `tests/test_sharing_ui.py`, `tools/e2e/sharing.py` |
 | The full Care team (design note 29) | `app/sharing.py` (switches, `PRESETS`, `role_of`, `PUT /api/me/shares/{id}/switches`, the `care_*` checks, eaten food, saved meals), `app/care_suggestions.py`, `app/migrations/m031_care_team_full.py`, `meals.apply_template`, export key `care_suggestions`; screens: the switches in `js/views/sharing.js`, `js/views/careplan.js`, `js/views/suggestions.js` (`#plan-suggestions`); demo `js/mock/care.js`; tests `tests/test_care_team_full.py`, `tests/test_migration_m031.py`, `tests/data/care_vectors.json` (`gen_care_vectors.py`), `tests/js/care_demo.mjs`, `tools/e2e/sharing.py` |
@@ -4908,6 +4909,8 @@ Code `app/sync_feed.py`, `app/row_versions.py` (twin `js/engine/row_versions.js`
   version as stored), `gone` or `refused`. An edit whose `version` equals the stored version is `done` with no write.
 * **`POST /push/v1/match`**: `{ids: {kind: [ids]}}` → `{known: {kind: {phone: server}}, unknown: {kind: [ids]}}`, by `client_id` and by
   step 37's receipts. At most 2,000 ids.
+* **The reader** is the iPhone app's page (note 39 steps 6 and 7): `js/mock/server_changes.js`, in "Device mode" below. It reaches
+  all three routes through the app's `serverApi` bridge message, which carries only these paths (`ServerAPI.swift`).
 
 ### `POST /push/v1/body` (`app/push.py`, router outside `/api`, like `/mcp`)
 
@@ -5811,18 +5814,21 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
     server's own entry version (`log.entry_version`, the twin `KH.mock.entryVersion`), for the other kinds `b:` and a 64-bit FNV-1a
     hash of the row as sent (sorted keys), until note 39 step 5 gives each kind its own version. A sent row deleted on the phone
     keeps its mark with `d: 1` (a food counts as deleted only when the person no longer has it). `status()` counts
-    `changedSince` and `deletedSince`, and Settings says how many. Nothing of this is sent yet; the first two-way sync (§8.7) uses it.
+    `changedSince` and `deletedSince`, and Settings says how many while the token only adds. The first two-way sync (§8.7) uses it;
+    the mark goes once the server has the row deleted too.
   * **What is sent**: entries, the person's own foods, the USDA and Open Food Facts foods an entry uses (in `foods`, with `fdc_id` or
     `gtin`; the entry names them by `client_id`), built-in foods as `{builtin: {fdc_id, name}}`, labs as typed, symptoms, weights and
     readings (with the Health `source_key`). Foods first, oldest first, at most 200 rows and 256 KiB a request, at most 10 requests a
-    run. A planned entry waits until its day is over. The sample data (`_sample`) is never sent. Edits and deletes are never sent.
+    run. With a token that only adds, a planned entry waits until its day is over; both ways it is sent at once. The sample data
+    (`_sample`) is never sent. Edits and deletes go only both ways, through `js/mock/server_changes.js` (below).
   * **Answers**: 200 marks the rows sent. The server counts skipped rows without naming them, so the rows that could have been
     skipped are sent again in halving groups until it is clear which; one skipped alone three times is `stuck`. 400 naming a row
     (`entries.3.date`) marks it `refused` and the rest goes on. 401 stops (automatic runs check again at most hourly); 404/405 says the
     server is too old; 413 halves the request; 429 waits for `Retry-After`; offline keeps the queue; anything else pauses 5 minutes.
-  * **When**: 10 s after a save, when the page becomes visible, and at start; only while paired and after the token check passed
-    (kept a day). Settings → This device → **Sending to your server** shows the server, the rows waiting, when it last sent, refused
-    and stuck rows, the sentence that changes after sending are not sent, and **Send now**.
+  * **When**: 10 s after a save, when the page becomes visible, at start, and every 15 minutes while it is open with a token both
+    ways; only while paired and after the token check passed (kept a day). `run()` is: the account check of
+    `server_changes.js` (`gate`), this queue, then `afterSend` (below). Settings → This device → **Your server** shows the server, the
+    rows waiting, when it last sent, refused and stuck rows, the two-way part below, and **Sync now**.
 * **The iPhone's own AI (step 5)**: describe a meal (`POST /api/ai/parse-meal`) and the text of a lab report page
   (`POST /api/ai/read-lab-report-text`) run on Apple's on-device model; the other AI features stay off. `js/mock/ai.js` asks the
   app `{kind: 'aiStatus'}` (answer `{ok, available, reason: not_eligible | not_enabled | not_ready | null}`) and
@@ -5881,8 +5887,53 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
     that name, and an idea or card naming a food the phone lacks is left out (`dropped: not_on_this_iphone`); server row ids
     (`entry_id`, `meal_id`) are never kept; a safety answer is never cut. Requests drop `exclude_food_ids` (the phone's ids).
     Photos go from `KH.ai.uploadPhoto` to the in-page API, which sends them as `jpeg`.
+* **Sync both ways (design note 39, steps 6 and 7)**: `js/mock/server_changes.js` (device mode only, `M.serverChanges`) reads the
+  change feed and sends the phone's edits and deletes ("The change feed" above), through `M.serverApi.call` and the app's
+  `serverApi` message (allow-list: `GET /push/v1/changes` with `after` and `limit`, `POST /push/v1/changes`, `POST /push/v1/match`).
+  Kinds: `entry`, `food` (own), `lab`, `symptom`, `weight`, `reading`; the feed's `meal` rows are skipped until step 8. A row's ID
+  is its `client_id`: an entry's own, every other kind's step-4 mark `c`. Active only with `about` 200, an `account`, and the same
+  account as saved.
+  * **Saved** with the log in `_serverChanges`: `{ v: 1, account, host, cursor, first, full, rows: { kind: { client_id: { b, l?, r?,
+    w? } } }, items: [...], notices: [...], ask, syncedAt, outcome, message, waitUntil }`. `b` is the server's version the phone
+    agreed on; `l` the phone's own version of that state when its twin's rounding differs (so a done edit never loops); `r` the
+    phone's version (or `delete`) the server refused, with `w` why. A row's change waits when the phone no longer has it (delete)
+    or its version (`KH.rowVersions` over the API view) differs from `l || b` (edit). Lab results are only added and deleted.
+  * **The account check** (`gate`, §8.8): before anything is sent, `about.account` and the host are compared with the saved ones.
+    The first pairing, or a phone with no rows, takes the account. A different account, or a different host after one, sets `ask`
+    and stops everything until the person answers: **Send this iPhone's data to <host>** (step 4's marks cleared, so all is sent as
+    new; the receipts and `client_id`s keep it from adding twice; cursor 0), **Replace this iPhone's data with <host>'s** (saved
+    first, so the Files app safety copy holds it; then the log's synced rows are removed and read again from cursor 0; profile,
+    settings and saved meals stay), or **Cancel** (nothing changes; sync stays stopped).
+  * **One run** (`afterSend`, §8.5): at the first sync, `POST /push/v1/match` renames the phone's rows to the server's IDs (a
+    duplicate with the same version is dropped), then the feed is read from cursor 0 with §8.7's rules. Then the waiting changes go
+    out (`POST /push/v1/changes`, at most 200 and 256 KiB a request, 5 requests a run) with `base` = `b` and `version` = the phone's,
+    and the feed is read from the cursor, 500 a page, 20 pages a run. Each page's rows and the new cursor are saved in one save.
+    401/403 stops (token), 404/405 says the server cannot sync both ways, 429 waits for `Retry-After`, offline keeps everything,
+    410 reads everything again from 0 and then removes the rows the server no longer has (`full`; the cursor is saved only at the end).
+  * **Receiving** (note 02's rule): no change waits → the server's copy is taken; a change waits and the server still has `b` →
+    it stays and is sent; a change waits and the server's version differs → a conflict item, unless the two versions are equal (the
+    same change on both sides). A delete of a row with a waiting edit drops the edit and says "This entry no longer exists, so your
+    change was dropped". A row with no agreed version (the first sync, or step 4's new row coming back) uses step 1's `v`: only the
+    phone changed it → sent as an edit; only the server → taken; both, or no record → the review item `differ` (the server's copy is
+    shown, the phone's kept in the item). A row deleted here after sending → `deleted_here` at the first sync (shown again until the
+    person chooses), else the delete is sent. A server delete of a row changed here → `deleted_there`. Entries name their food by the
+    feed's reference: an own food by `client_id` (from `foods` if new), a built-in by `fdc_id` then name, USDA and Open Food Facts
+    foods by `fdc_id`/`gtin` (`_storeServerFood`); an unknown one becomes a hidden food with the entry's values. Rows that came from
+    the server get a step-4 mark `sent`, so they are never sent back as new.
+  * **Sending answers**: `done` stores the new `b` (and `l` when the phone's version differs); `conflict` makes a conflict item with
+    the server's row; `gone` drops an edit with the notice above; `refused` keeps the change on the phone, listed with why, and sends
+    it again only after it changes. Rows under review are never sent and never overwritten.
+  * **The person's answers** (`decide`): a conflict's **Keep the saved one** takes the server's copy; **Use mine** sets `b` to the
+    server's current version, so the next run sends again (if it changed again meanwhile, that is a new conflict). The first sync's
+    `differ`: **Keep your server's** / **Keep this iPhone's**; `deleted_here`: **Keep it** / **Delete it there**; `deleted_there`:
+    **Delete it here** / **Keep this iPhone's** (sent again as a new row with a new ID). Settings → This device → Your server shows
+    "Both ways", when it last synced, the changes waiting, the number to review, each card (both copies side by side, with what
+    differs marked), the dropped-change notices (OK clears them) and refused changes. Today reloads when rows came from the server
+    (`takeChanged`, `js/main.js`). Nothing looks at `purpose`: a low treatment is synced, edited and reviewed like any entry.
 * **Tests**: `tests/js/server_sync.mjs` and `tests/test_server_sync_phone.py` (the queue against a stand-in app, and the page's
   body through the real route), `tests/js/server_services.mjs` and `tests/test_server_services_phone.py` (note 39 steps 3 and 4
-  against a fake gateway), `ServerAPITests.swift` (the allow-list), `tests/js/device_mode.mjs` (the engine, against a fake IndexedDB), `tests/test_device_mode.py` (the build and the wiring), `PhoneTests.swift`,
-  `tests/test_ios_app.py` (the shell's rules), `WebShellTests.swift` (the simulator), `tools/e2e/device_mode.py` (Chromium).
+  against a fake gateway), `tests/js/server_changes.mjs` (steps 6 and 7 against a fake feed) and `tests/test_server_changes_phone.py`
+  (the same page against the real routes, through the allow-list, playing the web app too), `ServerAPITests.swift` (the allow-list), `tests/js/device_mode.mjs` (the engine, against a fake IndexedDB), `tests/test_device_mode.py` (the build and the wiring), `PhoneTests.swift`,
+  `tests/test_ios_app.py` (the shell's rules), `WebShellTests.swift` (the simulator), `tools/e2e/device_mode.py` (Chromium, with a
+  sync walk: an entry from the server on Today, a conflict card, Use mine).
 

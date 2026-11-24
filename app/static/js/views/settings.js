@@ -1618,16 +1618,101 @@
     offline: 'Not known: your server could not be reached',
     not_paired: 'None',
   };
+  // Design note 39 steps 6 and 7 (js/mock/server_changes.js): sync both ways. What the person sees: the account question when
+  // the paired server or account changed, the first sync's review and the conflict cards (note 02's card: both copies side by
+  // side and the person's choice; nothing is decided for them), the changes that were dropped, and what the server refused.
+  const REVIEW = {
+    conflict: { title: (x) => `This ${x.what} was changed on another device`, server: 'Saved on your server', mine: 'Your change',
+      keep: 'Keep the saved one', use: 'Use mine',
+      hint: (x) => (x.op === 'delete' ? `You deleted ${x.name} on this iPhone. Choose which to keep.` : `You changed ${x.name} on this iPhone too. Choose which to keep.`) },
+    differ: { title: () => 'Your iPhone and your server differ', server: 'On your server', mine: 'On this iPhone',
+      keep: 'Keep your server\'s', use: 'Keep this iPhone\'s', hint: (x) => `${x.name} was changed on both. Until you choose, your server's copy is shown.` },
+    deleted_here: { title: () => 'Deleted on this iPhone, still on your server', server: 'On your server', mine: null,
+      keep: 'Keep it', use: 'Delete it there', hint: (x) => `You deleted ${x.name} on this iPhone after it was sent. Until you choose, it is shown again.` },
+    deleted_there: { title: () => 'Deleted on your server, changed on this iPhone', server: null, mine: 'On this iPhone',
+      keep: 'Delete it here', use: 'Keep this iPhone\'s', hint: (x) => `${x.name} was deleted on your server. Keep this iPhone's copy to send it again.` },
+  };
+  function reviewSide(title, lines, against) {
+    const dl = h('dl', { class: 'conflict-lines' });
+    lines.forEach(([label, value], i) => {
+      const differs = !!against && !!against[i] && against[i][1] !== value;
+      dl.append(h('dt', {}, label), h('dd', { class: differs ? 'differs' : null }, value, differs ? h('span', { class: 'sr-only' }, ' (different)') : null));
+    });
+    return h('div', { class: 'conflict-side' }, h('p', { class: 'conflict-side-title' }, title), dl);
+  }
+  function reviewCard(C, x) {
+    const t = REVIEW[x.type];
+    const server = x.server.length ? x.server : null;
+    const mine = x.mine.length ? x.mine : null;
+    const sides = h('div', { class: 'conflict-sides' },
+      t.server && server ? reviewSide(t.server, server, mine) : h('div', { class: 'conflict-side' }, h('p', { class: 'conflict-side-title' }, t.server || 'On your server'),
+        h('p', {}, 'Deleted.')),
+      mine ? reviewSide(t.mine || 'On this iPhone', mine, server) : h('div', { class: 'conflict-side' }, h('p', { class: 'conflict-side-title' }, t.mine || 'Your change'),
+        h('p', {}, `Delete ${x.name}`)));
+    const keep = action(t.keep, 'secondary', async () => { await C.decide(x.key, 'server'); }, { 'aria-label': `${t.keep}: ${x.name}` });
+    const use = action(t.use, x.op === 'delete' || x.type === 'deleted_here' ? 'danger' : 'primary', async () => { await C.decide(x.key, 'mine'); },
+      { 'aria-label': `${t.use}: ${x.name}` });
+    return h('li', { class: 'outbox-item conflict', 'aria-label': `${t.title(x)}: ${x.name}` },
+      h('p', { class: 'outbox-title' }, t.title(x)), h('p', { class: 'hint' }, t.hint(x)), sides, h('div', { class: 'outbox-actions' }, keep, use));
+  }
+  function askCard(C, ask) {
+    const host = ask.host || 'your server';
+    const foot = h('div', { class: 'settings-actions' });
+    const send = action(`Send this iPhone's data to ${host}`, 'primary', async () => { await C.choose('send'); }, { id: 'set-server-ask-send' });
+    const replace = action(`Replace this iPhone's data with ${host}'s`, 'danger', async (btn) => {
+      KH.confirm.inline(foot, btn, {
+        message: `Replace the log on this iPhone with ${host}'s? A copy of this iPhone's data is saved in the Files app first. Your profile, settings and saved meals stay.`,
+        confirmText: 'Replace', onConfirm: async () => { await C.choose('replace'); return true; },
+      });
+    }, { id: 'set-server-ask-replace' });
+    const cancel = action('Cancel', 'secondary', async () => { await C.choose('cancel'); }, { id: 'set-server-ask-cancel' });
+    foot.append(send, replace, cancel);
+    return h('div', { class: 'outbox-item conflict', id: 'set-server-ask', role: 'group', 'aria-labelledby': 'set-server-ask-h' },
+      h('p', { class: 'outbox-title', id: 'set-server-ask-h' }, `This iPhone is now paired with ${host}: another server, or another account`),
+      h('p', {}, ask.cancelled ? 'Nothing is sent or read until you choose, or pair the app with your old server again.'
+        : 'Nothing is sent or read until you choose. Two people\'s data are never mixed without this question.'),
+      foot);
+  }
+  function serverChangesParts(C) {
+    const s = C.status();
+    const parts = [];
+    if (s.ask) { parts.push(askCard(C, s.ask)); return parts; }
+    if (!s.active) return parts;
+    const changes = (n) => (n === 1 ? '1 change' : `${n} changes`);
+    parts.push(kv([
+      ['Sync', 'Both ways'],
+      ['Last synced', s.syncedAt ? fmtDateTime(s.syncedAt) : 'Not yet'],
+      ['Changes waiting to be sent', s.waiting ? changes(s.waiting) : 'Nothing'],
+      ['To review', s.review ? String(s.review) : 'Nothing'],
+    ]));
+    if (s.message && s.outcome !== 'done') parts.push(h('p', { class: 'setting-status', id: 'set-server-changes-msg' }, s.message));
+    if (s.notices.length) {
+      parts.push(h('ul', { class: 'list', id: 'set-server-notices' }, ...s.notices.slice(-10).map((t) => h('li', {}, h('span', { class: 'row-title' }, t)))),
+        h('div', { class: 'settings-actions' }, action('OK', 'secondary', async () => { await C.clearNotices(); }, { id: 'set-server-notices-ok' })));
+    }
+    if (s.items.length) {
+      parts.push(h('h4', { id: 'set-server-review-h' }, `${s.items.length} to review`),
+        h('ul', { class: 'outbox-list', id: 'set-server-review', 'aria-labelledby': 'set-server-review-h' }, ...s.items.map((x) => reviewCard(C, x))));
+    }
+    if (s.refused.length) {
+      parts.push(h('p', {}, `Your server did not take ${changes(s.refused.length)}. They stay on this iPhone and are sent again only after you change them.`),
+        h('ul', { class: 'list', id: 'set-server-changes-refused' }, ...s.refused.slice(0, 10).map((x) => h('li', {},
+          h('span', { class: 'row-title' }, x.text), x.why ? h('span', { class: 'row-sub' }, x.why) : null))));
+    }
+    return parts;
+  }
   function serverSyncBlock(stops) {
     const S = KH.mock.serverSync;
     const A = KH.mock.serverApi || null;
+    const C = KH.mock.serverChanges || null;
+    const both = h('div', { id: 'set-server-changes', 'aria-live': 'polite' });
     const info = h('div', { id: 'set-server-sync', 'aria-live': 'polite' });
     const rowsText = (n) => (n === 1 ? '1 row' : `${n} rows`);
     const stay = (n) => (n === 1 ? 'It stays' : 'They stay');
     const listOf = (items, id) => h('ul', { class: 'list', id }, ...items.slice(0, 10).map((x) => h('li', {},
       h('span', { class: 'row-title' }, x.text), x.why ? h('span', { class: 'row-sub' }, x.why) : null)));
     // The button is drawn once, so it keeps the focus while the lines above it change.
-    const now = h('div', { class: 'settings-actions' }, action('Send now', 'secondary', async () => { await S.sendNow(); }, { id: 'set-server-sync-now' }));
+    const now = h('div', { class: 'settings-actions' }, action('Sync now', 'secondary', async () => { await S.sendNow(); }, { id: 'set-server-sync-now' }));
     const draw = () => {
       const s = S.status();
       now.hidden = s.sample;
@@ -1654,11 +1739,12 @@
         parts.push(h('p', {}, `Your server could not place ${rowsText(s.stuck.length)} after several tries. ${stay(s.stuck.length)} on this iPhone and ${s.stuck.length === 1 ? 'is' : 'are'} not sent again.`),
           listOf(s.stuck, 'set-server-sync-stuck'));
       }
-      // Design note 39, step 1: what changed on this iPhone after it was sent. Not sent yet; kept for two-way sync.
+      both.replaceChildren(...(C ? serverChangesParts(C) : []));
+      // Design note 39, step 1: what changed on this iPhone after it was sent. With a token that only adds it is not sent.
       const since = [];
       if (s.changedSince) since.push(`${rowsText(s.changedSince)} changed`);
       if (s.deletedSince) since.push(`${rowsText(s.deletedSince)} deleted`);
-      if (since.length) {
+      if (since.length && !(C && C.status().active)) {
         parts.push(h('p', { id: 'set-server-sync-since' }, `Since they were sent, ${since.join(' and ')} on this iPhone. Your server still has them as they were sent. The app keeps note of this for when changes can be sent too.`));
       }
       info.replaceChildren(...parts);
@@ -1666,9 +1752,12 @@
     draw();
     stops.push(S.subscribe(draw));
     if (A) { stops.push(A.subscribe(draw)); A.check().then(draw, () => null); }
-    const box = h('div', { role: 'region', 'aria-labelledby': 'set-server-sync-h' }, info, now,
-      h('p', { class: 'hint' }, 'New rows you add here are sent to your server when it can be reached: food, foods you made, lab results, symptoms, weight and blood pressure. Changes or deletions made on this iPhone after a row was sent are not sent yet. The app keeps note of them.'));
-    return [subtitle('Sending to your server', 'set-server-sync-h'), box];
+    if (C) stops.push(C.subscribe(draw));
+    const box = h('div', { role: 'region', 'aria-labelledby': 'set-server-sync-h' }, info, both, now,
+      h('p', { class: 'hint' }, 'What you add here is sent to your server when it can be reached: food, foods you made, lab results, symptoms, weight and blood pressure. '
+        + 'With a token for the iPhone app, both ways, your changes and deletions are sent too, and what is added on your server comes to this iPhone. '
+        + 'If a row was changed in both places, you choose which to keep. Saved meals, your profile and your targets do not sync yet.'));
+    return [subtitle('Your server', 'set-server-sync-h'), box];
   }
   let deviceRender = 0;
   let deviceStop = null; // stops the shown outbox list's live updates when a newer render replaces it
