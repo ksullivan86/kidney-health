@@ -882,6 +882,8 @@ def test_the_export_holds_the_log_in_both_forms(client):
     keys = list(doc)
     assert keys.index("symptoms") < keys.index("weights") < keys.index("blood_pressures") < keys.index("ai_audit")
     assert [x["kg"] for x in doc["weights"]] == [72.0, 70.26, 71.0]  # oldest day first
+    ids = [row.pop("client_id") for row in [*doc["weights"], *doc["blood_pressures"]]]  # one ID per row (design note 39 §8.2)
+    assert all(isinstance(i, str) and len(i) == 36 for i in ids) and len(set(ids)) == 4
     assert doc["weights"][0] == {"id": 3, "date": day(3), "time": None, "kg": 72.0, "context": "other", "note": "", "source": "apple_health",
                                  "source_key": "abc123", "created_at": doc["weights"][0]["created_at"],
                                  "updated_at": doc["weights"][0]["updated_at"]}

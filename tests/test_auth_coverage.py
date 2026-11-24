@@ -218,13 +218,32 @@ PUSH_ROUTES = {("post", "/push/v1/body"), ("get", "/push/v1/check")}
 # The iPhone app's route for the rows it made (design note 38 §5.5; app/app_sync.py): a device token with app:add (an app token), the
 # same switch. GET /push/v1/sync tests that token and reads and stores nothing.
 SYNC_ROUTES = {("post", "/push/v1/sync"), ("get", "/push/v1/sync")}
+# The iPhone app both ways (design note 39; app/app_gateway.py): a device token with app:sync, under push.enabled and push.app_sync.
+# GET /push/v1/about says what the server offers; the gateway /push/v1/api/<path> is a middleware, not a route (tests/test_app_gateway.py).
+TWO_WAY_ROUTES = {("get", "/push/v1/about"), ("get", "/push/v1/changes"), ("post", "/push/v1/changes"), ("post", "/push/v1/match")}
 
 
 def test_the_bearer_routes_are_the_only_write_routes_outside_the_api(anon_client):
     unsafe = {(m, p) for m, p, _ in _walk(anon_client.app.routes)
               if not p.startswith("/api/") and m in ("post", "put", "patch", "delete")}
     assert BEARER_ROUTES | {r for r in PUSH_ROUTES | SYNC_ROUTES if r[0] == "post"} <= unsafe
-    assert {p for _, p in unsafe} == {p for _, p in BEARER_ROUTES | PUSH_ROUTES | SYNC_ROUTES}, sorted(unsafe)  # the other methods: 405
+    assert {p for _, p in unsafe} == {p for _, p in BEARER_ROUTES | PUSH_ROUTES | SYNC_ROUTES | TWO_WAY_ROUTES}, sorted(unsafe)  # the other methods: 405
+
+
+def test_the_two_way_routes_need_a_token_with_app_sync_and_never_take_a_session(client):
+    for method, path in sorted(TWO_WAY_ROUTES):
+        assert client.request(method.upper(), path).status_code == 401  # switched off: the generic 401
+    assert client.patch("/api/admin/settings", json={"push.enabled": True, "push.app_sync": True}).status_code == 200
+    old = client.post("/api/me/tokens", json={"name": "coverage", "family": "device", "kind": "app"}).json()["token"]
+    both = client.post("/api/me/tokens", json={"name": "coverage", "family": "device", "kind": "app_sync"}).json()["token"]
+    for method, path in sorted(TWO_WAY_ROUTES):
+        body = {"ids": {"entry": []}} if path.endswith("/match") else {"changes": []}
+        r = client.request(method.upper(), path, json=body)  # the signed-in admin's cookie, no token
+        assert r.status_code == 401 and r.headers["www-authenticate"].startswith("Bearer"), (method, path)
+        old_client = TestClient(client.app, headers={"Authorization": f"Bearer {old}"})
+        assert old_client.request(method.upper(), path, json=body).status_code == 401
+        ok = TestClient(client.app, headers={"Authorization": f"Bearer {both}"}).request(method.upper(), path, json=body).status_code
+        assert ok == (400 if (method, path) == ("post", "/push/v1/changes") else 200), (method, path, ok)  # [] changes is a 400
 
 
 def test_the_sync_route_needs_an_app_token_and_never_takes_a_session(client):

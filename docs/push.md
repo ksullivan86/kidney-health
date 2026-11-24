@@ -11,6 +11,10 @@ A device token can also be made **for the iPhone app**. The app keeps the log on
 food, foods they made, lab results, symptoms, weights and blood pressure. That token can also only add. See
 [Sending from the iPhone app](#sending-from-the-iphone-app).
 
+When the admin also allows it, a token can be made **for the iPhone app, both ways**. With it the app can also use this server's
+AI and food services as the person, and read and change the person's own data here. See
+[The iPhone app, both ways](#the-iphone-app-both-ways).
+
 This page is for the person who runs the server and for people who change the code. The contract is in
 [`ARCHITECTURE.md`](../ARCHITECTURE.md) ("Device tokens and `/push/v1`") and the design note is
 [`dev/research/12-phone-push-tokens.md`](dev/research/12-phone-push-tokens.md). The person's side is **Settings → Account → Your data →
@@ -32,9 +36,15 @@ off: it says "Your admin has not turned this on", shows no form, and lets a pers
 
 **The phone must reach the server.** On your home network, or through the VPN you reach the server by. A server on a private network is
 not reachable from mobile data without one. If a reverse proxy lists the paths it passes on, add `/push/v1/` next to `/mcp`; the routes
-are `POST /push/v1/body`, the token check `GET /push/v1/check`, and the iPhone app's `POST` and `GET /push/v1/sync` (below). To let a
-phone reach them from beyond your LAN without opening the rest of the app, use the commented second host name in
-`deploy/caddy/Caddyfile.example`; it passes only these requests and `POST /mcp` ([assistant.md](assistant.md)). A VPN is simpler and safer.
+are `POST /push/v1/body`, the token check `GET /push/v1/check`, the iPhone app's `POST` and `GET /push/v1/sync` (below), and for the
+app both ways `GET /push/v1/about`, everything under `/push/v1/api/`, `GET` and `POST /push/v1/changes` and `POST /push/v1/match`. To let a phone reach them from beyond your LAN without opening
+the rest of the app, use the commented second host name in `deploy/caddy/Caddyfile.example`; it passes only these requests and
+`POST /mcp` ([assistant.md](assistant.md)). A VPN is simpler and safer.
+
+**The iPhone app, both ways** has a second switch, under the first: Server administration → Server settings → Phone shortcuts →
+"Let the iPhone app read and change the person's data and use this server's AI and food services", or `PUSH_APP_SYNC=true`. It is
+**off** by default and works only while phone shortcuts are on. So you can let phones add without letting them read. While it is
+off, nobody can make such a token, and the tokens made before answer `401`; tokens that only add keep working.
 
 ## What a token is
 
@@ -231,6 +241,127 @@ reaches the page.
   rows wait on the phone.
 * The sample data is never sent. Starting over on the phone starts a new queue.
 
+## The iPhone app, both ways
+
+This is [design note 39](dev/research/39-iphone-app-with-a-server.md), step 2. The token lets the iPhone app use some of this
+server's routes as the person, so the phone can use the server's AI and food services. The phone's use of it, and the two-way sync of
+the log, come in later steps of the note.
+
+**The token.** Turn on both switches (above). In Settings → Account → Your data → Phone shortcuts, choose **What it is for: The
+iPhone app, both ways** and make the token. It holds `body:write app:add app:sync`, so it also works where an iPhone app token works.
+Pair it by QR code as before. A token made for the iPhone app before is **never widened**: to get the server's data and AI on the
+phone, the person makes a new token and pairs again.
+
+**The gateway, `/push/v1/api/<path>`.** It runs the `/api/<path>` route of a short list as the token's owner. The phone calls
+`/push/v1/api/ai/status` where the web app calls `/api/ai/status`, with the same body and the same answer. In order:
+
+1. Any `Origin` header, or a `Sec-Fetch-Site` other than `none`, is `403`. The app sends neither; a browser always does.
+2. The token: a device token with `app:sync`, while both switches are on. Every failure is the same `401` as the other routes here. A
+   request with a session cookie and no token is that `401` too. No cookie is ever read, and none reaches the route.
+3. At most **600 requests an hour** for each token, together with `GET /push/v1/about`. The route's own limits apply after that, as
+   for the web app (for example the AI's daily limit).
+4. The list. A route that is not on it is `404` with "This is not open to the iPhone app." The list today:
+
+   | Route | What for |
+   |---|---|
+   | `GET /api/ai/status`, `POST /api/ai/consent`, `DELETE /api/ai/consent/{provider_id}` | which AI runs each feature, and the person's consent |
+   | `POST /api/ai/next-meal`, `/api/ai/parse-meal`, `/api/ai/recipes`, `/api/ai/chat`, `/api/ai/transcribe` | meal ideas, describe a meal, recipes, Ask and its microphone |
+   | `POST /api/vision/label`, `/api/vision/plate` | label and plate photos |
+   | `POST /api/ai/read-lab-report`, `/api/ai/read-lab-report-text` | lab report photos and text: on the local AI only |
+   | `GET /api/foods/usda/search`, `POST /api/foods/usda/import`, `POST /api/foods/barcode` | the server's food services, with its keys |
+   | `PATCH /api/me/settings` with only `food.off_consent`, `PATCH /api/me/ai` with only `opt_in` | the person's Open Food Facts consent and AI opt-in. Any other key is `403` and the route does not run |
+
+   **Never on it:** anything that needs the password again, admin routes, sign-in, tokens, sessions, keys and AI providers, sharing,
+   the import, the `.zip` export, and deleting or changing the account. A test pins the list.
+5. The route runs as the token's owner with the role of a person, **never an admin**, even when the owner is one. It cannot pass a
+   password check either. Every rule of the route still holds: it sees only this person's data, and another person's row is `404`.
+
+Every answer has `Cache-Control: no-store`. The server's log holds the token's id, the route and the status, never a value. The
+person's activity list shows "The iPhone app read your data" once a day for each token, and the token's "last used" in Settings.
+
+**The AI's rules are the same as on the web.** The phone calls the same routes, so the admin's choice of local or cloud AI for each
+feature, the person's opt-in and consent, the checks before and after the AI, the daily limit and the AI activity list all apply.
+Lab report text and photos go only to the local AI: without one, the lab routes answer `503 no_local_provider`, and nothing falls
+back to a cloud model. Prompts and answers are not kept, as on the web, and no route on the list asks the AI about doses.
+
+**No key moves.** The server's USDA key, Open Food Facts consent and other keys stay on the server and are never sent to the phone.
+
+### `GET /push/v1/about`
+
+What this server offers this person, so the phone can choose without trying each route. Same token, same `401`, `403` (a foreign
+`Origin`) and `429`; only `GET` (`405` otherwise).
+
+```json
+{"account": "5f1d0c1e9a8b7c6d5e4f3a2b1c0d9e8f",
+ "api_version": 1, "app_version": "0.24.1",
+ "sync": {"gateway": true, "changes": true},
+ "gateway": [{"method": "GET", "path": "/api/ai/status"}, …],
+ "ai": {"enabled": true, "available": true, "routes": {"meal_ideas": {…}, "labs": {…}, …}},
+ "services": {"usda_search": true, "barcode": true, "barcode_off": false, "barcode_usda": true,
+              "recipe_import": false, "instacart": false, "list_sync": false},
+ "capabilities": {…},
+ "features": {"usda_search": true, "barcode": true, "ai": true, "changes": true}}
+```
+
+* `account` is the same for every token of this person on this server, and different for anyone else. It is a keyed hash of the
+  person's id, so it names neither the person nor the server. The phone keeps it to notice a different account or server. It changes
+  if the server's `SECRET_KEY` is replaced; the phone then asks once.
+* `ai.routes` is `routes` of `GET /api/ai/status`; `capabilities` is that of `GET /api/meta`.
+* `features` repeats the four answers the phone needs first: `services.usda_search`, `services.barcode`, `ai.available` and
+  `sync.changes`.
+* `200` means the token works both ways. A token that only adds gets `401`, and a server older than this gets `404`.
+* An AI route answers `404` while the AI is off for the person, as on the web. The phone then uses its own AI.
+
+### The change feed
+
+Step 5 of the note. Every row the phone syncs has one ID on every device, its `client_id`: the person's own foods, food log
+entries, saved meals and recipes, lab results, symptoms, weights and blood pressure readings. Rows the iPhone app added before
+keep the phone's ID. The server records every change, whoever made it (the web app, an import, the Care team, the assistant, the
+phone), and keeps a marker for each delete for 180 days.
+
+**`GET /push/v1/changes?after=<next>&limit=<1 to 500>`** answers what changed since the last answer, oldest first, and only
+the latest state of each row:
+
+```json
+{"changes": [{"kind": "entry", "id": "7c9e6679-…", "op": "put", "version": "3f0c…", "row": {…, "food": {"builtin": {"fdc_id": 173944, "name": "Banana, raw"}}}},
+             {"kind": "lab", "id": "886313e1-…", "op": "delete", "version": null}],
+ "foods": [{"ref": {"client_id": "0f8fad5b-…"}, "food": {…}}],
+ "next": "1234", "more": false}
+```
+
+* `kind` is `food`, `entry`, `meal`, `lab`, `symptom`, `weight` or `reading`. `row` has the export's shape, with `client_id`.
+  An entry's food, and each saved meal item's, is named as `POST /push/v1/sync` names it. `foods` holds the foods (not
+  built-in) that this answer's rows use.
+* `version` is the row's version (below). Send `next` back as `after` until `more` is false. Without `after`, or with `0`, the
+  feed starts at the beginning.
+* A cursor older than the delete markers kept is `410 {"resync": true}`: read everything again from `0`.
+* At most 120 reads an hour for each token.
+
+**Versions.** Every kind has a version, as entries do: a hash of what the person sees of the row, so the same content has the
+same version everywhere. The browser's copy is `app/static/js/engine/row_versions.js`. Each kind's `PUT` and `DELETE` route in
+`/api` takes `If-Match: "<version>"` and answers `412` with the row as stored when it changed. Without the header they work as
+before. Lab results have no edits, so only their delete takes it.
+
+**`POST /push/v1/changes`** sends edits and deletes made on the phone:
+
+```json
+{"changes": [{"kind": "entry", "id": "7c9e6679-…", "op": "edit", "base": "3f0c…", "fields": {"servings": 2}},
+             {"kind": "weight", "id": "c56a4180-…", "op": "delete", "base": "91aa…"}]}
+```
+
+* `base` is the version the change was made on. `fields` is the body of that kind's `PUT` route. An edit may also carry
+  `version`, the version of the phone's copy after the change.
+* Each change runs through its route with `If-Match`, and has its own answer in `results`, in order: `done` with the new
+  version; `conflict` with the row as stored and its version, when the row changed since `base`; `gone` when the row is not
+  here; `refused` with the reason. One answer never stops the others. Nothing is ever overwritten without a question.
+* The same edit made on both sides is `done`, not a conflict: send `version` and the server compares.
+* At most 200 changes and 256 KiB a request.
+
+**`POST /push/v1/match`** helps the first two-way sync of a phone that already sent rows:
+`{"ids": {"entry": ["<phone id>", …], …}}` answers `{"known": {"entry": {"<phone id>": "<server id>"}}, "unknown": {"entry": […]}}`.
+A row the phone sent that matched a row already here is named by that row's ID. At most 2,000 IDs a request. `POST` requests to
+`/changes` and `/match` share 120 an hour for each token.
+
 ## Pairing the iPhone app by QR code
 
 When a device token is made, `POST /api/me/tokens` also answers `pair_url`, and Settings → Account → Your data → Phone shortcuts draws it as a QR code
@@ -272,6 +403,11 @@ are linked to the token, and Delete what it sent removes them.
 The server checks the token again before saving the readings. If access ended while the phone was sending,
 the request gets 401 and none of its readings are saved. Readings already saved stay in your log until you delete them.
 
+A leaked token **for the iPhone app, both ways** is worth more: it can use the routes of the list above as the person, so it can
+read what those routes answer and use the person's AI quota. It still cannot reach any other route, change the password, a key, a
+token or the account, or act as an admin. It works only while both switches are on, at most 600 requests an hour, and shows as "last
+used" and as a daily activity row. Revoke it, or change the password, and it stops at once.
+
 Tokens are not in the export (a credential, like sessions); the rows are, as `source: shortcut`, without the token. Rows a token sent
 are never sent to an AI provider or the assistant, like the rest of the weight and blood pressure log ([`privacy.md`](privacy.md)).
 
@@ -294,4 +430,12 @@ are never sent to an AI provider or the assistant, like the rest of the weight a
 * The iPhone app's route: `app/app_sync.py`, schema step 37 (`app/migrations/m037_app_sync.py`, the receipts), the food matching it
   shares with the import (`shared_match`, `builtin_match`, `food_key` in `app/data_import.py`). Tests: `tests/test_app_sync.py`,
   `tests/test_migration_m037.py`, the app parts of `tests/test_push_ui.py` and `tests/test_auth_coverage.py`.
+* The iPhone app both ways (design note 39): `app/app_gateway.py` (the gateway's middleware, its list, the second check `guard` and
+  `GET /push/v1/about`), `app:sync` and the kind `app_sync` in `app/auth/api_tokens.py`, the one change point in `app/auth/deps.py`
+  (`GatewayCaller`), the Origin rule and the body limit in `app/security.py`, the `push.app_sync` key. Tests: `tests/test_app_gateway.py`
+  (the list pinned, the isolation matrix through the gateway, the AI's rules), the two-way parts of `tests/test_auth_coverage.py` and
+  `tests/test_push_ui.py`.
+* The change feed: `app/sync_feed.py`, schema step 38 (`app/migrations/m038_change_feed.py`), versions in `app/row_versions.py` and
+  `app/static/js/engine/row_versions.js` (vectors `tests/data/row_version_vectors.json`). Tests: `tests/test_sync_feed.py`,
+  `tests/test_migration_m038.py`, `tests/test_row_versions.py`.
 * `/push/v1` is a promise: a change that breaks it gets `/push/v2`, and v1 keeps working for at least one release.

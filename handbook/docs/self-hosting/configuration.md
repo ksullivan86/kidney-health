@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-11-12
 fact_checked: 2026-10-05
-sources: [NOTE01, NOTE03, NOTE04, NOTE06, NOTE07, NOTE08, NOTE12, NOTE17, NOTE27, NOTE28, WHOOP-API, NOTE30, NOTE33, NOTE34, NOTE35, NOTE20, DEPLOY, SECDOC, NIST-63B4, FDC-API, OFF-API]
+sources: [NOTE01, NOTE03, NOTE04, NOTE06, NOTE07, NOTE08, NOTE12, NOTE17, NOTE27, NOTE28, WHOOP-API, NOTE30, NOTE33, NOTE34, NOTE35, NOTE39, NOTE20, DEPLOY, SECDOC, NIST-63B4, FDC-API, OFF-API]
 ---
 
 # Configuration
@@ -185,6 +185,7 @@ Agent profile, OpenAI, OpenRouter), the address rules and troubleshooting are in
 | Variable | Default | Purpose |
 |---|---|---|
 | `PUSH_ENABLED` | `false` | Phone shortcuts (also **Server administration → Server settings**): each person may make device tokens (**Settings → Account → Your data → Phone shortcuts**) for an iPhone Shortcut that adds their weight and blood pressure to their own log at `POST /push/v1/body`, or a token for the iPhone app, which can also add the food, lab results and symptoms logged on the phone at `POST /push/v1/sync`. A token can only add; it reads nothing. While off, the routes answer `401` to everyone. The phone must reach the server (home network or your VPN); if a reverse proxy lists the paths it passes on, add `/push/v1/`. Nothing leaves the server for it ([design note 12][NOTE12]; [From a phone shortcut](../app/weight-and-blood-pressure.md#from-a-phone-shortcut)). |
+| `PUSH_APP_SYNC` | `false` | The iPhone app both ways (also **Server administration → Server settings**), under `PUSH_ENABLED`: a person may make a token **for the iPhone app, both ways**. With it the app uses this server's AI and food services as that person, through `/push/v1/api/`, and can read and change their own data there. It can never change a password, a key, a token or the account, and it is never an admin. Lab reports still go only to a local AI. Off: such tokens answer `401`, and tokens that only add keep working. If a reverse proxy lists the paths it passes on, `/push/v1/` covers it ([design note 39][NOTE39]). |
 | `TOKENS_ALLOW_NEVER_EXPIRING` | `true` | Whether people may choose "Never (until you remove it)" when making a token for an outside AI app or a phone shortcut (also **Server administration → Server settings**). Off: every new token expires; tokens made before keep working until revoked. |
 | `DEVICES_ENABLED`, `DEVICES_SYNC_HOURS` | `false`, `4` | Connected devices (also **Server administration → Server settings**): each person may connect their own Withings scale or blood pressure monitor, or their Whoop strap, in **Settings → Connected devices**, and the server fetches their data every few hours. Nothing about the person is sent to Withings or Whoop ([design note 27][NOTE27]; [From a Withings scale or monitor](../app/weight-and-blood-pressure.md#from-withings)). |
 | `WITHINGS_ENABLED`, `WITHINGS_CLIENT_ID`, `WITHINGS_CLIENT_SECRET_FILE` | off | Your free Withings developer app. Its return address is `<PUBLIC_URL>/api/devices/withings/callback`; the client secret only as a file. The server then talks to `wbsapi.withings.net`. Step-by-step setup in the repository's [devices guide](https://github.com/ksullivan86/kidney-health/blob/main/docs/devices.md). |
@@ -268,6 +269,7 @@ Environment=AUTH_MODE=local
 - [Design note 01][NOTE01] §5.5 and [design note 07][NOTE07] §4.3: the variables and their rules.
 - [Design note 03][NOTE03] R10; [design note 04][NOTE04] R4; [design note 06][NOTE06] §4.14; [design note 08][NOTE08] §4.6.
 - [Design note 12][NOTE12] §4.4: the `PUSH_ENABLED` switch.
+- [Design note 39][NOTE39] §5.1: the `PUSH_APP_SYNC` switch.
 - [Design note 20][NOTE20]: first values from the environment.
 - [Design note 34][NOTE34]: password reset by email.
 - [Design note 35][NOTE35]: reminders by phone notification.

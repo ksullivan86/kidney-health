@@ -26,7 +26,7 @@ final class ServerAPITests: XCTestCase {
         XCTAssertEqual(ServerAPI.routes.filter(\.photo).map(\.path),
                        ["/push/v1/api/ai/read-lab-report", "/push/v1/api/vision/label", "/push/v1/api/vision/plate"])
         // a settings route takes only its own keys
-        let consent = ServerAPI.route(method: "PUT", path: "/push/v1/api/me/settings")!.route
+        let consent = ServerAPI.route(method: "PATCH", path: "/push/v1/api/me/settings")!.route
         XCTAssertTrue(consent.allows(["food.off_consent": true]))
         XCTAssertFalse(consent.allows(["food.off_consent": true, "auth.two_step": false]))
         XCTAssertFalse(consent.allows([:]))

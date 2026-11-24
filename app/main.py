@@ -24,6 +24,8 @@ from . import symptoms  # schema step 15: /api/symptoms
 from . import body  # schema step 18: /api/body (weight and blood pressure)
 from . import push  # schema step 19: POST /push/v1/body (device tokens) and DELETE /api/me/tokens/{id}/body-rows
 from . import app_sync  # schema step 37: POST /push/v1/sync, the iPhone app sends the rows it made (design note 38 §5.5)
+from . import app_gateway  # design note 39 §5: the iPhone app's gateway /push/v1/api/ and GET /push/v1/about (token with app:sync)
+from . import sync_feed  # schema step 38: the change feed, GET and POST /push/v1/changes and POST /push/v1/match (design note 39 §8)
 from .guidance import api as guidance_api  # M2 guidance: /api/guidance
 from . import handbook  # M3: the handbook at /learn and /api/handbook
 from . import barcode  # M2 barcode: POST /api/foods/barcode
@@ -145,6 +147,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         redoc_url="/redoc" if docs else None,
         openapi_url="/openapi.json" if docs else None,
         generate_unique_id_function=openapi_doc.operation_id,
+        # Design note 39 §5.2: a request that came through the iPhone app's gateway runs only the route on its list (a no-op otherwise).
+        dependencies=[Depends(app_gateway.guard)],
     )
     openapi_doc.install(app)  # app.openapi(): the rewritten document (docs/api/openapi.json is made from it)
     app.state.settings = settings
@@ -160,6 +164,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     auth_ctx = auth.install(app, settings, store)  # /api/auth, /api/me, /api/admin + error handler
 
     # Middleware: added innermost first (security.install adds the outer stack last).
+    app.add_middleware(app_gateway.GatewayMiddleware)  # design note 39 §5.2: /push/v1/api/<path> runs /api/<path> for an app:sync token
     pwa.setup(app, settings)  # GET /sw.js (before the static mount) + gzip for static files
     learn = handbook.setup(app, settings)  # the built handbook, or None (/learn is then 404)
     security.install(app, settings, path_policies=handbook.csp_policies(learn))  # /learn's own CSP
@@ -184,6 +189,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(push.router)  # bearer-only like /mcp, outside /api
     app.include_router(push.api_router)
     app.include_router(app_sync.router)  # schema step 37: POST /push/v1/sync (app tokens, design note 38 §5.5)
+    app.include_router(app_gateway.router)  # design note 39 §5.3: GET /push/v1/about (tokens with app:sync)
+    app.include_router(sync_feed.router)  # schema step 38: the change feed (tokens with app:sync, design note 39 §8)
     app.include_router(data_import.router)
     app.include_router(meta.router)
     app.include_router(sharing.me_router)

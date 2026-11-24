@@ -70,6 +70,7 @@ from .auth.accounts import begin_immediate
 from .auth.deps import CurrentUser, current_user
 from .db import get_db, utcnow
 from .log import parse_date_param, parse_range
+from .row_versions import IfMatch, check_if_match, precondition_failed
 from .models import (
     MAX_READINGS_PER_DAY,
     MAX_SQLITE_INT,
@@ -417,13 +418,22 @@ def _known_reading(row: sqlite3.Row) -> bool:
 def export_weights(conn: sqlite3.Connection, user_id: int) -> list[dict[str, Any]]:
     """Every weight of ``user_id`` for the export: the stored columns (``note`` as text), oldest day first, also a context or
     source this version does not know, so nothing the person recorded is left out of their file."""
-    rows = conn.execute(f"SELECT {WEIGHT_COLUMNS} FROM weights WHERE user_id = ? {ORDER}", (int(user_id),)).fetchall()
-    return [{**{k: row[k] for k in WEIGHT_CSV_COLUMNS}, "kg": float(row["kg"]), "note": row["note"] or ""} for row in rows]
+    rows = conn.execute(f"SELECT {WEIGHT_COLUMNS}, client_id FROM weights WHERE user_id = ? {ORDER}", (int(user_id),)).fetchall()
+    return [export_weight(row) for row in rows]
+
+
+def export_weight(row: sqlite3.Row) -> dict[str, Any]:
+    """One weight as the export writes it; ``client_id`` is the row's ID on every device (design note 39 §8.2)."""
+    return {**{k: row[k] for k in WEIGHT_CSV_COLUMNS}, "kg": float(row["kg"]), "note": row["note"] or "", "client_id": row["client_id"]}
 
 
 def export_readings(conn: sqlite3.Connection, user_id: int) -> list[dict[str, Any]]:
-    rows = conn.execute(f"SELECT {READING_COLUMNS} FROM blood_pressures WHERE user_id = ? {ORDER}", (int(user_id),)).fetchall()
-    return [{**{k: row[k] for k in READING_CSV_COLUMNS}, "note": row["note"] or ""} for row in rows]
+    rows = conn.execute(f"SELECT {READING_COLUMNS}, client_id FROM blood_pressures WHERE user_id = ? {ORDER}", (int(user_id),)).fetchall()
+    return [export_reading(row) for row in rows]
+
+
+def export_reading(row: sqlite3.Row) -> dict[str, Any]:
+    return {**{k: row[k] for k in READING_CSV_COLUMNS}, "note": row["note"] or "", "client_id": row["client_id"]}
 
 
 def count_on_day(conn: sqlite3.Connection, table: str, user_id: int, day: str, *, except_id: int | None = None) -> int:
@@ -493,10 +503,12 @@ def create_weight(body: WeightCreate, user: CurrentUser, conn: sqlite3.Connectio
     return row_to_weight(_fetch_weight(conn, user.id, int(cur.lastrowid)))
 
 
-@router.put("/weights/{weight_id}", response_model=WeightOut)
-def update_weight(weight_id: int, body: WeightCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+@router.put("/weights/{weight_id}", response_model=WeightOut, responses=precondition_failed("weight"))
+def update_weight(weight_id: int, body: WeightCreate, user: CurrentUser, if_match: IfMatch = None,
+                  conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     begin_immediate(conn)
-    _fetch_weight(conn, user.id, weight_id)
+    row = _fetch_weight(conn, user.id, weight_id)
+    check_if_match("weight", if_match, lambda: row_to_weight(row))
     _check_weight_day(conn, user.id, body.date, except_id=weight_id)
     conn.execute(
         "UPDATE weights SET date = ?, time = ?, kg = ?, context = ?, note = ?, source = 'manual', api_token_id = NULL, updated_at = ? "
@@ -507,9 +519,12 @@ def update_weight(weight_id: int, body: WeightCreate, user: CurrentUser, conn: s
     return row_to_weight(_fetch_weight(conn, user.id, weight_id))
 
 
-@router.delete("/weights/{weight_id}", status_code=204)
-def delete_weight(weight_id: int, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> Response:
-    _fetch_weight(conn, user.id, weight_id)
+@router.delete("/weights/{weight_id}", status_code=204, responses=precondition_failed("weight"))
+def delete_weight(weight_id: int, user: CurrentUser, if_match: IfMatch = None, conn: sqlite3.Connection = Depends(get_db)) -> Response:
+    if if_match is not None:
+        begin_immediate(conn)
+    row = _fetch_weight(conn, user.id, weight_id)
+    check_if_match("weight", if_match, lambda: row_to_weight(row))
     conn.execute("DELETE FROM weights WHERE id = ? AND user_id = ?", (weight_id, user.id))
     conn.commit()
     return Response(status_code=204)
@@ -629,11 +644,12 @@ def create_reading(body: BloodPressureCreate, user: CurrentUser, conn: sqlite3.C
     return row_to_reading(_fetch_reading(conn, user.id, int(cur.lastrowid)))
 
 
-@router.put("/blood-pressure/{reading_id}", response_model=BloodPressureOut)
-def update_reading(reading_id: int, body: BloodPressureCreate, user: CurrentUser,
+@router.put("/blood-pressure/{reading_id}", response_model=BloodPressureOut, responses=precondition_failed("blood pressure reading"))
+def update_reading(reading_id: int, body: BloodPressureCreate, user: CurrentUser, if_match: IfMatch = None,
                    conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     begin_immediate(conn)
-    _fetch_reading(conn, user.id, reading_id)
+    row = _fetch_reading(conn, user.id, reading_id)
+    check_if_match("reading", if_match, lambda: row_to_reading(row))
     _check_reading_day(conn, user.id, body.date, except_id=reading_id)
     conn.execute(
         "UPDATE blood_pressures SET date = ?, time = ?, systolic = ?, diastolic = ?, pulse = ?, context = ?, note = ?, "
@@ -644,9 +660,12 @@ def update_reading(reading_id: int, body: BloodPressureCreate, user: CurrentUser
     return row_to_reading(_fetch_reading(conn, user.id, reading_id))
 
 
-@router.delete("/blood-pressure/{reading_id}", status_code=204)
-def delete_reading(reading_id: int, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> Response:
-    _fetch_reading(conn, user.id, reading_id)
+@router.delete("/blood-pressure/{reading_id}", status_code=204, responses=precondition_failed("blood pressure reading"))
+def delete_reading(reading_id: int, user: CurrentUser, if_match: IfMatch = None, conn: sqlite3.Connection = Depends(get_db)) -> Response:
+    if if_match is not None:
+        begin_immediate(conn)
+    row = _fetch_reading(conn, user.id, reading_id)
+    check_if_match("reading", if_match, lambda: row_to_reading(row))
     conn.execute("DELETE FROM blood_pressures WHERE id = ? AND user_id = ?", (reading_id, user.id))
     conn.commit()
     return Response(status_code=204)

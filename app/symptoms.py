@@ -37,6 +37,7 @@ from .auth.accounts import begin_immediate
 from .auth.deps import CurrentUser, current_user
 from .db import get_db, utcnow
 from .log import parse_range
+from .row_versions import IfMatch, check_if_match, precondition_failed
 from .models import (
     MAX_SQLITE_INT,
     MAX_SYMPTOMS_PER_DAY,
@@ -97,7 +98,7 @@ def red_flag(symptom: str, severity: int) -> dict[str, Any] | None:
             "link_text": GET_HELP_NOW_LINK_TEXT, "prominent": severity == 3}
 
 
-COLUMNS = "id, date, symptom, label, severity, note, created_at"
+COLUMNS = "id, date, symptom, label, severity, note, created_at, client_id"
 # symptoms.csv in the export archive (app/account.py): the stored row.
 CSV_COLUMNS: tuple[str, ...] = ("id", "date", "symptom", "label", "severity", "note", "created_at")
 
@@ -129,7 +130,7 @@ def export_rows(conn: sqlite3.Connection, user_id: int) -> list[dict[str, Any]]:
     """Every symptom of ``user_id`` for the export: the stored columns, oldest day first (also a key this version does
     not know, so nothing the person recorded is left out of their file)."""
     rows = _rows(conn, f"SELECT {COLUMNS} FROM symptoms WHERE user_id = ? ORDER BY date, id", (int(user_id),))
-    return [{k: row[k] for k in CSV_COLUMNS} for row in rows]
+    return [{**{k: row[k] for k in CSV_COLUMNS}, "client_id": row["client_id"]} for row in rows]  # client_id: note 39 §8.2
 
 
 def count_on_day(conn: sqlite3.Connection, user_id: int, day: str, *, except_id: int | None = None) -> int:
@@ -178,10 +179,12 @@ def create_symptom(body: SymptomCreate, user: CurrentUser, conn: sqlite3.Connect
     return row_to_symptom(_fetch(conn, user.id, int(cur.lastrowid)))
 
 
-@router.put("/{symptom_id}", response_model=SymptomOut)
-def update_symptom(symptom_id: int, body: SymptomCreate, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
+@router.put("/{symptom_id}", response_model=SymptomOut, responses=precondition_failed("symptom"))
+def update_symptom(symptom_id: int, body: SymptomCreate, user: CurrentUser, if_match: IfMatch = None,
+                   conn: sqlite3.Connection = Depends(get_db)) -> dict[str, Any]:
     begin_immediate(conn)
-    _fetch(conn, user.id, symptom_id)
+    row = _fetch(conn, user.id, symptom_id)
+    check_if_match("symptom", if_match, lambda: row_to_symptom(row))
     _check_day_not_full(conn, user.id, body.date, except_id=symptom_id)
     conn.execute(
         "UPDATE symptoms SET date = ?, symptom = ?, label = ?, severity = ?, note = ? WHERE id = ? AND user_id = ?",
@@ -191,9 +194,12 @@ def update_symptom(symptom_id: int, body: SymptomCreate, user: CurrentUser, conn
     return row_to_symptom(_fetch(conn, user.id, symptom_id))
 
 
-@router.delete("/{symptom_id}", status_code=204)
-def delete_symptom(symptom_id: int, user: CurrentUser, conn: sqlite3.Connection = Depends(get_db)) -> Response:
-    _fetch(conn, user.id, symptom_id)
+@router.delete("/{symptom_id}", status_code=204, responses=precondition_failed("symptom"))
+def delete_symptom(symptom_id: int, user: CurrentUser, if_match: IfMatch = None, conn: sqlite3.Connection = Depends(get_db)) -> Response:
+    if if_match is not None:
+        begin_immediate(conn)
+    row = _fetch(conn, user.id, symptom_id)
+    check_if_match("symptom", if_match, lambda: row_to_symptom(row))
     conn.execute("DELETE FROM symptoms WHERE id = ? AND user_id = ?", (symptom_id, user.id))
     conn.commit()
     return Response(status_code=204)

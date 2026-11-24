@@ -293,7 +293,7 @@ def test_the_server_api_bridge_carries_only_its_allow_list():
     assert listed == [
         ("GET", "/push/v1/about"),
         ("GET", "/push/v1/api/foods/usda/search"), ("POST", "/push/v1/api/foods/usda/import"), ("POST", "/push/v1/api/foods/barcode"),
-        ("PUT", "/push/v1/api/me/settings"),
+        ("PATCH", "/push/v1/api/me/settings"),
         ("GET", "/push/v1/api/ai/status"), ("PATCH", "/push/v1/api/me/ai"), ("POST", "/push/v1/api/ai/consent"),
         ("POST", "/push/v1/api/ai/next-meal"), ("POST", "/push/v1/api/ai/parse-meal"), ("POST", "/push/v1/api/ai/recipes"),
         ("POST", "/push/v1/api/ai/chat"),
@@ -304,7 +304,7 @@ def test_the_server_api_bridge_carries_only_its_allow_list():
         for word in ("/admin", "/auth", "/tokens", "/sessions", "/provider", "/me/import", "/export", "/keys", "delete", "transcribe"):
             assert word not in path, path
     # a settings route takes only its own key; the person's AI switch only opt_in
-    assert 'Route("PUT", "/push/v1/api/me/settings", bodyKeys: ["food.off_consent"])' in core
+    assert 'Route("PATCH", "/push/v1/api/me/settings", bodyKeys: ["food.off_consent"])' in core
     assert 'Route("PATCH", "/push/v1/api/me/ai", bodyKeys: ["opt_in"])' in core
     sync = CODE["KidneyHealth/Services/ServerSync.swift"]
     assert 'case "serverApi":' in sync

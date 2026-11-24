@@ -12,7 +12,10 @@ Two **families** share the ``api_tokens`` table, the hash-only storage, expiry, 
   where it can add weights and blood pressure readings and read nothing; an **app** token (design note 38 §5.5) holds
   ``body:write`` and ``app:add`` and is also accepted at ``POST /push/v1/sync`` (:mod:`app.app_sync`), where the iPhone app adds
   food log entries, its own foods, lab results, symptoms, weights and readings, and reads nothing. ``app:add`` implies
-  ``body:write`` and nothing else; neither kind can read, change or delete a row.
+  ``body:write`` and nothing else; neither kind can read, change or delete a row. A third kind, **app_sync** ("The iPhone app,
+  both ways", design note 39 §5.1), also holds ``app:sync``: it is accepted at the gateway ``/push/v1/api/`` (:mod:`app.app_gateway`),
+  which runs an allow-list of ``/api`` routes as the token's owner, and at the change feed. It works only while the second switch
+  ``push.app_sync`` is on too, and it can be made only then. An ``app`` token is never widened into one.
 
 A token is its prefix + 43 base64url characters (32 random bytes). Only the SHA-256 of the whole token is stored, as hex,
 with its first 12 characters for display. The plain token is in the answer to ``POST /api/me/tokens`` once and never again
@@ -81,11 +84,16 @@ LOG = "assistant:log"  # also save food and recipes (part C); a token that has i
 PREFS = "assistant:prefs"  # also remember a taste (set_food_preference, note 09 §4.8b); implies READ, never LOG
 BODY_WRITE = "body:write"  # add weights and blood pressure readings at POST /push/v1/body, and nothing else
 APP_ADD = "app:add"  # also add entries, own foods, labs and symptoms at POST /push/v1/sync (note 38 §5.5); implies BODY_WRITE only
+# Also read and change the person's data and use the server's AI and food services, through the gateway /push/v1/api/ and the change
+# feed (design note 39 §5.1). Implies APP_ADD and BODY_WRITE, nothing of the assistant family. Works only while push.app_sync is on.
+APP_SYNC = "app:sync"
 SCOPES: tuple[str, ...] = (READ, LOG, PREFS)  # the assistant family's scopes, in the order they are stored and shown
-DEVICE_SCOPES: tuple[str, ...] = (BODY_WRITE, APP_ADD)  # the device family's, in the order they are stored and shown
+DEVICE_SCOPES: tuple[str, ...] = (BODY_WRITE, APP_ADD, APP_SYNC)  # the device family's, in the order they are stored and shown
 SHORTCUT_SCOPES: tuple[str, ...] = (BODY_WRITE,)  # a phone Shortcut's token: exactly this
-APP_SCOPES: tuple[str, ...] = (BODY_WRITE, APP_ADD)  # the iPhone app's token
-DEVICE_KINDS: tuple[str, ...] = ("shortcut", "app")
+APP_SCOPES: tuple[str, ...] = (BODY_WRITE, APP_ADD)  # the iPhone app's token that can only add (note 38): never widened
+APP_SYNC_SCOPES: tuple[str, ...] = (BODY_WRITE, APP_ADD, APP_SYNC)  # "The iPhone app, both ways" (note 39 §5.1)
+DEVICE_KINDS: tuple[str, ...] = ("shortcut", "app", "app_sync")
+APP_KINDS: tuple[str, ...] = ("app", "app_sync")  # the kinds the iPhone app pairs with
 ALL_SCOPES: tuple[str, ...] = SCOPES + DEVICE_SCOPES
 EXPIRY_DAYS: tuple[int, ...] = tuple(get_args(ExpiryDays))
 DEFAULT_EXPIRY_DAYS = 90
@@ -101,12 +109,15 @@ KEEP_ENDED_DAYS = 30
 TOUCH_INTERVAL = timedelta(minutes=1)
 SWITCH = "assistant.enabled"  # the assistant family's instance switch (env ASSISTANT_ENABLED)
 DEVICE_SWITCH = "push.enabled"  # the device family's (env PUSH_ENABLED)
+APP_SYNC_SWITCH = "push.app_sync"  # app:sync on top of it (env PUSH_APP_SYNC, design note 39 §5.1); off by default
 
 CHALLENGE = f'Bearer realm="{brand.BEARER_REALM}"'
 DENIED = "A valid assistant token is required (Settings → Outside AI apps)."
 SWITCHED_OFF = "Outside AI apps are turned off on this server. Ask your admin to turn it on."
 DEVICE_DENIED = "A valid device token is required (Settings → Phone shortcuts)."
 DEVICE_SWITCHED_OFF = "Phone shortcuts are turned off on this server. Ask your admin to turn them on."
+APP_SYNC_SWITCHED_OFF = ("This server does not let the iPhone app read your data or use its AI. Ask your admin to turn it on, "
+                         "or make a token for the iPhone app that only adds.")
 
 # Why every token of a person ended at once (the activity log's "reason"); "self" = revoked in Settings, "admin" =
 # an admin used Server administration → People → Revoke tokens (it ends both families), "auth_mode_changed" = the
@@ -119,9 +130,9 @@ register_limit("api_tokens", 20, 3600, "Too many new tokens. Try again later.")
 
 MAX_ROW_ID = 2**63 - 1
 
-# SQL for "this row is a device token": the scopes text holds the word body:write or app:add. A row that mixes the families
-# is counted as a device row here and grants nothing (:func:`parse_scopes`), so it can never be used at either surface.
-_IS_DEVICE_SQL = f"((' ' || scopes || ' ') LIKE '% {BODY_WRITE} %' OR (' ' || scopes || ' ') LIKE '% {APP_ADD} %')"
+# SQL for "this row is a device token": the scopes text holds the word body:write, app:add or app:sync. A row that mixes the
+# families is counted as a device row here and grants nothing (:func:`parse_scopes`), so it can never be used at either surface.
+_IS_DEVICE_SQL = "(" + " OR ".join(f"(' ' || scopes || ' ') LIKE '% {s} %'" for s in (BODY_WRITE, APP_ADD, APP_SYNC)) + ")"
 
 
 @dataclass(frozen=True)
@@ -165,28 +176,35 @@ def family_of_scope(scope: str) -> str:
 
 
 def family_of_scopes(scopes: str | tuple[str, ...] | list[str] | None) -> str:
-    """The family of a stored ``scopes`` text (or a tuple of scopes): ``device`` when it holds ``body:write`` or ``app:add``,
-    else ``assistant``. The same rule as the list filter's SQL."""
+    """The family of a stored ``scopes`` text (or a tuple of scopes): ``device`` when it holds ``body:write``, ``app:add`` or
+    ``app:sync``, else ``assistant``. The same rule as the list filter's SQL."""
     words = (scopes or "").split() if isinstance(scopes, str) or scopes is None else list(scopes)
-    return DEVICE if BODY_WRITE in words or APP_ADD in words else ASSISTANT
+    return DEVICE if any(w in DEVICE_SCOPES for w in words) else ASSISTANT
 
 
 def kind_of_scopes(scopes: str | tuple[str, ...] | list[str] | None) -> str | None:
-    """A device token's kind: ``app`` when it holds ``app:add``, else ``shortcut``; None for an assistant token."""
+    """A device token's kind: ``app_sync`` when it holds ``app:sync``, ``app`` when it holds ``app:add``, else ``shortcut``; None
+    for an assistant token."""
     if family_of_scopes(scopes) != DEVICE:
         return None
     text = scopes if isinstance(scopes, str) or scopes is None else " ".join(scopes)
-    return "app" if APP_ADD in parse_scopes(text) else "shortcut"
+    granted = parse_scopes(text)
+    if APP_SYNC in granted:
+        return "app_sync"
+    return "app" if APP_ADD in granted else "shortcut"
 
 
 def parse_scopes(text: str | None) -> tuple[str, ...]:
     """The known scopes in a stored ``scopes`` text, in :data:`ALL_SCOPES` order. An unknown word grants nothing;
     ``assistant:log`` and ``assistant:prefs`` each imply ``assistant:read`` and nothing else implies anything (``log`` does
     not give ``prefs`` and ``prefs`` does not give ``log``; a device token never gains an assistant scope, an assistant token
-    never gains ``body:write``; ``app:add`` implies ``body:write``); a text that names scopes of both families grants nothing."""
+    never gains ``body:write``; ``app:add`` implies ``body:write``; ``app:sync`` implies ``app:add`` and ``body:write``, and nothing
+    implies ``app:sync``); a text that names scopes of both families grants nothing."""
     known = {w for w in (text or "").split() if w in ALL_SCOPES}
     if LOG in known or PREFS in known:
         known.add(READ)
+    if APP_SYNC in known:
+        known.add(APP_ADD)
     if APP_ADD in known:
         known.add(BODY_WRITE)
     if known.intersection(SCOPES) and known.intersection(DEVICE_SCOPES):
@@ -204,6 +222,18 @@ def is_enabled(conn: sqlite3.Connection, ctx: AuthContext, family: str = ASSISTA
     """The family's instance switch: ``assistant.enabled`` (env ``ASSISTANT_ENABLED``) or ``push.enabled`` (env
     ``PUSH_ENABLED``)."""
     return bool(ctx.store.get(conn, DEVICE_SWITCH if _family(family) == DEVICE else SWITCH))
+
+
+def app_sync_enabled(conn: sqlite3.Connection, ctx: AuthContext) -> bool:
+    """Whether ``app:sync`` works: ``push.enabled`` and, under it, ``push.app_sync`` (env ``PUSH_APP_SYNC``, design note 39 §5.1)."""
+    return is_enabled(conn, ctx, DEVICE) and bool(ctx.store.get(conn, APP_SYNC_SWITCH))
+
+
+def scope_enabled(conn: sqlite3.Connection, ctx: AuthContext, scope: str) -> bool:
+    """The switches a scope needs: its family's, and ``push.app_sync`` too for ``app:sync``."""
+    if scope == APP_SYNC:
+        return app_sync_enabled(conn, ctx)
+    return is_enabled(conn, ctx, family_of_scope(scope))
 
 
 def clean_name(raw: str) -> str:
@@ -254,8 +284,8 @@ APP_SENT_KEYS: tuple[str, ...] = ("entries", "foods", "labs", "symptoms", "weigh
 
 def empty_sent(kind: str | None) -> dict[str, int]:
     """``sent`` of a token that sent nothing: ``{weights, readings}`` for a shortcut token (as before note 38 step 4), every
-    kind for an app token."""
-    return {k: 0 for k in (APP_SENT_KEYS if kind == "app" else BODY_SENT_KEYS)}
+    kind for an app token of either kind."""
+    return {k: 0 for k in (APP_SENT_KEYS if kind in APP_KINDS else BODY_SENT_KEYS)}
 
 
 def sent_counts(conn: sqlite3.Connection, user_id: int) -> dict[int, dict[str, int]]:
@@ -465,7 +495,7 @@ def authenticate(request: Request, conn: sqlite3.Connection, scope: str = READ) 
     ctx = auth_context(request)
     housekeeping.run(conn, ctx)
     presented = _bearer(request)
-    if presented is None or not is_enabled(conn, ctx, family):
+    if presented is None or not scope_enabled(conn, ctx, scope):
         raise _denied(presented is not None, family)
     ip = request_ip(request)
     wait = ctx.throttle.ip_wait(ip)
@@ -506,7 +536,7 @@ def require_current_write(request: Request, conn: sqlite3.Connection, scope: str
     row = conn.execute(
         "SELECT user_id, scopes, expires_at, revoked_at FROM api_tokens WHERE id = ?", (token.id,),
     ).fetchone()
-    if not is_enabled(conn, ctx, family) or row is None or int(row["user_id"]) != token.user_id \
+    if not scope_enabled(conn, ctx, scope) or row is None or int(row["user_id"]) != token.user_id \
             or row["revoked_at"] is not None or row["expires_at"] <= clock.now_iso() \
             or scope not in parse_scopes(row["scopes"]) or _owner(conn, ctx, token.user_id) is None:
         raise _denied(True, family)
@@ -534,6 +564,15 @@ def app_user(request: Request, conn: Annotated[sqlite3.Connection, Depends(get_d
 
 
 AppUser = Annotated[User, Depends(app_user)]
+
+
+def app_sync_user(request: Request, conn: Annotated[sqlite3.Connection, Depends(get_db)]) -> User:
+    """FastAPI dependency for the iPhone app's two-way routes (``/push/v1/about``, the change feed; design note 39): a token with
+    ``app:sync``, while ``push.enabled`` and ``push.app_sync`` are both on."""
+    return authenticate(request, conn, APP_SYNC)
+
+
+AppSyncUser = Annotated[User, Depends(app_sync_user)]
 
 
 # --------------------------------------------------------------------------- #
@@ -564,6 +603,7 @@ def read_my_tokens(request: Request, user: CurrentUser, conn: sqlite3.Connection
         "default_expiry_days": DEFAULT_EXPIRY_DAYS,
         "never_allowed": never,
         "tokens": list_tokens(conn, user.id, family),
+        **({"app_sync_enabled": app_sync_enabled(conn, auth_context(request))} if family == DEVICE else {}),
     }
 
 
@@ -593,6 +633,8 @@ def create_my_token(body: TokenCreate, request: Request, user: RecentUser,
     kind = (body.kind or "shortcut") if family == DEVICE else None
     if not is_enabled(conn, ctx, family):
         raise ApiProblem(409, DEVICE_SWITCHED_OFF if family == DEVICE else SWITCHED_OFF)
+    if kind == "app_sync" and not app_sync_enabled(conn, ctx):
+        raise ApiProblem(409, APP_SYNC_SWITCHED_OFF, field="kind")
     if body.expires_in_days == NEVER and not never_allowed(conn, ctx):
         raise ApiProblem(400, NEVER_REFUSED, field="expires_in_days")
     name = clean_name(body.name)
@@ -602,7 +644,7 @@ def create_my_token(body: TokenCreate, request: Request, user: RecentUser,
         conn.rollback()
         raise ApiProblem(400, f"You have {MAX_ACTIVE} active tokens, the most allowed. Revoke one first.")
     if family == DEVICE:
-        scopes = APP_SCOPES if kind == "app" else SHORTCUT_SCOPES
+        scopes = {"app": APP_SCOPES, "app_sync": APP_SYNC_SCOPES}.get(str(kind), SHORTCUT_SCOPES)
     else:
         scopes = scopes_for(body.can_log, body.can_prefs)
     token, item = create(conn, user.id, name, body.expires_in_days, scopes)
@@ -611,7 +653,7 @@ def create_my_token(body: TokenCreate, request: Request, user: RecentUser,
         item["sent"] = empty_sent(kind)
     audit(conn, user.id, "api_token.created", "api_token", item["id"], ip=request_ip(request),
           expires_in_days=body.expires_in_days, scopes=item["scopes"], family=family,
-          **({"kind": kind} if kind == "app" else {}))
+          **({"kind": kind} if kind in APP_KINDS else {}))
     conn.commit()
     if family == DEVICE:
         return {**item, "token": token, "pair_url": pairing.link(public_base(request, ctx.settings), token)}
