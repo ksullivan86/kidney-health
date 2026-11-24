@@ -4870,16 +4870,44 @@ Code `app/app_gateway.py`, `GatewayCaller` in `app/auth/deps.py`, `app:sync` in 
 * **The list** (`ALLOWED`): `GET /api/ai/status`, `POST /api/ai/consent`, `DELETE /api/ai/consent/{provider_id}`, `POST /api/ai/next-meal`,
   `/api/ai/parse-meal`, `/api/ai/recipes`, `/api/ai/chat`, `/api/ai/transcribe`, `/api/vision/label`, `/api/vision/plate`,
   `/api/ai/read-lab-report`, `/api/ai/read-lab-report-text`, `GET /api/foods/usda/search`, `POST /api/foods/usda/import`,
-  `POST /api/foods/barcode`. `NEVER_PREFIXES` and `NEVER` name what may never be added (sign-in, admin, tokens, sessions, keys and providers,
+  `POST /api/foods/barcode`, and `PATCH /api/me/settings` and `PATCH /api/me/ai` with only the keys of `BODY_KEYS` (`food.off_consent`;
+  `opt_in`: any other key is `403` before the route runs). `NEVER_PREFIXES` and `NEVER` name what may never be added (sign-in, admin, tokens, sessions, keys and providers,
   sharing, the import, the `.zip` export, two-step sign-in, passkeys, the account itself). The test pins the list, checks every listed route
   needs `current_user` and neither `require_recent_auth` nor `require_admin`, and runs the isolation matrix through the gateway.
 * **The AI** keeps every rule because it is the same route: routing per feature, opt-in and consent per person, prefilters, guard, daily limit,
   the AI activity list, lab text and photos on the local AI only (`503 no_local_provider` without one, never a cloud fallback).
 * **`GET /push/v1/about`** (in `BEARER_PATHS`; `405` for other methods): `{account, api_version, app_version, sync: {gateway, changes},
   gateway: [{method, path}], ai: {enabled, available, routes}, services: {usda_search, barcode, barcode_off, barcode_usda, recipe_import,
-  instacart, list_sync}, capabilities}`. `account` is the first 32 hex characters of the HMAC-SHA256 of the person's id under the
+  instacart, list_sync}, capabilities, features: {usda_search, barcode, ai, changes}}`. `account` is the first 32 hex characters of the HMAC-SHA256 of the person's id under the
   `SECRET_KEY` subkey `kidney-health/v1/app-account` (`brand.HKDF_APP_ACCOUNT_INFO`): stable per person and server, naming neither. `ai.routes`
   is `routes` of `GET /api/ai/status` (empty while the AI is off for the person); `capabilities` is `GET /api/meta`'s.
+
+### The change feed: `GET` and `POST /push/v1/changes`, `POST /push/v1/match` (note 39 §8, plan step 5, schema step 38)
+
+Code `app/sync_feed.py`, `app/row_versions.py` (twin `js/engine/row_versions.js`), `app/migrations/m038_change_feed.py`; guide
+`docs/push.md` ("The change feed"); tests `tests/test_sync_feed.py`, `tests/test_migration_m038.py`, `tests/test_row_versions.py`.
+
+* **One ID per row.** Schema step 38 adds `client_id` (36 characters, unique per person) to `foods` (owned rows only),
+  `meal_templates`, `lab_results`, `symptoms`, `weights` and `blood_pressures` (`log_entries` has had it since step 5). Step 37's receipts
+  with `added = 1` give their row the phone's ID; every other row gets a random UUID, and an `AFTER INSERT` trigger fills it for every row
+  made later without one. `POST /push/v1/sync` stores the phone's ID on the rows it adds; the export writes `client_id` for every kind and
+  the import keeps it when the person has no row with it yet.
+* **`sync_changes`** (`id` AUTOINCREMENT, `user_id`, `kind`, `row_id`, `client_id`, `deleted`, `at`): one row per synced row, its latest
+  change. Triggers on each synced table replace it on insert and update, and leave a tombstone on delete while the person exists. A trigger
+  on `users` deletes an account's changes. The daily housekeeping (`sync_tombstones`) deletes tombstones older than 180 days and records
+  the highest id removed per person in `sync_purged`; a cursor below it is `410 {"resync": true}`.
+* **Versions** (`row_versions.row_version`): FNV-1a 64 over the canonical text of `FIELDS[kind]` (an entry: `log.entry_version`). The
+  `PUT` and `DELETE` routes of foods, saved meals, symptoms, weights and readings, and the `DELETE` of labs, take `If-Match` and answer
+  `412 {detail, current: <row with version>}` (`row_versions.check_if_match`, inside the write's transaction). Normal answers do not carry
+  the new kinds' versions; the feed, the 412 and the twin do.
+* **`GET /push/v1/changes?after&limit`** (token with `app:sync`, 120 an hour, `push_changes`): `{changes: [{kind, id, op: put|delete,
+  version, row?}], foods: [{ref, food}], next, more}`, one snapshot per page, at most 500. `row` is the export's shape with `client_id`;
+  entries and saved meal items carry `food` as `POST /push/v1/sync`'s food reference.
+* **`POST /push/v1/changes`** (`push_changes_write`, 120 an hour with match; at most 200 changes, 256 KiB): each `{kind, id, op: edit|delete,
+  base, fields?, version?}` calls the kind's route function with `If-Match: "<base>"` and answers `done` (new version), `conflict` (row and
+  version as stored), `gone` or `refused`. An edit whose `version` equals the stored version is `done` with no write.
+* **`POST /push/v1/match`**: `{ids: {kind: [ids]}}` → `{known: {kind: {phone: server}}, unknown: {kind: [ids]}}`, by `client_id` and by
+  step 37's receipts. At most 2,000 ids.
 
 ### `POST /push/v1/body` (`app/push.py`, router outside `/api`, like `/mcp`)
 

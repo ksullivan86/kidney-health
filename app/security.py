@@ -117,7 +117,7 @@ UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 # on every method (the MCP transport's DNS-rebinding rule; a page on another site cannot post to /push/v1/body either).
 BEARER_PATHS = frozenset({"/mcp", "/push/v1/body", "/push/v1/check", "/push/v1/sync",
                           # design note 39: what this server offers the iPhone app (app/app_gateway.py)
-                          "/push/v1/about"})
+                          "/push/v1/about", "/push/v1/changes", "/push/v1/match"})
 # The bearer gateway (design note 39 §5.2; app/app_gateway.py): /push/v1/api/<path> runs /api/<path> of an allow-list as the owner of
 # an app:sync token. It reads no cookie, and it refuses every request with an Origin header (a browser's).
 GATEWAY_PREFIX = "/push/v1/api/"

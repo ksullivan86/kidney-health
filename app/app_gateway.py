@@ -32,6 +32,7 @@ AI (``available`` and the same ``routes`` as ``GET /api/ai/status``), and the fo
 """
 from __future__ import annotations
 
+import json
 import logging
 import re
 import sqlite3
@@ -89,7 +90,19 @@ ALLOWED: frozenset[tuple[str, str]] = frozenset({
     ("GET", "/api/foods/usda/search"),
     ("POST", "/api/foods/usda/import"),
     ("POST", "/api/foods/barcode"),
+    # Two settings the phone needs before it may ask the server (§6.1, §7), and only those keys (BODY_KEYS): the person's own
+    # Open Food Facts consent, and their AI opt-in.
+    ("PATCH", "/api/me/settings"),
+    ("PATCH", "/api/me/ai"),
 })
+# Routes on the list that take only some keys through the gateway: the body must be one JSON object holding at least one of these
+# keys and nothing else, or the answer is 403 and the route never runs.
+BODY_KEYS: dict[tuple[str, str], frozenset[str]] = {
+    ("PATCH", "/api/me/settings"): frozenset({"food.off_consent"}),
+    ("PATCH", "/api/me/ai"): frozenset({"opt_in"}),
+}
+ONLY_KEYS = "From the iPhone app this can change only: {keys}."
+MAX_KEYS_BODY = 4096
 
 # Never on the list, whatever it grows into (§5.2): prefixes of /api paths, and single routes.
 NEVER_PREFIXES: tuple[str, ...] = (
@@ -233,6 +246,15 @@ class GatewayMiddleware:
             response.headers.update(NO_STORE)
             await response(scope, receive, send)
             return
+        keys = BODY_KEYS.get((method, template))
+        if keys is not None:
+            body = await _read_all(receive)
+            if not _only_keys(body, keys):
+                response = ApiProblem(403, ONLY_KEYS.format(keys=", ".join(sorted(keys)))).response()
+                response.headers.update(NO_STORE)
+                await response(scope, receive, send)
+                return
+            receive = _replay(body)
         inner = dict(scope)
         inner["path"] = api_path
         inner["raw_path"] = api_path.encode("utf-8")
@@ -250,6 +272,44 @@ class GatewayMiddleware:
             await send(message)
 
         await self.app(inner, receive, send_no_store)
+
+
+async def _read_all(receive: Receive) -> bytes:
+    chunks: list[bytes] = []
+    size = 0
+    while True:
+        message = await receive()
+        if message["type"] != "http.request":
+            break
+        chunk = message.get("body", b"")
+        size += len(chunk)
+        if size > MAX_KEYS_BODY:
+            return b""  # far more than two settings: refused below
+        chunks.append(chunk)
+        if not message.get("more_body", False):
+            break
+    return b"".join(chunks)
+
+
+def _only_keys(raw: bytes, keys: frozenset[str]) -> bool:
+    try:
+        doc = json.loads(raw)
+    except (ValueError, UnicodeDecodeError):
+        return False
+    return isinstance(doc, dict) and bool(doc) and set(doc) <= keys
+
+
+def _replay(body: bytes) -> Receive:
+    sent = False
+
+    async def receive() -> Message:
+        nonlocal sent
+        if not sent:
+            sent = True
+            return {"type": "http.request", "body": body, "more_body": False}
+        return {"type": "http.disconnect"}
+
+    return receive
 
 
 # --------------------------------------------------------------------------- #
@@ -286,6 +346,13 @@ class AboutSync(BaseModel):
     changes: bool = Field(description="The change feed (`GET` and `POST /push/v1/changes`, `POST /push/v1/match`).")
 
 
+class AboutFeatures(BaseModel):
+    usda_search: bool = Field(description="As `services.usda_search`.")
+    barcode: bool = Field(description="As `services.barcode`.")
+    ai: bool = Field(description="As `ai.available`.")
+    changes: bool = Field(description="As `sync.changes`.")
+
+
 class About(BaseModel):
     account: str = Field(description="Opaque and stable for this person on this server; names neither. A new value means a "
                                      "different account or server.")
@@ -296,6 +363,7 @@ class About(BaseModel):
     ai: AboutAi
     services: AboutServices
     capabilities: meta.Capabilities
+    features: AboutFeatures
 
 
 def account_key(request: Request, user_id: int) -> str:
@@ -321,10 +389,11 @@ def about_view(request: Request, conn: sqlite3.Connection, user: User, *, change
                      "barcode_usda": caps["barcode_usda"], "recipe_import": recipe_import_api.web_enabled(request, conn),
                      "instacart": instacart.enabled(request, conn), "list_sync": list_sync_api.enabled(request, conn)},
         "capabilities": caps,
+        "features": {"usda_search": usda, "barcode": caps["barcode"], "ai": bool(view and view["available"]), "changes": changes},
     }
 
 
-CHANGE_FEED = False  # design note 39 step 5 turns this on with the routes of app/sync_feed.py
+CHANGE_FEED = True  # design note 39 step 5: GET and POST /push/v1/changes and POST /push/v1/match (app/sync_feed.py)
 
 
 @router.get(ABOUT_PATH, response_model=About, summary="What this server offers the iPhone app (token with app:sync)")

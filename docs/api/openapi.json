@@ -159,6 +159,9 @@
           "capabilities": {
             "$ref": "#/components/schemas/Capabilities"
           },
+          "features": {
+            "$ref": "#/components/schemas/AboutFeatures"
+          },
           "gateway": {
             "items": {
               "$ref": "#/components/schemas/AboutRoute"
@@ -181,7 +184,8 @@
           "gateway",
           "ai",
           "services",
-          "capabilities"
+          "capabilities",
+          "features"
         ],
         "title": "About",
         "type": "object"
@@ -211,6 +215,38 @@
           "routes"
         ],
         "title": "AboutAi",
+        "type": "object"
+      },
+      "AboutFeatures": {
+        "properties": {
+          "ai": {
+            "description": "As `ai.available`.",
+            "title": "Ai",
+            "type": "boolean"
+          },
+          "barcode": {
+            "description": "As `services.barcode`.",
+            "title": "Barcode",
+            "type": "boolean"
+          },
+          "changes": {
+            "description": "As `sync.changes`.",
+            "title": "Changes",
+            "type": "boolean"
+          },
+          "usda_search": {
+            "description": "As `services.usda_search`.",
+            "title": "Usda Search",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "usda_search",
+          "barcode",
+          "ai",
+          "changes"
+        ],
+        "title": "AboutFeatures",
         "type": "object"
       },
       "AboutRoute": {
@@ -30227,6 +30263,151 @@
         ]
       }
     },
+    "/push/v1/changes": {
+      "delete": {
+        "operationId": "push_changes_delete_not_allowed",
+        "responses": {
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          }
+        },
+        "summary": "Not offered: GET and POST only (405)",
+        "tags": [
+          "push"
+        ]
+      },
+      "get": {
+        "description": "The person's changes since ``after``: the module docstring has the whole contract.",
+        "operationId": "push_read_changes",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "After"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 500,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "401": {
+            "$ref": "#/components/responses/BearerUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "deviceToken": []
+          }
+        ],
+        "summary": "The changes since a cursor (token with app:sync)",
+        "tags": [
+          "push"
+        ]
+      },
+      "patch": {
+        "operationId": "push_changes_patch_not_allowed",
+        "responses": {
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          }
+        },
+        "summary": "Not offered: GET and POST only (405)",
+        "tags": [
+          "push"
+        ]
+      },
+      "post": {
+        "description": "Each change through its route's ``PUT`` or ``DELETE`` with ``If-Match``; the module docstring has the whole contract.",
+        "operationId": "push_post_changes",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/BearerUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "deviceToken": []
+          }
+        ],
+        "summary": "Send edits and deletes made on the iPhone (token with app:sync)",
+        "tags": [
+          "push"
+        ]
+      },
+      "put": {
+        "operationId": "push_changes_put_not_allowed",
+        "responses": {
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          }
+        },
+        "summary": "Not offered: GET and POST only (405)",
+        "tags": [
+          "push"
+        ]
+      }
+    },
     "/push/v1/check": {
       "delete": {
         "description": "``405`` for every method but GET on ``/push/v1/check``.",
@@ -30313,6 +30494,97 @@
           }
         },
         "summary": "Not offered: GET only (405)",
+        "tags": [
+          "push"
+        ]
+      }
+    },
+    "/push/v1/match": {
+      "delete": {
+        "operationId": "push_match_delete_not_allowed",
+        "responses": {
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          }
+        },
+        "summary": "Not offered: POST only (405)",
+        "tags": [
+          "push"
+        ]
+      },
+      "get": {
+        "operationId": "push_match_get_not_allowed",
+        "responses": {
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          }
+        },
+        "summary": "Not offered: POST only (405)",
+        "tags": [
+          "push"
+        ]
+      },
+      "patch": {
+        "operationId": "push_match_patch_not_allowed",
+        "responses": {
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          }
+        },
+        "summary": "Not offered: POST only (405)",
+        "tags": [
+          "push"
+        ]
+      },
+      "post": {
+        "description": "``{\"known\": {kind: {phone id: server id}}, \"unknown\": {kind: [ids]}}``; the module docstring has the whole contract.",
+        "operationId": "push_post_match",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/BearerUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "deviceToken": []
+          }
+        ],
+        "summary": "This server's ID for each of the phone's rows (token with app:sync)",
+        "tags": [
+          "push"
+        ]
+      },
+      "put": {
+        "operationId": "push_match_put_not_allowed",
+        "responses": {
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          }
+        },
+        "summary": "Not offered: POST only (405)",
         "tags": [
           "push"
         ]

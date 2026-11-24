@@ -54,6 +54,7 @@ import test_care_notes
 import test_app_sync
 import test_migration_m037
 import test_migration_m038
+import test_sync_feed
 from ai_support import FakeProvider, attach, chat
 from conftest import DAY, HTTPS_URL, TestClient, add_user, find_food, sign_in
 from app.config import AiEnv
@@ -141,7 +142,8 @@ MATRIX: dict[str, tuple[str, ...]] = {
                       "test_app_sync.test_where_each_token_works",
                       "test_migration_m037.test_a_step_36_database_gains_the_table_checks_and_cascades"),
     "sync_changes": ("test_migration_m038.test_deleting_an_account_deletes_its_changes_and_writes_no_tombstone",  # step 38 (note 39)
-                     "test_migration_m038.test_ids_are_unique_per_person_and_checked"),
+                     "test_migration_m038.test_ids_are_unique_per_person_and_checked",
+                     "test_sync_feed.test_another_persons_rows_never_reach_the_feed_or_the_writes"),
     "sync_purged": ("test_migration_m038.test_deleting_an_account_deletes_its_changes_and_writes_no_tombstone",),
     "reminders": ("test_reminders.test_another_persons_ids_are_404",  # reminders by phone notification, step 35 (note 35)
                   "test_reminders.test_deleting_the_account_deletes_its_reminders_and_devices",
@@ -187,7 +189,8 @@ MODULES = {"test_reset_email": test_reset_email, "test_isolation": test_isolatio
            "test_care_team_full": test_care_team_full, "test_migration_m031": test_migration_m031,
            "test_list_sync": test_list_sync, "test_migration_m032": test_migration_m032,
            "test_reminders": test_reminders, "test_migration_m035": test_migration_m035, "test_care_notes": test_care_notes,
-           "test_app_sync": test_app_sync, "test_migration_m037": test_migration_m037, "test_migration_m038": test_migration_m038}
+           "test_app_sync": test_app_sync, "test_migration_m037": test_migration_m037, "test_migration_m038": test_migration_m038,
+           "test_sync_feed": test_sync_feed}
 
 
 def _tables_with_people(conn: sqlite3.Connection) -> dict[str, list[str]]:

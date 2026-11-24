@@ -32,7 +32,8 @@
 	# running elsewhere, or a phone shortcut away from home): a second name that passes only the token
 	# routes, and answers 404 to everything else: POST /mcp (docs/assistant.md), POST /push/v1/body, the
 	# iPhone app's token check GET /push/v1/check, POST and GET /push/v1/sync (the app's rows), and for the
-	# iPhone app both ways GET /push/v1/about and the gateway /push/v1/api/... (docs/push.md). The sign-in
+	# iPhone app both ways GET /push/v1/about, the gateway /push/v1/api/..., the change feed GET and POST
+	# /push/v1/changes and POST /push/v1/match (docs/push.md). The sign-in
 	# page, the API and the rest of the app stay on the LAN-only name above. All of these carry a token
 	# (Authorization: Bearer ...), so do not put a login in front of this name. Also: add the name to
 	# ALLOWED_HOSTS, point its DNS at this machine, and turn on only the switches you use (Assistant access,
@@ -56,7 +57,7 @@
 	# 		reverse_proxy kidney-health:8000
 	# 	}
 	# 	@twoway {
-	# 		path /push/v1/about /push/v1/api/*
+	# 		path /push/v1/about /push/v1/api/* /push/v1/changes /push/v1/match
 	# 	}
 	# 	handle @twoway {
 	# 		reverse_proxy kidney-health:8000

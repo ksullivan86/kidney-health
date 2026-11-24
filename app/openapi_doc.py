@@ -57,6 +57,9 @@ BEARER_OPERATIONS: dict[tuple[str, str], str] = {
     ("post", "/push/v1/sync"): DEVICE_TOKEN,  # an app token (scope app:add, design note 38 §5.5)
     ("get", "/push/v1/sync"): DEVICE_TOKEN,
     ("get", "/push/v1/about"): DEVICE_TOKEN,  # a token with app:sync (design note 39 §5.3)
+    ("get", "/push/v1/changes"): DEVICE_TOKEN,  # the change feed (design note 39 §8.4)
+    ("post", "/push/v1/changes"): DEVICE_TOKEN,
+    ("post", "/push/v1/match"): DEVICE_TOKEN,
 }
 # The stubs that answer 405 for the methods a bearer route does not offer. ``/mcp`` answers 404 first while ``assistant.enabled`` is off.
 NOT_ALLOWED_SUFFIX = "_not_allowed"
@@ -82,6 +85,7 @@ CONFLICT: frozenset[str] = frozenset({
 })
 UNSUPPORTED_MEDIA: frozenset[str] = frozenset({
     "vision_read_label", "vision_plate", "vision_read_lab_report", "ai_transcribe", "me_import_my_data", "push_body", "push_sync",
+    "push_post_changes", "push_post_match",
 })
 RATE_LIMITED: frozenset[str] = frozenset({
     "auth_login", "auth_setup", "auth_register", "auth_reset_info", "auth_reset", "auth_reauth",
@@ -89,7 +93,8 @@ RATE_LIMITED: frozenset[str] = frozenset({
     "admin_set_shared_key", "admin_probe_ai_provider", "admin_probe_voice", "ai_probe_my_provider",
     "body_create_weights", "body_create_readings", "barcode_lookup", "foods_usda_search", "foods_usda_import",
     "ai_next_meal", "ai_parse_meal", "ai_chat", "ai_transcribe", "vision_read_label", "vision_plate", "vision_read_lab_report",
-    "mcp_post", "push_body", "push_check", "push_sync", "push_sync_check", "push_about", "me_enable_totp",
+    "mcp_post", "push_body", "push_check", "push_sync", "push_sync_check", "push_about", "push_read_changes",
+    "push_post_changes", "push_post_match", "me_enable_totp",
     "me_passkey_creation_options", "auth_passkey_request_options", "auth_passkey_sign_in", "auth_passkey_reauth_options",
     "auth_passkey_reauth", "shared_share_link_info", "shared_accept_share_link", "me_invite_by_username",
     "shared_send_suggestion", "shared_write_note",

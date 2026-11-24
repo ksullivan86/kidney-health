@@ -31,6 +31,11 @@ the API. Security fixes are released as patch versions of the newest minor versi
   admin, and never anything that needs your password. Lab reports still go only to a local AI. `GET /push/v1/about` tells the app what
   the server offers. An admin turns it on with a new switch, off by default. Tokens made for the iPhone app before are not changed
   ([docs/push.md](docs/push.md)).
+* The server keeps a list of changes for the iPhone app (design note 39, step 5, the server side). Every row of your log has one ID
+  on every device. The app can read what changed since it last asked, and send its edits and deletes. A change made on another
+  device is never overwritten without asking you. Foods, saved meals, lab results, symptoms, weights and blood pressure readings now
+  have versions like food log entries, and their change and delete routes accept `If-Match`. The export carries each row's ID, and
+  an import keeps it.
 
 ### Upgrading
 
@@ -40,6 +45,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * New setting `PUSH_APP_SYNC` (Server administration → Server settings → Phone shortcuts), off by default. It works only while
   `PUSH_ENABLED` is on. Nothing changes until you turn it on. If a reverse proxy lists paths, also pass `/push/v1/about` and
   `/push/v1/api/` (the Caddy example does).
+* Schema step 38 gives every food of your own, saved meal, lab result, symptom, weight and blood pressure reading an ID, and adds
+  the list of changes (`sync_changes`, `sync_purged`). It runs once at start and changes no value. Proxies that list paths also pass
+  `/push/v1/changes` and `/push/v1/match`.
 
 ## 0.24.1 — 2026-11-20
 

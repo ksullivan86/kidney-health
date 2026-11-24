@@ -265,7 +265,9 @@ def test_the_allow_list_is_pinned(anon_client):
         ("POST", "/api/ai/transcribe"), ("POST", "/api/vision/label"), ("POST", "/api/vision/plate"),
         ("POST", "/api/ai/read-lab-report"), ("POST", "/api/ai/read-lab-report-text"),
         ("GET", "/api/foods/usda/search"), ("POST", "/api/foods/usda/import"), ("POST", "/api/foods/barcode"),
+        ("PATCH", "/api/me/settings"), ("PATCH", "/api/me/ai"),
     }
+    assert app_gateway.BODY_KEYS == {("PATCH", "/api/me/settings"): {"food.off_consent"}, ("PATCH", "/api/me/ai"): {"opt_in"}}
     from app.auth.deps import current_user
 
     by_op = {(m, p): r for m, p, r in app_gateway.walk_routes(anon_client.app.routes)}
@@ -287,6 +289,24 @@ def test_the_allow_list_is_pinned(anon_client):
         calls = _dependency_calls(route)
         if require_recent_auth in calls or require_admin in calls:
             assert never_allowed(method, path) or path.startswith("/api/admin/"), (method, path)
+
+
+def test_two_settings_and_only_those_keys(admin, token):
+    """The phone may set the person's Open Food Facts consent and AI opt-in, and nothing else of the settings."""
+    r = call(admin.app, token, "PATCH", f"{GATEWAY}/me/settings", json={"food.off_consent": True})
+    assert r.status_code == 200, r.text
+    assert admin.get("/api/me/settings").json()["settings"]["food.off_consent"]["value"] is True
+    for body in ({"food.off_consent": True, "ui.theme": "dark"}, {"ui.theme": "dark"}, {}, [], "x"):
+        r = call(admin.app, token, "PATCH", f"{GATEWAY}/me/settings", json=body)
+        assert r.status_code == 403 and r.json()["detail"] == "From the iPhone app this can change only: food.off_consent.", body
+    r = call(admin.app, token, "PATCH", f"{GATEWAY}/me/settings", content=b"{not json", headers={"Content-Type": "application/json"})
+    assert r.status_code == 403
+    assert admin.get("/api/me/settings").json()["settings"]["ui.theme"]["value"] == "system"
+    r = call(admin.app, token, "PATCH", f"{GATEWAY}/me/ai", json={"opt_in": True, "trust": "high"})
+    assert r.status_code == 403
+    r = call(admin.app, token, "PATCH", f"{GATEWAY}/me/ai", json={"opt_in": True})
+    assert r.status_code in (200, 404), r.text  # 404 while the AI is off, as for every AI route
+    assert call(admin.app, token, "PUT", f"{GATEWAY}/me/settings", json={"food.off_consent": True}).status_code == 404  # PATCH only
 
 
 def test_about_names_the_list(admin, token):
@@ -367,7 +387,9 @@ def test_about_answers_what_this_server_offers_this_person(admin, token):
     r = call(admin.app, token, "GET", ABOUT)
     assert r.status_code == 200 and r.headers["cache-control"] == "no-store"
     about = r.json()
-    assert set(about) == {"account", "api_version", "app_version", "sync", "gateway", "ai", "services", "capabilities"}
+    assert set(about) == {"account", "api_version", "app_version", "sync", "gateway", "ai", "services", "capabilities", "features"}
+    assert about["features"] == {"usda_search": about["services"]["usda_search"], "barcode": about["services"]["barcode"], "ai": False,
+                                 "changes": True}
     assert re.fullmatch(r"[0-9a-f]{32}", about["account"])
     assert about["sync"] == {"gateway": True, "changes": app_gateway.CHANGE_FEED}
     assert about["ai"] == {"enabled": False, "available": False, "routes": {}}

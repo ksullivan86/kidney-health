@@ -37,7 +37,7 @@ off: it says "Your admin has not turned this on", shows no form, and lets a pers
 **The phone must reach the server.** On your home network, or through the VPN you reach the server by. A server on a private network is
 not reachable from mobile data without one. If a reverse proxy lists the paths it passes on, add `/push/v1/` next to `/mcp`; the routes
 are `POST /push/v1/body`, the token check `GET /push/v1/check`, the iPhone app's `POST` and `GET /push/v1/sync` (below), and for the
-app both ways `GET /push/v1/about` and everything under `/push/v1/api/`. To let a phone reach them from beyond your LAN without opening
+app both ways `GET /push/v1/about`, everything under `/push/v1/api/`, `GET` and `POST /push/v1/changes` and `POST /push/v1/match`. To let a phone reach them from beyond your LAN without opening
 the rest of the app, use the commented second host name in `deploy/caddy/Caddyfile.example`; it passes only these requests and
 `POST /mcp` ([assistant.md](assistant.md)). A VPN is simpler and safer.
 
@@ -269,6 +269,7 @@ phone, the person makes a new token and pairs again.
    | `POST /api/vision/label`, `/api/vision/plate` | label and plate photos |
    | `POST /api/ai/read-lab-report`, `/api/ai/read-lab-report-text` | lab report photos and text: on the local AI only |
    | `GET /api/foods/usda/search`, `POST /api/foods/usda/import`, `POST /api/foods/barcode` | the server's food services, with its keys |
+   | `PATCH /api/me/settings` with only `food.off_consent`, `PATCH /api/me/ai` with only `opt_in` | the person's Open Food Facts consent and AI opt-in. Any other key is `403` and the route does not run |
 
    **Never on it:** anything that needs the password again, admin routes, sign-in, tokens, sessions, keys and AI providers, sharing,
    the import, the `.zip` export, and deleting or changing the account. A test pins the list.
@@ -293,19 +294,73 @@ What this server offers this person, so the phone can choose without trying each
 ```json
 {"account": "5f1d0c1e9a8b7c6d5e4f3a2b1c0d9e8f",
  "api_version": 1, "app_version": "0.24.1",
- "sync": {"gateway": true, "changes": false},
+ "sync": {"gateway": true, "changes": true},
  "gateway": [{"method": "GET", "path": "/api/ai/status"}, …],
  "ai": {"enabled": true, "available": true, "routes": {"meal_ideas": {…}, "labs": {…}, …}},
  "services": {"usda_search": true, "barcode": true, "barcode_off": false, "barcode_usda": true,
               "recipe_import": false, "instacart": false, "list_sync": false},
- "capabilities": {…}}
+ "capabilities": {…},
+ "features": {"usda_search": true, "barcode": true, "ai": true, "changes": true}}
 ```
 
 * `account` is the same for every token of this person on this server, and different for anyone else. It is a keyed hash of the
   person's id, so it names neither the person nor the server. The phone keeps it to notice a different account or server. It changes
   if the server's `SECRET_KEY` is replaced; the phone then asks once.
 * `ai.routes` is `routes` of `GET /api/ai/status`; `capabilities` is that of `GET /api/meta`.
-* `sync.changes` says whether this server has the change feed of the note's later step.
+* `features` repeats the four answers the phone needs first: `services.usda_search`, `services.barcode`, `ai.available` and
+  `sync.changes`.
+* `200` means the token works both ways. A token that only adds gets `401`, and a server older than this gets `404`.
+* An AI route answers `404` while the AI is off for the person, as on the web. The phone then uses its own AI.
+
+### The change feed
+
+Step 5 of the note. Every row the phone syncs has one ID on every device, its `client_id`: the person's own foods, food log
+entries, saved meals and recipes, lab results, symptoms, weights and blood pressure readings. Rows the iPhone app added before
+keep the phone's ID. The server records every change, whoever made it (the web app, an import, the Care team, the assistant, the
+phone), and keeps a marker for each delete for 180 days.
+
+**`GET /push/v1/changes?after=<next>&limit=<1 to 500>`** answers what changed since the last answer, oldest first, and only
+the latest state of each row:
+
+```json
+{"changes": [{"kind": "entry", "id": "7c9e6679-…", "op": "put", "version": "3f0c…", "row": {…, "food": {"builtin": {"fdc_id": 173944, "name": "Banana, raw"}}}},
+             {"kind": "lab", "id": "886313e1-…", "op": "delete", "version": null}],
+ "foods": [{"ref": {"client_id": "0f8fad5b-…"}, "food": {…}}],
+ "next": "1234", "more": false}
+```
+
+* `kind` is `food`, `entry`, `meal`, `lab`, `symptom`, `weight` or `reading`. `row` has the export's shape, with `client_id`.
+  An entry's food, and each saved meal item's, is named as `POST /push/v1/sync` names it. `foods` holds the foods (not
+  built-in) that this answer's rows use.
+* `version` is the row's version (below). Send `next` back as `after` until `more` is false. Without `after`, or with `0`, the
+  feed starts at the beginning.
+* A cursor older than the delete markers kept is `410 {"resync": true}`: read everything again from `0`.
+* At most 120 reads an hour for each token.
+
+**Versions.** Every kind has a version, as entries do: a hash of what the person sees of the row, so the same content has the
+same version everywhere. The browser's copy is `app/static/js/engine/row_versions.js`. Each kind's `PUT` and `DELETE` route in
+`/api` takes `If-Match: "<version>"` and answers `412` with the row as stored when it changed. Without the header they work as
+before. Lab results have no edits, so only their delete takes it.
+
+**`POST /push/v1/changes`** sends edits and deletes made on the phone:
+
+```json
+{"changes": [{"kind": "entry", "id": "7c9e6679-…", "op": "edit", "base": "3f0c…", "fields": {"servings": 2}},
+             {"kind": "weight", "id": "c56a4180-…", "op": "delete", "base": "91aa…"}]}
+```
+
+* `base` is the version the change was made on. `fields` is the body of that kind's `PUT` route. An edit may also carry
+  `version`, the version of the phone's copy after the change.
+* Each change runs through its route with `If-Match`, and has its own answer in `results`, in order: `done` with the new
+  version; `conflict` with the row as stored and its version, when the row changed since `base`; `gone` when the row is not
+  here; `refused` with the reason. One answer never stops the others. Nothing is ever overwritten without a question.
+* The same edit made on both sides is `done`, not a conflict: send `version` and the server compares.
+* At most 200 changes and 256 KiB a request.
+
+**`POST /push/v1/match`** helps the first two-way sync of a phone that already sent rows:
+`{"ids": {"entry": ["<phone id>", …], …}}` answers `{"known": {"entry": {"<phone id>": "<server id>"}}, "unknown": {"entry": […]}}`.
+A row the phone sent that matched a row already here is named by that row's ID. At most 2,000 IDs a request. `POST` requests to
+`/changes` and `/match` share 120 an hour for each token.
 
 ## Pairing the iPhone app by QR code
 
@@ -380,4 +435,7 @@ are never sent to an AI provider or the assistant, like the rest of the weight a
   (`GatewayCaller`), the Origin rule and the body limit in `app/security.py`, the `push.app_sync` key. Tests: `tests/test_app_gateway.py`
   (the list pinned, the isolation matrix through the gateway, the AI's rules), the two-way parts of `tests/test_auth_coverage.py` and
   `tests/test_push_ui.py`.
+* The change feed: `app/sync_feed.py`, schema step 38 (`app/migrations/m038_change_feed.py`), versions in `app/row_versions.py` and
+  `app/static/js/engine/row_versions.js` (vectors `tests/data/row_version_vectors.json`). Tests: `tests/test_sync_feed.py`,
+  `tests/test_migration_m038.py`, `tests/test_row_versions.py`.
 * `/push/v1` is a promise: a change that breaks it gets `/push/v2`, and v1 keeps working for at least one release.

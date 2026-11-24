@@ -25,6 +25,7 @@ from . import body  # schema step 18: /api/body (weight and blood pressure)
 from . import push  # schema step 19: POST /push/v1/body (device tokens) and DELETE /api/me/tokens/{id}/body-rows
 from . import app_sync  # schema step 37: POST /push/v1/sync, the iPhone app sends the rows it made (design note 38 §5.5)
 from . import app_gateway  # design note 39 §5: the iPhone app's gateway /push/v1/api/ and GET /push/v1/about (token with app:sync)
+from . import sync_feed  # schema step 38: the change feed, GET and POST /push/v1/changes and POST /push/v1/match (design note 39 §8)
 from .guidance import api as guidance_api  # M2 guidance: /api/guidance
 from . import handbook  # M3: the handbook at /learn and /api/handbook
 from . import barcode  # M2 barcode: POST /api/foods/barcode
@@ -189,6 +190,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.include_router(push.api_router)
     app.include_router(app_sync.router)  # schema step 37: POST /push/v1/sync (app tokens, design note 38 §5.5)
     app.include_router(app_gateway.router)  # design note 39 §5.3: GET /push/v1/about (tokens with app:sync)
+    app.include_router(sync_feed.router)  # schema step 38: the change feed (tokens with app:sync, design note 39 §8)
     app.include_router(data_import.router)
     app.include_router(meta.router)
     app.include_router(sharing.me_router)

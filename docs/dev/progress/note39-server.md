@@ -1,6 +1,6 @@
 # note39-server progress
 
-Status: in progress (step 2 done and committed; step 5 next)
+Status: in progress (steps 2 and 5 built; full suite running)
 
 Task: server side of design note 39 (docs/dev/research/39-iphone-app-with-a-server.md): plan step 2 (gateway, `app:sync` token kind,
 `push.app_sync`, `GET /push/v1/about`, Settings choice, Caddy), then step 5 (change feed).
@@ -61,7 +61,15 @@ Done (checkpoint 2):
 * Decision: normal API answers do not carry `version` for the new kinds (the 412, the feed and the JS twin give it).
 * Decision: the mock demo's routes (js/mock/*) are not changed (another helper owns them), so the demo has no If-Match for these kinds.
 
-Next: `app/sync_feed.py`: GET /push/v1/changes, POST /push/v1/changes, POST /push/v1/match; tombstone purge (daily housekeeping, 410);
-BEARER_PATHS, openapi BEARER_OPERATIONS, CHANGE_FEED=True, Caddy, docs, tests (tests/test_sync_feed.py + matrix).
+Done (checkpoint 3):
+* `app/sync_feed.py`: GET/POST /push/v1/changes, POST /push/v1/match, 405 stubs, limits push_changes / push_changes_write (120/h),
+  daily tombstone purge (180 days) and 410. Wired in main.py, BEARER_PATHS, openapi BEARER_OPERATIONS; CHANGE_FEED = True.
+  Tests tests/test_sync_feed.py (21); isolation MATRIX entry.
+* Coordinator's phone contract: gateway also allows PATCH /api/me/settings (only food.off_consent) and PATCH /api/me/ai (only opt_in),
+  enforced in GatewayMiddleware by BODY_KEYS (403 otherwise); about gained `features: {usda_search, barcode, ai, changes}`.
+  NOTE: the phone said PUT me/settings; the server route is PATCH (told the coordinator).
+* Docs: push.md (change feed section), ARCHITECTURE (change feed section), CHANGELOG, Caddy, note 39 status + "differs" subsection.
+
+Next: check the full suite result, fix anything, mark complete, report.
 
 Venv: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/venv-new/bin/python; ruff at /root/.local/bin/ruff.
