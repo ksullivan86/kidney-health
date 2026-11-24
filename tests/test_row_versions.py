@@ -168,3 +168,32 @@ def test_not_yours_is_404_whatever_the_header_says(two_clients, kind):
             body = _edit_body(kind, row, find_food(admin, "apple")["id"])
             assert sam.put(url, json=body, headers=header).status_code == 404, header
     assert admin.delete(url, headers=_q(version)).status_code == 204  # it was there all along
+
+
+# --------------------------------------------------------------------------- the demo's twins (CLAUDE.md "Parity")
+
+
+def test_the_request_script_covers_every_kinds_if_match():
+    """The script the demo replays (``node tests/js/run_vectors.mjs``) holds, for each kind, a change with the right version, a 412
+    with the row as stored, and a delete; a food's and a saved meal's 412 carry the row's client_id, as the server's row does."""
+    script = json.loads((DATA / "row_version_vectors.json").read_text(encoding="utf-8"))["script"]
+    for kind in ("food", "meal", "symptom", "weight", "reading", "lab"):
+        steps = [s for s in script if s["kind"] == kind]
+        for method in ({"DELETE"} if kind == "lab" else {"PUT", "DELETE"}):
+            assert any(s["method"] == method and s["answer"].get("status") == 412 and "current" in s["answer"] for s in steps), (kind, method)
+            assert any(s["method"] == method and s["answer"]["ok"] and "if_match" in s for s in steps), (kind, method)
+        for s in steps:
+            if s["answer"].get("status") == 412:
+                assert s["answer"]["current_has_client_id"] is (kind in ("food", "meal")), s["name"]
+    assert any(s["answer"].get("status") == 400 and "if_match" in s for s in script)  # the body is checked first
+    assert any(s["answer"].get("status") == 404 and "if_match" in s for s in script)
+
+
+@pytest.mark.skipif(shutil.which("node") is None, reason="node is not installed")
+def test_the_demo_gives_every_row_an_id_and_the_file_keeps_it():
+    """``tests/js/row_ids_demo.mjs``: a client_id for every new row of every kind in the demo and on the phone, in the export, kept by
+    the import when it is free, and filled in for a log kept from before."""
+    done = subprocess.run(["node", str(ROOT / "tests" / "js" / "row_ids_demo.mjs")], capture_output=True, text=True, timeout=300,
+                          check=False)
+    assert done.returncode == 0, done.stdout[-2000:] + done.stderr[-2000:]
+    assert "row ids demo:" in done.stdout

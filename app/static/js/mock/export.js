@@ -28,23 +28,27 @@
       const settings = {};
       for (const key of Object.keys(own).sort()) settings[key] = JSON.parse(JSON.stringify(own[key]));
 
-      const entries = this._fetchEntries().map((row) => { const v = this._entryView(row); delete v.version; return v; }); // the version is derived, not data
-      const customFoods = this._foods.filter((f) => f.source === 'custom').sort(byId).map((f) => this._foodView(f));
+      // log.entry_fields: the version is derived, not data, and the Care helper's name is not in the file (as on the server)
+      const entries = this._fetchEntries().map((row) => { const v = this._entryView(row); delete v.version; delete v.added_by; return v; });
+      // client_id (schema step 38, design note 39 §8.2): every synced row's ID on every device; a shared food has none.
+      const customFoods = this._foods.filter((f) => f.source === 'custom').sort(byId).map((f) => ({ ...this._foodView(f), client_id: f.client_id || null }));
       const linked = this._foods.filter((f) => f.source !== 'builtin' && f.source !== 'custom' && this._foodLinks().has(f.id)).sort(byId)
-        .map((f) => ({ id: f.id, name: f.name, source: f.source, fdc_id: f.fdc_id, linked_at: null, gtin: f.gtin || null, food: this._foodView(f) }));
-      const templates = this._templates.slice().sort(byId).map((t) => this._templateView(t));
+        .map((f) => ({ id: f.id, name: f.name, source: f.source, fdc_id: f.fdc_id, linked_at: null, gtin: f.gtin || null,
+          food: { ...this._foodView(f), client_id: null } }));
+      const templates = this._templates.slice().sort(byId).map((t) => { const v = this._templateView(t); return { id: v.id, client_id: t.client_id || null, ...v }; });
       const labs = this._labsOf(uid).slice().sort((a, b) => (a.taken_on < b.taken_on ? -1 : a.taken_on > b.taken_on ? 1 : a.id - b.id)).map((r) => ({
         id: r.id, analyte: r.analyte, value: r.value, unit: (KH.kidney.ANALYTES[r.analyte] || {}).canonical_unit || '',
-        entered_value: r.entered_value, entered_unit: r.entered_unit, taken_on: r.taken_on, note: r.note, created_at: r.created_at }));
+        entered_value: r.entered_value, entered_unit: r.entered_unit, taken_on: r.taken_on, note: r.note, created_at: r.created_at, client_id: r.client_id || null }));
       const symptoms = this._symptomsOf(uid).slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id)).map((r) => ({
-        id: r.id, date: r.date, symptom: r.symptom, label: r.label, severity: r.severity, note: r.note, created_at: r.created_at }));
+        id: r.id, date: r.date, symptom: r.symptom, label: r.label, severity: r.severity, note: r.note, created_at: r.created_at, client_id: r.client_id || null }));
       // weights and blood_pressures (schema step 18): the stored columns, oldest day first (app/body.py export_weights / export_readings)
       const BR = KH.bodyRules;
       const weights = this._weightsOf(uid).slice().sort(BR.compareRows).map((r) => ({ id: r.id, date: r.date, time: r.time, kg: r.kg, context: r.context,
-        note: r.note || '', source: r.source, source_key: r.source_key == null ? null : r.source_key, created_at: r.created_at, updated_at: r.updated_at }));
+        note: r.note || '', source: r.source, source_key: r.source_key == null ? null : r.source_key, created_at: r.created_at, updated_at: r.updated_at,
+        client_id: r.client_id || null }));
       const bloodPressures = this._readingsOf(uid).slice().sort(BR.compareRows).map((r) => ({ id: r.id, date: r.date, time: r.time, systolic: r.systolic,
         diastolic: r.diastolic, pulse: r.pulse, context: r.context, note: r.note || '', source: r.source, source_key: r.source_key == null ? null : r.source_key,
-        created_at: r.created_at, updated_at: r.updated_at }));
+        created_at: r.created_at, updated_at: r.updated_at, client_id: r.client_id || null }));
       // food_preferences (schema steps 5 and 17): every preference of the person, with who set it and when it last changed.
       const prefs = [...this._foodPreferences().entries()].map(([foodId, row]) => ({ food: this._food(foodId), row }))
         .filter((p) => p.food).sort((a, b) => a.food.id - b.food.id)

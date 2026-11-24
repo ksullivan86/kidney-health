@@ -24,7 +24,7 @@ from app import app_gateway
 from app.app_gateway import ALLOWED, NOT_ON_LIST, Allowed, never_allowed
 from app.auth import api_tokens
 from app.auth.deps import CurrentUser, require_admin, require_recent_auth
-from conftest import DAY, HTTPS_URL, TestClient, add_user, make_settings, sign_in, signed_in_client
+from conftest import DAY, HTTPS_URL, TestClient, add_user, find_food, make_settings, sign_in, signed_in_client
 from test_api_tokens import audit_rows, make
 from test_auth_coverage import _walk
 from test_push import bare, make_device
@@ -266,7 +266,14 @@ def test_the_allow_list_is_pinned(anon_client):
         ("POST", "/api/ai/read-lab-report"), ("POST", "/api/ai/read-lab-report-text"),
         ("GET", "/api/foods/usda/search"), ("POST", "/api/foods/usda/import"), ("POST", "/api/foods/barcode"),
         ("PATCH", "/api/me/settings"), ("PATCH", "/api/me/ai"),
+        # step 9: recipe pages, Instacart and the list app; never the list app's set-up (its address and key)
+        ("GET", "/api/recipe-import"), ("POST", "/api/recipe-import/page"),
+        ("GET", "/api/instacart"), ("POST", "/api/instacart/preview"), ("POST", "/api/instacart/send"),
+        ("GET", "/api/list-sync"), ("POST", "/api/list-sync/preview"), ("POST", "/api/list-sync/send"),
     }
+    for method in ("PUT", "DELETE"):
+        assert (method, "/api/list-sync") not in ALLOWED
+    assert ("POST", "/api/list-sync/test") not in ALLOWED
     assert app_gateway.BODY_KEYS == {("PATCH", "/api/me/settings"): {"food.off_consent"}, ("PATCH", "/api/me/ai"): {"opt_in"}}
     from app.auth.deps import current_user
 
@@ -610,6 +617,117 @@ def test_the_bearer_paths_and_the_document_agree():
     assert security.is_gateway_path("/push/v1/api/ai/status") and security.is_gateway_path("/push/v1/api")
     assert not security.is_gateway_path("/push/v1/apix") and not security.is_gateway_path("/api/ai/status")
     assert security.gateway_api_path("/push/v1/api/ai/status") == "/api/ai/status"
+
+
+# --------------------------------------------------------------------------- #
+# Step 9: recipe pages, Instacart and the list app through the gateway
+# --------------------------------------------------------------------------- #
+
+RECIPE_URL = "https://recipes.example.com/lemon-chicken"
+
+
+@pytest.fixture
+def services(tmp_path, foods_json) -> Iterator[tuple[TestClient, TestClient, str, Any, Any, Any]]:
+    """A (the admin) and B, B's token both ways, and the three services on with fakes behind the server's checked transports."""
+    from app.config import InstacartEnv
+    from lists_support import FakeListApp, FakeSite, attach_list_app, attach_site
+    from test_instacart import KEY as INSTACART_KEY
+    from test_instacart import FakeInstacart, attach as attach_instacart
+
+    settings = make_settings(tmp_path, foods_json, instacart=InstacartEnv(api_key=INSTACART_KEY))
+    with signed_in_client(settings, base_url=HTTPS_URL) as a:
+        switches(a)
+        r = a.patch("/api/admin/settings", json={"recipes.import_enabled": True, "lists.instacart_enabled": True,
+                                                  "lists.sync_enabled": True})
+        assert r.status_code == 200, r.text
+        b = add_user(a, "sam")
+        site = attach_site(a.app, FakeSite())
+        lists = attach_list_app(a.app, FakeListApp(lists=[{"id": 7, "name": "Shop"}]))
+        instacart = attach_instacart(a.app, FakeInstacart())
+        yield a, b, make_sync(b)["token"], site, lists, instacart
+
+
+def _plan(client: TestClient, query: str, servings: float = 1) -> int:
+    food = find_food(client, query)
+    r = client.post("/api/log", json={"date": DAY, "meal": "lunch", "food_id": food["id"], "servings": servings, "status": "planned"})
+    assert r.status_code == 201, r.text
+    return int(food["id"])
+
+
+def test_a_recipe_page_is_read_through_the_servers_checked_transport(services):
+    from lists_support import page_html, recipe_jsonld
+
+    a, b, token, site, _lists, _instacart = services
+    a.post("/api/foods", json={"name": "Dried thyme, A's own", "serving_desc": "1 tsp", "serving_g": 1, "nutrients": {}})
+    site.add("/lemon-chicken", page_html(recipe_jsonld()))
+    assert call(a.app, token, "GET", f"{GATEWAY}/recipe-import").json()["web"] is True
+    r = call(a.app, token, "POST", f"{GATEWAY}/recipe-import/page", json={"url": RECIPE_URL})
+    assert r.status_code == 200, r.text
+    draft = r.json()
+    assert draft["source_url"] == RECIPE_URL and draft["lines"]
+    matched = [m["food"]["name"] for line in draft["lines"] for m in line["matches"]]
+    assert "Dried thyme, A's own" not in matched  # only B's own foods and the shared ones
+    sent = site.calls[0]["headers"]
+    assert "authorization" not in sent and "cookie" not in sent  # the token never reaches the page's site
+    # a private address is refused by the transport, as for the web app
+    from lists_support import attach_site, FakeSite
+
+    blocked = attach_site(a.app, FakeSite(), address="169.254.169.254")
+    r = call(a.app, token, "POST", f"{GATEWAY}/recipe-import/page", json={"url": RECIPE_URL})
+    assert r.status_code == 422 and r.json()["code"] == "blocked" and blocked.calls == []
+    # pasting stays on the phone: the route is not open to it
+    assert call(a.app, token, "POST", f"{GATEWAY}/recipe-import/text", json={"text": "1 apple"}).status_code == 404
+    # with pages off on this server, the route says so as it does for the web app
+    assert a.patch("/api/admin/settings", json={"recipes.import_enabled": False}).status_code == 200
+    assert call(a.app, token, "GET", f"{GATEWAY}/recipe-import").json()["web"] is False
+    r = call(a.app, token, "POST", f"{GATEWAY}/recipe-import/page", json={"url": RECIPE_URL})
+    assert r.status_code == 404 and r.json()["detail"] != NOT_ON_LIST
+
+
+def test_instacart_sends_only_the_token_owners_plan(services):
+    from test_instacart import LINK
+
+    a, b, token, _site, _lists, instacart = services
+    mine = _plan(b, "Banana", 2)
+    theirs = _plan(a, "Chicken")
+    assert call(a.app, token, "GET", f"{GATEWAY}/instacart").json()["enabled"] is True
+    preview = call(a.app, token, "POST", f"{GATEWAY}/instacart/preview", json={"start": DAY, "end": DAY}).json()
+    assert [i["food_id"] for i in preview["items"]] == [mine]
+    r = call(a.app, token, "POST", f"{GATEWAY}/instacart/send", json={"start": DAY, "end": DAY, "food_ids": [theirs]})
+    assert r.status_code == 400 and instacart.calls == []  # A's planned food is not on B's list
+    r = call(a.app, token, "POST", f"{GATEWAY}/instacart/send", json={"start": DAY, "end": DAY, "food_ids": [mine]})
+    assert r.status_code == 200 and r.json()["url"] == LINK, r.text
+    assert len(instacart.calls) == 1 and "sam" not in json.dumps(instacart.calls[0]["body"])
+    assert a.patch("/api/admin/settings", json={"lists.instacart_enabled": False}).status_code == 200
+    assert call(a.app, token, "GET", f"{GATEWAY}/instacart").json()["enabled"] is False
+    assert call(a.app, token, "POST", f"{GATEWAY}/instacart/preview", json={"start": DAY, "end": DAY}).status_code == 404
+
+
+def test_the_list_app_sends_but_is_set_up_only_in_the_web_app(services):
+    from lists_support import KEY as LIST_KEY
+
+    a, b, token, _site, lists, _instacart = services
+    # nothing set up yet: the phone sees no list app, and cannot set one up
+    assert call(a.app, token, "GET", f"{GATEWAY}/list-sync").json()["connection"] is None
+    body = {"app": "grocy", "base_url": "https://lists.example.com", "key": LIST_KEY}
+    assert call(a.app, token, "PUT", f"{GATEWAY}/list-sync", json=body).json()["detail"] == NOT_ON_LIST
+    assert b.put("/api/list-sync", json=body).status_code == 200
+    assert call(a.app, token, "POST", f"{GATEWAY}/list-sync/test").json()["detail"] == NOT_ON_LIST
+    assert call(a.app, token, "DELETE", f"{GATEWAY}/list-sync").json()["detail"] == NOT_ON_LIST
+    assert b.post("/api/list-sync/test").json()["ok"] is True
+    r = call(a.app, token, "GET", f"{GATEWAY}/list-sync")
+    assert r.json()["connection"]["key_set"] is True and LIST_KEY not in r.text  # the key is write-only, here too
+    mine = _plan(b, "Banana", 2)
+    _plan(a, "Chicken")
+    preview = call(a.app, token, "POST", f"{GATEWAY}/list-sync/preview", json={"start": DAY, "end": DAY}).json()
+    assert [i["food_id"] for i in preview["items"]] == [mine]
+    r = call(a.app, token, "POST", f"{GATEWAY}/list-sync/send", json={"start": DAY, "end": DAY, "food_ids": [mine]})
+    assert r.status_code == 200 and r.json()["sent"] == 1, r.text
+    assert [x["note"] for x in lists.added] == ["Banana, raw: 2 servings of 1 medium (118 g)"]
+    # A has no list app: A's own token sees none, and B's set-up is never A's
+    a_token = make_sync(a)["token"]
+    assert call(a.app, a_token, "GET", f"{GATEWAY}/list-sync").json()["connection"] is None
+    assert call(a.app, a_token, "POST", f"{GATEWAY}/list-sync/send", json={"start": DAY, "end": DAY, "food_ids": [mine]}).status_code == 404
 
 
 def test_walk_finds_the_same_routes_as_the_coverage_walk(anon_client):

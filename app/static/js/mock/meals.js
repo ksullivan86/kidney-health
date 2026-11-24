@@ -86,11 +86,11 @@
       }
       return c.done();
     },
-    _insertTemplate({ name, note, items, mealHint = null, createdAt = null, servingsMade = null, steps = null, sourceUrl = null }) {
+    _insertTemplate({ name, note, items, mealHint = null, createdAt = null, servingsMade = null, steps = null, sourceUrl = null, clientId = null }) {
       const now = createdAt || this._stamp();
       const t = { id: this._nextTemplateId++, name, note: note == null ? null : note, meal_hint: mealHint || null, items: items.map((it) => ({ food_id: Number(it.food_id), servings: Number(it.servings) })),
         servings_made: servingsMade ?? null, steps: steps && steps.length ? [...steps] : null, source_url: sourceUrl ?? null,
-        created_at: now, updated_at: now };
+        created_at: now, updated_at: now, client_id: clientId || M.newClientId() }; // schema step 38 (design note 39 §8.2)
       this._templates.push(t);
       return t;
     },
@@ -153,10 +153,13 @@
     }
     return { entries: created.map((r) => this._entryView(r)) };
   });
-  route('*', '/api/meals/{id}', function ({ method, id, body }) {
+  route('*', '/api/meals/{id}', function ({ method, id, body, header }) {
     const b = method === 'PUT' ? this._templateBody(body) : null;
     const t = this._template(id);
     if (method === 'GET') return this._templateView(t);
+    // meals.row_to_template as the 412 shows it: with its client_id (the API's MealTemplate leaves the ID out). After the 404,
+    // before the foods are checked (design note 39 §8.3).
+    if (method === 'PUT' || method === 'DELETE') M.checkIfMatch('meal', header('If-Match'), { ...this._templateView(t), client_id: t.client_id || null });
     if (method === 'PUT') {
       for (const it of b.items) this._foodOr404(it.food_id);
       // A body without meal_hint (a v0.2 screen) keeps the stored one; null clears it.

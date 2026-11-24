@@ -38,6 +38,34 @@
   function failFields(errors) { fail(400, errors.join('; ') || 'invalid request'); }
 
   // ---------------------------------------------------------------------------
+  // One ID per row and versions for every synced kind (design note 39 §8.2 and §8.3; app/row_versions.py, schema step 38)
+  // ---------------------------------------------------------------------------
+  const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+  // A new row's client_id: a random UUID (version 4), lower-case, as the server's trigger gives a row made without one.
+  function newClientId() {
+    const c = typeof crypto !== 'undefined' ? crypto : null;
+    if (c && typeof c.randomUUID === 'function') { try { return c.randomUUID(); } catch (e) { /* an insecure context: below */ } }
+    const b = new Uint8Array(16);
+    if (c && typeof c.getRandomValues === 'function') c.getRandomValues(b); else for (let i = 0; i < 16; i += 1) b[i] = Math.floor(Math.random() * 256);
+    b[6] = (b[6] & 0x0f) | 0x40; b[8] = (b[8] & 0x3f) | 0x80;
+    const hex = [...b].map((x) => x.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
+  // row_versions.WHAT: the words of each kind in the 412's detail.
+  const ROW_WHAT = { food: 'food', entry: 'entry', meal: 'saved meal', lab: 'lab result', symptom: 'symptom', weight: 'weight',
+    reading: 'blood pressure reading' };
+  // row_versions.with_version: the row as the API shows it, with its version.
+  function withVersion(kind, view) { return { ...view, version: KH.rowVersions.version(kind, view) }; }
+  // row_versions.check_if_match: after the 404 (and each route's own checks before it), an If-Match that is not the row's version
+  // now is a 412 whose `current` is the row as stored with its version. No header changes nothing.
+  function checkIfMatch(kind, header, view) {
+    if (header == null) return;
+    if (!KH.rowVersions.matches(header, KH.rowVersions.version(kind, view))) {
+      fail(412, `This ${ROW_WHAT[kind]} was changed on another device`, { current: withVersion(kind, view) });
+    }
+  }
+
+  // ---------------------------------------------------------------------------
   // Request validation (the server's pydantic models, flattened like main.py does)
   // Pydantic collects every field's errors in the model's field order before failing, and main.py
   // joins them with "; ". Literal fields compare the raw value (str_strip_whitespace only applies
@@ -381,9 +409,30 @@
     }
   }
 
+  // Schema step 38's _fill_ids for a log kept from before this version (js/mock/persist.js calls it after reading one back): every
+  // synced row without a client_id gets one. A row the phone already sent to its server keeps the ID it was sent with (the queue of
+  // js/mock/server_sync.js holds it as `c`), so the phone and the server agree.
+  MockApi.prototype._fillClientIds = function fillClientIds() {
+    const sent = (this._serverSync && this._serverSync.rows) || {};
+    const fill = (kind, rows, syncs = () => true) => {
+      for (const row of rows || []) {
+        if (!syncs(row) || (typeof row.client_id === 'string' && UUID_RE.test(row.client_id))) continue;
+        const queued = sent[kind] && sent[kind][row.id] ? sent[kind][row.id].c : null;
+        row.client_id = typeof queued === 'string' && UUID_RE.test(queued) ? queued : newClientId();
+      }
+    };
+    fill('food', this._foods, (f) => f.source === 'custom'); // shared foods have no owner and no ID, as on the server
+    fill('entry', this._entries);
+    fill('meal', this._templates);
+    fill('lab', this._labs);
+    fill('symptom', this._symptoms);
+    fill('weight', this._weights);
+    fill('reading', this._readings);
+  };
+
   KH.mock = Object.assign(KH.mock || {}, {
     instance: null,
-    route, routes: ROUTES, MockApi, ApiError, fail, failFields, Check, choiceMessage, validDate, pydanticInt, pydanticFloat,
+    route, routes: ROUTES, MockApi, ApiError, fail, failFields, Check, newClientId, withVersion, checkIfMatch, CLIENT_ID_RE: UUID_RE, choiceMessage, validDate, pydanticInt, pydanticFloat,
     validateNutrients, validateFlags, validateTargets, isDict, asciiLower, nocaseCompare,
     MEAL_RANK, MEAL_KEYS, FOOD_CATEGORIES, MAX_SEARCH_QUERY_CHARS, MAX_SEARCH_WORDS, MAX_RANGE_DAYS, MAX_INTERDIALYTIC_DAYS,
   });

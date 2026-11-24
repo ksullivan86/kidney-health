@@ -43,10 +43,10 @@
     },
     _symptomsOf(userId) { return this._symptomsState().filter((r) => r.user_id === userId); },
     // Store one checked symptom (also usable by a demo seed).
-    _insertSymptom(userId, data, createdAt = null) {
+    _insertSymptom(userId, data, createdAt = null, clientId = null) {
       this._symptomsState();
       const row = { id: this._nextSymptomId++, user_id: userId, date: data.date, symptom: data.symptom, label: data.label, severity: data.severity,
-        note: data.note, created_at: createdAt || this._stamp() };
+        note: data.note, created_at: createdAt || this._stamp(), client_id: clientId || M.newClientId() }; // schema step 38
       this._symptoms.push(row);
       return row;
     },
@@ -80,14 +80,17 @@
       const n = this._symptomsOf(userId).filter((r) => r.date === day && r.id !== exceptId).length;
       if (n >= R.MAX_PER_DAY) fail(400, `too many symptoms for one day (max ${R.MAX_PER_DAY})`);
     },
-    _updateSymptom(user, id, data) {
+    // `ifMatch`: the request's If-Match (design note 39 §8.3), checked after the 404 and before the day's limit, as the server does.
+    _updateSymptom(user, id, data, ifMatch = null) {
       const row = this._symptomOf(user.id, id);
+      M.checkIfMatch('symptom', ifMatch, R.rowToSymptom(row));
       this._checkSymptomDay(user.id, data.date, row.id);
       Object.assign(row, { date: data.date, symptom: data.symptom, label: data.label, severity: data.severity, note: data.note });
       return R.rowToSymptom(row);
     },
-    _deleteSymptom(user, id) {
+    _deleteSymptom(user, id, ifMatch = null) {
       const row = this._symptomOf(user.id, id);
+      M.checkIfMatch('symptom', ifMatch, R.rowToSymptom(row));
       this._symptoms.splice(this._symptoms.indexOf(row), 1);
       return null;
     },
@@ -107,18 +110,18 @@
     this._checkSymptomDay(user.id, data.date);
     return R.rowToSymptom(this._insertSymptom(user.id, data));
   });
-  route('PUT', '/api/symptoms/{id}', function ({ id, body }) {
+  route('PUT', '/api/symptoms/{id}', function ({ id, body, header }) {
     const user = this._currentUser();
     const data = this._symptomBody(body); // the body is checked before the symptom is looked up, as FastAPI does
-    return this._updateSymptom(user, Number(id), data);
+    return this._updateSymptom(user, Number(id), data, header('If-Match'));
   });
-  route('DELETE', '/api/symptoms/{id}', function ({ id }) {
-    return this._deleteSymptom(this._currentUser(), Number(id));
+  route('DELETE', '/api/symptoms/{id}', function ({ id, header }) {
+    return this._deleteSymptom(this._currentUser(), Number(id), header('If-Match'));
   });
   // A path id that is not made of digits only: pydantic reads "-1", "+2", "1_0" and "3.0" as whole numbers (a 404 or the
   // symptom they name) and fails anything else with a validation error, listed before the body's errors.
   const ID_ERROR = 'symptom_id: Input should be a valid integer, unable to parse string as an integer';
-  route('PUT', /^\/api\/symptoms\/([^/]+)$/, function ({ id, body }) {
+  route('PUT', /^\/api\/symptoms\/([^/]+)$/, function ({ id, body, header }) {
     const user = this._currentUser();
     const n = pydanticInt(id);
     const errors = n === undefined ? [ID_ERROR] : [];
@@ -128,12 +131,12 @@
       errors.push(e.detail);
     }
     if (errors.length) failFields(errors);
-    return this._updateSymptom(user, n, data);
+    return this._updateSymptom(user, n, data, header('If-Match'));
   });
-  route('DELETE', /^\/api\/symptoms\/([^/]+)$/, function ({ id }) {
+  route('DELETE', /^\/api\/symptoms\/([^/]+)$/, function ({ id, header }) {
     const user = this._currentUser();
     const n = pydanticInt(id);
     if (n === undefined) failFields([ID_ERROR]);
-    return this._deleteSymptom(user, n);
+    return this._deleteSymptom(user, n, header('If-Match'));
   });
 })();
