@@ -299,7 +299,16 @@ def test_the_server_api_bridge_carries_only_its_allow_list():
         ("POST", "/push/v1/api/ai/chat"),
         ("POST", "/push/v1/api/ai/read-lab-report-text"), ("POST", "/push/v1/api/ai/read-lab-report"),
         ("POST", "/push/v1/api/vision/label"), ("POST", "/push/v1/api/vision/plate"),
+        # step 9: the server's recipe pages, Instacart and list app (never the list app's set-up)
+        ("GET", "/push/v1/api/recipe-import"), ("POST", "/push/v1/api/recipe-import/page"),
+        ("GET", "/push/v1/api/instacart"), ("POST", "/push/v1/api/instacart/preview"), ("POST", "/push/v1/api/instacart/send"),
+        ("GET", "/push/v1/api/list-sync"), ("POST", "/push/v1/api/list-sync/preview"), ("POST", "/push/v1/api/list-sync/send"),
     ]
+    # every route the app carries is on the server's own gateway list (app/app_gateway.py), or is GET /push/v1/about
+    from app.app_gateway import ALLOWED
+
+    for method, path in listed[1:]:
+        assert (method, "/api" + path.removeprefix("/push/v1/api")) in ALLOWED, (method, path)
     for _, path in listed:
         for word in ("/admin", "/auth", "/tokens", "/sessions", "/provider", "/me/import", "/export", "/keys", "delete", "transcribe"):
             assert word not in path, path

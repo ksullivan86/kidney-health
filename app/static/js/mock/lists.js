@@ -10,7 +10,16 @@
      work as on a server.
    * Instacart (app/instacart.py, design note 33) answers like a server with it on. Preview shows the same lines as list sync;
      Send answers a placeholder link (#instacart-demo) that does not leave the page, and nothing is sent.
-   The words of each list line and the parser are pinned to the server by tests/data/lists_recipes_vectors.json. */
+   The words of each list line and the parser are pinned to the server by tests/data/lists_recipes_vectors.json.
+
+   DEVICE MODE (the iPhone app, design note 39 §7, plan step 9): none of the demo's stand-ins. Recipe pages, Instacart and the list
+   app are the person's own server's, through its gateway (js/mock/server_api.js), and only with a token both ways and the service
+   on there; the server reads the page through its checked transport and uses its own keys, and no key comes to the phone. With no
+   such server, or while it cannot be reached, they are off, as on a server with them off: the recipe sheet offers pasting only
+   (pasted ingredients are read here, offline too), and Plan shows no Instacart or list app button. A recipe page's lines are
+   matched again with this phone's own foods, the ones the recipe is saved with. The list app is set up in the server's web app.
+   The server makes its lists from its own Plan, which holds the phone's plans once they are sent; its lines name its own food ids,
+   so they are shown with this phone's ids (by the food's name, so "ticked on this phone" works) and sent back with the server's. */
 (() => {
   'use strict';
   const KH = window.KH;
@@ -45,6 +54,48 @@
     if (u.search || u.hash || /[?#]/.test(text)) return [null, 'Leave anything after ? or # out of the address.'];
     return [`${u.protocol}//${u.host}${u.pathname.replace(/\/+$/, '')}`, null];
   }
+
+  // ---- device mode: the server's services through the gateway ----
+  const DEVICE = !!(KH.flags && KH.flags.DEVICE === true);
+  const UNREACHABLE = 'Your server cannot be reached right now. Try again when this iPhone is online.';
+  const isDict = (v) => v != null && typeof v === 'object' && !Array.isArray(v);
+  const idMaps = new Map(); // "<what>|<start>|<end>" → Map(the id shown on this phone → the server's id); in memory only
+  // What the server says of a service (its GET), or `off` when it is not offered both ways, is off there, or cannot be reached.
+  async function serverStatus(what, path, off) {
+    const S = M.serverApi;
+    if (!S || !(await S.offers(what))) return off;
+    const res = await S.call('GET', path);
+    return res.status === 200 && isDict(res.json) ? res.json : off;
+  }
+  // One request to the server's route: its answer, or its error as the page's own.
+  async function viaServer(what, method, path, body) {
+    const S = M.serverApi;
+    if (!S || !(await S.offers(what))) fail(404, 'Not Found');
+    const res = await S.call(method, path, { body });
+    if (res.offline || res.error) fail(503, UNREACHABLE);
+    if (res.status >= 400 || !isDict(res.json)) S.failWith(res);
+    return res.json;
+  }
+  // The server's lines with this phone's food ids, remembered for the send that follows.
+  function shownHere(api, what, b, json) {
+    const here = new Map();
+    try { for (const it of api._shopping(b.start, b.end).items) if (!here.has(it.food_name)) here.set(it.food_name, it.food_id); } catch (e) { /* the server checked the range */ }
+    const map = new Map();
+    json.items = (Array.isArray(json.items) ? json.items : []).map((it, i) => {
+      let id = here.get(it.name);
+      if (id == null || map.has(id)) id = -(i + 1); // not planned on this phone: an id no food has
+      map.set(id, it.food_id);
+      return { ...it, food_id: id };
+    });
+    idMaps.set(`${what}|${b.start}|${b.end}`, map);
+    return json;
+  }
+  function toServer(what, body) {
+    const b = isDict(body) ? body : {};
+    const map = idMaps.get(`${what}|${b.start}|${b.end}`);
+    return Array.isArray(b.food_ids) ? { ...b, food_ids: b.food_ids.map((id) => (map && map.has(id) ? map.get(id) : id)) } : b;
+  }
+  const rangeOf = (body) => (isDict(body) ? { start: body.start, end: body.end } : {});
 
   Object.assign(MockApi.prototype, {
     _listsState() {
@@ -91,10 +142,12 @@
   // ---- list sync ----
   route('GET', '/api/list-sync', function () {
     this._currentUser();
+    if (DEVICE) return serverStatus('listSync', '/api/list-sync', { enabled: false, can_use: false, private_hosts: false, apps: APPS.map((a) => ({ ...a })), connection: null });
     return { enabled: true, can_use: true, private_hosts: true, apps: APPS.map((a) => ({ ...a })), connection: this._listsState().connection ? { ...this._listsState().connection } : null };
   });
   route('PUT', '/api/list-sync', function ({ body }) {
     this._currentUser();
+    if (DEVICE) fail(404, 'Not Found'); // set up in the server's web app
     const c = new Check(body);
     c.choice('app', APP_IDS, { required: true, nullable: false });
     c.str('base_url', { required: true, min: 1, max: 500, nullable: false });
@@ -123,12 +176,14 @@
   });
   route('DELETE', '/api/list-sync', function () {
     this._currentUser();
+    if (DEVICE) fail(404, 'Not Found');
     this._listConnection();
     this._listsState().connection = null;
     return null;
   });
   route('POST', '/api/list-sync/test', function () {
     this._currentUser();
+    if (DEVICE) fail(404, 'Not Found');
     const conn = this._listConnection();
     conn.last_test_at = new Date().toISOString();
     conn.last_test_error = null;
@@ -139,6 +194,7 @@
   });
   route('POST', '/api/list-sync/preview', function ({ body }) {
     this._currentUser();
+    if (DEVICE) return viaServer('listSync', 'POST', '/api/list-sync/preview', rangeOf(body)).then((json) => shownHere(this, 'list', rangeOf(body), json));
     const conn = this._listConnection();
     const items = this._listItems(body);
     const app = APPS.find((a) => a.id === conn.app);
@@ -147,6 +203,7 @@
   });
   route('POST', '/api/list-sync/send', function ({ body }) {
     this._currentUser();
+    if (DEVICE) return viaServer('listSync', 'POST', '/api/list-sync/send', toServer('list', body));
     const conn = this._listConnection();
     const ids = body && Array.isArray(body.food_ids) ? body.food_ids : null;
     if (!ids || !ids.length || ids.length > MAX_ITEMS || ids.some((x) => !Number.isInteger(x))) fail(400, 'food_ids: Choose between 1 and 200 foods.');
@@ -166,14 +223,17 @@
   const INSTACART_DEMO_LINK = '#instacart-demo';
   route('GET', '/api/instacart', function () {
     this._currentUser();
+    if (DEVICE) return serverStatus('instacart', '/api/instacart', { enabled: false, max_items: MAX_ITEMS });
     return { enabled: true, max_items: MAX_ITEMS };
   });
   route('POST', '/api/instacart/preview', function ({ body }) {
     this._currentUser();
+    if (DEVICE) return viaServer('instacart', 'POST', '/api/instacart/preview', rangeOf(body)).then((json) => shownHere(this, 'instacart', rangeOf(body), json));
     return { title: INSTACART_TITLE, items: this._listItems(body) };
   });
   route('POST', '/api/instacart/send', function ({ body }) {
     this._currentUser();
+    if (DEVICE) return viaServer('instacart', 'POST', '/api/instacart/send', toServer('instacart', body));
     const ids = body && Array.isArray(body.food_ids) ? body.food_ids : null;
     if (!ids || !ids.length || ids.length > MAX_ITEMS || ids.some((x) => !Number.isInteger(x))) fail(400, 'food_ids: Choose between 1 and 200 foods.');
     const wanted = new Set(ids);
@@ -203,6 +263,7 @@
   };
   route('GET', '/api/recipe-import', function () {
     this._currentUser();
+    if (DEVICE) return serverStatus('recipe', '/api/recipe-import', { web: false, max_lines: R.MAX_LINES, estimate: ESTIMATE_TEXT });
     return { web: true, max_lines: R.MAX_LINES, estimate: ESTIMATE_TEXT };
   });
   route('POST', '/api/recipe-import/page', function ({ body }) {
@@ -211,6 +272,11 @@
     c.str('url', { required: true, min: 1, max: 900, nullable: false });
     const b = c.done();
     const url = b.url.trim();
+    if (DEVICE) { // the server reads the page; this phone matches its lines with its own foods
+      return viaServer('recipe', 'POST', '/api/recipe-import/page', { url }).then((d) => this._importDraft({ name: d.name || null,
+        servings_made: d.servings_made ?? null, steps: Array.isArray(d.steps) ? d.steps : [], steps_cut: !!d.steps_cut, lines_cut: !!d.lines_cut,
+        lines: (Array.isArray(d.lines) ? d.lines : []).map((line) => String((line && line.text) || '')) }, typeof d.source_url === 'string' ? d.source_url : url));
+    }
     let port = '';
     try { port = new URL(url).port; } catch { /* checked below */ }
     if (M.checkSourceUrl(url) || (port && !['80', '443'].includes(port))) {

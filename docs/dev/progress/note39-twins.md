@@ -45,6 +45,13 @@ Avoid (another helper's): `app/static/js/mock/server_sync.js`, `ios/KidneyHealth
    `tests/test_app_gateway.py`: the pin, and three tests (recipe page through the checked transport, token not sent to the site,
    private address blocked, off is 404; Instacart only the token owner's plan; list app set up only in the web app, key never
    shown, only the owner's list). Verified: `pytest tests/test_app_gateway.py` (41 pass), ruff clean.
+4. **Phone** (checkpoint 2). `ServerAPI.swift` carries the eight routes (tests in `ServerAPITests.swift`, pinned by
+   `tests/test_ios_app.py`, which now also checks every carried route is on the server's `ALLOWED`). `server_api.js` reads
+   `services.recipe_import/instacart/list_sync` from `about`. `lists.js` in device mode: off without a both-ways server (no more
+   demo stand-ins on the phone: before, Instacart showed a fake link and a recipe link gave the sample page); through the gateway
+   when offered; a page's lines re-matched with the phone's foods; the server's food ids shown as the phone's (by name) and mapped
+   back on send; list app set-up 404 on the phone. `views/instacart.js`: the demo text only when `MOCK && !DEVICE`. Tests:
+   `tests/js/server_lists.mjs` (63 checks) run by `tests/test_server_services_phone.py`. Swift not compiled (no Xcode here).
 
 ## Commands
 
