@@ -346,6 +346,57 @@ let dumped = null;
   ok(() => assert.equal(fourth.api._serverSync, undefined, 'starting over resets the queue'));
 }
 
+// 12. Design note 39, step 1: each row remembers its version when sent; changes and deletes after sending are counted, not sent.
+{
+  const db = createFakeIndexedDB();
+  const server = fakeServer();
+  const { KH, api, S } = await page({ db, server });
+  const { own } = await fill(api);
+  await S.sendNow();
+  const rows = api._serverSync.rows;
+  const entry = api._entries[0];
+  ok(() => assert.equal(rows.entry[entry.id].v, api._entryView(entry).version), 'an entry remembers the server\'s own entry version');
+  ok(() => assert.equal(rows.entry[entry.id].v, KH.mock.entryVersion(api._entryView(entry))), 'the twin of log.entry_version');
+  for (const kind of ['food', 'lab', 'symptom', 'weight', 'reading']) {
+    const sent = Object.values(rows[kind]).filter((r) => r.s === 'sent');
+    ok(() => assert.ok(sent.length && sent.every((r) => /^b:[0-9a-f]{16}$/.test(r.v)), `${kind}: a hash of the row as sent`));
+  }
+  const planned = Object.entries(rows.entry).find(([id]) => api._entry(id).status === 'planned');
+  ok(() => assert.ok(planned && planned[1].v === undefined, 'a row not sent yet has no version'));
+  let s = S.status();
+  ok(() => assert.deepEqual([s.changedSince, s.deletedSince], [0, 0]), 'nothing changed since sending');
+  // the same content again: no change; an edit: one change; back as it was: none
+  await api.request('PUT', `/api/log/${entry.id}`, { servings: 3 });
+  const lab = api._labsOf(1)[0];
+  await api.request('PUT', `/api/foods/${own.id}`, { name: own.name, serving_desc: '1 big bowl', serving_g: 150, nutrients: { calories_kcal: 210, potassium_mg: 180 } });
+  s = S.status();
+  ok(() => assert.equal(s.changedSince, 2), 'an entry and a food changed on the phone');
+  await api.request('PUT', `/api/log/${entry.id}`, { servings: 1 });
+  ok(() => assert.equal(S.status().changedSince, 1), 'an entry changed back counts as unchanged');
+  await api.request('DELETE', `/api/labs/${lab.id}`);
+  const symptom = api._symptomsOf(1)[0];
+  await api.request('DELETE', `/api/symptoms/${symptom.id}`);
+  s = S.status();
+  ok(() => assert.equal(s.deletedSince, 2), 'two rows deleted on the phone after sending');
+  const before = server.bodies.length;
+  await S.sendNow();
+  ok(() => assert.equal(server.bodies.length, before, 'neither an edit nor a delete is sent (step 1)'));
+  ok(() => assert.equal(api._serverSync.rows.lab[lab.id].d, 1, 'the deleted lab keeps its mark'));
+  ok(() => assert.equal(api._serverSync.rows.lab[lab.id].s, 'sent'));
+  ok(() => assert.ok(api._serverSync.rows.lab[lab.id].v, 'and its version'));
+  // a restart keeps the versions and the marks
+  const again = await page({ db, server });
+  ok(() => assert.equal(again.api._serverSync.rows.lab[lab.id].d, 1, 'kept after a restart'));
+  s = again.S.status();
+  ok(() => assert.deepEqual([s.changedSince, s.deletedSince], [1, 2]), 'the same counts after a restart');
+  // a row deleted before it was sent leaves no mark
+  const late = await again.api.request('POST', '/api/symptoms', { date: D, symptom: 'cramps', severity: 1 });
+  again.S._assignIds(again.api);
+  await again.api.request('DELETE', `/api/symptoms/${late.id}`);
+  again.S._assignIds(again.api);
+  ok(() => assert.equal(again.api._serverSync.rows.symptom[late.id], undefined, 'an unsent row deleted leaves nothing'));
+}
+
 if (process.argv[2] === '--dump' && process.argv[3]) writeFileSync(process.argv[3], `${JSON.stringify(dumped, null, 1)}\n`);
 console.log(`server sync: ${checks} checks passed`);
 process.exit(0);

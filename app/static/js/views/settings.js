@@ -1624,12 +1624,19 @@
         parts.push(h('p', {}, `Your server could not place ${rowsText(s.stuck.length)} after several tries. ${stay(s.stuck.length)} on this iPhone and ${s.stuck.length === 1 ? 'is' : 'are'} not sent again.`),
           listOf(s.stuck, 'set-server-sync-stuck'));
       }
+      // Design note 39, step 1: what changed on this iPhone after it was sent. Not sent yet; kept for two-way sync.
+      const since = [];
+      if (s.changedSince) since.push(`${rowsText(s.changedSince)} changed`);
+      if (s.deletedSince) since.push(`${rowsText(s.deletedSince)} deleted`);
+      if (since.length) {
+        parts.push(h('p', { id: 'set-server-sync-since' }, `Since they were sent, ${since.join(' and ')} on this iPhone. Your server still has them as they were sent. The app keeps note of this for when changes can be sent too.`));
+      }
       info.replaceChildren(...parts);
     };
     draw();
     stops.push(S.subscribe(draw));
     const box = h('div', { role: 'region', 'aria-labelledby': 'set-server-sync-h' }, info, now,
-      h('p', { class: 'hint' }, 'New rows you add here are sent to your server when it can be reached: food, foods you made, lab results, symptoms, weight and blood pressure. Changes or deletions made on this iPhone after a row was sent are not sent.'));
+      h('p', { class: 'hint' }, 'New rows you add here are sent to your server when it can be reached: food, foods you made, lab results, symptoms, weight and blood pressure. Changes or deletions made on this iPhone after a row was sent are not sent yet. The app keeps note of them.'));
     return [subtitle('Sending to your server', 'set-server-sync-h'), box];
   }
   let deviceRender = 0;
