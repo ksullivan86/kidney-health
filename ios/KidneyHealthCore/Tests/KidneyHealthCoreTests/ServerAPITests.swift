@@ -10,7 +10,7 @@ final class ServerAPITests: XCTestCase {
         XCTAssertNotNil(ServerAPI.route(method: "POST", path: "/push/v1/api/foods/barcode"))
         XCTAssertNotNil(ServerAPI.route(method: "POST", path: "/push/v1/api/ai/read-lab-report-text?dry_run=true"))
         let search = ServerAPI.route(method: "GET", path: "/push/v1/api/foods/usda/search?q=white%20rice")
-        XCTAssertEqual(search?.query.first?.value, "white rice")
+        XCTAssertEqual(search?.query.first?.value, "white%20rice") // kept as the page encoded it
         for (method, path) in [
             ("GET", "/push/v1/api/me/tokens"), ("POST", "/push/v1/api/me/ai/provider"), ("PUT", "/push/v1/api/me/ai/provider"),
             ("GET", "/push/v1/api/admin/users"), ("POST", "/push/v1/api/auth/login"), ("GET", "/push/v1/api/export.zip"),
@@ -48,6 +48,9 @@ final class ServerAPITests: XCTestCase {
         let found = ServerAPI.route(method: "GET", path: "/push/v1/api/foods/usda/search?q=rice")!
         XCTAssertEqual(ServerAPI.url("https://example.org:8443/kidney", route: found.route, query: found.query)?.absoluteString,
                        "https://example.org:8443/kidney/push/v1/api/foods/usda/search?q=rice")
+        let plus = ServerAPI.route(method: "GET", path: "/push/v1/api/foods/usda/search?q=a%2Bb%20c")!
+        XCTAssertEqual(ServerAPI.url("https://kidney.example.org", route: plus.route, query: plus.query)?.absoluteString,
+                       "https://kidney.example.org/push/v1/api/foods/usda/search?q=a%2Bb%20c")
         XCTAssertNil(ServerAPI.url("http://kidney.example.org", route: ServerAPI.about))
     }
 

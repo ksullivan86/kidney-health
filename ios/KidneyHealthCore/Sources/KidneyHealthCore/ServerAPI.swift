@@ -68,15 +68,17 @@ public enum ServerAPI {
         for item in items {
             guard found.query.contains(item.name), let value = item.value, value.count <= 200 else { return nil }
         }
-        return (found, items)
+        // The query goes on as the page encoded it (a "+" stays "%2B"), so the server reads the words the person typed.
+        return (found, parts.percentEncodedQueryItems ?? [])
     }
 
-    /// The URL of a route on the paired server: the address's `https://host[:port][/prefix]`, then the route's path and query.
+    /// The URL of a route on the paired server: the address's `https://host[:port][/prefix]`, then the route's path and query
+    /// (`query` percent-encoded, as `route(method:path:)` answers it).
     public static func url(_ address: String, route: Route, query: [URLQueryItem] = []) -> URL? {
         guard let push = Settings.pushURL(address),
               var parts = URLComponents(url: push, resolvingAgainstBaseURL: false) else { return nil }
         parts.path = String(push.path.dropLast(Push.path.count)) + route.path
-        parts.queryItems = query.isEmpty ? nil : query
+        parts.percentEncodedQueryItems = query.isEmpty ? nil : query
         return parts.url
     }
 
