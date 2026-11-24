@@ -258,6 +258,9 @@ A repository variable (Settings → Secrets and variables → Actions → Variab
 * **v0.16.0: not held.** The release runs schema step 29 at start without an automatic copy (it only adds two tables), adds
   the `tzdata` dependency and moves the shipped files from `:0.15` to `:0.16`. A host that tracks `:0.15` stays on 0.15.x.
   CHANGELOG.md, "Upgrading from 0.15", says to take a backup first.
+* **v0.25.0: not held.** Schema steps 37 and 38 (what the iPhone app sent, and the change feed) run at start and only add
+  tables and IDs. The new `PUSH_APP_SYNC` is off by default. The release moves the shipped files from `:0.24` to `:0.25`. A host
+  that tracks `:0.24` stays on 0.24.x.
 * **v0.24.1: not held.** A patch: no schema step and no new settings. The pairing links in the QR code now start
   `kidneyhealth://`, for the renamed iPhone app. `:0.24` and `:latest` move.
 * **v0.24.0: not held.** Schema step 35 (reminders) and 36 (Care team notes), both off by default; reading a lab PDF's text

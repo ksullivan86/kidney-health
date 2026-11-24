@@ -1118,7 +1118,10 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 
 **Unreleased (2026-11-12):** reminders by phone notification (note 35, schema step 35), off until `REMINDERS_ENABLED`.
 
-**Status (2026-11-20): v0.24.1 is prepared.** The iPhone app is called Kidney Health everywhere (bundle ID
+**Status (2026-11-24): v0.25.0 is prepared.** The iPhone app runs with no server (note 38: storage, food services, Apple
+Health into the phone's log, the iPhone's own AI, native scanners, Home Screen shortcuts) and with your own server both ways
+(note 39: the both-ways token and its gateway, the change feed with schema steps 37 and 38, sync with conflict cards, profile
+and targets from the server, recipe import, Instacart and lists). **v0.24.1**: The iPhone app is called Kidney Health everywhere (bundle ID
 `io.github.ksullivan86.kidneyhealth`, pairing links `kidneyhealth://`), goes to TestFlight by a workflow, and says the whole path to a
 phone token; design note 38 (the iPhone app without a server) is decided. **v0.24.0**: Reminders by phone notification (note 35, schema step 35, `REMINDERS_ENABLED`),
 reading the text of a lab PDF on the local AI (note 36, no schema step), and Care team notes, phase 1 (note 37, schema step 36,

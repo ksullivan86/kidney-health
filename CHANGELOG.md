@@ -7,6 +7,20 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+## 0.25.0 — 2026-11-24
+
+The iPhone app works with no server, and with your own server both ways (design notes 38 and 39).
+
+### Upgrading from 0.24 (read this first)
+
+* Back up `kidney.db` first, change the image tag to `:0.25`, and start it. Schema steps 37 and 38 run once at start. They add
+  tables and an ID on every row, and change no value.
+* Nothing new is turned on for you. Sending from the iPhone app needs `PUSH_ENABLED`; sync both ways also needs the new
+  `PUSH_APP_SYNC`, off by default.
+* If a reverse proxy lists the paths it passes on, also pass `/push/v1/sync`, `/push/v1/about`, `/push/v1/api/`,
+  `/push/v1/changes` and `/push/v1/match` (see `deploy/caddy/Caddyfile.example`). A proxy that passes all of `/push/v1/` needs
+  no change.
+
 ### Added
 
 * The iPhone app runs the whole app on the phone with no server (design note 38, step 1). It starts empty, keeps your data on the
@@ -73,7 +87,7 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * The iPhone app no longer shows the demo's sample recipe page or a pretend Instacart link when it has no server.
 * A file exported from the demo can be imported into the demo again: entries no longer carry a field the import refuses.
 
-### Upgrading
+### Upgrading details
 
 * Schema step 37 adds one table, `app_sync_rows`: what the iPhone app sent. It changes nothing else.
 * If a reverse proxy lists the paths it passes on, add `/push/v1/sync` next to `/push/v1/body` (the commented second host name in

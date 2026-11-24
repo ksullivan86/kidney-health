@@ -304,7 +304,7 @@ What this server offers this person, so the phone can choose without trying each
 
 ```json
 {"account": "5f1d0c1e9a8b7c6d5e4f3a2b1c0d9e8f",
- "api_version": 1, "app_version": "0.24.1",
+ "api_version": 1, "app_version": "0.25.0",
  "sync": {"gateway": true, "changes": true},
  "gateway": [{"method": "GET", "path": "/api/ai/status"}, …],
  "ai": {"enabled": true, "available": true, "routes": {"meal_ideas": {…}, "labs": {…}, …}},
