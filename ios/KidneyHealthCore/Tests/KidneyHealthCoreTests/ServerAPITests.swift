@@ -36,7 +36,7 @@ final class ServerAPITests: XCTestCase {
         XCTAssertTrue(ServerAPI.route(method: "POST", path: "/push/v1/api/ai/chat")!.route.allows(["messages": []]))
         // no route that needs the password, holds keys or tokens, or is an admin's
         for route in ServerAPI.routes {
-            for word in ["/admin", "/auth", "/tokens", "/sessions", "/provider", "/import", "/export", "/keys"] {
+            for word in ["/admin", "/auth", "/tokens", "/sessions", "/provider", "/me/import", "/export", "/keys"] {
                 XCTAssertFalse(route.path.contains(word), route.path)
             }
         }

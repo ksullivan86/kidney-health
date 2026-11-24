@@ -42,7 +42,7 @@ final class SyncModel: ObservableObject {
         status = defaults.string(forKey: Key.status) ?? "Nothing sent yet."
         lastSent = defaults.object(forKey: Key.lastSent) as? Date
         phoneStatus = defaults.string(forKey: Key.phoneStatus) ?? "Nothing added from Health yet."
-        tokenKind = ServerAPI.TokenKind(rawValue: defaults.string(forKey: Key.tokenKind) ?? "") ?? .unknown
+        tokenKind = ServerAPI.TokenKind(rawValue: defaults.string(forKey: Key.serverOffers) ?? "") ?? .unknown
     }
 
     /// The pairing screen's line about the saved token, or nil while it is not known.
@@ -129,7 +129,7 @@ final class SyncModel: ObservableObject {
 
     private func setTokenKind(_ kind: ServerAPI.TokenKind) {
         tokenKind = kind
-        defaults.set(kind.rawValue, forKey: Key.tokenKind)
+        defaults.set(kind.rawValue, forKey: Key.serverOffers)
     }
 
     /// Asks the saved server whether the saved token works (`GET /push/v1/check`). Nothing of Health is read or sent.
@@ -310,7 +310,7 @@ final class SyncModel: ObservableObject {
         static let healthAsked = "healthAsked"
         static let phoneStatus = "phoneStatus"
         static let phoneSince = "phoneSince"
-        static let tokenKind = "tokenKind"
+        static let serverOffers = "serverOffers" // what the paired token may do: never the token itself
     }
 }
 

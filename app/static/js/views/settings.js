@@ -1103,7 +1103,13 @@
     // USDA. In the iPhone app the person's own key lives in the app (Keys and services), never in the page.
     if (KH.flags && KH.flags.DEVICE) {
       const phone = (() => { try { return window.webkit.messageHandlers.phone; } catch (e) { return null; } })();
-      body.append(subtitle('USDA FoodData Central and Open Food Facts', 'set-usda-h'),
+      const using = h('p', { class: 'setting-status', id: 'set-food-using' }, 'Using this iPhone\'s keys.');
+      if (KH.mock && KH.mock.serverApi) {
+        KH.mock.serverApi.check().then((k) => { // design note 39 §7: no key moves between this iPhone and the server
+          if (k.state === 'both') using.textContent = 'Using your server\'s food services while it can be reached. This iPhone\'s keys are used when it cannot be.';
+        }, () => null);
+      }
+      body.append(subtitle('USDA FoodData Central and Open Food Facts', 'set-usda-h'), using,
         h('p', { class: 'hint' }, 'To look up more foods, add your own USDA key or turn on Open Food Facts in the phone settings: Keys and services. Each is off until you turn it on.'),
         phone ? h('div', { class: 'settings-actions' }, action('Keys and services', 'secondary', async () => { phone.postMessage('settings'); }, { id: 'set-device-keys' })) : null);
     } else body.append(subtitle('USDA FoodData Central', 'set-usda-h'),
@@ -1593,8 +1599,17 @@
   // rows never appear twice and the ids (#set-clear-device, #set-outbox, #set-outbox-h) stay unique.
   // The iPhone app: sending what the person adds on the phone to their own server (design note 38 step 4; js/mock/server_sync.js
   // owns the queue). Redrawn live while it sends; `stops` ends the updates when the section is drawn again.
+  // Design note 39 §5.1: what the paired token may do, from GET /push/v1/about (js/mock/server_api.js).
+  const TOKEN_TEXT = {
+    both: 'Both ways: your server\'s AI and food services too',
+    add_only: 'Adds only: what you add is sent',
+    old_server: 'Adds only: your server is too old for more',
+    offline: 'Not known: your server could not be reached',
+    not_paired: 'None',
+  };
   function serverSyncBlock(stops) {
     const S = KH.mock.serverSync;
+    const A = KH.mock.serverApi || null;
     const info = h('div', { id: 'set-server-sync', 'aria-live': 'polite' });
     const rowsText = (n) => (n === 1 ? '1 row' : `${n} rows`);
     const stay = (n) => (n === 1 ? 'It stays' : 'They stay');
@@ -1611,9 +1626,13 @@
       }
       const parts = [kv([
         ['Your server', s.server || 'Not paired'],
+        A ? ['Token', TOKEN_TEXT[(A.status() || {}).state] || 'Not known yet'] : null,
         ['Waiting to be sent', s.waiting ? rowsText(s.waiting) : 'Nothing'],
         ['Last sent', s.sentAt ? fmtDateTime(s.sentAt) : 'Not yet'],
-      ])];
+      ].filter(Boolean))];
+      if (A && (A.status() || {}).state === 'add_only') {
+        parts.push(h('p', { class: 'hint', id: 'set-server-token-hint' }, 'To get your server\'s data and AI on this iPhone, make a new token for the iPhone app, both ways, and pair again.'));
+      }
       if (s.running) parts.push(h('p', { class: 'setting-status' }, 'Sending…'));
       else if (s.message) parts.push(h('p', { class: 'setting-status', id: 'set-server-sync-msg' }, s.message));
       if (s.refused.length) {
@@ -1635,6 +1654,7 @@
     };
     draw();
     stops.push(S.subscribe(draw));
+    if (A) { stops.push(A.subscribe(draw)); A.check().then(draw, () => null); }
     const box = h('div', { role: 'region', 'aria-labelledby': 'set-server-sync-h' }, info, now,
       h('p', { class: 'hint' }, 'New rows you add here are sent to your server when it can be reached: food, foods you made, lab results, symptoms, weight and blood pressure. Changes or deletions made on this iPhone after a row was sent are not sent yet. The app keeps note of them.'));
     return [subtitle('Sending to your server', 'set-server-sync-h'), box];

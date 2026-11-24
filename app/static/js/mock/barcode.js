@@ -279,7 +279,7 @@
       if (res.offline) {
         const services = await M.device.lookup({ kind: 'services' });
         if (services && services.off) return null; // the phone's own Open Food Facts lookup, which the person turned on
-        fail(502, SERVER_OFFLINE, { reason: 'server_offline', gtin: G.normalize(b.code, b.format) });
+        fail(502, SERVER_OFFLINE, { gtin: G.normalize(b.code, b.format) });
       }
       if (res.error) return null;
       if (res.status >= 200 && res.status < 300 && res.json && M.isDict(res.json.food)) return { result: res.json };

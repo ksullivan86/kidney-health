@@ -147,8 +147,75 @@
     return btoa(text);
   }
 
+  // An answer of the server's AI, made safe to use on this phone, whose rows have their own ids until two-way sync (note 39 step 6):
+  // * every food the answer carries in full (a Food) is kept on this phone (USDA and Open Food Facts foods as the shared row, the
+  //   person's own as their own) and named by its id here;
+  // * every other `food_id` is named by the food kept above, else by the one built-in food of that exact name (the built-in list is
+  //   the same on both), else by the one food of that name on this phone; else it is not known here;
+  // * an id of a row on the server (an entry or a saved meal) is never kept.
+  // An idea, recipe or card that names something not known here is left out, so nothing is saved with another food's numbers, and
+  // `dropped` says so. A safety answer (a low, a red flag, a medicine question) is never cut: it names no food.
+  const FOOD_SOURCES = new Set(['builtin', 'custom', 'usda', 'off']);
+  const ROW_IDS = ['entry_id', 'entry_ids', 'meal_id', 'template_id'];
+  const SAFETY = new Set(['red_flag', 'treating_a_low', 'medicine_question']);
+  const looksLikeFood = (o) => isDict(o) && Number.isInteger(o.id) && typeof o.name === 'string' && FOOD_SOURCES.has(o.source)
+    && typeof o.serving_desc === 'string' && isDict(o.nutrients);
+  function localize(api, answer) {
+    if (!isDict(answer) && !Array.isArray(answer)) return answer;
+    const ids = new Map();
+    const keep = (v) => {
+      if (Array.isArray(v)) { v.forEach(keep); return; }
+      if (!isDict(v)) return;
+      if (looksLikeFood(v)) {
+        const row = api._storeServerFood(v);
+        ids.set(v.id, row.id);
+        v.id = row.id;
+      }
+      for (const k of Object.keys(v)) keep(v[k]);
+    };
+    keep(answer);
+    const byName = (name) => {
+      if (typeof name !== 'string' || !name) return null;
+      const builtin = api._foods.filter((f) => f.source === 'builtin' && !f.hidden && f.name === name);
+      if (builtin.length === 1) return builtin[0].id;
+      const mine = api._foods.filter((f) => !f.hidden && api._foodVisible(f) && f.name === name);
+      return mine.length === 1 ? mine[0].id : null;
+    };
+    const unknown = new WeakSet();
+    const name = (v) => {
+      if (Array.isArray(v)) { v.forEach(name); return; }
+      if (!isDict(v)) return;
+      if (Number.isInteger(v.food_id)) {
+        const here = ids.has(v.food_id) ? ids.get(v.food_id) : byName(v.name != null ? v.name : v.food_name);
+        if (here == null) { v.food_id = null; unknown.add(v); } else v.food_id = here;
+      }
+      for (const k of ROW_IDS) if (k in v && v[k] != null) { v[k] = null; unknown.add(v); }
+      for (const k of Object.keys(v)) name(v[k]);
+    };
+    name(answer);
+    if (isDict(answer) && SAFETY.has(answer.status)) return answer;
+    const holds = (v) => (Array.isArray(v) ? v.some(holds) : isDict(v) && (unknown.has(v) || Object.values(v).some(holds)));
+    let left = 0;
+    const cut = (v) => { // the outermost list that holds the unknown thing loses that element
+      if (Array.isArray(v)) {
+        const kept = v.filter((el) => !holds(el));
+        left += v.length - kept.length;
+        v.splice(0, v.length, ...kept);
+        kept.forEach(cut);
+        return;
+      }
+      if (isDict(v)) for (const k of Object.keys(v)) if (k !== 'dropped') cut(v[k]);
+    };
+    cut(answer);
+    if (left && isDict(answer)) {
+      if (answer.dropped == null) answer.dropped = [];
+      if (Array.isArray(answer.dropped)) for (let i = 0; i < left; i += 1) answer.dropped.push({ reason: 'not_on_this_iphone' });
+    }
+    return answer;
+  }
+
   M.serverApi = {
-    check, offers, call, failWith, forget, readAbout, base64,
+    check, offers, call, failWith, forget, readAbout, base64, localize,
     status: () => known,
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
   };
