@@ -269,7 +269,9 @@ leave the server.
 * **Other people on the same server** cannot see any of it.
 * **Your iPhone app**, if you pair it with a token **for the iPhone app, both ways** (only when the admin allows it). With it the app
   uses this server's AI, food services, recipe pages, Instacart and list app as you, and can read what those routes answer. It
-  never sees the key of your list app. It sees only your own data, never as an
+  also keeps a copy of your log on the phone in step with this server: it reads your entries, foods, saved meals, lab results,
+  symptoms, weights and readings, your profile, targets, account settings and food preferences, and sends back what you change on
+  the phone. It never sees the key of your list app. It sees only your own data, never as an
   admin, and the activity list shows "The iPhone app read your data" once a day. Revoke the token in Settings → Phone shortcuts and it
   stops at once ([push.md](push.md#the-iphone-app-both-ways)).
 * **Admins** manage accounts but have no screen or API that shows another person's log, foods or
