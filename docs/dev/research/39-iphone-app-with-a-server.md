@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Decided 2026-11-24 (§12), with the usual good practice the owner asked for. The plan is §11. Built, server side: step 2 (the gateway, `app:sync`, `GET /push/v1/about`; `app/app_gateway.py`) and step 5 (the change feed, schema step 38; `app/sync_feed.py`). Built on the phone: step 1, and the phone side of steps 3 and 4 (the `serverApi` bridge and its allow-list, ARCHITECTURE "Device mode"). Ask stays off on the phone until step 6. |
+| Status | Decided 2026-11-24 (§12), with the usual good practice the owner asked for. The plan is §11. Built, server side: step 2 (the gateway, `app:sync`, `GET /push/v1/about`; `app/app_gateway.py`) and step 5 (the change feed, schema step 38; `app/sync_feed.py`). Built on the phone: step 1, and the phone side of steps 3 and 4 (the `serverApi` bridge and its allow-list, ARCHITECTURE "Device mode"). Step 9 is built on both sides: recipe pages, Instacart and the list app through the gateway. The demo's twins of step 5's versions, `If-Match` and `client_id` are built and pinned by vectors. Ask stays off on the phone until step 6. |
 | Owner's words | "Connecting a server should let the iPhone app use the server's AI and the other keys and services set up there, and sync between devices." (2026-11-21) And: "finish whatever is left on the roadmap." (2026-11-24) |
 | Builds on | [Note 38](38-iphone-app-without-a-server.md) (the app alone, device mode, step 4's one-way sending, §5.5 and §5.6, D2), [note 02](02-ios-pwa.md) R5 (the outbox, entry versions, "never overwrite another device's change"), [note 12](12-phone-push-tokens.md) (device tokens, `/push/v1`), [note 32](32-choose-local-or-cloud-ai.md) and [note 36](36-lab-pdf-text.md) (AI routing, lab text on the local model only). |
 | Scope | What the iPhone app can do once it is paired with the person's server: read and edit the person's data there, use the server's AI, use the server's food services and keys, and keep the phone and the server in step both ways. This is note 38 §9 step 6. |
@@ -373,6 +373,12 @@ The exact shapes are in [`docs/push.md`](../../push.md) and ARCHITECTURE.md.
   server's, the same edit was made on both sides and the answer is `done`.
 * The feed's answer also has `foods`, the foods its entries and saved meals use, and each entry and saved meal item names its food
   as `POST /push/v1/sync` does.
+* Step 9: the gateway's list also holds `GET /api/recipe-import`, `POST /api/recipe-import/page`, `GET /api/instacart`,
+  `POST /api/instacart/preview` and `/send`, `GET /api/list-sync`, `POST /api/list-sync/preview` and `/send`. The list app is set up
+  only in the web app, and pasted ingredients are read on the phone. The phone matches a page's ingredient lines with its own foods.
+  The server makes the shopping list from its own Plan, so before step 7 sends planned entries at once, plans made on the phone show
+  there only once they are sent. `about.services` says which of the three the server has on.
+* The web app's offline outbox (note 02) queues only food log entries, so it sends `If-Match` for no other kind.
 
 ## 12. Decisions (2026-11-24)
 

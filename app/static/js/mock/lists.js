@@ -73,7 +73,8 @@
     if (!S || !(await S.offers(what))) fail(404, 'Not Found');
     const res = await S.call(method, path, { body });
     if (res.offline || res.error) fail(503, UNREACHABLE);
-    if (res.status >= 400 || !isDict(res.json)) S.failWith(res);
+    if (res.status >= 400) S.failWith(res);
+    if (!isDict(res.json)) fail(502, 'Your server gave an answer the app could not read.');
     return res.json;
   }
   // The server's lines with this phone's food ids, remembered for the send that follows.

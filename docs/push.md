@@ -270,6 +270,13 @@ phone, the person makes a new token and pairs again.
    | `POST /api/ai/read-lab-report`, `/api/ai/read-lab-report-text` | lab report photos and text: on the local AI only |
    | `GET /api/foods/usda/search`, `POST /api/foods/usda/import`, `POST /api/foods/barcode` | the server's food services, with its keys |
    | `PATCH /api/me/settings` with only `food.off_consent`, `PATCH /api/me/ai` with only `opt_in` | the person's Open Food Facts consent and AI opt-in. Any other key is `403` and the route does not run |
+   | `GET /api/recipe-import`, `POST /api/recipe-import/page` | a recipe from a web page: the server reads the page through its checked connection, as for the web app |
+   | `GET /api/instacart`, `POST /api/instacart/preview`, `/api/instacart/send` | the Plan's shopping list at Instacart, with the server's key |
+   | `GET /api/list-sync`, `POST /api/list-sync/preview`, `/api/list-sync/send` | sending the shopping list to the person's own list app |
+
+   Each service works only while it is on for this server (`RECIPE_IMPORT_ENABLED`, `INSTACART_ENABLED` with its key,
+   `LIST_SYNC_ENABLED`); otherwise its route answers as it does for the web app. The list app is set up only in the web app: its
+   address and key are never sent from the phone, and its key never goes to it.
 
    **Never on it:** anything that needs the password again, admin routes, sign-in, tokens, sessions, keys and AI providers, sharing,
    the import, the `.zip` export, and deleting or changing the account. A test pins the list.
@@ -340,7 +347,8 @@ the latest state of each row:
 **Versions.** Every kind has a version, as entries do: a hash of what the person sees of the row, so the same content has the
 same version everywhere. The browser's copy is `app/static/js/engine/row_versions.js`. Each kind's `PUT` and `DELETE` route in
 `/api` takes `If-Match: "<version>"` and answers `412` with the row as stored when it changed. Without the header they work as
-before. Lab results have no edits, so only their delete takes it.
+before. Lab results have no edits, so only their delete takes it. The page's own copy of these routes, which the demo and the
+iPhone app run, does the same, and gives every new row a `client_id` as the server does.
 
 **`POST /push/v1/changes`** sends edits and deletes made on the phone:
 

@@ -48,6 +48,16 @@ the API. Security fixes are released as patch versions of the newest minor versi
   device is never overwritten without asking you. Foods, saved meals, lab results, symptoms, weights and blood pressure readings now
   have versions like food log entries, and their change and delete routes accept `If-Match`. The export carries each row's ID, and
   an import keeps it.
+* The demo and the iPhone app follow the same rules: every row gets an ID, a change or delete with an old version is refused in
+  the same way, and their export and import keep the IDs.
+* With a token both ways, the iPhone app can import a recipe from a web page, open the shopping list in Instacart, and send it to
+  your own list app, through your server and only when it has them turned on (design note 39, step 9). The list app is still set up
+  in the web app. Without such a server these stay off on the phone.
+
+### Fixed
+
+* The iPhone app no longer shows the demo's sample recipe page or a pretend Instacart link when it has no server.
+* A file exported from the demo can be imported into the demo again: entries no longer carry a field the import refuses.
 
 ### Upgrading
 

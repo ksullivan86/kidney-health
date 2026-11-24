@@ -52,6 +52,16 @@ Avoid (another helper's): `app/static/js/mock/server_sync.js`, `ios/KidneyHealth
    when offered; a page's lines re-matched with the phone's foods; the server's food ids shown as the phone's (by name) and mapped
    back on send; list app set-up 404 on the phone. `views/instacart.js`: the demo text only when `MOCK && !DEVICE`. Tests:
    `tests/js/server_lists.mjs` (63 checks) run by `tests/test_server_services_phone.py`. Swift not compiled (no Xcode here).
+5. **Docs**: ARCHITECTURE (the gateway list, "The demo's twins" under the change feed, device mode step 9 and its tests),
+   `docs/push.md` (the list table, the services' switches, the page's twins), `docs/privacy.md`, the handbook
+   (`app/install.md`, "With a token both ways"), CHANGELOG Unreleased (Added and Fixed), note 39 (status and "as built").
+
+## For the helper on steps 6 and 7 (server_sync.js)
+
+* Every row in the page now has `row.client_id` (entries before too). `server_sync.js` still keeps its own `c` for non-entry rows;
+  for a row it has not sent yet it could use `row.client_id` instead of a new UUID, so the phone, the export and the server share
+  one ID. `_fillClientIds` already prefers the queue's `c` for rows the queue knows, so existing phones line up.
+* Instacart and the list app read the server's Plan: plans made on the phone reach it only when step 7 sends planned entries.
 
 ## Commands
 
