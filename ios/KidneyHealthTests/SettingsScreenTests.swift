@@ -35,6 +35,7 @@ final class SettingsScreenTests: XCTestCase {
         let link = try XCTUnwrap(Pairing.parse("kidneyhealth://pair?v=1&server=https%3A%2F%2Fkidney.example.org&token=" + token))
         XCTAssertFalse(m.hasToken)  // reading the link saves nothing
         XCTAssertEqual(m.pairingQuestion(link), "This phone will send your weight and blood pressure, and with a token for the iPhone app what you add in the app, to https://kidney.example.org. "
+                       + "With a token for the iPhone app, both ways, the app also uses that server's AI and food services. "
                        + "Pair only with a QR code from your own server, under Settings → Account → Your data → Phone shortcuts.")
         XCTAssertNil(m.save(address: link.server, token: link.token))
         XCTAssertTrue(m.hasToken)

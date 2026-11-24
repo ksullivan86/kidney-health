@@ -42,6 +42,9 @@ struct ContentView: View {
                         Text("Saved.")
                     }
                     if model.hasToken {
+                        if let kind = model.tokenKindText {
+                            Text(kind) // both ways or add only (design note 39 §5.1)
+                        }
                         Button(model.testing ? "Testing…" : "Test connection") {
                             Task { await model.testConnection() }
                         }
@@ -55,11 +58,12 @@ struct ContentView: View {
                     Text("Your server")
                 } footer: {
                     Text("To connect: in the web app, open Settings → Account → Your data → Phone shortcuts and make a token for the iPhone app, "
-                         + "so the app can also send what you add in it. "
+                         + "so the app can also send what you add in it. A token for the iPhone app, both ways, also lets the app use your "
+                         + "server's AI and food services. "
                          + "Tap Scan the QR code and point it at the code, or type your server's address and paste the token here, then tap Save. "
                          + "If there is no Phone shortcuts form, ask whoever runs your server to turn phone shortcuts on. "
                          + "The token is kept on this phone only and is never shown again. "
-                         + "Test connection checks the saved address and token, and sends nothing else.")
+                         + "Test connection checks the saved address and token, says which kind of token it is, and sends nothing else.")
                 }
 
                 Section {

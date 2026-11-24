@@ -63,6 +63,7 @@
     too_many_recipes: 'more recipes than were asked for', too_few_items: 'fewer than two foods', malformed_recipe: 'an answer the app could not check',
     share_too_large: 'more than 3 servings of one food in each serving', not_for_me: 'a food you marked Not for me',
     excluded_category: 'a food from a group you do not want suggested',
+    not_on_this_iphone: 'a food that is not on this iPhone yet', // design note 39: the server's AI named a food the phone does not have
   };
   // AI recipes (note 16 §8): the fixed lists the request offers.
   const DISHES = [['bowl', 'Bowl'], ['soup', 'Soup'], ['stew', 'Stew'], ['stir_fry', 'Stir-fry'], ['bake', 'Bake'], ['salad', 'Salad'],
@@ -134,10 +135,13 @@
   // an AbortSignal) lets the caller stop the request: it rejects with the browser's AbortError, which is not turned into a message
   // (a PDF lab report is read page by page and has a Cancel button, js/views/lab_photo.js).
   async function uploadPhoto(kind, blob, dry, signal) {
+    const photoPath = `${kind === 'lab-report' ? '/api/ai/read-lab-report' : `/api/vision/${kind}`}${dry ? '?dry_run=true' : ''}`;
+    // The iPhone app: the in-page API hands the photo to the person's server's AI through the app (design note 39, js/mock/ai.js).
+    if (MOCK && DEVICE) return request('POST', photoPath, blob, { noQueue: true });
     if (MOCK) throw Object.assign(new Error('Photos are read by AI only in the installed app.'), { status: 0 });
     let res;
     try {
-      res = await fetch(`${kind === 'lab-report' ? '/api/ai/read-lab-report' : `/api/vision/${kind}`}${dry ? '?dry_run=true' : ''}`, {
+      res = await fetch(photoPath, {
         method: 'POST',
         headers: { 'Content-Type': 'image/jpeg', Accept: 'application/json', 'X-Requested-With': KH.brand.csrfHeaderValue },
         body: blob,
@@ -1105,8 +1109,37 @@
   const DEVICE_TEXT = 'Describe a meal and reading the text of a lab report PDF use Apple\'s on-device model. It runs on this iPhone: '
     + 'nothing you write or read is sent to any company or server, and the questions and answers are not kept. The app checks every '
     + 'answer, and you check each line before anything is saved.';
+  // Design note 39 §6.1: with a token both ways, the server's AI runs what it can; this iPhone's runs the rest. The person may
+  // choose to use only this iPhone's AI.
+  const WHERE_TEXT = { server: 'your server\'s AI', iphone: 'this iPhone\'s AI' };
+  function phonePart(me) {
+    const p = me.phone;
+    if (!p || !p.both_ways) return [];
+    const err = formError();
+    const msg = statusMsg();
+    const only = h('input', { type: 'checkbox', id: uid('ai-device-only'), checked: !!p.device_only });
+    only.addEventListener('change', async () => {
+      clear(err);
+      try {
+        await KH.mock.aiDevice.setOnly(only.checked);
+        forget();
+        msg.textContent = only.checked ? 'Only this iPhone\'s AI is used.' : 'Your server\'s AI is used where it can be.';
+        renderSettings();
+        renderAddSlot();
+      } catch (e) { only.checked = !only.checked; if (!e.handled) showError(err, e); }
+    });
+    const rows = Object.entries(p.where || {}).filter(([, w]) => w).map(([f, w]) => h('li', {}, `${(p.labels || {})[f] || f}: ${WHERE_TEXT[w]}`));
+    return [subtitle('Your server\'s AI'),
+      h('p', {}, `This iPhone is paired with ${p.server} both ways. A feature uses your server's AI when your server can be reached and offers it, `
+        + 'with the choices and consent you made there. Otherwise it uses this iPhone\'s own AI where it has one. A lab report goes only to an AI on '
+        + 'your own network or on this iPhone, never to a company\'s AI.'),
+      rows.length ? h('ul', { class: 'list', id: 'set-ai-where' }, ...rows) : h('p', { class: 'hint' }, 'No AI feature can run just now.'),
+      check('Use only this iPhone\'s AI', only, 'Nothing you write is sent to any AI, not even your server\'s. Features this iPhone\'s AI cannot do are off.'),
+      msg, err];
+  }
   function devicePart(me) {
     const d = me.device || {};
+    if (!me.enabled && me.phone && me.phone.both_ways) return phonePart(me);
     if (!me.enabled) {
       return [h('p', { class: 'setting-status' }, h('span', { class: 'state-pill off' }, 'Not available on this iPhone')),
         h('p', {}, d.message || 'Apple\'s on-device AI is not available on this iPhone, so the AI features are off. Everything else works.')];
@@ -1124,7 +1157,8 @@
       } catch (e) { opt.checked = !opt.checked; if (!e.handled) showError(err, e); }
     });
     return [h('p', {}, DEVICE_TEXT),
-      check('Use AI features', opt, 'Off by default. The app\'s own rules always run first. The AI never gives insulin or medicine doses.'), msg, err];
+      check('Use AI features', opt, 'Off by default. The app\'s own rules always run first. The AI never gives insulin or medicine doses.'), msg, err,
+      ...phonePart(me)];
   }
 
   // "How AI help is set up": the three questions of docs/ai.md ("The setup in three questions") and the handbook's

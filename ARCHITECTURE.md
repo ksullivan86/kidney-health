@@ -5743,9 +5743,14 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
   `{ ok, status, json, retryAfter? }` or `{ error: "not_paired" | "offline" | "bad_request" }`. The token never reaches the page and
   nothing is logged.
   * **The queue** is saved with the log in `_serverSync`: `rows[kind][row id] = { c: client_id, s: sent | refused | stuck, t: tries,
-    g: group, w: why }`, plus `server` (host), `sentAt`, `outcome`, `message`, `waitUntil`, `checkOk`, `checkedAt`. An entry keeps its
-    own `client_id` (the export carries it). The log is saved before a row with a new ID leaves the phone. Starting over makes a new
-    log and so a new queue; another server host sends everything again.
+    g: group, w: why, v: version when sent, d: 1 }`, plus `server` (host), `sentAt`, `outcome`, `message`, `waitUntil`, `checkOk`,
+    `checkedAt`. An entry keeps its own `client_id` (the export carries it). The log is saved before a row with a new ID leaves the
+    phone. Starting over makes a new log and so a new queue; another server host sends everything again.
+  * **What was sent is remembered** (design note 39, step 1): when the server takes a row, `v` keeps its version: for an entry the
+    server's own entry version (`log.entry_version`, the twin `KH.mock.entryVersion`), for the other kinds `b:` and a 64-bit FNV-1a
+    hash of the row as sent (sorted keys), until note 39 step 5 gives each kind its own version. A sent row deleted on the phone
+    keeps its mark with `d: 1` (a food counts as deleted only when the person no longer has it). `status()` counts
+    `changedSince` and `deletedSince`, and Settings says how many. Nothing of this is sent yet; the first two-way sync (§8.7) uses it.
   * **What is sent**: entries, the person's own foods, the USDA and Open Food Facts foods an entry uses (in `foods`, with `fdc_id` or
     `gtin`; the entry names them by `client_id`), built-in foods as `{builtin: {fdc_id, name}}`, labs as typed, symptoms, weights and
     readings (with the Health `source_key`). Foods first, oldest first, at most 200 rows and 256 KiB a request, at most 10 requests a
@@ -5780,7 +5785,43 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
     features on with `opt_in` (Settings → AI features shows one switch). Nothing leaves the phone, so consent is given with
     `skip_preview` and there is no consent sheet; "What will be sent?" shows the request to the app. The device build also packs the
     vendored pdf.js so a lab PDF can be read on the phone.
+* **The server's services, paired both ways (design note 39, steps 3 and 4)**. A token "For the iPhone app, both ways" (scope
+  `app:sync`) lets the phone use the server's gateway `/push/v1/api/<path>`. The page builds each request and reads each answer;
+  the app only carries it.
+  * **The bridge**: `{ kind: 'serverApi', method, path, body?, jpeg?, ifMatch? }` → `{ ok, status, json, retryAfter? }` or
+    `{ error: not_paired | offline | refused | bad_request }`. `path` is the `/push/v1/...` path with its query; `body` is JSON text;
+    `jpeg` is a photo in base64. `Services/ServerSync.swift` refuses anything not on the allow-list in
+    `KidneyHealthCore/ServerAPI.swift` before it looks for a server: `GET /push/v1/about`; `GET /api/foods/usda/search` (`q`),
+    `POST /api/foods/usda/import`, `POST /api/foods/barcode`, `PUT /api/me/settings` (body only `food.off_consent`);
+    `GET /api/ai/status`, `PATCH /api/me/ai` (body only `opt_in`), `POST /api/ai/consent`, `next-meal`, `parse-meal`, `recipes`,
+    `chat`, `read-lab-report-text` (each with `dry_run`), and the photo routes `POST /api/ai/read-lab-report`, `/api/vision/label`
+    and `/api/vision/plate` (JPEG only), all under `/push/v1/api/`. It sends to the paired HTTPS address with the Keychain token
+    through `URLSessionTransport` (no cookies, no cache, no redirects; 180 s for an answer; JSON up to 512 KiB, a photo up to 6 MiB,
+    an answer up to 4 MiB). No key of the phone's is ever sent, and nothing is logged.
+  * **Which token**: `js/mock/server_api.js` asks `GET /push/v1/about` at most every five minutes: 200 is `both`, 401 or 403
+    `add_only` (an old token, or `push.app_sync` off), 404 or 405 `old_server`, no answer `offline` (asked again after a minute).
+    `about` is read leniently: `account`, `api_version`, and per feature `usda_search`, `barcodes` and `ai` at the top or under
+    `features`; one it does not mention is tried. The app's pairing screen asks `about` after a save and after Test connection
+    (`SyncModel.tokenKind`) and says which kind of token is saved; Settings → This device shows the same in a Token row.
+  * **Food services** (§7): with `both`, USDA search and import and barcode look-ups go to the server, with the key it would use
+    for the person. A food it answers is kept on the phone at once (`_storeServerFood`: a USDA food by `fdc_id` and an Open Food
+    Facts food by barcode as the one shared row, linked; the person's own as their own food) and named by the phone's id. A 503 or
+    no answer moves to the phone's own key (Keys and services), else the built-in list. The server's Open Food Facts question is
+    asked on the phone; once the person agrees, the page sends `food.off_consent` to the server and looks up again. With no answer
+    and the phone's own Open Food Facts off, the look-up says to try when the server can be reached. Any other answer is the server's.
+  * **The AI** (§6, D2, D3), in `js/mock/ai.js`: per feature, the server's AI when `GET /api/ai/status` says it is available for the
+    person, else the iPhone's own (describe a meal, lab text), else none. Only no answer, 503 or 404 moves on; every other answer,
+    a safety card, a consent question (409), a limit (429) or a failure, is the server's and is shown as it is. "Use only this
+    iPhone's AI" (`GET`/`PUT /api/device/ai-choice`, kept with the log) skips the server. `GET /api/ai/status` merges the two: the
+    server's route, features and consent for what it runs, the iPhone's for the rest; voice is off. Lab text and photos go only to
+    the server's lab routes (local AI only) or the iPhone's model. Ask stays off on the phone: the server's assistant can save to
+    the server's log, which the phone sees only with two-way sync (step 6). Answers pass `M.serverApi.localize`: foods sent in full
+    are kept and renamed to the phone's ids, other `food_id`s are matched by the built-in food of that exact name or the one food of
+    that name, and an idea or card naming a food the phone lacks is left out (`dropped: not_on_this_iphone`); server row ids
+    (`entry_id`, `meal_id`) are never kept; a safety answer is never cut. Requests drop `exclude_food_ids` (the phone's ids).
+    Photos go from `KH.ai.uploadPhoto` to the in-page API, which sends them as `jpeg`.
 * **Tests**: `tests/js/server_sync.mjs` and `tests/test_server_sync_phone.py` (the queue against a stand-in app, and the page's
-  body through the real route), `tests/js/device_mode.mjs` (the engine, against a fake IndexedDB), `tests/test_device_mode.py` (the build and the wiring), `PhoneTests.swift`,
+  body through the real route), `tests/js/server_services.mjs` and `tests/test_server_services_phone.py` (note 39 steps 3 and 4
+  against a fake gateway), `ServerAPITests.swift` (the allow-list), `tests/js/device_mode.mjs` (the engine, against a fake IndexedDB), `tests/test_device_mode.py` (the build and the wiring), `PhoneTests.swift`,
   `tests/test_ios_app.py` (the shell's rules), `WebShellTests.swift` (the simulator), `tools/e2e/device_mode.py` (Chromium).
 

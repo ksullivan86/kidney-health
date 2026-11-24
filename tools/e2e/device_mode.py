@@ -17,6 +17,10 @@ stands in for the iPhone app's message handlers. At 375x812 light and 1280x800 d
   Describe a meal, which sends the server's cleaned data to the app and shows the matches and the server's notice; a low gets the
   Treating a low card and the model is not asked;
 * no request to any other host, no console or page error (CSP violations included), no sideways scroll.
+* paired with a token both ways (design note 39, steps 3 and 4; 375x812 light), with a stand-in for the server's gateway: This
+  device says the token works both ways, Food data says the server's food services are used, Settings → AI features lists Describe
+  a meal on the server's AI and offers "Use only this iPhone's AI"; Describe a meal goes to the server and its answer is shown with
+  its food named by the phone's own id; with "Use only this iPhone's AI" on, the iPhone's model answers and the server is not asked.
 
 Nothing leaves the machine. Prints PASS / FAIL lines and writes ``<out>/report.json``; exit status 1 on any failure.
 """
@@ -56,6 +60,35 @@ STUB = ("window.__kh = { copies: [], phone: [], sync: [], ai: [] };"
         " : r.kind === 'ai' ? (window.__kh.ai.push(r), { ok: true, answer: { status: 'ok', items: ["
         "   { text: '2 eggs', search: 'egg', amount: 2, unit: 'serving' }] } })"
         " : { error: 'off_off', message: 'off' } } } };")
+
+
+# Design note 39: the same app paired with a token both ways. The stand-in gateway answers GET /push/v1/about, the server's AI status
+# (describe a meal available) and its parse-meal, whose match is a built-in food under the server's own id.
+BOTH_WAYS = ("window.__kh = { copies: [], phone: [], api: [], ai: [] };"
+             "window.__kh.status = { enabled: true, opted_in: true, available: true, reason: null, message: null, provider: { label: 'Home AI', host: 'ai.home.lan' },"
+             " consent: { text: { host: 'ai.home.lan', skip_preview: true }, photos: null, chat: null, labs: null, voice: null }, routing: { mode: 'routed' },"
+             " routes: { describe: { feature: 'describe', label: 'Describe a meal', available: true, consent: { host: 'ai.home.lan', skip_preview: true } } },"
+             " features: { parse_meal: true }, daily_limit: null, remaining_today: null };"
+             "window.__kh.parse = () => { const api = KH.mock.instance; const f = api._foods.find((x) => x.source === 'builtin' && /egg/i.test(x.name));"
+             " const food = { ...api._foodView(f), id: 999999 }; return { status: 'ok', feature: 'parse_meal', provider: { label: 'Home AI' },"
+             " items: [{ text: '2 eggs', search: 'egg', amount: 2, unit: 'serving', matches: [{ food, servings: 2 }] }], dropped: [],"
+             " notice: 'Checked by your server. Nothing is logged until you add it.' }; };"
+             "window.__kh.gateway = (r) => { window.__kh.api.push({ method: r.method, path: r.path });"
+             " const reply = (json) => ({ ok: true, status: 200, json: JSON.stringify(json) });"
+             " if (r.path === '/push/v1/about') return reply({ account: 'acct-1', api_version: 1 });"
+             " if (r.path === '/push/v1/api/ai/status') return reply(window.__kh.status);"
+             " if (r.path.startsWith('/push/v1/api/ai/parse-meal')) return reply(window.__kh.parse());"
+             " return { ok: true, status: 404, json: '{\"detail\": \"Not Found\"}' }; };"
+             "window.webkit = { messageHandlers: { safetyCopy: { postMessage: (t) => window.__kh.copies.push(String(t)) },"
+             " phone: { postMessage: (m) => window.__kh.phone.push(String(m)) },"
+             " bridge: { postMessage: async (r) => r.kind === 'services' ? { ok: true, off: false, usda: false, scan: false }"
+             " : r.kind === 'serverInfo' ? { ok: true, paired: true, server: 'food.example.org' }"
+             " : r.kind === 'serverSyncCheck' ? { ok: true, status: 200, json: '{\"ok\": true}' }"
+             " : r.kind === 'serverApi' ? window.__kh.gateway(r)"
+             " : r.kind === 'aiStatus' ? { ok: true, available: true, reason: null }"
+             " : r.kind === 'ai' ? (window.__kh.ai.push(r), { ok: true, answer: { status: 'ok', items: ["
+             "   { text: '2 eggs', search: 'egg', amount: 2, unit: 'serving' }] } })"
+             " : { error: 'off_off', message: 'off' } } } };")
 
 
 def check(name: str, ok: bool, detail: str = "") -> None:
@@ -194,6 +227,68 @@ def ai_walk(page, base: str, tag: str) -> None:
     page.keyboard.press("Escape")
 
 
+def both_ways_walk(browser, base: str) -> None:
+    """Design note 39, steps 3 and 4: the server's food services and AI from the phone, and the choice of AI."""
+    tag = "both-ways"
+    ctx = browser.new_context(viewport={"width": 375, "height": 812}, color_scheme="light")
+    ctx.add_init_script(BOTH_WAYS)
+    page = ctx.new_page()
+    errors: list[str] = []
+    others: list[str] = []
+    page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.on("request", lambda r: others.append(r.url) if not r.url.startswith(base) else None)
+    page.goto(f"{base}/index.html#today")
+    page.wait_for_selector("#view-today:not([hidden])", timeout=30000)
+    page.wait_for_timeout(800)
+    page.evaluate("KH.request('PUT', '/api/device/setup', { done: true }).then(() => KH.mock.local.flush())")  # past the first-start setup
+    page.goto(f"{base}/index.html#settings")
+    page.reload()
+    page.wait_for_selector("#view-settings:not([hidden])", timeout=30000)
+    page.wait_for_selector("#set-ai-where", timeout=30000)
+    device = page.locator("#set-device-body").inner_text()
+    for _ in range(50):
+        if "Both ways" in device:
+            break
+        page.wait_for_timeout(100)
+        device = page.locator("#set-device-body").inner_text()
+    check(f"[{tag}] This device says the token works both ways", "Both ways" in device, device[:200])
+    food = page.locator("#set-food-using").inner_text() if page.locator("#set-food-using").count() else ""
+    check(f"[{tag}] Food data says the server's food services are used", "server's food services" in food, food[:120])
+    ai = page.locator("#set-ai-slot").inner_text()
+    check(f"[{tag}] AI settings list Describe a meal on the server's AI", "Describe a meal: your server's AI" in ai, ai[:240])
+    check(f"[{tag}] and offer Use only this iPhone's AI", "Use only this iPhone's AI" in ai)
+    page.goto(f"{base}/index.html#add")
+    page.wait_for_selector("#view-add:not([hidden])", timeout=30000)
+    button = page.get_by_role("button", name="Describe a meal (AI)")
+    button.wait_for(timeout=30000)
+    button.click()
+    page.wait_for_selector("#sheet-ai[open] textarea", timeout=10000)
+    page.fill("#sheet-ai textarea", "2 eggs")
+    page.get_by_role("button", name="Find foods").click()
+    page.wait_for_selector("#sheet-ai .ai-parse-item", timeout=10000)
+    results = page.locator("#sheet-ai .ai-results").inner_text()
+    asked = [r["path"] for r in page.evaluate("window.__kh.api")]
+    check(f"[{tag}] describe a meal goes to the server", "/push/v1/api/ai/parse-meal" in asked and not page.evaluate("window.__kh.ai"),
+          json.dumps(asked)[:200])
+    check(f"[{tag}] the server's answer is shown", "Checked by your server" in results and "egg" in results.lower(), results[:160])
+    page.keyboard.press("Escape")
+    got = page.evaluate("KH.request('POST', '/api/ai/parse-meal', { text: '2 eggs', meal: 'lunch' })"
+                        ".then((a) => [a.items[0].matches[0].food.id, KH.mock.instance._food(a.items[0].matches[0].food.id).source])")
+    check(f"[{tag}] its food is named by the phone's own id", got[0] != 999999 and got[1] == "builtin", json.dumps(got))
+    page.evaluate("KH.mock.aiDevice.setOnly(true)")
+    page.evaluate("KH.request('PATCH', '/api/me/ai', { opt_in: true })")
+    before = len(page.evaluate("window.__kh.api"))
+    answer = page.evaluate("KH.request('POST', '/api/ai/parse-meal', { text: '2 eggs', meal: 'lunch' })")
+    check(f"[{tag}] with Use only this iPhone's AI, the iPhone answers",
+          answer.get("provider", {}).get("label") == "Apple's on-device model" and len(page.evaluate("window.__kh.ai")) == 1)
+    paths = [r["path"] for r in page.evaluate("window.__kh.api")[before:]]
+    check(f"[{tag}] and the server's AI is not asked", not any("/api/ai/" in x for x in paths), json.dumps(paths)[:160])
+    check(f"[{tag}] no request to another host", not others, "; ".join(others[:3]))
+    check(f"[{tag}] no console or page error", not errors, "; ".join(errors[:3]))
+    ctx.close()
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n", 1)[0])
     ap.add_argument("--out", type=Path, default=OUT)
@@ -210,6 +305,7 @@ def main(argv: list[str] | None = None) -> int:
             try:
                 for width, height, scheme in ((375, 812, "light"), (1280, 800, "dark")):
                     walk(browser, base, width, height, scheme)
+                both_ways_walk(browser, base)
             finally:
                 browser.close()
     finally:

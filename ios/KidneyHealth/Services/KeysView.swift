@@ -1,9 +1,11 @@
 // Settings → This device → Apple Health and server → Keys and services (design note 38, step 2, §5.3).
 // Each service is off until the person turns it on, says which host it talks to and what it sends, and a key is never shown again.
+import KidneyHealthCore
 import SwiftUI
 
 struct KeysView: View {
     @ObservedObject private var services = FoodServices.shared
+    @ObservedObject private var pairing = SyncModel.shared
     @State private var key = ""
     @State private var keyMessage: String?
     @State private var testing = false
@@ -11,6 +13,10 @@ struct KeysView: View {
     var body: some View {
         Form {
             Section {
+                // Design note 39 §7: with a token both ways, lookups go through the server, with its keys; no key crosses.
+                Text(pairing.hasToken && pairing.tokenKind == .bothWays
+                     ? "Using your server's food services while it can be reached. The keys below are used only when it cannot be."
+                     : "Using this iPhone's keys.")
                 Text("The app's own food list works with nothing turned on. These services find more foods. Each one is off until you turn it on, and sends only the words you type or the barcode you scan, never anything about you. Foods you look up are saved, so they work offline afterwards.")
             }
 

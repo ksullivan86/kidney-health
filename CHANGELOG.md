@@ -28,6 +28,15 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * In the iPhone app, Describe a meal and reading the text of a lab report PDF can use Apple's AI on the phone, once you turn AI
   features on in Settings. Nothing leaves the phone and nothing about the question or the answer is kept. The app runs the
   server's own checks on every answer, and you check each line before saving (design note 38, step 5).
+* The iPhone app remembers which rows it sent and how they looked, and Settings → This device says how many you changed or deleted
+  on the phone since. Nothing more is sent yet. This prepares sync both ways (design note 39, step 1).
+* Paired with a token for the iPhone app, both ways, the iPhone app uses your server's food services and AI (design note 39,
+  steps 3 and 4, the phone side). USDA and barcode look-ups go through your server while it can be reached, and the foods it finds
+  are saved on the phone. Offline, the phone uses its own keys. No key moves between the phone and the server. Each AI feature uses
+  your server's AI when it offers the feature, else the iPhone's own, else works without AI. A lab report goes only to an AI on
+  your own network or on the phone. **Use only this iPhone's AI** in Settings → AI features keeps everything away from your
+  server's AI. The server address screen says which kind of token is saved, and an older token keeps working as before. Ask is
+  not on the phone yet.
 
 ### Upgrading
 

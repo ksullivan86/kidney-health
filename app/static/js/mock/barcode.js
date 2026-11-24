@@ -257,7 +257,38 @@
   const NO_SERVING_WEIGHT = "Open Food Facts lists this product's values per serving but not how much a serving weighs, so they "
     + 'cannot be used. Enter them from the label.';
   const NOT_FOUND_OFF = 'No product with this barcode in Open Food Facts. Enter it from the label; the app keeps the barcode for next time.';
+  // Design note 39 §7 (step 3): with a token both ways the person's server looks the barcode up: Open Food Facts after the
+  // person agreed there, then USDA Branded, then its shared rows, with its own limits and keys. Its answer is kept on this phone
+  // (js/mock/foods.js _storeServerFood). Its consent question is the server's: once the person agrees here, the page tells the
+  // server (PUT /api/me/settings with food.off_consent only) and asks again. When the server cannot be reached, the phone's own
+  // Open Food Facts switch is used if it is on; else the person is told to look it up when the server can be reached.
+  const SERVER_OFFLINE = 'Your server could not be reached, so this barcode cannot be looked up now. Look it up when your server '
+    + 'can be reached, or enter the food from its label.';
   Object.assign(MockApi.prototype, {
+    // { result } when the server answered with a food, { failed } with its error answer, or null when the phone must look it up.
+    async _serverBarcode(b) {
+      const S = M.serverApi;
+      if (!S || !(await S.offers('barcode'))) return null;
+      const body = { code: b.code, format: b.format, refresh: b.refresh };
+      let res = await S.call('POST', '/api/foods/barcode', { body });
+      const consented = () => !!this._effectiveSetting('food.off_consent', this._currentUser().id).value;
+      if (res.status === 503 && res.json && res.json.reason === 'off_consent_required' && consented()) {
+        const told = await S.call('PUT', '/api/me/settings', { body: { 'food.off_consent': true } });
+        if (told.status >= 200 && told.status < 300) res = await S.call('POST', '/api/foods/barcode', { body });
+      }
+      if (res.offline) {
+        const services = await M.device.lookup({ kind: 'services' });
+        if (services && services.off) return null; // the phone's own Open Food Facts lookup, which the person turned on
+        fail(502, SERVER_OFFLINE, { gtin: G.normalize(b.code, b.format) });
+      }
+      if (res.error) return null;
+      if (res.status >= 200 && res.status < 300 && res.json && M.isDict(res.json.food)) return { result: res.json };
+      if (res.status === 503 && !(res.json && res.json.reason === 'off_consent_required')) {
+        const services = await M.device.lookup({ kind: 'services' });
+        if (services && services.off) return null; // the server cannot look it up; the phone's own switch is on
+      }
+      return { failed: res };
+    },
     async _deviceBarcode(gtin14, row, source) {
       this._takeBarcodeLookup();
       const u = this._currentUser();
@@ -306,7 +337,20 @@
     const [row, source] = this._barcodeLocal(gtin14);
     if (row && (!b.refresh || source === 'local')) return this._barcodeResult(row, gtin14, source, this._attributionsOfRow(row));
 
-    if (KH.flags && KH.flags.DEVICE && M.device) return this._deviceBarcode(gtin14, row, source);
+    if (KH.flags && KH.flags.DEVICE && M.device) {
+      return this._serverBarcode(b).then((served) => {
+        if (!served) return this._deviceBarcode(gtin14, row, source);
+        if (served.failed) {
+          if (row) return this._barcodeResult(row, gtin14, source, this._attributionsOfRow(row)); // a refresh found nothing new
+          return M.serverApi.failWith(served.failed);
+        }
+        const r = served.result;
+        const stored = this._storeServerFood(r.food);
+        const attributions = Array.isArray(r.attributions) ? r.attributions : this._attributionsOfRow(stored);
+        const kind = r.source === 'local' ? 'local' : stored.source === 'custom' ? 'local' : r.source || stored.source;
+        return this._barcodeResult(stored, gtin14, kind, attributions);
+      });
+    }
     this._takeBarcodeLookup();
     const u = this._currentUser();
     const offEnabled = !!this._effectiveSetting('food.off_enabled', null).value;
