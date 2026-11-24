@@ -66,6 +66,32 @@ final class PhoneTests: XCTestCase {
         XCTAssertFalse(lock.locked)
     }
 
+    /// Design note 39 §5.4: the serverApi bridge refuses a path off the allow-list, and an odd body, before it looks for a server.
+    @MainActor
+    func testTheServerApiBridgeCarriesOnlyItsList() async {
+        for bad: [String: Any] in [["method": "GET", "path": "/push/v1/api/me/tokens"], ["method": "PUT", "path": "/push/v1/api/me/ai/provider"],
+                                   ["method": "POST", "path": "/push/v1/sync"], ["path": "/push/v1/about"], ["method": "GET"]] {
+            let answer = await ServerSync.answer("serverApi", bad)
+            XCTAssertEqual(answer["error"] as? String, "refused", "\(bad)")
+        }
+        for bad: [String: Any] in [["method": "POST", "path": "/push/v1/api/ai/parse-meal"],
+                                   ["method": "POST", "path": "/push/v1/api/ai/parse-meal", "body": "[1]"],
+                                   ["method": "GET", "path": "/push/v1/about", "body": "{}"],
+                                   ["method": "POST", "path": "/push/v1/api/ai/parse-meal", "jpeg": "/9j/"],
+                                   ["method": "POST", "path": "/push/v1/api/vision/label", "jpeg": "iVBORw0KGgo="],
+                                   ["method": "POST", "path": "/push/v1/api/vision/label", "body": "{}"],
+                                   ["method": "POST", "path": "/push/v1/api/ai/consent", "body": "{}", "ifMatch": "a\nb"],
+                                   ["method": "PATCH", "path": "/push/v1/api/me/ai", "body": "{\"provider\": \"own\"}"],
+                                   ["method": "PUT", "path": "/push/v1/api/me/settings", "body": "{\"ai.enabled\": true}"]] {
+            let answer = await ServerSync.answer("serverApi", bad)
+            XCTAssertEqual(answer["error"] as? String, "bad_request", "\(bad)")
+        }
+        let services = FoodServices(defaults: UserDefaults(suiteName: "PhoneTests-\(UUID().uuidString)")!)
+        let routed = await services.answer(["kind": "serverApi", "method": "DELETE", "path": "/push/v1/api/ai/audit"])
+        XCTAssertEqual(routed["error"] as? String, "refused") // the bridge hands serverApi to ServerSync
+        XCTAssertNil(routed["json"])
+    }
+
     /// Step 5: the server's instructions, with the page's data JSON put in place exactly; other tasks and empty text are refused.
     func testTheOnDeviceAIUsesTheServersPromptAndOnlyTwoTasks() async {
         let prompts = AIPrompts(raw: ["system": "S", "tasks": ["parse_meal": ["template": "<data>{text}</data>"]]])

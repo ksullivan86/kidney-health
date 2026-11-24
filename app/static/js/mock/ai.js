@@ -19,6 +19,21 @@
    * The answers have the server's shape, with the on-device model as the provider. Nothing leaves the phone, so there is no
      consent sheet to a host; the person still turns AI features on in Settings (opt_in, kept with the rest of the log).
    * Nothing about the prompt or the reply is stored: there is no AI activity log in device mode (audit_id is null).
+
+   DEVICE MODE WITH A SERVER (design note 39 §6, plan step 4; D2 and D3). When the phone is paired with a token "both ways"
+   (js/mock/server_api.js), each feature picks its AI by one rule, worked out each time:
+     1. the server's AI, when the server answers and its GET /api/ai/status says the feature is available for this person;
+     2. else the iPhone's own AI, for the two features it has (describe a meal, the text of a lab report page);
+     3. else the feature's way without AI, as before.
+   The setting "Use only this iPhone's AI" (kept with the log, GET and PUT /api/device/ai-choice) skips step 1. Only a failure moves
+   on: the server could not be reached, or answered 503 (not available) or 404 (AI off there, as if not registered). Every other
+   answer is shown as it is: a safety answer (treating a low, get help now, ask your care team) is never asked anywhere else, a
+   consent question (409) opens the same consent sheet as the web app, a daily limit (429) is the server's.
+   Lab report text and photos go only to the server's lab routes, which run only on its local AI, or to the iPhone's own model. They
+   are never put in any other request and never fall back to a cloud model. The server's foods in an answer are kept on this phone
+   and named by its own ids (M.serverApi.localize); an idea that names a food this phone does not have is left out. Ask (the chat)
+   stays off on the phone for now: the server's assistant can save to the log on the server, which reaches the phone only with
+   two-way sync (note 39 step 6).
    Outside device mode nothing here changes. */
 (() => {
   'use strict';
@@ -122,10 +137,18 @@
   // GET /api/me/ai in device mode: `enabled` is whether the iPhone's model can answer; `device` says why not, in plain words.
   async function meView(api) {
     const st = await aiStatus();
+    const [ss, dev] = await Promise.all([serverStatus(api, { fresh: true }), deviceStatus(api)]);
+    const S = KH.mock.serverApi;
+    const known = S ? S.status() : null;
+    const where = whereEach(ss, dev);
+    const serverAi = Object.values(where).includes('server');
     return {
-      ...OFF_VIEW(), enabled: st.available, settings: prefs(api), user_keys_allowed: false, daily_limit: null, remaining_today: null,
+      ...OFF_VIEW(), enabled: st.available || serverAi, settings: prefs(api), user_keys_allowed: false, daily_limit: null, remaining_today: null,
       routing: st.available ? { mode: 'routed', features: Object.keys(ROUTES).map((f) => routeView(f, true, null)) } : null,
       device: { available: st.available, reason: st.reason, message: st.reason ? UNAVAILABLE[st.reason] : null, provider: summary() },
+      // Note 39 §6.1: the server's AI, when a token both ways is paired; and the person's choice to use only this iPhone's.
+      phone: { server: known && known.state === 'both' ? known.server : null, both_ways: !!(known && known.state === 'both'),
+        device_only: choiceOf(api).device_only, server_ai: serverAi, where, labels: { ...ROUTES } },
     };
   }
   route('GET', '/api/me/ai', function () { return device() ? meView(this) : OFF_VIEW(); });
@@ -146,13 +169,17 @@
     const b = c.done();
     const changes = Object.fromEntries(Object.entries(b).filter(([, v]) => v !== null && v !== undefined));
     this._aiPrefs = { ...prefs(this), ...changes };
-    return meView(this);
+    // The same switch on the server, when its AI may be used: only opt_in, nothing else of the person's AI settings.
+    const send = typeof changes.opt_in === 'boolean' && KH.mock.serverApi && !choiceOf(this).device_only;
+    const told = send ? KH.mock.serverApi.offers('ai').then((yes) => (yes ? KH.mock.serverApi.call('PATCH', '/api/me/ai', { body: { opt_in: changes.opt_in } }) : null))
+      : Promise.resolve(null);
+    return told.then(() => { forgetServer(); return meView(this); });
   });
-  route('GET', '/api/ai/status', function () {
-    if (!device()) fail(404, 'Not Found');
+  // The iPhone's own AI as GET /api/ai/status shows it, or null when this iPhone has none.
+  async function deviceStatus(api) {
     return aiStatus().then((st) => {
-      if (!st.available) fail(404, 'Not Found'); // as a server with AI off
-      const optedIn = !!prefs(this).opt_in;
+      if (!st.available) return null; // as a server with AI off
+      const optedIn = !!prefs(api).opt_in;
       const routes = Object.fromEntries(Object.keys(ROUTES).map((f) => [f, routeView(f, optedIn, 'not_opted_in')]));
       return {
         enabled: true, opted_in: optedIn, available: optedIn, reason: optedIn ? null : 'not_opted_in',
@@ -164,7 +191,146 @@
         voice: null, trust: { setting: 'ask', allowed: false, effective: 'ask' }, prompt_version: J().PROMPT_VERSION, device: true,
       };
     });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Device mode with a server: the choice of AI (note 39 §6.1)
+  // ---------------------------------------------------------------------------
+  const FEATURE_ROUTE = { next_meal: 'meal_ideas', parse_meal: 'describe', label: 'photos', plate: 'photos', chat: 'chat', voice: 'chat',
+    lab_report: 'labs', lab_report_text: 'labs', recipes: 'recipes', recipe_steps: 'recipes' };
+  const NOT_ON_PHONE = new Set(['chat']); // Ask stays off on the phone until two-way sync (see the top)
+  const SERVER_GONE = 'Your server could not be reached, so this AI feature is not available right now. Try again later.';
+  const STATUS_TTL_MS = 30000;
+  const choiceOf = (api) => ({ device_only: false, ...(api._aiPhone || {}) });
+  let serverSeen = null; // { at, status } of the server's GET /api/ai/status, for the feature routes
+  function forgetServer() { serverSeen = null; }
+  // The server's AI status for this person, or null when its AI is not to be used now.
+  async function serverStatus(api, { fresh = false } = {}) {
+    const S = KH.mock.serverApi;
+    if (!S || choiceOf(api).device_only) return null;
+    if (!fresh && serverSeen && Date.now() - serverSeen.at < STATUS_TTL_MS) return serverSeen.status;
+    let status = null;
+    if (await S.offers('ai')) {
+      const res = await S.call('GET', '/api/ai/status');
+      if (res.status === 200 && isDict(res.json) && res.json.enabled !== false) status = res.json;
+    }
+    serverSeen = { at: Date.now(), status };
+    return status;
+  }
+  // Step 1 of the rule: does the server run this feature route for this person now?
+  function serverRuns(ss, featureRoute) {
+    if (!ss || NOT_ON_PHONE.has(featureRoute) || ss.opted_in === false) return false;
+    const r = ss.routes && ss.routes[featureRoute];
+    return isDict(r) && r.available === true;
+  }
+  // One feature through the server. { value } with its answer (kept foods named by this phone's ids), or { skip } when the next
+  // step of the rule must run: { skip: 'unreachable' } or { skip: 'not_available' }. Any other answer is thrown as the server's.
+  async function viaServer(api, featureRoute, method, path, opts = {}) {
+    const ss = await serverStatus(api);
+    if (!serverRuns(ss, featureRoute)) return { skip: 'not_available' };
+    const res = await KH.mock.serverApi.call(method, path, opts);
+    if (res.offline || res.error) { forgetServer(); return { skip: 'unreachable' }; }
+    if (res.status === 503 || res.status === 404) { forgetServer(); return { skip: 'not_available' }; }
+    if (res.status >= 200 && res.status < 300) return { value: KH.mock.serverApi.localize(api, res.json) };
+    return KH.mock.serverApi.failWith(res);
+  }
+  // A body for the server: nothing that names this phone's own rows (the server's ids differ until two-way sync).
+  function forServer(body) {
+    if (!isDict(body)) return body;
+    const out = { ...body };
+    for (const k of Object.keys(out)) if (/(^|_)food_ids?$/.test(k)) delete out[k];
+    return out;
+  }
+  const query = (qp) => (qp('dry_run') === 'true' ? '?dry_run=true' : '');
+  // Where each feature runs now, for Settings: 'server', 'iphone' or null.
+  function whereEach(ss, dev) {
+    const out = {};
+    for (const f of Object.keys(ROUTES)) {
+      out[f] = serverRuns(ss, f) ? 'server' : dev && dev.routes[f] && dev.routes[f].available ? 'iphone' : null;
+    }
+    return out;
+  }
+  // GET /api/ai/status in device mode: the server's view for the features it runs, the iPhone's for the rest.
+  async function mergedStatus(api) {
+    const [ss, dev] = await Promise.all([serverStatus(api, { fresh: true }), deviceStatus(api)]);
+    const runs = (f) => serverRuns(ss, f);
+    if (!ss || !Object.keys(ROUTES).some(runs)) {
+      if (!dev) fail(404, 'Not Found'); // no AI anywhere: as a server with AI off
+      return dev;
+    }
+    const routes = {};
+    for (const f of Object.keys(ROUTES)) {
+      routes[f] = runs(f) ? { ...ss.routes[f], runs_on_phone: 'server' } : dev ? dev.routes[f] : routeView(f, false, 'feature_off');
+    }
+    const features = {};
+    for (const [k, f] of Object.entries(FEATURE_ROUTE)) {
+      features[k] = runs(f) ? !!(ss.features && ss.features[k]) : !!(dev && dev.features[k]);
+    }
+    features.voice = false; // the phone does not send recordings
+    const consent = {};
+    for (const purpose of ['text', 'photos', 'chat', 'labs', 'voice']) {
+      const served = Object.keys(ROUTES).some((f) => PURPOSE[f] === purpose && runs(f));
+      consent[purpose] = served ? (ss.consent || {})[purpose] || null : dev ? dev.consent[purpose] || null : null;
+    }
+    const available = Object.values(features).some(Boolean);
+    return {
+      ...ss, enabled: true, opted_in: true, available, reason: available ? null : ss.reason, message: available ? null : ss.message,
+      routes, features, consent, voice: null, device: true, server: KH.mock.serverApi.status() ? KH.mock.serverApi.status().server : null,
+      remaining_today: ss.remaining_today == null ? null : ss.remaining_today,
+    };
+  }
+
+  route('GET', '/api/ai/status', function () {
+    if (!device()) fail(404, 'Not Found');
+    return mergedStatus(this);
   });
+  // "Use only this iPhone's AI" (note 39 §6.1): a setting of this phone, kept with the log, never sent to the server.
+  route('GET', '/api/device/ai-choice', function () {
+    if (!device()) fail(404, 'Not Found');
+    return choiceOf(this);
+  });
+  route('PUT', '/api/device/ai-choice', function ({ body }) {
+    if (!device()) fail(404, 'Not Found');
+    if (!isDict(body) || typeof body.device_only !== 'boolean') KH.mock.failFields(['device_only: Input should be a valid boolean']);
+    this._aiPhone = { device_only: body.device_only };
+    forgetServer();
+    return choiceOf(this);
+  });
+  // Consent to the server's AI provider (the same sheet as the web app): only for the server, whose consent it is.
+  route('POST', '/api/ai/consent', function ({ body }) {
+    if (!device()) fail(404, 'Not Found');
+    return serverStatus(this).then(async (ss) => {
+      if (!ss) fail(404, 'Not Found');
+      const res = await KH.mock.serverApi.call('POST', '/api/ai/consent', { body });
+      forgetServer();
+      if (res.offline || res.error) fail(503, SERVER_GONE, { reason: 'server_unreachable' });
+      if (res.status >= 200 && res.status < 300) return res.json;
+      return KH.mock.serverApi.failWith(res);
+    });
+  });
+  // Meal ideas and AI recipes: the server's AI only (the iPhone's model has neither).
+  for (const [path, featureRoute] of [['/api/ai/next-meal', 'meal_ideas'], ['/api/ai/recipes', 'recipes']]) {
+    route('POST', path, function ({ body, qp }) {
+      if (!device()) fail(404, 'Not Found');
+      return viaServer(this, featureRoute, 'POST', `${path}${query(qp)}`, { body: forServer(body) }).then((got) => {
+        if (got.value !== undefined) return got.value;
+        if (got.skip === 'unreachable') fail(503, SERVER_GONE, { reason: 'server_unreachable' });
+        return fail(404, 'Not Found'); // no AI for this feature: its way without AI
+      });
+    });
+  }
+  // Photos (a label, a plate, a lab report page): the server's AI only, the photo as the JPEG the page made (no location data).
+  for (const [path, featureRoute] of [['/api/vision/label', 'photos'], ['/api/vision/plate', 'photos'], ['/api/ai/read-lab-report', 'labs']]) {
+    route('POST', path, function ({ body, qp }) {
+      if (!device()) fail(404, 'Not Found');
+      if (!body || typeof body.arrayBuffer !== 'function') fail(415, 'Send the photo as a JPEG (Content-Type: image/jpeg).', { reason: 'not_jpeg' });
+      return KH.mock.serverApi.base64(body).then((jpeg) => viaServer(this, featureRoute, 'POST', `${path}${query(qp)}`, { jpeg })).then((got) => {
+        if (got.value !== undefined) return got.value;
+        if (got.skip === 'unreachable') fail(503, SERVER_GONE, { reason: 'server_unreachable' });
+        return fail(404, 'Not Found');
+      });
+    });
+  }
   // Describe a meal (app/ai/routes.py parse_meal; app/ai/features.py prepare_parse_meal), device mode only.
   route('POST', '/api/ai/parse-meal', function ({ body, qp }) {
     if (!device()) fail(404, 'Not Found');
@@ -174,10 +340,17 @@
     c.choice('meal', ['breakfast', 'lunch', 'dinner', 'snack'], { nullable: true });
     c.str('date');
     const b = c.done();
-    const cards = J().prefilter(b.text, this._guidancePrefs().hypo_dose_g); // G7, G8, G2/G3: the AI is not asked
+    // Note 39 §6.1: the server's AI first. Its own prefilter answers a low or a red flag; that answer is shown as it is.
+    return viaServer(this, 'describe', 'POST', `/api/ai/parse-meal${query(qp)}`, { body }).then((got) => {
+      if (got.value !== undefined) return got.value;
+      return parseMealOnDevice(this, b, qp);
+    });
+  });
+  function parseMealOnDevice(api, b, qp) {
+    const cards = J().prefilter(b.text, api._guidancePrefs().hypo_dose_g); // G7, G8, G2/G3: the AI is not asked
     if (cards) return cards;
     const dry = qp('dry_run') === 'true';
-    return ready(this).then(async () => {
+    return ready(api).then(async () => {
       const text = J().dataPayload(J().parseMealData(b.text));
       if (dry) return dryRun('parse_meal', 'parse_meal', text);
       const got = await ask('parse_meal', text);
@@ -185,10 +358,10 @@
       const checked = J().checkParseMeal(got.answer);
       if (!checked.ok) return answer('parse_meal', { status: 'error', reason: 'schema', message: ERROR_TEXT.schema });
       const keep = ['id', 'name', 'brand', 'category', 'source', 'serving_desc', 'serving_g', 'nutrients', 'flags', 'warnings', 'kidney_rating'];
-      const search = (query) => this._searchFoods(query, null, null, 3).map((f) => Object.fromEntries(keep.map((k) => [k, f[k] === undefined ? null : f[k]])));
+      const search = (words) => api._searchFoods(words, null, null, 3).map((f) => Object.fromEntries(keep.map((k) => [k, f[k] === undefined ? null : f[k]])));
       return answer('parse_meal', J().judgeParseMeal(checked.answer, search, checked.malformed));
     });
-  });
+  }
 
   // Choosing the server's local or cloud AI (design note 32): with AI off the server refuses it.
   route('PUT', '/api/me/ai/route-choice', function () { fail(403, 'Your admin has not let you choose which of the server\'s AIs you use.'); });
@@ -215,7 +388,13 @@
     if (text.length > 20000) fail(400, 'text: String should have at most 20000 characters');
     const page = body.page === undefined || body.page === null ? null : body.page;
     if (page !== null && !(Number.isInteger(page) && page >= 1 && page <= 50)) fail(400, 'page: Input should be a whole number from 1 to 50');
-    if (device()) return readLabTextOnDevice(this, text, page, qp('dry_run') === 'true');
+    if (device()) {
+      // Note 39 §6.2: only the server's lab route (local AI only), or the iPhone's own model. Never any other AI.
+      return viaServer(this, 'labs', 'POST', `/api/ai/read-lab-report-text${query(qp)}`, { body: { text: body.text, page } }).then((got) => {
+        if (got.value !== undefined) return got.value;
+        return readLabTextOnDevice(this, text, page, qp('dry_run') === 'true');
+      });
+    }
     if (qp('dry_run') === 'true') {
       return { dry_run: true, demo: true, feature: 'read_lab_report_text', message: LAB_TEXT_DEMO_NOTICE };
     }
@@ -250,5 +429,7 @@
     return out;
   }
   route('*', /^\/api\/(?:ai|vision)\//, function () { fail(404, 'Not Found'); });
-  KH.mock.aiDevice = { PROVIDER, UNAVAILABLE, MAX_DEVICE_TEXT };
+  // Settings → AI features sets the phone's own choice through this (the route above, so the log is saved after it).
+  const setOnly = (deviceOnly) => KH.mock.instance.request('PUT', '/api/device/ai-choice', { device_only: !!deviceOnly });
+  KH.mock.aiDevice = { PROVIDER, UNAVAILABLE, MAX_DEVICE_TEXT, setOnly, forgetServer };
 })();

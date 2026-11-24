@@ -9,7 +9,7 @@ reviewed_by: ""
 reviewed_on: null
 last_checked: 2026-10-07
 fact_checked: 2026-10-05
-sources: [NOTE02, NOTE38, WEBKIT-26, CHROME-PWA, MDN-SECURE]
+sources: [NOTE02, NOTE38, NOTE39, WEBKIT-26, CHROME-PWA, MDN-SECURE]
 ---
 
 # Install the app on your phone
@@ -136,10 +136,27 @@ phone and needs no server ([design note 38][NOTE38]):
   - **Lock with Face ID or passcode**: off unless you turn it on.
   - Connecting your own server is optional. With a token made for the iPhone app, the app sends each new row you add to your
     server when it can be reached ([Connect the Kidney Health iPhone app](weight-and-blood-pressure.md#connect-the-kidney-health-iphone-app)).
-    You then see it in the web app and on your other devices, and your care team can use it. Using your server's AI and its keys
-    from the phone, and changes made elsewhere coming back to the phone, come later.
+    You then see it in the web app and on your other devices, and your care team can use it. Changes made elsewhere coming back
+    to the phone come later.
+  - A token made for **the iPhone app, both ways** does that too, and lets the app use your server's food services and AI
+    ([design note 39][NOTE39]). The server's address screen says which kind of token is saved. An older token keeps working
+    for sending what you add.
 - **Settings → This device → Sending to your server** shows how many rows wait to be sent, when it last sent, and any row your
-  server refused. **Send now** tries at once. Changes or deletions you make on the phone after a row was sent are not sent.
+  server refused. **Send now** tries at once. Changes or deletions you make on the phone after a row was sent are not sent yet.
+  The app keeps note of them and says how many there are.
+
+### With a token both ways
+
+- **Food look-ups** go through your server while it can be reached, with the key your server uses for you. A food it finds is
+  saved on the phone at once, so it works offline. When your server cannot be reached, the phone uses its own keys from Keys and
+  services, if you added them, and otherwise the food list it already has. No key ever moves between the phone and the server.
+- **AI features** use your server's AI when your server can be reached and offers the feature, with the choices and consent you
+  made there. Otherwise they use the iPhone's own AI where it has one, and otherwise the app works without AI, as before.
+  **Settings → AI features** lists which AI each feature uses.
+- **Use only this iPhone's AI** in Settings → AI features keeps everything you write away from any AI but the iPhone's own.
+- An answer from your server is shown as it is. If it says to treat a low or to get help now, the app does not ask another AI.
+- A lab report goes only to an AI on your own network or on the iPhone, never to a company's AI.
+- **Ask** is not on the phone yet. It comes with two-way sync, because the assistant can save to your log on the server.
 - On an iPhone with Apple Intelligence, **Describe a meal** and reading the text of a lab report PDF can use Apple's AI on the
   phone. Turn it on in **Settings → AI features**. Nothing you write or read leaves the iPhone, and the questions and answers are
   not kept. The app checks every answer, and you check each line before anything is saved. The AI never gives insulin or
@@ -173,6 +190,7 @@ When the admin upgrades the server, the app notices the next time you open it an
 
 - [Design note 02: home-screen install, offline and HTTPS][NOTE02].
 - [Design note 38: the iPhone app without a server][NOTE38].
+- [Design note 39: the iPhone app with a server, both ways][NOTE39].
 - [WebKit: Safari 26 and Home Screen web apps][WEBKIT-26].
 - [Chrome Help: use web apps][CHROME-PWA].
 - [MDN: secure contexts][MDN-SECURE].

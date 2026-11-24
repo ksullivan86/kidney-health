@@ -16,11 +16,17 @@
    Saved with the rest of the log (js/mock/persist.js saves every property of the demo API), in `_serverSync`:
        { v: 1, server: 'food.example.org' | null,
          rows: { food | entry | lab | symptom | weight | reading: { <row id>: { c: client_id, s?: 'sent'|'refused'|'stuck',
-                                                                                 t?: tries, g?: group, w?: why } } },
+                                                                                 t?: tries, g?: group, w?: why,
+                                                                                 v?: version when sent, d?: 1 } } },
          sentAt, triedAt, outcome, message, status, waitUntil, checkOk, checkedAt }
    `c` is a UUID made once for the row (an entry keeps its own `client_id`, which the export carries). Starting over makes a new
    demo API, so the queue starts again with it. A different server (host) sends everything again; the server's receipts and
    `created_at` checks keep that from adding twice.
+
+   What was sent is remembered (design note 39, plan step 1), so the first two-way sync can tell which side changed a row:
+   `v` is the row's version when the server took it: for an entry the server's own entry version (log.entry_version, the
+   twin M.entryVersion), for every other kind "b:" and a hash of the row as it was sent, until note 39 step 5 gives each
+   kind its own version. `d: 1` marks a sent row deleted on this phone afterwards; the mark is kept. Neither is sent yet.
 
    The server answers counts only. A row the server cannot place (a food it does not know, a full day) is "skipped": it is counted,
    not named. Per list, rows sent minus (added + already there) are the skipped ones. When that cannot say which rows they were, the
@@ -111,6 +117,14 @@
     };
   }
 
+  // The ids of the rows of a kind still on this phone. A food counts while the person still has it (their own and not deleted, or a
+  // USDA or Open Food Facts food still linked), even when no entry uses it any more.
+  function presentIds(api, kind, all) {
+    if (kind !== 'food') return new Set(all[kind].map((row) => String(row.id)));
+    const links = typeof api._foodLinks === 'function' ? api._foodLinks() : new Set();
+    return new Set((api._foods || []).filter((f) => !f.hidden && (f.source === 'custom' || links.has(f.id))).map((f) => String(f.id)));
+  }
+
   // Gives every row a client ID and forgets rows deleted before they were sent. True when something changed (save before sending).
   function assignIds(api) {
     const st = stateOf(api);
@@ -119,6 +133,7 @@
     for (const [, kind] of LISTS) {
       const map = st.rows[kind];
       const here = new Set();
+      const kept = presentIds(api, kind, all);
       for (const row of all[kind]) {
         here.add(String(row.id));
         let r = map[row.id];
@@ -128,7 +143,12 @@
           if (r.c !== row.client_id) { r.c = row.client_id; changed = true; }
         } else if (typeof r.c !== 'string' || !UUID_RE.test(r.c)) { r.c = uuid(); changed = true; }
       }
-      for (const id of Object.keys(map)) if (!here.has(id) && !done(map[id])) { delete map[id]; changed = true; }
+      for (const id of Object.keys(map)) {
+        const r = map[id];
+        if (kept.has(id)) { if (r.d === 1) { delete r.d; changed = true; } } // still here, or back again (a USDA food imported again)
+        if (here.has(id)) continue;
+        if (!done(r)) { delete map[id]; changed = true; } else if (r.s === 'sent' && r.d !== 1 && !kept.has(id)) { r.d = 1; changed = true; }
+      }
     }
     return changed;
   }
@@ -176,6 +196,31 @@
   const enc = new TextEncoder();
   const bytes = (v) => enc.encode(JSON.stringify(v)).length;
 
+  // The version a row is remembered by once sent (see the top). FNV-1a, 64 bit, over the row's JSON with sorted keys.
+  const FNV_OFFSET = 0xcbf29ce484222325n, FNV_PRIME = 0x100000001b3n, FNV_MASK = 0xffffffffffffffffn;
+  function sorted(v) {
+    if (Array.isArray(v)) return v.map(sorted);
+    if (v && typeof v === 'object') return Object.fromEntries(Object.keys(v).sort().map((k) => [k, sorted(v[k])]));
+    return v;
+  }
+  function bodyHash(body) {
+    let digest = FNV_OFFSET;
+    for (const byte of enc.encode(JSON.stringify(sorted(body)))) digest = ((digest ^ BigInt(byte)) * FNV_PRIME) & FNV_MASK;
+    return `b:${digest.toString(16).padStart(16, '0')}`;
+  }
+  function versionOf(api, kind, row, body) {
+    if (kind === 'entry') {
+      try { return api._entryView(row).version; } catch (e) { return null; }
+    }
+    return body ? bodyHash(body) : null;
+  }
+  // The version a row has now, to compare with the one it was sent with (null when it cannot be worked out).
+  function versionNow(api, kind, row, r) {
+    if (kind === 'entry') return versionOf(api, kind, row, null);
+    if (kind === 'food') return bodyHash(foodBody(row, r.c));
+    return bodyHash(BODY[kind](row, r.c));
+  }
+
   // The next request: { lists: { foods: [...], ... }, refs: [{ kind, id, cid, maySkip }], probe } or null when nothing is left.
   // `skip`: "kind:id" of rows already given their try in this run. Also refuses entries whose food cannot be sent (sets `changed`).
   function nextBatch(api, { skip = new Set(), maxRows = MAX_ROWS, today = localDay() } = {}) {
@@ -196,7 +241,7 @@
     const add = (kind, row, body, maySkip) => {
       const list = LIST_OF[kind];
       (out.lists[list] = out.lists[list] || []).push(body);
-      out.refs.push({ kind, id: row.id, cid: body.client_id, list, index: out.lists[list].length - 1, maySkip });
+      out.refs.push({ kind, id: row.id, cid: body.client_id, list, index: out.lists[list].length - 1, maySkip, v: versionOf(api, kind, row, body) });
     };
     const bodyOf = (kind, row, r) => {
       if (kind === 'food') return { body: foodBody(row, r.c), maySkip: false };
@@ -249,7 +294,12 @@
     const st = stateOf(api);
     const added = (answer && answer.added) || {};
     const there = (answer && answer.already_there) || {};
-    const take = (ref) => { const r = st.rows[ref.kind][ref.id]; if (r) { r.s = 'sent'; delete r.t; delete r.g; delete r.w; } };
+    const take = (ref) => {
+      const r = st.rows[ref.kind][ref.id];
+      if (!r) return;
+      r.s = 'sent'; delete r.t; delete r.g; delete r.w;
+      if (ref.v) r.v = ref.v; // the version the server took (note 39 step 1)
+    };
     const missed = (ref) => {
       const r = st.rows[ref.kind][ref.id];
       if (!r) return;
@@ -331,7 +381,7 @@
     const st = stateOf(api);
     const server = typeof info.server === 'string' ? info.server.slice(0, 300) : null;
     if (st.server !== server) { // another server: everything is sent there too
-      for (const [, kind] of LISTS) for (const r of Object.values(st.rows[kind])) { delete r.s; delete r.t; delete r.g; delete r.w; }
+      for (const [, kind] of LISTS) for (const r of Object.values(st.rows[kind])) { delete r.s; delete r.t; delete r.g; delete r.w; delete r.v; delete r.d; }
       Object.assign(st, { server, sentAt: null, checkOk: false, checkedAt: null, waitUntil: null });
     }
     const now = Date.now();
@@ -439,7 +489,8 @@
   function status() {
     const api = M.instance;
     const st = peek(api);
-    const out = { sample: !!(api && api._sample === true), server: st.outcome === 'not_paired' ? null : st.server, waiting: 0, refused: [], stuck: [], sentAt: st.sentAt, triedAt: st.triedAt,
+    const out = { sample: !!(api && api._sample === true), server: st.outcome === 'not_paired' ? null : st.server, waiting: 0, refused: [], stuck: [],
+      changedSince: 0, deletedSince: 0, sentAt: st.sentAt, triedAt: st.triedAt,
       outcome: st.outcome, message: st.message || (st.outcome ? MESSAGES[st.outcome] : null), waitUntil: st.waitUntil, running };
     if (!api || out.sample) return out;
     const all = rowsOf(api);
@@ -447,9 +498,12 @@
       for (const row of all[kind]) {
         const r = (st.rows[kind] || {})[row.id];
         if (!done(r)) out.waiting += 1;
+        else if (r.s === 'sent') { if (r.v && r.v !== versionNow(api, kind, row, r)) out.changedSince += 1; }
         else if (r.s === 'refused') out.refused.push({ text: label(api, kind, row), why: r.w || '' });
         else if (r.s === 'stuck') out.stuck.push({ text: label(api, kind, row), why: r.w || '' });
       }
+      const kept = presentIds(api, kind, all);
+      for (const [id, r] of Object.entries(st.rows[kind] || {})) if (r && r.s === 'sent' && !kept.has(id)) out.deletedSince += 1;
     }
     return out;
   }
@@ -471,5 +525,6 @@
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
     // for the tests: the pure parts
     _assignIds: assignIds, _nextBatch: nextBatch, _applyAnswer: applyAnswer, _refuseNamed: refuseNamed, _foodRef: foodRef, _blank: blank,
+    _versionNow: versionNow,
   };
 })();

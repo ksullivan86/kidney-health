@@ -260,7 +260,7 @@ def test_sending_to_the_server_goes_only_to_the_paired_server_with_the_keychain_
     assert set(re.findall(r'"(\w+)": ', sync)) == {"ok", "paired", "server", "error", "status", "json"}
     assert 'out["retryAfter"] = wait' in sync and '"server": target.url.host' in sync
     services = CODE["KidneyHealth/Services/FoodServices.swift"]
-    assert 'case "serverInfo", "serverSyncCheck", "serverSync":' in services and "ServerSync.answer(kind, request)" in services
+    assert 'case "serverInfo", "serverSyncCheck", "serverSync", "serverApi":' in services and "ServerSync.answer(kind, request)" in services
     core = SWIFT["KidneyHealthCore/Sources/KidneyHealthCore/Sync.swift"]
     assert 'push.deletingLastPathComponent().appendingPathComponent("sync")' in core
     # the page asks with these kinds and never holds a token
@@ -281,3 +281,47 @@ def test_the_iphones_own_ai_does_two_narrow_tasks_and_keeps_nothing():
     code = re.sub(r"//[^\n]*", "", ai).lower()
     for word in ("insulin", "dose", "dosing", "bolus"):
         assert word not in code, word  # the model is never given a dosing task
+
+
+def test_the_server_api_bridge_carries_only_its_allow_list():
+    """Design note 39 §5.4, steps 3 and 4: one bridge kind, serverApi, carries the page's request to the paired server's gateway.
+    The app checks the method and path against a short allow-list first (KidneyHealthCore/ServerAPI.swift): GET /push/v1/about, the
+    food lookups and the AI routes. Nothing that needs the password, no keys, providers, tokens, sessions, admin, import or export.
+    The token stays in the Keychain, no phone key is sent, and lab text has only the server's lab routes."""
+    core = CODE["KidneyHealthCore/Sources/KidneyHealthCore/ServerAPI.swift"]
+    listed = re.findall(r'Route\("(GET|POST|PUT|PATCH|DELETE)", "([^"]+)"', core)
+    assert listed == [
+        ("GET", "/push/v1/about"),
+        ("GET", "/push/v1/api/foods/usda/search"), ("POST", "/push/v1/api/foods/usda/import"), ("POST", "/push/v1/api/foods/barcode"),
+        ("PUT", "/push/v1/api/me/settings"),
+        ("GET", "/push/v1/api/ai/status"), ("PATCH", "/push/v1/api/me/ai"), ("POST", "/push/v1/api/ai/consent"),
+        ("POST", "/push/v1/api/ai/next-meal"), ("POST", "/push/v1/api/ai/parse-meal"), ("POST", "/push/v1/api/ai/recipes"),
+        ("POST", "/push/v1/api/ai/chat"),
+        ("POST", "/push/v1/api/ai/read-lab-report-text"), ("POST", "/push/v1/api/ai/read-lab-report"),
+        ("POST", "/push/v1/api/vision/label"), ("POST", "/push/v1/api/vision/plate"),
+    ]
+    for _, path in listed:
+        for word in ("/admin", "/auth", "/tokens", "/sessions", "/provider", "/me/import", "/export", "/keys", "delete", "transcribe"):
+            assert word not in path, path
+    # a settings route takes only its own key; the person's AI switch only opt_in
+    assert 'Route("PUT", "/push/v1/api/me/settings", bodyKeys: ["food.off_consent"])' in core
+    assert 'Route("PATCH", "/push/v1/api/me/ai", bodyKeys: ["opt_in"])' in core
+    sync = CODE["KidneyHealth/Services/ServerSync.swift"]
+    assert 'case "serverApi":' in sync
+    assert 'ServerAPI.route(method: method, path: path) else { return ["error": "refused"] }' in sync
+    assert "found.route.allows(object)" in sync and "data.starts(with: [0xFF, 0xD8])" in sync
+    assert "ServerAPI.url(SyncModel.shared.address, route: found.route, query: found.query)" in sync
+    assert "Keychain.read(.token)" in sync and "usdaKey" not in sync  # the phone's own keys never go to the server
+    assert "apiTransport.send(method, to: url" in sync and "URLSessionTransport(session: URLSessionTransport.makeSession(" in sync
+    for word in ("print(", "NSLog", "os_log", "Logger(", "debugPrint", "dump("):
+        assert word not in sync, word
+    # the pairing screen tells the two kinds of token apart, from about
+    model = CODE["KidneyHealth/SyncModel.swift"]
+    assert "ServerAPI.url(address, route: ServerAPI.about)" in model and "ServerAPI.tokenKind(reply)" in model
+    assert "if let kind = model.tokenKindText" in CODE["KidneyHealth/ContentView.swift"]
+    assert "tokenKind == .bothWays" in CODE["KidneyHealth/Services/KeysView.swift"]
+    # the page asks with this kind, holds no token, and sends lab text only to the lab route
+    page = (ROOT / "app" / "static" / "js" / "mock" / "server_api.js").read_text(encoding="utf-8")
+    assert "kind: 'serverApi'" in page and "khd_" not in page and "Authorization" not in page
+    ai = (ROOT / "app" / "static" / "js" / "mock" / "ai.js").read_text(encoding="utf-8")
+    assert ai.count("'/api/ai/read-lab-report-text") == 1 and "{ body: { text: body.text, page } }" in ai

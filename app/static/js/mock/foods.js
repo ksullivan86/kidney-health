@@ -253,20 +253,42 @@
     try { return JSON.parse(answer.json); } catch (e) { return fail(502, 'USDA returned an unexpected record'); }
   }
   const device = () => !!(KH.flags && KH.flags.DEVICE && KH.mock.device);
+  // Design note 39 §7 (step 3): with a token both ways, USDA goes through the person's server, with the key the server would use
+  // for them; the server's own limits and outbound checks apply. Only when the server cannot be reached, or answers that it has
+  // no key (503), does the phone use its own key (Keys and services), else the built-in list. No key moves either way.
+  async function viaServer(what, method, path, body) {
+    const S = KH.mock.serverApi;
+    if (!S || !(await S.offers(what))) return null;
+    const res = await S.call(method, path, body === undefined ? {} : { body });
+    if (res.offline || res.error || res.status === 503) return null;
+    if (res.status >= 200 && res.status < 300 && res.json) return res.json;
+    return S.failWith(res);
+  }
   route('GET', '/api/foods/usda/search', function ({ qp }) {
     if ((qp('q') || '').length > 200) failFields(['q: String should have at most 200 characters']);
     if (!device()) fail(503, 'USDA_API_KEY not configured');
     const query = (qp('q') || '').trim();
     if (!query) fail(400, 'q is required');
-    return deviceUsda({ kind: 'usdaSearch', q: query }).then((data) => ({
-      foods: ((data && data.foods) || []).map((item) => KH.usda.searchItem(item)).filter(Boolean) }));
+    return viaServer('usda', 'GET', `/api/foods/usda/search?q=${encodeURIComponent(query)}`).then((served) => {
+      if (served) return { foods: Array.isArray(served.foods) ? served.foods : [] }; // already in the server's shape
+      return deviceUsda({ kind: 'usdaSearch', q: query }).then((data) => ({
+        foods: ((data && data.foods) || []).map((item) => KH.usda.searchItem(item)).filter(Boolean) }));
+    });
   });
   route('POST', '/api/foods/usda/import', function ({ body }) {
     const c = new Check(body); // UsdaImport
     c.num('fdc_id', { required: true, gt: 0, int: true, nullable: false, maxId: true });
     const b = c.done();
     if (!device()) fail(503, 'USDA_API_KEY not configured');
-    return deviceUsda({ kind: 'usdaFood', fdcId: b.fdc_id }).then((data) => {
+    return viaServer('usda', 'POST', '/api/foods/usda/import', { fdc_id: b.fdc_id }).then((served) => {
+      // The server's food is saved on this phone at once, so it works offline (note 39 §7).
+      if (served) return this._foodView(this._storeServerFood(served));
+      return deviceUsda({ kind: 'usdaFood', fdcId: b.fdc_id }).then((data) => this._usdaFromRecord(data, b.fdc_id));
+    });
+  });
+  Object.assign(MockApi.prototype, {
+    _usdaFromRecord(data, fdcId) {
+      const b = { fdc_id: fdcId };
       if (!M.isDict(data)) fail(502, 'USDA returned an unexpected record');
       const r = KH.usda.row(KH.usda.mapRecord(data, b.fdc_id), b.fdc_id);
       let food = this._foods.find((f) => f.source === 'usda' && f.fdc_id === b.fdc_id) || null;
@@ -278,7 +300,42 @@
       else food = this._food(this._insertFood({ source: 'usda', fdc_id: b.fdc_id, ...values, ...provenance }));
       this._foodLinks().add(food.id);
       return this._foodView(food);
-    });
+    },
+    // A food the server found or holds (its Food answer), kept on this phone: a USDA food by fdc_id and an Open Food Facts food by
+    // barcode as the one shared row, linked; a built-in food is this phone's own; any other (the person's own food on the server)
+    // as their own food here, which step 4's sending finds already there by its content.
+    _storeServerFood(food) {
+      if (!M.isDict(food) || typeof food.name !== 'string') fail(502, 'Your server sent a food the app could not read.');
+      const quality = (food.quality || []).map((q) => {
+        if (typeof q === 'string') return q;
+        const code = q && typeof q.code === 'string' ? q.code : null;
+        if (!code) return null;
+        const key = Object.keys(KH.rules.NUT || {}).find((k) => typeof q.message === 'string'
+          && q.message.endsWith(`: ${KH.rules.NUT[k].label.toLowerCase()}.`));
+        return key ? `${code}:${key}` : code;
+      }).filter(Boolean);
+      const values = { name: food.name, brand: food.brand || null, category: food.category || null, serving_desc: food.serving_desc,
+        serving_g: food.serving_g, nutrients: { ...(food.nutrients || {}) }, flags: [...(food.flags || [])], kidney_notes: food.kidney_notes || null };
+      const provenance = { gtin: food.gtin || null, source_url: food.source_url || null, source_license: food.source_license || null,
+        ingredients_text: food.ingredients_text || null, additives: [...(food.additives || [])], quality };
+      if (food.source === 'builtin') {
+        const own = this._foods.find((f) => f.source === 'builtin' && (food.fdc_id != null ? f.fdc_id === food.fdc_id : f.name === food.name));
+        if (own) return own;
+      }
+      const shared = food.source === 'usda' && food.fdc_id != null ? (f) => f.source === 'usda' && f.fdc_id === food.fdc_id
+        : food.source === 'off' && food.gtin ? (f) => f.source === 'off' && f.gtin === food.gtin : null;
+      if (shared) {
+        let row = this._foods.find(shared) || null;
+        if (row) this._updateFood(row.id, { ...values, hidden: false, fdc_id: food.source === 'usda' ? food.fdc_id : row.fdc_id, provenance });
+        else row = this._food(this._insertFood({ source: food.source, fdc_id: food.source === 'usda' ? food.fdc_id : null, ...values, ...provenance }));
+        this._foodLinks().add(row.id);
+        return row;
+      }
+      const same = this._foods.find((f) => f.source === 'custom' && !f.hidden && f.name === food.name && (f.gtin || null) === (food.gtin || null)
+        && f.serving_desc === food.serving_desc);
+      if (same) return same;
+      return this._food(this._insertFood({ source: 'custom', fdc_id: food.fdc_id == null ? null : food.fdc_id, ...values, ...provenance }));
+    },
   });
   // The copy keeps the barcode, the ingredient list and the attribution (ODbL travels with copied data), not the quality notes.
   route('POST', '/api/foods/{id}/copy', function ({ id }) {
