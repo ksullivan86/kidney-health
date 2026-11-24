@@ -143,6 +143,7 @@ const SHELL_URLS = [
   '/js/views/profile.js',
   '/js/views/auth.js',
   '/js/views/settings.js',
+  '/js/views/server_review.js',
   '/js/views/two_step.js',
   '/js/views/passkeys.js',
   '/js/views/oidc.js',

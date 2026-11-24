@@ -149,7 +149,7 @@ def test_nothing_inline_and_the_card_is_styled_from_the_stylesheet() -> None:
 
 
 def test_a_waiting_entry_is_edited_like_any_other_and_a_conflicting_one_opens_the_device_list() -> None:
-    assert "const needsReview = (e) => !!(e.conflict || (e.pending && e.failed));" in TODAY
+    assert "const needsReview = (e) => !!(e.conflict || (e.pending && e.failed) || serverReview(e));" in TODAY
     assert "if (!needsReview(e)) { views().add.openEntrySheet('edit', { entry: e, trigger: btn }); return; }" in TODAY
     assert "needsReview(e) ? null : eatenButton(e)" in TODAY
     assert "err.conflict" in ADD and "err.conflict" in TODAY
