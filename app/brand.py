@@ -150,8 +150,11 @@ USER_AGENT_PUSH = "reminders"
 # * ``HKDF_LOGIN_FAILURES_INFO`` and ``HKDF_DEVICE_INFO`` only reset the sign-in throttle's counters and remembered devices.
 # * ``HKDF_OPENAI_SAFETY_ID_INFO`` makes the per-person id sent to OpenAI. A new label makes everyone look like a new user there.
 # * ``HKDF_AI_KEY_FINGERPRINT_INFO`` tells that a key in the environment was replaced. A new label reads as one replacement.
+# * ``HKDF_APP_ACCOUNT_INFO`` makes the ``account`` key of ``GET /push/v1/about`` (design note 39 §5.3). A new label makes every paired
+#   iPhone ask once whether this is the same account.
 HKDF_SECRETS_INFO = b"kidney-health/v1/secrets"
 HKDF_LOGIN_FAILURES_INFO = "kidney-health/v1/login-failures"
 HKDF_DEVICE_INFO = "kidney-health/v1/device"
 HKDF_OPENAI_SAFETY_ID_INFO = "kidney-health/v1/openai-safety-id"
 HKDF_AI_KEY_FINGERPRINT_INFO = "kidney-health/v1/ai-key-fingerprint"
+HKDF_APP_ACCOUNT_INFO = "kidney-health/v1/app-account"

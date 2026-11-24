@@ -138,6 +138,165 @@
       }
     },
     "schemas": {
+      "About": {
+        "properties": {
+          "account": {
+            "description": "Opaque and stable for this person on this server; names neither. A new value means a different account or server.",
+            "title": "Account",
+            "type": "string"
+          },
+          "ai": {
+            "$ref": "#/components/schemas/AboutAi"
+          },
+          "api_version": {
+            "title": "Api Version",
+            "type": "integer"
+          },
+          "app_version": {
+            "title": "App Version",
+            "type": "string"
+          },
+          "capabilities": {
+            "$ref": "#/components/schemas/Capabilities"
+          },
+          "gateway": {
+            "items": {
+              "$ref": "#/components/schemas/AboutRoute"
+            },
+            "title": "Gateway",
+            "type": "array"
+          },
+          "services": {
+            "$ref": "#/components/schemas/AboutServices"
+          },
+          "sync": {
+            "$ref": "#/components/schemas/AboutSync"
+          }
+        },
+        "required": [
+          "account",
+          "api_version",
+          "app_version",
+          "sync",
+          "gateway",
+          "ai",
+          "services",
+          "capabilities"
+        ],
+        "title": "About",
+        "type": "object"
+      },
+      "AboutAi": {
+        "properties": {
+          "available": {
+            "description": "As `GET /api/ai/status`: the person opted in and a provider answers.",
+            "title": "Available",
+            "type": "boolean"
+          },
+          "enabled": {
+            "description": "The AI is on for this person (`ai.enabled`, and for a test account `test_accounts.ai`).",
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "routes": {
+            "additionalProperties": true,
+            "description": "As `routes` of `GET /api/ai/status`: where each feature runs. Empty while off.",
+            "title": "Routes",
+            "type": "object"
+          }
+        },
+        "required": [
+          "enabled",
+          "available",
+          "routes"
+        ],
+        "title": "AboutAi",
+        "type": "object"
+      },
+      "AboutRoute": {
+        "properties": {
+          "method": {
+            "title": "Method",
+            "type": "string"
+          },
+          "path": {
+            "description": "The `/api` route; the phone calls it at `/push/v1` + this path.",
+            "title": "Path",
+            "type": "string"
+          }
+        },
+        "required": [
+          "method",
+          "path"
+        ],
+        "title": "AboutRoute",
+        "type": "object"
+      },
+      "AboutServices": {
+        "properties": {
+          "barcode": {
+            "title": "Barcode",
+            "type": "boolean"
+          },
+          "barcode_off": {
+            "title": "Barcode Off",
+            "type": "boolean"
+          },
+          "barcode_usda": {
+            "title": "Barcode Usda",
+            "type": "boolean"
+          },
+          "instacart": {
+            "title": "Instacart",
+            "type": "boolean"
+          },
+          "list_sync": {
+            "title": "List Sync",
+            "type": "boolean"
+          },
+          "recipe_import": {
+            "description": "This server reads a recipe page from its link (`RECIPE_IMPORT_ENABLED`).",
+            "title": "Recipe Import",
+            "type": "boolean"
+          },
+          "usda_search": {
+            "description": "USDA search and import with the key this server would use for this person.",
+            "title": "Usda Search",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "usda_search",
+          "barcode",
+          "barcode_off",
+          "barcode_usda",
+          "recipe_import",
+          "instacart",
+          "list_sync"
+        ],
+        "title": "AboutServices",
+        "type": "object"
+      },
+      "AboutSync": {
+        "properties": {
+          "changes": {
+            "description": "The change feed (`GET` and `POST /push/v1/changes`, `POST /push/v1/match`).",
+            "title": "Changes",
+            "type": "boolean"
+          },
+          "gateway": {
+            "description": "`/push/v1/api/` runs the routes of `gateway`.",
+            "title": "Gateway",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "gateway",
+          "changes"
+        ],
+        "title": "AboutSync",
+        "type": "object"
+      },
       "AcceptResult": {
         "properties": {
           "entries": {
@@ -13207,7 +13366,7 @@
       },
       "TokenCreate": {
         "additionalProperties": false,
-        "description": "``POST /api/me/tokens``. Unknown fields are refused, so a scope cannot be sent by name: ``can_log`` is the one\nway to ask for ``assistant:log`` (it saves food and recipes) and ``can_prefs`` the one way to ask for ``assistant:prefs``\n(it remembers tastes: likes and dislikes); ``assistant:read`` is always included, and neither choice gives the other.\n``family`` is ``assistant`` (default, so the Assistant access screen works unchanged) or ``device`` (a phone shortcut's\ntoken). A device token's ``kind`` is ``shortcut`` (default: the one scope ``body:write``) or ``app`` (``body:write`` and\n``app:add``: the iPhone app may also add food, labs and symptoms; design note 38 §5.5). ``can_log`` and ``can_prefs`` are\nrefused for a device token, and ``kind: \"app\"`` for an assistant token.",
+        "description": "``POST /api/me/tokens``. Unknown fields are refused, so a scope cannot be sent by name: ``can_log`` is the one\nway to ask for ``assistant:log`` (it saves food and recipes) and ``can_prefs`` the one way to ask for ``assistant:prefs``\n(it remembers tastes: likes and dislikes); ``assistant:read`` is always included, and neither choice gives the other.\n``family`` is ``assistant`` (default, so the Assistant access screen works unchanged) or ``device`` (a phone shortcut's\ntoken). A device token's ``kind`` is ``shortcut`` (default: the one scope ``body:write``) or ``app`` (``body:write`` and\n``app:add``: the iPhone app may also add food, labs and symptoms; design note 38 §5.5) or ``app_sync`` (also ``app:sync``: the\niPhone app both ways, design note 39 §5.1; refused while ``push.app_sync`` is off). ``can_log`` and ``can_prefs`` are\nrefused for a device token, and ``kind: \"app\"`` for an assistant token.",
         "properties": {
           "can_log": {
             "default": false,
@@ -13251,7 +13410,8 @@
               {
                 "enum": [
                   "shortcut",
-                  "app"
+                  "app",
+                  "app_sync"
                 ],
                 "type": "string"
               },
@@ -14500,7 +14660,7 @@
       },
       "deviceToken": {
         "bearerFormat": "khd_ followed by 43 characters",
-        "description": "A device token (`Authorization: Bearer khd_...`), made in Settings, Phone shortcuts. A shortcut token has the one scope `body:write` and works only at `POST /push/v1/body` (and `GET /push/v1/check`, which tests it), where it adds weights and blood pressure readings. An app token also has `app:add` and also works at `POST /push/v1/sync` (and `GET /push/v1/sync`, which tests it), where the iPhone app adds the rows it made. Both work only while the instance switch `push.enabled` is on and read nothing. No cookie is read there.",
+        "description": "A device token (`Authorization: Bearer khd_...`), made in Settings, Phone shortcuts. A shortcut token has the one scope `body:write` and works only at `POST /push/v1/body` (and `GET /push/v1/check`, which tests it), where it adds weights and blood pressure readings. An app token also has `app:add` and also works at `POST /push/v1/sync` (and `GET /push/v1/sync`, which tests it), where the iPhone app adds the rows it made. Both work only while the instance switch `push.enabled` is on and read nothing. No cookie is read there. A token of the kind \"The iPhone app, both ways\" also has `app:sync` (only while `push.app_sync` is on too): it works at `GET /push/v1/about`, and at the gateway `/push/v1/api/<path>`, which runs the `/api/<path>` route of a short allow-list (the AI features and the food lookups) as the token's owner, never as an admin. The gateway refuses any `Origin` header and answers 404 for a route that is not on its list; `GET /push/v1/about` names the list.",
         "scheme": "bearer",
         "type": "http"
       },
@@ -29565,6 +29725,97 @@
         "summary": "Not offered: no SSE stream, no sessions (405)",
         "tags": [
           "assistant"
+        ]
+      }
+    },
+    "/push/v1/about": {
+      "delete": {
+        "description": "``405`` for every method but GET.",
+        "operationId": "push_about_delete_not_allowed",
+        "responses": {
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          }
+        },
+        "summary": "Not offered: GET only (405)",
+        "tags": [
+          "push"
+        ]
+      },
+      "get": {
+        "description": "The ``account`` key, the versions, the gateway's list, the AI and the services for the token's owner. One request of the\ntoken's 600 an hour.",
+        "operationId": "push_about",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/About"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "$ref": "#/components/responses/BearerUnauthorized"
+          },
+          "403": {
+            "$ref": "#/components/responses/Forbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/TooManyRequests"
+          },
+          "default": {
+            "$ref": "#/components/responses/Error"
+          }
+        },
+        "security": [
+          {
+            "deviceToken": []
+          }
+        ],
+        "summary": "What this server offers the iPhone app (token with app:sync)",
+        "tags": [
+          "push"
+        ]
+      },
+      "patch": {
+        "description": "``405`` for every method but GET.",
+        "operationId": "push_about_patch_not_allowed",
+        "responses": {
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          }
+        },
+        "summary": "Not offered: GET only (405)",
+        "tags": [
+          "push"
+        ]
+      },
+      "post": {
+        "description": "``405`` for every method but GET.",
+        "operationId": "push_about_post_not_allowed",
+        "responses": {
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          }
+        },
+        "summary": "Not offered: GET only (405)",
+        "tags": [
+          "push"
+        ]
+      },
+      "put": {
+        "description": "``405`` for every method but GET.",
+        "operationId": "push_about_put_not_allowed",
+        "responses": {
+          "405": {
+            "$ref": "#/components/responses/MethodNotAllowed"
+          }
+        },
+        "summary": "Not offered: GET only (405)",
+        "tags": [
+          "push"
         ]
       }
     },

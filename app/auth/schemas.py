@@ -118,7 +118,7 @@ class UserDeleteBody(_Body):
 ExpiryDays = Literal[30, 90, 365]
 Never = Literal["never"]  # a token that never expires (design note 24 §13), when the server allows it
 TokenFamily = Literal["assistant", "device"]
-DeviceKind = Literal["shortcut", "app"]  # a device token for a phone Shortcut (weights and blood pressure) or the iPhone app (note 38 §5.5)
+DeviceKind = Literal["shortcut", "app", "app_sync"]  # a phone Shortcut (weights and blood pressure), the iPhone app that adds (note 38 §5.5), or the iPhone app both ways (note 39 §5.1)
 TOKEN_NAME_MAX = 60
 
 
@@ -128,7 +128,8 @@ class TokenCreate(BaseModel):
     (it remembers tastes: likes and dislikes); ``assistant:read`` is always included, and neither choice gives the other.
     ``family`` is ``assistant`` (default, so the Assistant access screen works unchanged) or ``device`` (a phone shortcut's
     token). A device token's ``kind`` is ``shortcut`` (default: the one scope ``body:write``) or ``app`` (``body:write`` and
-    ``app:add``: the iPhone app may also add food, labs and symptoms; design note 38 §5.5). ``can_log`` and ``can_prefs`` are
+    ``app:add``: the iPhone app may also add food, labs and symptoms; design note 38 §5.5) or ``app_sync`` (also ``app:sync``: the
+    iPhone app both ways, design note 39 §5.1; refused while ``push.app_sync`` is off). ``can_log`` and ``can_prefs`` are
     refused for a device token, and ``kind: "app"`` for an assistant token."""
 
     model_config = ConfigDict(extra="forbid", str_max_length=4096)

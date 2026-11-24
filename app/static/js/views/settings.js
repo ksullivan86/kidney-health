@@ -859,7 +859,7 @@
     'data.imported': 'Data imported',
     'account.deleted': 'Account deleted', 'secret_key.rotated': 'Secret key rotated', 'backup.created': 'Backup created',
     'api_token.created': 'Assistant token created', 'api_token.revoked': 'Assistant token revoked', 'body.token_rows_deleted': 'Phone shortcut data deleted',
-    'app.rows_added': 'The iPhone app added to your log',
+    'app.rows_added': 'The iPhone app added to your log', 'app.server_used': 'The iPhone app read your data',
     'assistant.food_logged': 'Assistant saved food', 'assistant.recipe_saved': 'Assistant saved a recipe', 'assistant.preference_set': 'Assistant remembered a taste',
     'ai.trust_changed': 'Trust in the assistant changed', 'ai.route_choice_changed': 'Which AI a feature uses changed',
     'totp.enabled': 'Two-step sign-in turned on', 'totp.disabled': 'Two-step sign-in turned off', 'totp.recovery_codes_renewed': 'New recovery codes made',
@@ -926,6 +926,7 @@
     if (ev.action === 'api_token.revoked') return [d.count > 1 ? `${d.count} tokens` : '', TOKEN_REVOKED_WHY[d.reason] || ''].filter(Boolean).join(', ');
     if (ev.action === 'body.token_rows_deleted') return pushCountsText(d) || 'nothing was left to delete';
     if (ev.action === 'app.rows_added') return [pushCountsText(d), d.via ? `with “${d.via}”` : ''].filter(Boolean).join(', ');
+    if (ev.action === 'app.server_used') return d.via ? `with “${d.via}”` : '';
     if (ev.action === 'data.imported') {
       return [[d.log_entries, 'entry', 'entries'], [d.custom_foods, 'food', 'foods'], [d.meal_templates, 'saved meal', 'saved meals'], [d.lab_results, 'lab result', 'lab results'], [d.symptoms, 'symptom', 'symptoms'],
         [d.weights, 'weight', 'weights'], [d.blood_pressures, 'blood pressure reading', 'blood pressure readings']]
@@ -1239,6 +1240,12 @@
   // change or delete anything.
   const PUSH_APP_INTRO = 'A token for the Kidney Health iPhone app can also add the food, lab results and symptoms you log on the phone. No token can see, change or delete anything.';
   const PUSH_KINDS = [['shortcut', 'A Shortcut: weight and blood pressure only'], ['app', 'The iPhone app: also food, lab results and symptoms']];
+  // "The iPhone app, both ways" (kind "app_sync", design note 39 §5.1): offered only while the admin's push.app_sync is on.
+  const PUSH_SYNC_KIND = ['app_sync', 'The iPhone app, both ways: also your data, AI and food services here'];
+  const PUSH_SYNC_INTRO = 'Your server also lets the iPhone app work both ways. With a token for the iPhone app, both ways, the app can read and change your log here and use this server\'s AI and food services as you. It can never change your password, keys, tokens or account. Other tokens can only add.';
+  const PUSH_SYNC_HINT = 'The iPhone app, both ways, also reads and changes your log here and uses this server\'s AI and food services.';
+  const pushKinds = (res) => (res && res.app_sync_enabled ? [...PUSH_KINDS, PUSH_SYNC_KIND] : PUSH_KINDS);
+  const isAppKind = (kind) => kind === 'app' || kind === 'app_sync';
   // "2 weights and 1 blood pressure reading" for { weights, readings }, and an app token's entries, foods, labs and symptoms
   // ("3 food entries, 1 lab result and 2 weights"); '' when all are none.
   const PUSH_WORDS = [['entries', 'food entry', 'food entries'], ['foods', 'food of your own', 'foods of your own'], ['labs', 'lab result', 'lab results'],
@@ -1251,6 +1258,7 @@
   function pushTokenSub(t) {
     const parts = [`${t.prefix}…`, `created ${fmtDate(t.created_at)}`, t.last_used_at ? `last used ${relTime(t.last_used_at)}` : 'never used'];
     if (t.kind === 'app') parts.unshift('for the iPhone app');
+    if (t.kind === 'app_sync') parts.unshift('for the iPhone app, both ways');
     if (t.state === 'revoked') parts.push(`revoked ${fmtDate(t.revoked_at)}`);
     else parts.push(expiryText(t));
     const sent = pushCountsText(t.sent);
@@ -1318,7 +1326,7 @@
       if (sent) {
         const del = h('button', { class: 'btn secondary', type: 'button', 'aria-label': `Delete what ${t.name} sent` }, 'Delete what it sent');
         del.addEventListener('click', () => confirm.inline(actions, del, {
-          message: t.kind === 'app'
+          message: isAppKind(t.kind)
             ? `Delete the ${sent} that “${t.name}” sent? What you typed or imported yourself here stays, and so does a food you also used yourself. This cannot be undone.`
             : `Delete the ${sent} that “${t.name}” sent? Weights and readings you typed or imported yourself stay. This cannot be undone.`,
           confirmText: 'Delete',
@@ -1346,14 +1354,14 @@
     const name = h('input', { id: 'set-push-name', type: 'text', maxlength: 60, autocomplete: 'off', spellcheck: 'false', 'aria-describedby': 'set-push-name-hint' });
     const expiry = selectEl('set-push-expiry', (res.expiry_days || []).map((d) => [d, EXPIRY_LABEL[d] || `${d} days`]), res.default_expiry_days);
     const neverHint = expiryWarning(expiry, 'set-push-never');
-    const kind = selectEl('set-push-kind', PUSH_KINDS, 'shortcut');
+    const kind = selectEl('set-push-kind', pushKinds(res), 'shortcut');
     const err = formError();
     const create = action('Make token', 'primary', async () => {
       clear(err);
       const text = name.value.trim();
       if (!text) { showFormError(err, 'Give the token a name, for example “Morning weight”.'); name.focus(); return; }
       let made;
-      const forApp = kind.value === 'app' ? { kind: 'app' } : {}; // the server sets what each kind may add
+      const forApp = isAppKind(kind.value) ? { kind: kind.value } : {}; // the server sets what each kind may add
       try {
         made = await A.createToken({ name: text, expires_in_days: expiryValue(expiry), family: 'device', ...forApp }); // a password prompt opens here when it is needed
       } catch (e) {
@@ -1367,7 +1375,8 @@
       h('div', { class: 'field' }, h('label', { for: 'set-push-name' }, 'Name'), name,
         h('span', { class: 'hint', id: 'set-push-name-hint' }, 'For example “Morning weight”, so you know which one to revoke.')),
       h('div', { class: 'field' }, h('label', { for: 'set-push-kind' }, 'What it is for'), kind,
-        h('span', { class: 'hint', id: 'set-push-kind-hint' }, 'A Shortcut token adds weight and blood pressure. An iPhone app token also adds food, lab results and symptoms.')),
+        h('span', { class: 'hint', id: 'set-push-kind-hint' }, 'A Shortcut token adds weight and blood pressure. An iPhone app token also adds food, lab results and symptoms.'
+          + (res.app_sync_enabled ? ` ${PUSH_SYNC_HINT}` : ''))),
       h('div', { class: 'field' }, h('label', { for: 'set-push-expiry' }, 'Expires after'), expiry, neverHint),
       h('div', { class: 'settings-actions' }, create),
       err);
@@ -1392,12 +1401,14 @@
     if (ticket !== pushDraw) return;
     const tokens = res.tokens || [];
     const active = tokens.filter((t) => t.state === 'active').length;
-    const parts = [h('p', {}, PUSH_INTRO), h('p', { class: 'hint', id: 'set-push-app' }, PUSH_APP_INTRO)];
+    const parts = [h('p', {}, PUSH_INTRO), h('p', { class: 'hint', id: 'set-push-app' }, res.enabled && res.app_sync_enabled ? PUSH_SYNC_INTRO : PUSH_APP_INTRO)];
     if (!res.enabled) {
       parts.push(h('p', { class: 'setting-status' }, h('span', { class: 'state-pill off' }, 'Turned off on this server')),
         h('p', { class: 'hint', id: 'set-push-off' }, 'Your admin has not turned this on.'));
       if (active) parts.push(h('p', { class: 'hint' }, 'Your tokens do not work while phone shortcuts are off. You can still revoke them and delete what they sent.'));
       if (isAdmin()) parts.push(h('p', { class: 'hint' }, 'Admins: switch "Let people send weights and blood pressure from a phone shortcut" on in Server administration → Server settings (or PUSH_ENABLED). See docs/push.md.'));
+    } else if (!res.app_sync_enabled && isAdmin()) {
+      parts.push(h('p', { class: 'hint', id: 'set-push-sync-off' }, 'Admins: to let the iPhone app read and change data and use this server\'s AI, switch "Let the iPhone app read and change the person\'s data" on in Server administration → Server settings (or PUSH_APP_SYNC). See docs/push.md.'));
     }
     parts.push(pushRecipe());
     if (tokens.length || res.enabled) parts.push(subtitle('Your phone shortcut tokens'), pushTokenList(host, tokens));
@@ -2171,7 +2182,7 @@
     // are not edited one by one here): the list shows a pointer instead of rows.
     ['Which AI each feature uses', ['ai.route.photos', 'ai.route.meal_ideas', 'ai.route.describe', 'ai.route.chat', 'ai.route.labs',
       'ai.route.recipes', 'ai.route.local_provider', 'ai.route.cloud_provider']],
-    ['Phone shortcuts', ['push.enabled']],
+    ['Phone shortcuts', ['push.enabled', 'push.app_sync']],
     ['Tokens for outside apps and phone shortcuts', ['tokens.allow_never_expiring']],
     ['Care team', ['sharing.enabled', 'care_notes.enabled']],
     ['Connected devices', ['devices.enabled', 'devices.sync_hours']],
@@ -2255,7 +2266,7 @@
           renderAssistant().catch((e2) => console.warn('Assistant access:', e2));
           loadPeople(); // "Revoke tokens" shows only while a token switch is on
         }
-        if (key === 'push.enabled') {
+        if (key === 'push.enabled' || key === 'push.app_sync') {
           if (pushHost) renderPush(pushHost).catch((e2) => console.warn('Phone shortcuts:', e2));
           loadPeople();
         }

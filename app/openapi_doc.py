@@ -56,6 +56,7 @@ BEARER_OPERATIONS: dict[tuple[str, str], str] = {
     ("get", "/push/v1/check"): DEVICE_TOKEN,
     ("post", "/push/v1/sync"): DEVICE_TOKEN,  # an app token (scope app:add, design note 38 §5.5)
     ("get", "/push/v1/sync"): DEVICE_TOKEN,
+    ("get", "/push/v1/about"): DEVICE_TOKEN,  # a token with app:sync (design note 39 §5.3)
 }
 # The stubs that answer 405 for the methods a bearer route does not offer. ``/mcp`` answers 404 first while ``assistant.enabled`` is off.
 NOT_ALLOWED_SUFFIX = "_not_allowed"
@@ -88,7 +89,7 @@ RATE_LIMITED: frozenset[str] = frozenset({
     "admin_set_shared_key", "admin_probe_ai_provider", "admin_probe_voice", "ai_probe_my_provider",
     "body_create_weights", "body_create_readings", "barcode_lookup", "foods_usda_search", "foods_usda_import",
     "ai_next_meal", "ai_parse_meal", "ai_chat", "ai_transcribe", "vision_read_label", "vision_plate", "vision_read_lab_report",
-    "mcp_post", "push_body", "push_check", "push_sync", "push_sync_check", "me_enable_totp",
+    "mcp_post", "push_body", "push_check", "push_sync", "push_sync_check", "push_about", "me_enable_totp",
     "me_passkey_creation_options", "auth_passkey_request_options", "auth_passkey_sign_in", "auth_passkey_reauth_options",
     "auth_passkey_reauth", "shared_share_link_info", "shared_accept_share_link", "me_invite_by_username",
     "shared_send_suggestion", "shared_write_note",
@@ -298,7 +299,11 @@ def _security_schemes() -> dict[str, Any]:
                 f"A device token (`Authorization: Bearer {brand.DEVICE_TOKEN_PREFIX}...`), made in Settings, Phone shortcuts. A shortcut token has the one scope "
                 "`body:write` and works only at `POST /push/v1/body` (and `GET /push/v1/check`, which tests it), where it adds weights and blood pressure "
                 "readings. An app token also has `app:add` and also works at `POST /push/v1/sync` (and `GET /push/v1/sync`, which tests it), where the "
-                "iPhone app adds the rows it made. Both work only while the instance switch `push.enabled` is on and read nothing. No cookie is read there."
+                "iPhone app adds the rows it made. Both work only while the instance switch `push.enabled` is on and read nothing. No cookie is read there. "
+                "A token of the kind \"The iPhone app, both ways\" also has `app:sync` (only while `push.app_sync` is on too): it works at "
+                "`GET /push/v1/about`, and at the gateway `/push/v1/api/<path>`, which runs the `/api/<path>` route of a short allow-list (the AI "
+                "features and the food lookups) as the token's owner, never as an admin. The gateway refuses any `Origin` header and "
+                "answers 404 for a route that is not on its list; `GET /push/v1/about` names the list."
             ),
         },
     }

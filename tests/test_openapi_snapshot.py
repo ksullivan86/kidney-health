@@ -254,8 +254,9 @@ def test_the_structural_statuses_are_where_the_app_is_built_to_answer_them(commi
 
 def test_the_405_stubs_say_405(committed):
     stubs = [(k, op) for k, op in operations(committed).items() if op["operationId"].endswith("_not_allowed")]
-    assert len(stubs) == 15
-    offered = {"/mcp": {"post"}, "/push/v1/body": {"post"}, "/push/v1/check": {"get"}, "/push/v1/sync": {"get", "post"}}
+    assert len(stubs) == 19
+    offered = {"/mcp": {"post"}, "/push/v1/body": {"post"}, "/push/v1/check": {"get"}, "/push/v1/sync": {"get", "post"},
+               "/push/v1/about": {"get"}}
     for (method, path), op in stubs:
         assert path in offered and method not in offered[path]
         assert "200" not in op["responses"] and op["responses"]["405"] == {"$ref": "#/components/responses/MethodNotAllowed"}
@@ -312,12 +313,13 @@ def test_each_route_has_the_scheme_its_dependencies_give_it(committed, client):
                 assert scheme == [{"session": []}], (method, path)
         elif (method, path) == ("post", "/mcp"):
             assert scheme == [{"assistantToken": []}]
-        elif (method, path) in (("post", "/push/v1/body"), ("get", "/push/v1/check"), ("post", "/push/v1/sync"), ("get", "/push/v1/sync")):
+        elif (method, path) in (("post", "/push/v1/body"), ("get", "/push/v1/check"), ("post", "/push/v1/sync"), ("get", "/push/v1/sync"),
+                                ("get", "/push/v1/about")):
             assert scheme == [{"deviceToken": []}]
         else:
             assert scheme is None, (method, path)  # /healthz, /sw.js and the 405 stubs
         seen[json.dumps(scheme)] += 1
-    assert seen[json.dumps([{"session": []}])] > 100 and seen[json.dumps([{"assistantToken": []}])] == 1 and seen[json.dumps([{"deviceToken": []}])] == 4
+    assert seen[json.dumps([{"session": []}])] > 100 and seen[json.dumps([{"assistantToken": []}])] == 1 and seen[json.dumps([{"deviceToken": []}])] == 5
 
 
 def test_the_public_list_is_what_an_anonymous_caller_gets_through(committed, anon_client):

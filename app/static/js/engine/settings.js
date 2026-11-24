@@ -256,6 +256,12 @@
     { key: 'providers.usda.user_keys_allowed', type: 'bool', default: true, scope: 'instance', env: 'USDA_ALLOW_USER_KEYS',
       label: 'People may add their own USDA key', help: '' },
     // Phone shortcuts (design note 12; app/auth/api_tokens.py, app/push.py). The device tokens are rows of api_tokens, never settings.
+    // push.app_sync (design note 39 §5.1; app/app_gateway.py): the iPhone app both ways, under push.enabled.
+    { key: 'push.app_sync', type: 'bool', default: false, scope: 'instance', env: 'PUSH_APP_SYNC',
+      label: 'Let the iPhone app read and change the person\'s data and use this server\'s AI and food services',
+      help: 'Off by default, and it works only while phone shortcuts are on. When on, a person can make a token for the iPhone app both ways in Settings → Phone shortcuts. '
+        + 'With it, the app can read and change that person\'s own log, use this server\'s AI and food lookups as that person, and keep the phone and the server in step. '
+        + 'It can never change a password, a key, a token or the account, and it is never an admin. While off, such tokens do not work; tokens that only add still do.' },
     { key: 'push.enabled', type: 'bool', default: false, scope: 'instance', env: 'PUSH_ENABLED',
       label: 'Let people send weights and blood pressure from a phone shortcut',
       help: 'Off by default. When on, each person can make tokens in Settings → Account → Your data → Phone shortcuts; a shortcut on their phone can use one to add weights and blood pressure readings to that person\'s own log, and a token made for the iPhone app can also add the food, lab results and symptoms logged on the phone. '

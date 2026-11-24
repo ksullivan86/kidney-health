@@ -25,12 +25,21 @@ the API. Security fixes are released as patch versions of the newest minor versi
   made for the iPhone app. Each new row is sent once, when the server can be reached, and waits on the phone until then. Settings →
   This device → **Sending to your server** shows how many rows wait, when it last sent and any row the server refused, with a
   **Send now** button. Changes and deletions made on the phone after a row was sent are not sent. The sample data is never sent.
+* A new kind of phone token, **The iPhone app, both ways** (design note 39, step 2, the server side). With it, the iPhone app can use
+  your server's AI and food services as you: meal ideas, describe a meal, recipes, Ask, label, plate and lab report photos, lab report
+  text, USDA search and barcodes. It goes through `/push/v1/api/`, which runs only a short list of the server's routes, never as an
+  admin, and never anything that needs your password. Lab reports still go only to a local AI. `GET /push/v1/about` tells the app what
+  the server offers. An admin turns it on with a new switch, off by default. Tokens made for the iPhone app before are not changed
+  ([docs/push.md](docs/push.md)).
 
 ### Upgrading
 
 * Schema step 37 adds one table, `app_sync_rows`: what the iPhone app sent. It changes nothing else.
 * If a reverse proxy lists the paths it passes on, add `/push/v1/sync` next to `/push/v1/body` (the commented second host name in
   `deploy/caddy/Caddyfile.example` now passes it).
+* New setting `PUSH_APP_SYNC` (Server administration → Server settings → Phone shortcuts), off by default. It works only while
+  `PUSH_ENABLED` is on. Nothing changes until you turn it on. If a reverse proxy lists paths, also pass `/push/v1/about` and
+  `/push/v1/api/` (the Caddy example does).
 
 ## 0.24.1 — 2026-11-20
 

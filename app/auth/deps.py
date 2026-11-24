@@ -15,11 +15,19 @@
 Every data router declares ``dependencies=[Depends(current_user)]`` and every handler that touches
 data takes ``user: CurrentUser`` and passes ``user.id`` explicitly. Not found and not yours are
 both 404.
+
+**The one change point for the iPhone app's gateway** (design note 39 §5.2; :mod:`app.app_gateway`): a request that came in at
+``/push/v1/api/<path>`` and passed the gateway's token check carries a :class:`GatewayCaller` in its internal request state
+(:data:`GATEWAY_STATE`), which only the gateway's middleware can set: no header, cookie or body of an outside request reaches it.
+Then :func:`current_user` and :func:`identify` answer the token's owner, never from a cookie; :func:`require_admin` refuses (a
+gateway request is never an admin, and the owner it carries has the role ``user``); :func:`require_recent_auth` refuses (no
+password was entered). ``/api`` itself still ignores the ``Authorization`` header.
 """
 from __future__ import annotations
 
 import sqlite3
-from typing import Annotated
+from dataclasses import dataclass
+from typing import Annotated, Any
 
 from fastapi import Depends, Request
 
@@ -31,6 +39,23 @@ from .models import User, load_user, setup_required as needs_setup, user_row
 
 # Routes a person with ``must_change_password`` may still call (GET /api/auth/status is public).
 PASSWORD_CHANGE_EXEMPT = frozenset({("POST", "/api/me/password"), ("POST", "/api/auth/logout")})
+
+GATEWAY_STATE = "push_gateway"  # the key in the request's internal state (scope["state"]) that only the gateway sets
+
+
+@dataclass(frozen=True)
+class GatewayCaller:
+    """Who a gateway request runs as (:mod:`app.app_gateway`): the token's owner with the role ``user``, and the token."""
+
+    user: User
+    token: Any  # app.auth.api_tokens.TokenInfo (not imported here: api_tokens imports this module)
+
+
+def gateway_caller(request: Request) -> GatewayCaller | None:
+    """The gateway's caller when this request came through ``/push/v1/api/``, else None."""
+    state = request.scope.get("state")
+    caller = state.get(GATEWAY_STATE) if isinstance(state, dict) else None
+    return caller if isinstance(caller, GatewayCaller) else None
 
 
 def _none_mode_user(conn: sqlite3.Connection) -> User:
@@ -76,6 +101,9 @@ def identify(request: Request, conn: sqlite3.Connection) -> User | None:
     ctx = auth_context(request)
     mode = ctx.settings.auth_mode
     request.state.auth_session = None
+    caller = gateway_caller(request)
+    if caller is not None:  # the iPhone app's gateway: the token's owner, never a cookie
+        return caller.user
     if mode == "none":
         return _none_mode_user(conn)
     if mode == "proxy":
@@ -117,7 +145,7 @@ def two_step_required(ctx: AuthContext, conn: sqlite3.Connection, user: User, re
 
 
 def require_admin(user: CurrentUser, request: Request, conn: Annotated[sqlite3.Connection, Depends(get_db)]) -> User:
-    if user.role != "admin":
+    if user.role != "admin" or gateway_caller(request) is not None:  # a gateway request is never an admin
         raise ApiProblem(403, "Admins only")
     if two_step_required(auth_context(request), conn, user, request) and not totp.is_enabled(conn, user.id):
         raise ApiProblem(403, TWO_STEP_FIRST, two_step_required=True)
@@ -129,6 +157,8 @@ AdminUser = Annotated[User, Depends(require_admin)]
 
 def require_recent_auth(user: CurrentUser, request: Request) -> User:
     ctx = auth_context(request)
+    if gateway_caller(request) is not None:  # no password was entered: a gateway request never passes (design note 39 §5.2)
+        raise reauth_required()
     if ctx.settings.auth_mode != "local":
         return user
     info = getattr(request.state, "auth_session", None)

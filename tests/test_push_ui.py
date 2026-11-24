@@ -187,9 +187,25 @@ def test_a_token_for_the_iphone_app_is_a_choice_that_says_what_it_adds():
     assert "Deleted 3 food entries, 1 food of your own, 2 symptoms and 1 blood pressure reading" in app["toast"]
 
 
+def test_the_iphone_app_both_ways_is_offered_only_while_the_server_allows_it():
+    """Design note 39 §5.1: the third kind appears only with ``app_sync_enabled``, and the words then stop saying that no token
+    can see anything."""
+    sync = page()["sync"]
+    assert sync["options"][-1] == ["app_sync", "The iPhone app, both ways: also your data, AI and food services here"]
+    assert sync["created"] == {"name": "Both ways", "expires_in_days": 90, "family": "device", "kind": "app_sync"}
+    assert "It can never change your password, keys, tokens or account." in sync["text"]
+    assert "No token can see, change or delete anything." not in sync["text"]
+    assert "for the iPhone app, both ways" in sync["list"]
+    assert sync["message"].startswith("Delete the 1 food entry that “Both ways” sent? What you typed or imported yourself here stays")
+    assert sync["off"]["options"] == ["shortcut", "app"]
+    assert "No token can see, change or delete anything." in sync["off"]["text"]
+    assert "(or PUSH_APP_SYNC)" in sync["off"]["text"]  # the admin is told where the switch is
+
+
 def test_the_activity_list_says_what_the_iphone_app_added():
     assert "'app.rows_added': 'The iPhone app added to your log'" in SETTINGS_JS
     assert "if (ev.action === 'app.rows_added') return [pushCountsText(d), d.via ? `with “${d.via}”` : ''].filter(Boolean).join(', ');" in SETTINGS_JS
+    assert "'app.server_used': 'The iPhone app read your data'" in SETTINGS_JS  # the gateway's daily row (design note 39 §5.2)
 
 
 # --------------------------------------------------------------------------- the source of the block
@@ -203,7 +219,8 @@ def test_the_block_draws_everything_through_h_and_keeps_nothing_in_the_browser()
     assert BLOCK.count("made.token") == 2 and "unshownDevice = null; return made" in BLOCK  # read by the check and the one box; forgotten at once
     assert "const pushAddress = () => `${window.location.origin}${PUSH_PATH}`;" in BLOCK and "const PUSH_PATH = '/push/v1/body';" in BLOCK
     assert "A.createToken({ name: text, expires_in_days: expiryValue(expiry), family: 'device', ...forApp })" in BLOCK  # scopes are not the person's choice
-    assert "const forApp = kind.value === 'app' ? { kind: 'app' } : {};" in BLOCK  # only the kind: the server sets what it may add
+    assert "const forApp = isAppKind(kind.value) ? { kind: kind.value } : {};" in BLOCK  # only the kind: the server sets what it may add
+    assert "const isAppKind = (kind) => kind === 'app' || kind === 'app_sync';" in BLOCK
     assert "can_log" not in BLOCK and "scopes" not in BLOCK
     assert "Your admin has not turned this on." in BLOCK and "The preview has no server to send readings to." in BLOCK
     assert BLOCK.index("if (MOCK) {") < BLOCK.index("await A.deviceTokens()")  # the demo never asks the server
@@ -218,7 +235,9 @@ def test_the_requests_and_where_the_block_sits():
     data = SETTINGS_JS[SETTINGS_JS.index("function dataBlock(me)"):SETTINGS_JS.index("// Delete the account (not in AUTH_MODE=none")]
     assert data.index("wrap.append(bodyImportBlock());") < data.index("wrap.append(pushBlock());")  # Your data → Phone shortcuts
     assert "id: 'set-push-create'" in BLOCK and "id: 'set-push-name'" in BLOCK
-    assert ("Phone shortcuts", "push.enabled") == re.search(r"\['(Phone shortcuts)', \['(push\.enabled)'\]\]", SETTINGS_JS).groups()  # the admin's switch
+    # the admin's switches: phone shortcuts, and the iPhone app both ways under it (design note 39 §5.1)
+    assert ("Phone shortcuts", "push.enabled", "push.app_sync") == re.search(
+        r"\['(Phone shortcuts)', \['(push\.enabled)', '(push\.app_sync)'\]\]", SETTINGS_JS).groups()
 
 
 def test_the_activity_list_has_words_for_a_phone_shortcut_token_and_for_deleting_what_it_sent():

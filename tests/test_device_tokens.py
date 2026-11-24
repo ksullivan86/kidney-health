@@ -125,7 +125,11 @@ def test_scopes_of_the_two_families_never_mix():
     assert api_tokens.new_token("device").startswith("khd_") and api_tokens.new_token().startswith("kha_")
     # The iPhone app's token (design note 38 §5.5) adds app:add, which implies body:write and nothing of the assistant's.
     assert api_tokens.SHORTCUT_SCOPES == ("body:write",) and api_tokens.APP_SCOPES == ("body:write", "app:add")
-    assert api_tokens.DEVICE_SCOPES == ("body:write", "app:add") and api_tokens.ALL_SCOPES == (*api_tokens.SCOPES, "body:write", "app:add")
+    assert api_tokens.DEVICE_SCOPES == ("body:write", "app:add", "app:sync")
+    assert api_tokens.ALL_SCOPES == (*api_tokens.SCOPES, "body:write", "app:add", "app:sync")
+    # "The iPhone app, both ways" (design note 39 §5.1): app:sync implies app:add and body:write, and nothing implies it.
+    assert api_tokens.APP_SYNC_SCOPES == ("body:write", "app:add", "app:sync") and p("app:sync") == api_tokens.APP_SYNC_SCOPES
+    assert p("app:sync assistant:read") == () and "app:sync" not in p("app:add body:write")
     assert p("app:add") == ("body:write", "app:add") and p("app:add assistant:read") == () and p("assistant:log app:add") == ()
     assert api_tokens.family_of_scope("app:add") == "device"
 

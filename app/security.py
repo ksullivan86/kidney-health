@@ -21,7 +21,9 @@ the outermost middleware comes first:
 6. :class:`CsrfMiddleware` - ``Sec-Fetch-Site``/``Origin`` checks on unsafe methods, the required
    ``X-Requested-With: kidney-health`` on unsafe ``/api`` requests, and no cross-site or same-site
    reads of ``/api`` at all. The bearer-only paths (:data:`BEARER_PATHS`, exactly ``/mcp``,
-   ``/push/v1/body``, ``/push/v1/check`` and ``/push/v1/sync``) get only the ``Origin`` check, on every method. One exception to the
+   ``/push/v1/body``, ``/push/v1/check``, ``/push/v1/sync`` and the iPhone app's two-way paths) get only the ``Origin`` check, on every
+   method. The gateway ``/push/v1/api/…`` (:data:`GATEWAY_PREFIX`, design note 39 §5.2) refuses any ``Origin`` and any
+   ``Sec-Fetch-Site`` but ``none``: the iPhone app sends neither, and no browser page has a reason to call it. One exception to the
    cross-site read rule: the sign-in provider's way back (:data:`PROVIDER_RETURN_RE`), a top-level ``GET`` navigation only
    (design note 24 §3; its own state and cookie checks stop a forged one).
 
@@ -113,7 +115,22 @@ UNSAFE_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 # iPhone app's route for the rows it made (app/app_sync.py, design note 38 §5.5). They never
 # read a session cookie, so the cookie CSRF checks (Sec-Fetch-Site, X-Requested-With) do not apply; the Origin rule does,
 # on every method (the MCP transport's DNS-rebinding rule; a page on another site cannot post to /push/v1/body either).
-BEARER_PATHS = frozenset({"/mcp", "/push/v1/body", "/push/v1/check", "/push/v1/sync"})
+BEARER_PATHS = frozenset({"/mcp", "/push/v1/body", "/push/v1/check", "/push/v1/sync",
+                          # design note 39: what this server offers the iPhone app (app/app_gateway.py)
+                          "/push/v1/about"})
+# The bearer gateway (design note 39 §5.2; app/app_gateway.py): /push/v1/api/<path> runs /api/<path> of an allow-list as the owner of
+# an app:sync token. It reads no cookie, and it refuses every request with an Origin header (a browser's).
+GATEWAY_PREFIX = "/push/v1/api/"
+
+
+def is_gateway_path(path: str) -> bool:
+    """``/push/v1/api`` itself or anything below it."""
+    return path == GATEWAY_PREFIX.rstrip("/") or path.startswith(GATEWAY_PREFIX)
+
+
+def gateway_api_path(path: str) -> str:
+    """The ``/api`` path a gateway path stands for (``/push/v1/api/ai/status`` → ``/api/ai/status``)."""
+    return path[len("/push/v1"):]
 # Where a sign-in provider sends the browser back (design note 24 §3): the provider is another site, so the browser says
 # Sec-Fetch-Site: cross-site (or same-site, for a provider on a sibling host). Allowed only as a top-level GET navigation, matched
 # exactly (the first provider at /api/auth/oidc/callback, a named one at .../callback/<name>, note 24 §13); the route itself
@@ -281,7 +298,7 @@ class SecurityHeadersMiddleware:
             headers[name] = value
         if https and self.hsts_max_age > 0:
             headers["Strict-Transport-Security"] = f"max-age={self.hsts_max_age}"
-        if is_api_path(path):
+        if is_api_path(path) or is_gateway_path(path):
             headers["Cache-Control"] = "no-store"
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
@@ -516,6 +533,8 @@ class BodyLimitMiddleware:
         self.settings = settings
 
     def limit_for(self, path: str) -> int:
+        if is_gateway_path(path):  # the gateway runs the /api route, so it has that route's limit
+            path = gateway_api_path(path)
         for prefix, setting in _BODY_LIMIT_OVERRIDES:
             if path == prefix or path.startswith(prefix.rstrip("/") + "/"):
                 return int(getattr(self.settings, setting))
@@ -610,6 +629,13 @@ class CsrfMiddleware:
         path = scope.get("path", "")
         method = scope.get("method", "GET").upper()
         headers = Headers(scope=scope)
+        if is_gateway_path(path):  # the iPhone app's gateway: no browser at all (design note 39 §9)
+            site = (headers.get("sec-fetch-site") or "none").strip().lower()
+            if headers.get("origin") is not None or site != "none":
+                await _json_response(403, "Cross-site request refused")(scope, receive, send)
+                return
+            await self.app(scope, receive, send)
+            return
         if path in BEARER_PATHS:  # exact match only: "/mcp/", "/mcpx" and "/mcp/x" get the checks below
             origin = headers.get("origin")
             if origin is not None and not self.origin_allowed(origin, scope, headers):
