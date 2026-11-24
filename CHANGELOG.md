@@ -25,6 +25,9 @@ the API. Security fixes are released as patch versions of the newest minor versi
   made for the iPhone app. Each new row is sent once, when the server can be reached, and waits on the phone until then. Settings →
   This device → **Sending to your server** shows how many rows wait, when it last sent and any row the server refused, with a
   **Send now** button. Changes and deletions made on the phone after a row was sent are not sent. The sample data is never sent.
+* In the iPhone app, Describe a meal and reading the text of a lab report PDF can use Apple's AI on the phone, once you turn AI
+  features on in Settings. Nothing leaves the phone and nothing about the question or the answer is kept. The app runs the
+  server's own checks on every answer, and you check each line before saving (design note 38, step 5).
 
 ### Upgrading
 

@@ -65,4 +65,16 @@ final class PhoneTests: XCTestCase {
         lock.lockIfEnabled()
         XCTAssertFalse(lock.locked)
     }
+
+    /// Step 5: the server's instructions, with the page's data JSON put in place exactly; other tasks and empty text are refused.
+    func testTheOnDeviceAIUsesTheServersPromptAndOnlyTwoTasks() async {
+        let prompts = AIPrompts(raw: ["system": "S", "tasks": ["parse_meal": ["template": "<data>{text}</data>"]]])
+        XCTAssertEqual(prompts.message(task: "parse_meal", text: " {\"text\": \"2 eggs\"} "), "<data> {\"text\": \"2 eggs\"} </data>")
+        XCTAssertNil(prompts.message(task: "read_lab_report_text", text: "x"))
+        XCTAssertEqual(OnDeviceAI.tasks, ["parse_meal", "read_lab_report_text"])
+        let other = await OnDeviceAI.answer(["task": "plan_day", "text": "x"])
+        XCTAssertEqual(other["error"] as? String, "bad_request")
+        let empty = await OnDeviceAI.answer(["task": "parse_meal", "text": ""])
+        XCTAssertEqual(empty["error"] as? String, "bad_request")
+    }
 }

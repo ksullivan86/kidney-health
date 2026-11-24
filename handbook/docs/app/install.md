@@ -140,6 +140,10 @@ phone and needs no server ([design note 38][NOTE38]):
     from the phone, and changes made elsewhere coming back to the phone, come later.
 - **Settings → This device → Sending to your server** shows how many rows wait to be sent, when it last sent, and any row your
   server refused. **Send now** tries at once. Changes or deletions you make on the phone after a row was sent are not sent.
+- On an iPhone with Apple Intelligence, **Describe a meal** and reading the text of a lab report PDF can use Apple's AI on the
+  phone. Turn it on in **Settings → AI features**. Nothing you write or read leaves the iPhone, and the questions and answers are
+  not kept. The app checks every answer, and you check each line before anything is saved. The AI never gives insulin or
+  medicine doses. On other iPhones these buttons do not appear, and everything else works.
 
 ## Updates
 

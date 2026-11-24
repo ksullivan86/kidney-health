@@ -89,7 +89,8 @@ def test_the_demo_never_reads_a_photo_and_answers_a_pdfs_text_with_a_fixed_examp
     # design note 36 §4.4: the text route is the one exception, registered before the catch-all, with a fixed example
     assert MOCK_AI.index("route('POST', '/api/ai/read-lab-report-text'") < MOCK_AI.index("route('*', /^")
     assert "nothing was sent to an AI. These rows are a fixed example, not read from your file." in MOCK_AI
-    assert "if (MOCK) return { enabled: false, demo: true };" in AI_JS or "if (MOCK) return { enabled: false, demo: true }" in AI_JS
+    # (device mode, design note 38 §5.6: the iPhone's own model answers through the in-page API instead)
+    assert "if (MOCK && !DEVICE) return { enabled: false, demo: true };" in AI_JS
     assert "Photos are read by AI only in the installed app." in AI_JS
 
 

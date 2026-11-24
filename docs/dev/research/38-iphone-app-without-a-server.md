@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Decided 2026-11-20 (§10). Steps 0 and 1 built and in TestFlight build 5 (2026-11-21). Steps 2 and 3 built 2026-11-21 (ARCHITECTURE.md "Device mode"). Step 4 built 2026-11-21: app tokens and `POST /push/v1/sync` on the server, and the phone's queue that sends to it (§5.5). Step 5 next. |
+| Status | Decided 2026-11-20 (§10). Steps 0 and 1 built and in TestFlight build 5 (2026-11-21). Steps 2 and 3 built 2026-11-21 (ARCHITECTURE.md "Device mode"). Step 4 built 2026-11-21: app tokens and `POST /push/v1/sync` on the server, and the phone's queue that sends to it (§5.5). Step 5 next. Step 6, the server's AI and keys from the phone and sync both ways, is designed in [note 39](39-iphone-app-with-a-server.md). |
 | Owner's words | "I'd like to have it work locally if connection to the server is lost and sync later, maybe use the iOS AI if possible as well. I'd like to also have users not need a server to use the app." And: "can we also just include the option for a USDA API key to be added to app, it could have its own settings page for keys or APIs." (2026-11-20) |
 | Builds on | [Note 15](15-native-ios-app.md) (the iPhone app, signing, TestFlight), [note 02](02-ios-pwa.md) (the Home Screen web app, the service worker on iOS), [note 12](12-phone-push-tokens.md) (device tokens), [note 14](14-reuse-map.md) (the JavaScript twins and their vectors), [`demo.md`](../../demo.md) ("Keep my data in this browser"), [note 36](36-lab-pdf-text.md) (lab text, local model only), [note 32](32-choose-local-or-cloud-ai.md) (local or cloud AI). |
 | Scope | The iPhone app as a whole food log that works with no server. It keeps data on the phone, looks foods up with the person's own keys, uses Apple's on-device AI, and sends to a server when one is set up and reachable. |
@@ -175,6 +175,14 @@ Safety rules that do not change (CLAUDE.md):
 * Everything runs on the phone, so the rule that lab reports and anything with a name or birth date go only to a local model
   is kept. The phone never calls a cloud AI.
 * The 4,096-token window (F3) is small, so prompts send only what each task needs.
+
+**What was built (step 5, web side).** Describe a meal and the text of a lab report page. Meal ideas are not built yet. In device
+mode the page asks the app `{kind: 'aiStatus'}` and `{kind: 'ai', task, text}` through `KH.mock.device.lookup`. `text` is the data
+block the server would send, cleaned and escaped the same way, and the app fills it into `ai-prompts.json`, which
+`scripts/build_preview.py --device` writes from `app/ai/prompts.py`. So the prompt exists in one place. The page checks the answer's
+shape, then runs twins of the server's checks (`js/engine/aijudge.js`, `js/engine/lab_report.js`, pinned by
+`tests/data/ai_device_vectors.json`): the prefilter for lows, emergencies and dose questions before anything is asked, the name
+policy, servings, and the lab judge. The answers have the server's shape. A photo of a report is not read on the phone yet.
 
 ## 6. Safety and privacy review
 

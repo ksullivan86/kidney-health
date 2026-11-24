@@ -94,6 +94,10 @@ final class FoodServices: ObservableObject {
             return ["ok": true, "usda": usdaOn && hasUsdaKey, "off": offOn, "scan": BarcodeScanner.available]
         case "scanBarcode": // the native scanner (Phone/BarcodeScanner.swift); the page looks the code up itself
             return await BarcodeScanner.shared.scan()
+        case "aiStatus": // the iPhone's own AI (design note 38, step 5): on the phone only
+            return OnDeviceAI.status()
+        case "ai":
+            return await OnDeviceAI.answer(request)
         case "enableOff":
             setOn(.openFoodFacts, true) // the page asked the person first, naming the host and what is sent (note 38, D5)
             return ["ok": true]

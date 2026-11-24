@@ -62,7 +62,7 @@ def test_no_code_names_another_health_type(word):
 
 def test_no_third_party_packages_and_only_apple_frameworks():
     assert "XCRemoteSwiftPackageReference" not in PROJECT
-    allowed = {"Foundation", "HealthKit", "LocalAuthentication", "Security", "SwiftUI", "UIKit", "Vision", "VisionKit", "WebKit", "XCTest",
+    allowed = {"Foundation", "FoundationModels", "HealthKit", "LocalAuthentication", "Security", "SwiftUI", "UIKit", "Vision", "VisionKit", "WebKit", "XCTest",
                "PackageDescription", "KidneyHealthCore", "KidneyHealth"}
     for name, text in SWIFT.items():
         for module in re.findall(r"^(?:@testable )?import (\w+)", text, re.M):
@@ -268,3 +268,16 @@ def test_sending_to_the_server_goes_only_to_the_paired_server_with_the_keychain_
     for kind in ("serverInfo", "serverSyncCheck", "serverSync"):
         assert f"kind: '{kind}'" in page, kind
     assert "khd_" not in page and "Authorization" not in page
+
+
+def test_the_iphones_own_ai_does_two_narrow_tasks_and_keeps_nothing():
+    """Design note 38, step 5: Apple's on-device model for describe a meal and lab text only. Nothing leaves the phone and nothing
+    is stored; the instructions are the server's own (ai-prompts.json, built from app/ai/prompts.py), never written twice."""
+    ai = APP["KidneyHealth/Services/OnDeviceAI.swift"]
+    assert 'static let tasks: Set<String> = ["parse_meal", "read_lab_report_text"]' in ai
+    for word in ("URLSession", "UserDefaults", "FileManager.default.create", ".write(to:", "Keychain"):
+        assert word not in ai, word  # no network, and no prompt or reply is kept
+    assert "ai-prompts.json" in ai and "TASK_SYSTEM_PROMPT" not in ai.replace("TASK_SYSTEM_PROMPT, verbatim", "")
+    code = re.sub(r"//[^\n]*", "", ai).lower()
+    for word in ("insulin", "dose", "dosing", "bolus"):
+        assert word not in code, word  # the model is never given a dosing task

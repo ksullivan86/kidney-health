@@ -5757,6 +5757,29 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
   * **When**: 10 s after a save, when the page becomes visible, and at start; only while paired and after the token check passed
     (kept a day). Settings → This device → **Sending to your server** shows the server, the rows waiting, when it last sent, refused
     and stuck rows, the sentence that changes after sending are not sent, and **Send now**.
+* **The iPhone's own AI (step 5)**: describe a meal (`POST /api/ai/parse-meal`) and the text of a lab report page
+  (`POST /api/ai/read-lab-report-text`) run on Apple's on-device model; the other AI features stay off. `js/mock/ai.js` asks the
+  app `{kind: 'aiStatus'}` (answer `{ok, available, reason: not_eligible | not_enabled | not_ready | null}`) and
+  `{kind: 'ai', task: 'parse_meal' | 'read_lab_report_text', text}` (answer `{ok, answer}` with the shape of `ParseMealAnswer` or
+  `LabReportAnswer`, or `{error: ai_unavailable | ai_failed | refused | bad_request, message}`).
+  * The prompt is the server's, in one place. `scripts/build_preview.py --device` writes `ai-prompts.json`:
+    `{"system": TASK_SYSTEM_PROMPT, "tasks": {"parse_meal": {"template"}, "read_lab_report_text": {"template"}}}`. A template is
+    `prompts.user_message(task, data, mode="json_schema")` (no schema line: guided generation enforces the shape) with the data
+    block's JSON replaced by `{text}`. The page sends that JSON as `text`, cleaned and escaped as the server does
+    (`KH.aiJudge.dataPayload`: `{"text": ...}` with `prompts.clean`, or `{"lines": [...]}` with `features.lab_text_lines`), so the
+    app's message is the server's byte for byte. A lab page whose JSON is over 8,000 characters is 413 `too_long_for_ai`, as on
+    the server, without asking. `tests/test_ai_device_vectors.py` checks the file against `app/ai/prompts.py`.
+  * Before anything is asked, the server's prefilter runs (`KH.aiJudge.prefilter`): a low, an emergency or a dose, lab or
+    diagnosis question gets the server's card. The model's answer is untrusted: a top level that does not fit the schema is a failed
+    answer (`schema`), and one item or row that does not fit is left out (`malformed_item`, or `dropped.malformed` with a note; the
+    server would fail the whole answer). Then the server's judges run: `guard.name_policy`, `servings_for` with matches from the
+    in-page food search, and `lab_report.judge_text`. Twins: `js/engine/aijudge.js`, `js/engine/lab_report.js`, pinned by
+    `tests/data/ai_device_vectors.json`.
+  * The answers have the server's shape, with `provider` the on-device model and `audit_id` null: nothing about a prompt or a reply
+    is stored. `GET /api/me/ai` is `enabled` only while the model can answer, and says why not under `device`; the person turns the
+    features on with `opt_in` (Settings → AI features shows one switch). Nothing leaves the phone, so consent is given with
+    `skip_preview` and there is no consent sheet; "What will be sent?" shows the request to the app. The device build also packs the
+    vendored pdf.js so a lab PDF can be read on the phone.
 * **Tests**: `tests/js/server_sync.mjs` and `tests/test_server_sync_phone.py` (the queue against a stand-in app, and the page's
   body through the real route), `tests/js/device_mode.mjs` (the engine, against a fake IndexedDB), `tests/test_device_mode.py` (the build and the wiring), `PhoneTests.swift`,
   `tests/test_ios_app.py` (the shell's rules), `WebShellTests.swift` (the simulator), `tools/e2e/device_mode.py` (Chromium).

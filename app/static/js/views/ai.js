@@ -15,12 +15,14 @@
    Rules: AI answers are rendered with textContent only (titles and sentences come from the server's
    templates; numbers from its rule check); nothing is logged or saved without a tap, and then through
    the ordinary /api/log/batch and /api/foods routes; photos are redrawn on the device as JPEG (≤ 1600 px,
-   no EXIF) before they leave. Demo mode never calls a provider. */
+   no EXIF) before they leave. Demo mode never calls a provider. In device mode (the iPhone app, design note 38 §5.6) describe a
+   meal and a lab report's text run on Apple's on-device model through the in-page API, and Settings shows one switch. */
 (() => {
   'use strict';
   const KH = window.KH;
   const { $, $$, h, clear, request, toast, toastError, state, util, ui, sheets, confirm, rules } = KH;
   const { MOCK, PREVIEW } = KH.flags;
+  const DEVICE = !!KH.flags.DEVICE; // the iPhone app with no server: Apple's on-device model answers through js/mock/ai.js
   const { NUTRIENTS, NUT, MEAL_LABEL, MEAL_KEYS, fmtNum } = rules;
 
   const PHOTO_EDGE = 1600; // note 02 R7: long edge on the device
@@ -189,7 +191,7 @@
   let statusCache = null;
   let statusAt = 0;
   async function status(force = false) {
-    if (MOCK) return { enabled: false, demo: true };
+    if (MOCK && !DEVICE) return { enabled: false, demo: true };
     if (!force && statusCache && Date.now() - statusAt < STATUS_TTL_MS) return statusCache;
     try {
       // /api/me/ai is always there; /api/ai/status answers 404 while AI is off (as if not registered).
@@ -302,8 +304,10 @@
   function renderDryRun(container, dry) {
     container.append(
       h('dl', { class: 'kv' },
-        h('div', { class: 'kv-row' }, h('dt', {}, 'Goes to'), h('dd', {}, `${dry.provider ? dry.provider.label : ''} · ${dry.host}${dry.provider && dry.provider.local ? ' (your local AI, on your network)' : ''}`)),
-        h('div', { class: 'kv-row' }, h('dt', {}, 'Address'), h('dd', {}, `${dry.method} ${dry.destination}`)),
+        h('div', { class: 'kv-row' }, h('dt', {}, 'Goes to'), h('dd', {}, `${dry.provider ? dry.provider.label : ''} · ${dry.host}${dry.device ? ''
+          : dry.provider && dry.provider.local ? ' (your local AI, on your network)' : ''}`)),
+        dry.destination ? h('div', { class: 'kv-row' }, h('dt', {}, 'Address'), h('dd', {}, `${dry.method} ${dry.destination}`)) : null,
+        dry.device && dry.message ? h('div', { class: 'kv-row' }, h('dt', {}, 'Where'), h('dd', {}, dry.message)) : null,
         dry.image_bytes ? h('div', { class: 'kv-row' }, h('dt', {}, 'Photo'), h('dd', {}, `${Math.round(dry.image_bytes / 1024)} KiB JPEG, ${dry.images.map((i) => `${i.width}×${i.height}`).join(', ')}, location and camera data removed`)) : null,
         dry.trimmed_candidates ? h('div', { class: 'kv-row' }, h('dt', {}, 'Left out'), h('dd', {}, `${dry.trimmed_candidates} lower-ranked foods, to fit the provider's prompt size`)) : null,
         dry.privacy_filter ? h('div', { class: 'kv-row' }, h('dt', {}, 'Privacy filter'), h('dd', {}, dry.privacy_filter.text)) : null),
@@ -1062,6 +1066,15 @@
     for (const el of Array.from(body.children)) if (el !== slot) el.remove(); // the M1 placeholder text
     body.dataset.filled = '1';
     if (!slot.childElementCount) slot.append(h('p', { class: 'muted small' }, 'Loading…')); // a refresh keeps what is shown until it is ready
+    if (DEVICE) {
+      let me;
+      try { me = await api.me(); } catch (err) {
+        if (current()) clear(slot).append(h('p', { class: 'form-error' }, `Could not load this: ${err.detail || err.message}`));
+        return;
+      }
+      if (current()) slot.replaceChildren(whatAiIs(false), ...devicePart(me));
+      return;
+    }
     if (MOCK) {
       clear(slot).append(whatAiIs(false), h('p', { class: 'setting-status' }, h('span', { class: 'state-pill off' }, 'Not in the preview')),
         h('p', {}, `Optional AI features run in the installed app, with an AI your admin sets up and only after you turn them on. The ${PREVIEW ? 'preview' : 'demo'} never sends anything to an AI.`));
@@ -1085,6 +1098,33 @@
     // v0.3.1: the shared providers are set up in Server administration (renderAdmin below), not here.
     if (isAdmin() && me.enabled) parts.push(h('p', { class: 'hint' }, 'Admins: the shared AI providers are set up in Server administration → AI providers.'));
     if (current()) slot.replaceChildren(...parts);
+  }
+
+  // Device mode (the iPhone app with no server): Apple's on-device model, and one switch. Nothing is sent anywhere, so there is no
+  // provider, key, consent or activity list; prompts and answers are not kept.
+  const DEVICE_TEXT = 'Describe a meal and reading the text of a lab report PDF use Apple\'s on-device model. It runs on this iPhone: '
+    + 'nothing you write or read is sent to any company or server, and the questions and answers are not kept. The app checks every '
+    + 'answer, and you check each line before anything is saved.';
+  function devicePart(me) {
+    const d = me.device || {};
+    if (!me.enabled) {
+      return [h('p', { class: 'setting-status' }, h('span', { class: 'state-pill off' }, 'Not available on this iPhone')),
+        h('p', {}, d.message || 'Apple\'s on-device AI is not available on this iPhone, so the AI features are off. Everything else works.')];
+    }
+    const msg = statusMsg();
+    const err = formError();
+    const opt = h('input', { type: 'checkbox', id: uid('ai-opt'), checked: !!me.settings.opt_in });
+    opt.addEventListener('change', async () => {
+      clear(err);
+      try {
+        await api.updateMe({ opt_in: opt.checked });
+        forget();
+        msg.textContent = opt.checked ? 'AI features are on.' : 'AI features are off.';
+        renderAddSlot();
+      } catch (e) { opt.checked = !opt.checked; if (!e.handled) showError(err, e); }
+    });
+    return [h('p', {}, DEVICE_TEXT),
+      check('Use AI features', opt, 'Off by default. The app\'s own rules always run first. The AI never gives insulin or medicine doses.'), msg, err];
   }
 
   // "How AI help is set up": the three questions of docs/ai.md ("The setup in three questions") and the handbook's
