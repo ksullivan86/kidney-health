@@ -82,6 +82,6 @@ def test_the_modules_are_device_mode_only_and_have_no_network_of_their_own():
     assert "const ACCOUNT_KEYS = ['user.units.labs', 'user.units.weight', 'body.weight_alarm', 'body.bp_goal', 'guidance'];" in code
     html = (STATIC / "index.html").read_text(encoding="utf-8")
     assert html.index('src="js/mock/guidance.js"') < html.index('src="js/mock/server_changes.js"') < html.index('src="js/mock/server_account.js"')
-    assert html.index('src="js/views/settings.js"') < html.index('src="js/views/server_review.js"')
+    assert html.index('src="js/views/settings.js"') < html.index('src="js/views/server_review.js"') < html.index('src="js/main.js"')
     sw = (STATIC / "sw.js").read_text(encoding="utf-8")
     assert "'/js/mock/server_account.js'," in sw and "'/js/views/server_review.js'," in sw
