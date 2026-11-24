@@ -379,6 +379,21 @@ The exact shapes are in [`docs/push.md`](../../push.md) and ARCHITECTURE.md.
   The server makes the shopping list from its own Plan, so before step 7 sends planned entries at once, plans made on the phone show
   there only once they are sent. `about.services` says which of the three the server has on.
 * The web app's offline outbox (note 02) queues only food log entries, so it sends `If-Match` for no other kind.
+* Step 8, saved meals: they have no receipts (step 37's table allows six kinds), so `POST /push/v1/sync` finds a saved meal again by
+  its `client_id` and does not count it toward the day cap. A saved meal's items, and its edits in `POST /push/v1/changes`, name
+  foods by reference, as entries do; a food the server does not have yet makes the edit `refused` until the phone sends it. A phone
+  that synced before step 8 reads the feed once more from `0` for saved meals alone. A saved meal of the phone with the same name as
+  one of the server's, never sent, becomes that row, so the first sync does not make two.
+* Step 8, what the server owns: the gateway's list also holds `GET` and `PUT /api/profile`, `GET /api/me/settings`,
+  `GET /api/guidance/preferences`, `PUT` and `DELETE /api/guidance/preferences/{food_id}`, `GET /api/foods` and `GET /api/foods/{food_id}`;
+  `PATCH /api/me/settings` also takes `user.units.labs`, `user.units.weight`, `body.weight_alarm`, `body.bp_goal` and `guidance`. A
+  preference names a food by the server's id, so the phone finds each food (`GET /api/foods/{id}`, or the food search by name) and
+  remembers the pair. The `guidance` lists that name rows by id ("OK to repeat", "Not this meal") stay on each side. Food preferences
+  only the phone had are sent once at the first sync. §8.7 point 5's card is built; the note describes no other card about a Care
+  team's change, so a new target from the server simply shows on the phone.
+* Found while building step 8: an entry on the phone for a food that came from the server (one made there, or a USDA or Open Food
+  Facts food) could not be placed by `POST /push/v1/sync`. The server now also finds an own food by its `client_id`, and the phone
+  names a USDA or Open Food Facts food from the server by its `fdc_id` or barcode.
 
 ## 12. Decisions (2026-11-24)
 

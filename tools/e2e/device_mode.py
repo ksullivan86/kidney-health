@@ -308,6 +308,10 @@ SYNC = ("window.__kh = { copies: [], phone: [], api: [], sent: [], feed: [], nex
         " if (r.path === '/push/v1/changes') { const body = JSON.parse(r.body); window.__kh.sent.push(body); const next = window.__kh.next; window.__kh.next = null;"
         "   return reply({ results: body.changes.map((c) => next ? { kind: c.kind, id: c.id, ...next } : { kind: c.kind, id: c.id, status: 'done', version: c.version }) }); }"
         " if (r.path === '/push/v1/match') return reply({ known: {}, unknown: {} });"
+        " if (r.path === '/push/v1/api/profile' && r.method === 'GET') return reply({ ...KH.mock.instance._profileView(), ckd_stage: '5', ckd_stage_chosen: true,"
+        "   targets: { potassium_mg: { min: null, max: 2100 } } });"
+        " if (r.path === '/push/v1/api/me/settings' && r.method === 'GET') return reply({ settings: { 'user.units.weight': { value: 'lb', source: 'user', editable: true } } });"
+        " if (r.path === '/push/v1/api/guidance/preferences') return reply({ foods: [], groups: { like: [], less: [], never: [] }, learn_from_log: true });"
         " return { ok: true, status: 404, json: '{\"detail\": \"Not Found\"}' }; };"
         "window.webkit = { messageHandlers: { safetyCopy: { postMessage: (t) => window.__kh.copies.push(String(t)) },"
         " phone: { postMessage: (m) => window.__kh.phone.push(String(m)) },"
@@ -345,6 +349,21 @@ def sync_walk(browser, base: str) -> None:
     page.wait_for_timeout(500)
     today = page.locator("#view-today").inner_text().lower()
     check(f"[{tag}] an entry made on the server shows on Today", "banana" in today, today[:200])
+    # step 8: the profile, targets and settings come from the server; a saved meal made there arrives
+    got = page.evaluate("[KH.mock.instance._profileView().ckd_stage, KH.mock.instance._profileView().targets.potassium_mg.max,"
+                        " KH.mock.instance._effectiveSetting('user.units.weight', KH.mock.instance._currentUser().id).value]")
+    check(f"[{tag}] the profile, a target and a setting come from the server", got == ["5", 2100, "lb"], json.dumps(got))
+    page.evaluate("(() => { const api = KH.mock.instance; const f = api._foods.find((x) => x.source === 'builtin' && /banana/i.test(x.name));"
+                  " const row = { name: 'Banana snack', note: null, meal_hint: 'snack', servings_made: null, steps: null, source_url: null,"
+                  " items: [{ food_id: 7, food_name: f.name, servings: 1, nutrients: api._foodView(f).nutrients, food: { builtin: { fdc_id: f.fdc_id, name: f.name } } }],"
+                  " client_id: '1b9d6bcd-bbfd-4b2d-9b5d-ab8dfbbd4bed', created_at: '2026-11-20T08:00:00Z', updated_at: '2026-11-20T08:00:00Z' };"
+                  " window.__kh.feed.push({ kind: 'meal', id: row.client_id, op: 'put', version: KH.rowVersions.version('meal', row), row }); })()")
+    page.evaluate("KH.mock.serverApi.forget(); KH.mock.serverSync.sendNow()")
+    for _ in range(50):
+        if page.evaluate("KH.mock.instance._templates.length"):
+            break
+        page.wait_for_timeout(100)
+    check(f"[{tag}] a saved meal made on the server arrives", page.evaluate("KH.mock.instance._templates.map((t) => t.name)") == ["Banana snack"])
     # the phone changes it, and so did the server: the conflict card, and nothing overwritten
     entry_id = page.evaluate("KH.mock.instance._entries[0].id")
     page.evaluate(f"KH.request('PUT', '/api/log/{entry_id}', {{ servings: 2 }})")
@@ -359,6 +378,19 @@ def sync_walk(browser, base: str) -> None:
           and "2 servings" in card, card[:240])
     check(f"[{tag}] with note 02's two answers", page.get_by_role("button", name=re.compile("^Keep the saved one")).count() == 1
           and page.get_by_role("button", name=re.compile("^Use mine")).count() == 1)
+    # step 8 (§8.6): the badge says "1 to review", Today marks the entry "needs review", and the badge opens the cards
+    badge = page.locator("#sync-badge")
+    label = badge.get_attribute("aria-label") or ""
+    check(f"[{tag}] the badge says 1 to review", badge.is_visible() and badge.inner_text().strip() == "1" and label.startswith("One change needs your choice"), label)
+    page.goto(f"{base}/index.html#today")
+    page.wait_for_selector("#view-today:not([hidden])", timeout=30000)
+    page.wait_for_timeout(500)
+    rows = page.locator("#view-today .row-btn").all_inner_texts()
+    check(f"[{tag}] Today marks the entry needs review", any("needs review" in r.lower() for r in rows), json.dumps(rows + [page.evaluate("JSON.stringify([KH.mock.instance._serverChanges.items.map((x) => x.key), KH.mock.instance._entries.map((e) => e.client_id)])")])[:400])
+    badge.click()
+    page.wait_for_selector("#set-server-review .conflict", timeout=10000)
+    focused = page.evaluate("document.activeElement && document.activeElement.id")
+    check(f"[{tag}] the badge opens the cards", focused == "set-server-review-h", str(focused))
     first = page.evaluate("window.__kh.sent[window.__kh.sent.length - 1].changes[0]")
     page.get_by_role("button", name=re.compile("^Use mine")).click()
     page.wait_for_timeout(300)
@@ -375,6 +407,7 @@ def sync_walk(browser, base: str) -> None:
     text = page.locator("#set-device-body").inner_text()
     check(f"[{tag}] Settings says it syncs both ways, with nothing left to review", "Both ways" in text and page.locator("#set-server-review").count() == 0,
           text[:240])
+    check(f"[{tag}] and the badge is gone", not page.locator("#sync-badge").is_visible())
     over = page.evaluate("document.documentElement.scrollWidth > window.innerWidth + 1")
     check(f"[{tag}] no sideways scroll", not over)
     check(f"[{tag}] no request to another host", not others, "; ".join(others[:3]))

@@ -53,8 +53,13 @@ the API. Security fixes are released as patch versions of the newest minor versi
   to the server: food log entries, your own foods, lab results, symptoms, weights and blood pressure. Planned entries are sent at
   once. If a row was changed in two places, Settings → This device → **Your server** shows both copies and you choose: **Keep the
   saved one** or **Use mine**. The first sync of a phone that already has data asks only about rows changed on both sides. Pairing
-  with another server or another person's token asks before anything moves. Saved meals, the profile and targets do not sync yet.
+  with another server or another person's token asks before anything moves.
   The section was called **Sending to your server**, and its button is now **Sync now**.
+* With a token both ways, saved meals and recipes sync both ways too, and your profile, targets, account settings and food
+  preferences come from your server, where your care team may set them (design note 39, step 8). You change them on the phone only
+  while your server can be reached; the change goes straight to the server. The first time, if the phone's profile and targets
+  differ from the server's, one card shows both and you choose. The phone's own settings, such as the theme, stay on the phone. A
+  "1 to review" badge at the top says when something needs your choice, and Today marks such an entry **needs review**.
 * The demo and the iPhone app follow the same rules: every row gets an ID, a change or delete with an old version is refused in
   the same way, and their export and import keep the IDs.
 * With a token both ways, the iPhone app can import a recipe from a web page, open the shopping list in Instacart, and send it to
@@ -63,6 +68,8 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### Fixed
 
+* With a token both ways, an entry added on the phone for a food made on the server, or a USDA or Open Food Facts food that came
+  from the server, now reaches the server. Before, the server could not find the food and the entry stayed on the phone.
 * The iPhone app no longer shows the demo's sample recipe page or a pretend Instacart link when it has no server.
 * A file exported from the demo can be imported into the demo again: entries no longer carry a field the import refuses.
 

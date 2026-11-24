@@ -147,14 +147,22 @@ phone and needs no server ([design note 38][NOTE38]):
 ### With a token both ways
 
 - **Sync both ways.** What you or your care team add or change on your server comes to the phone, and what you change or delete
-  on the phone goes to your server. This covers food you logged, your own foods, lab results, symptoms, weight and blood
-  pressure. Saved meals, your profile and your targets do not sync yet. The app syncs while it is open: after a change, when you
-  open it, every 15 minutes, and when you tap **Sync now**.
+  on the phone goes to your server. This covers food you logged, your own foods, saved meals and recipes, lab results, symptoms,
+  weight and blood pressure. The app syncs while it is open: after a change, when you open it, every 15 minutes, and when you tap
+  **Sync now**.
+- **Your profile, targets and settings come from your server.** Your care team may set your targets there, so the phone shows
+  your server's. This covers your profile, your targets, your units, your weight and blood pressure goals, and your food
+  preferences. You can still change them on the phone, but only while your server can be reached: the change goes straight to
+  your server. Without a connection the app says "This needs a connection to your server." The theme, the camera, the phone's
+  own keys and the lock stay on the phone.
+- **"1 to review"** at the top of the screen means a row or your profile needs your choice. Tap it to see the choices. On Today,
+  such an entry says **needs review**.
 - **The first sync** of a phone that already has data compares each row with your server. If only one side changed a row, that
   side is kept. If both changed it, the row is listed in **Settings → This device → Your server** under **Your iPhone and your
   server differ**: choose **Keep your server's** or **Keep this iPhone's**. A row you deleted on the phone but that is still on
   your server is listed too: choose **Delete it there** or **Keep it**. Until you choose, the app shows your server's copy and
-  keeps the phone's.
+  keeps the phone's. If your profile and targets differ, one card shows both: **Keep your server's** or **Keep this iPhone's**.
+  A saved meal with the same name on both becomes one. Food preferences you set only on the phone are sent to your server.
 - **Changed in two places.** If you change an entry on the phone and it was also changed somewhere else, the app never picks one
   for you. The row is listed with both copies side by side: **Keep the saved one** keeps your server's, **Use mine** sends yours.
   If you change something on the phone that was deleted elsewhere, the app says your change was dropped.

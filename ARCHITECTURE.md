@@ -4535,6 +4535,7 @@ at most **256 KiB** → `413`; one JSON object, strict JSON, at most **200 rows*
 | `symptoms` | `SymptomCreate` (`POST /api/symptoms`) | `client_id`, `created_at` | as `POST /api/symptoms` |
 | `weights` | `WeightCreate` (`POST /api/body/weights`) | `client_id`, `source_key` (the Health key the phone holds; optional) | `source = 'shortcut'`, `api_token_id` = the token |
 | `readings` | `BloodPressureCreate` (`POST /api/body/blood-pressure`) | `client_id`, `source_key` | `source = 'shortcut'`, `api_token_id` = the token |
+| `meals` (note 39 step 8; the phone sends them only with a token both ways) | `MealTemplateCreate` (`POST /api/meals`) with `items: [{food, servings}]` (`SyncMealFields`) | `client_id`, `created_at` | `meals.insert_template`, its `client_id` the phone's; found again by `client_id` (no receipt, so not in the day cap); a meal whose food this server cannot find is skipped as `food_not_found` |
 
 The first problem is `400 {"detail": "entries.3.date: …", "field": "entries.3.date"}`; nothing is stored. A model-level rule has no
 field name: `labs.0: unit 'x' is not accepted for potassium; …`. A `client_id` is a UUID in its 36-character form, stored lower-case;
@@ -4872,7 +4873,11 @@ Code `app/app_gateway.py`, `GatewayCaller` in `app/auth/deps.py`, `app:sync` in 
   `/api/ai/parse-meal`, `/api/ai/recipes`, `/api/ai/chat`, `/api/ai/transcribe`, `/api/vision/label`, `/api/vision/plate`,
   `/api/ai/read-lab-report`, `/api/ai/read-lab-report-text`, `GET /api/foods/usda/search`, `POST /api/foods/usda/import`,
   `POST /api/foods/barcode`, and `PATCH /api/me/settings` and `PATCH /api/me/ai` with only the keys of `BODY_KEYS` (`food.off_consent`;
-  `opt_in`: any other key is `403` before the route runs); since plan step 9 also `GET /api/recipe-import`, `POST /api/recipe-import/page`
+  `opt_in`: any other key is `403` before the route runs); since plan step 8 also `GET` and `PUT /api/profile`, `GET /api/me/settings`,
+  `GET /api/guidance/preferences`, `PUT` and `DELETE /api/guidance/preferences/{food_id}`, `GET /api/foods` and `GET /api/foods/{food_id}`
+  (the profile, targets, account settings and food preferences, which the server owns; the two food reads name a preference's food), with
+  `PATCH /api/me/settings` taking also `user.units.labs`, `user.units.weight`, `body.weight_alarm`, `body.bp_goal` and `guidance` (never the
+  theme, the camera, the AI's trust or route; at most 16 KiB); since plan step 9 also `GET /api/recipe-import`, `POST /api/recipe-import/page`
   (the page is read by the server's `RecipeFetcher` through the SSRF-checked transport), `GET /api/instacart`, `POST /api/instacart/preview`,
   `/api/instacart/send`, `GET /api/list-sync`, `POST /api/list-sync/preview` and `/api/list-sync/send`, each answering as for the web app
   while its switch is off. Never the list app's set-up (`PUT`/`DELETE /api/list-sync`, `POST /api/list-sync/test`) nor
@@ -4917,9 +4922,14 @@ Code `app/sync_feed.py`, `app/row_versions.py` (twin `js/engine/row_versions.js`
 * **`GET /push/v1/changes?after&limit`** (token with `app:sync`, 120 an hour, `push_changes`): `{changes: [{kind, id, op: put|delete,
   version, row?}], foods: [{ref, food}], next, more}`, one snapshot per page, at most 500. `row` is the export's shape with `client_id`;
   entries and saved meal items carry `food` as `POST /push/v1/sync`'s food reference.
+* **A food reference** (`app_sync.food_for_ref`, used by `POST /push/v1/sync` and by a saved meal's edit): a `client_id` is a food sent in
+  the same request, one an app token sent before (its receipt), or the person's own food with that `client_id` (a food made on the server
+  that the phone read from the feed); a built-in food by `fdc_id` then name; a USDA or Open Food Facts food by `fdc_id` or `gtin`.
 * **`POST /push/v1/changes`** (`push_changes_write`, 120 an hour with match; at most 200 changes, 256 KiB): each `{kind, id, op: edit|delete,
   base, fields?, version?}` calls the kind's route function with `If-Match: "<base>"` and answers `done` (new version), `conflict` (row and
-  version as stored), `gone` or `refused`. An edit whose `version` equals the stored version is `done` with no write.
+  version as stored), `gone` or `refused`. An edit whose `version` equals the stored version is `done` with no write. A saved meal's
+  `fields` are `SyncMealFields`: its items name their foods by reference, never by this server's ids; a food not here yet is `refused`
+  ("A food in this saved meal is not on your server yet"), and the phone sends the food first.
 * **`POST /push/v1/match`**: `{ids: {kind: [ids]}}` → `{known: {kind: {phone: server}}, unknown: {kind: [ids]}}`, by `client_id` and by
   step 37's receipts. At most 2,000 ids.
 * **The reader** is the iPhone app's page (note 39 steps 6 and 7): `js/mock/server_changes.js`, in "Device mode" below. It reaches
@@ -5905,8 +5915,8 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
 * **Sync both ways (design note 39, steps 6 and 7)**: `js/mock/server_changes.js` (device mode only, `M.serverChanges`) reads the
   change feed and sends the phone's edits and deletes ("The change feed" above), through `M.serverApi.call` and the app's
   `serverApi` message (allow-list: `GET /push/v1/changes` with `after` and `limit`, `POST /push/v1/changes`, `POST /push/v1/match`).
-  Kinds: `entry`, `food` (own), `lab`, `symptom`, `weight`, `reading`; the feed's `meal` rows are skipped until step 8. A row's ID
-  is its `client_id`: an entry's own, every other kind's step-4 mark `c`. Active only with `about` 200, an `account`, and the same
+  Kinds: `entry`, `food` (own), `meal` (step 8), `lab`, `symptom`, `weight`, `reading`. A row's ID is its `client_id`: an entry's
+  own, every other kind's step-4 mark `c`, which is also the row's own `client_id`. Active only with `about` 200, an `account`, and the same
   account as saved.
   * **Saved** with the log in `_serverChanges`: `{ v: 1, account, host, cursor, first, full, rows: { kind: { client_id: { b, l?, r?,
     w? } } }, items: [...], notices: [...], ask, syncedAt, outcome, message, waitUntil }`. `b` is the server's version the phone
@@ -5918,7 +5928,7 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
     and stops everything until the person answers: **Send this iPhone's data to <host>** (step 4's marks cleared, so all is sent as
     new; the receipts and `client_id`s keep it from adding twice; cursor 0), **Replace this iPhone's data with <host>'s** (saved
     first, so the Files app safety copy holds it; then the log's synced rows are removed and read again from cursor 0; profile,
-    settings and saved meals stay), or **Cancel** (nothing changes; sync stays stopped).
+    this iPhone's own settings stay), or **Cancel** (nothing changes; sync stays stopped).
   * **One run** (`afterSend`, §8.5): at the first sync, `POST /push/v1/match` renames the phone's rows to the server's IDs (a
     duplicate with the same version is dropped), then the feed is read from cursor 0 with §8.7's rules. Then the waiting changes go
     out (`POST /push/v1/changes`, at most 200 and 256 KiB a request, 5 requests a run) with `base` = `b` and `version` = the phone's,
@@ -5945,6 +5955,28 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
     "Both ways", when it last synced, the changes waiting, the number to review, each card (both copies side by side, with what
     differs marked), the dropped-change notices (OK clears them) and refused changes. Today reloads when rows came from the server
     (`takeChanged`, `js/main.js`). Nothing looks at `purpose`: a low treatment is synced, edited and reviewed like any entry.
+  * **Saved meals and recipes** (step 8) sync like the other kinds (`meal`; versions over `_templateView`). A phone that synced before
+    step 8 reads the feed once more from cursor 0 for them alone (`meals`, `mcursor`); a saved meal of the phone with the same name as a
+    new one of the server's, never sent, takes the server's ID (the same version: one row; different: the review). Step 4 sends the
+    phone's saved meals (`meals` in `POST /push/v1/sync`) only after that (`mealsReady`), with the foods they use; their items and edits
+    name foods by reference (`M.serverSync._refOf`: a built-in by `fdc_id`/name, an own food by `client_id`, a USDA or Open Food Facts
+    food read from the server, mark `f: 'server'`, by `fdc_id`/`gtin`). An edit whose new food waits to be sent waits too.
+  * **One ID per row**: step 4's mark `c` is the row's own `client_id` while it is not sent (the twins give every row one), a sent row
+    keeps the ID it was sent with and the row takes it; rows from the server, a match or "Keep this iPhone's" set both.
+  * **The profile, targets, account settings and food preferences** (step 8, D5), `js/mock/server_account.js` (`M.serverAccount`):
+    after each run (at most every 5 minutes unless Sync now) it reads `GET /push/v1/api/profile`, `/me/settings` and
+    `/guidance/preferences` and copies them into the phone's profile, its user settings of `ACCOUNT_KEYS` (`user.units.labs`,
+    `user.units.weight`, `body.weight_alarm`, `body.bp_goal`, `guidance`; the `guidance` lists that name this phone's ids,
+    `repeat_ok_foods`, `repeat_ok_meals`, `hidden_usual_meals`, stay as they are here) and its food preferences, each food found by
+    `GET /push/v1/api/foods/{id}` and remembered (`foodIds`). While the phone is paired both ways with an account (offline too), the
+    phone's `PUT /api/profile`, `PATCH /api/me/settings` (the account keys; the theme and the camera stay local), `PUT`/`DELETE
+    /api/guidance/preferences/{id}` and the "Not for me" routes go to the server first (a food's server id by `foodIds` or
+    `GET /push/v1/api/foods?q=`; unknown: `409` "not on your server yet") and are applied here only when it took them; offline they are
+    `503` "This needs a connection to your server." The first read (§8.7 point 5): when the phone had its own profile and it differs,
+    `card` keeps both; the server's is shown; **Keep this iPhone's** sends the phone's with `PUT /push/v1/api/profile` (targets the
+    server has and the phone does not as `null`). Preferences only the phone had are sent once. Saved in `_serverAccount`.
+  * **"N to review"** (§8.6, `js/views/server_review.js`): the header's `#sync-badge` says "N to review" (the review items and the
+    profile card) and opens Settings → This device at the cards; Today marks an entry under review "needs review" and opens the same.
   * **Recipe pages, Instacart and the list app** (§7, step 9), in `js/mock/lists.js`: in device mode never the demo's stand-ins.
     With `both` and the service on in `about.services` (`recipe_import`, `instacart`, `list_sync`; one not mentioned is tried), each
     goes through the gateway; otherwise, and while the server cannot be reached, it answers as a server with it off (`web: false`,
