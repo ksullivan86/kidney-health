@@ -14299,6 +14299,10 @@
             "title": "Labs",
             "type": "integer"
           },
+          "meals": {
+            "title": "Meals",
+            "type": "integer"
+          },
           "readings": {
             "title": "Readings",
             "type": "integer"
@@ -14318,7 +14322,8 @@
           "labs",
           "symptoms",
           "weights",
-          "readings"
+          "readings",
+          "meals"
         ],
         "title": "SyncCounts",
         "type": "object"

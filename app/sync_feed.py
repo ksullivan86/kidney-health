@@ -65,6 +65,7 @@ from . import body as body_module
 from . import brand, foods as foods_module, labs as labs_module, log as log_module, meals as meals_module
 from . import symptoms as symptoms_module
 from .app_gateway import note_use
+from .app_sync import SyncMealFields, meal_items
 from .auth import api_tokens, clock, housekeeping
 from .auth.accounts import begin_immediate
 from .auth.context import auth_context
@@ -304,7 +305,7 @@ class ChangesBody(BaseModel):
 
 
 EDIT_MODELS: dict[str, type[BaseModel]] = {
-    "entry": LogUpdate, "food": FoodCreate, "meal": MealTemplateCreate, "symptom": SymptomCreate, "weight": WeightCreate,
+    "entry": LogUpdate, "food": FoodCreate, "meal": SyncMealFields, "symptom": SymptomCreate, "weight": WeightCreate,
     "reading": BloodPressureCreate,
 }
 
@@ -335,9 +336,21 @@ def _run(conn: sqlite3.Connection, user: User, change: Change, row_id: int) -> N
     if kind == "lab":
         raise HTTPException(status_code=400, detail="Lab results can only be added or deleted.")
     body = EDIT_MODELS[kind].model_validate(change.fields)
+    if isinstance(body, SyncMealFields):
+        body = _meal_body(conn, user, body)
     update = {"entry": log_module.update_entry, "food": foods_module.update_food, "meal": meals_module.update_meal,
               "symptom": symptoms_module.update_symptom, "weight": body_module.update_weight, "reading": body_module.update_reading}[kind]
     update(row_id, body, user=user, if_match=if_match, conn=conn)
+
+
+def _meal_body(conn: sqlite3.Connection, user: User, sent: SyncMealFields) -> MealTemplateCreate:
+    """A saved meal's ``fields`` (items name their foods as the phone does) as ``PUT /api/meals/{id}`` takes them. A field the phone
+    left out keeps the stored value, as on the route. A food this server does not have is ``409``: the phone sends it first."""
+    items = meal_items(conn, user.id, sent.items)
+    if items is None:
+        raise HTTPException(status_code=409, detail="A food in this saved meal is not on your server yet. It is sent with the next sync.")
+    doc = {k: getattr(sent, k) for k in sent.model_fields_set if k != "items"}
+    return MealTemplateCreate.model_validate({**doc, "items": items})
 
 
 def apply_change(conn: sqlite3.Connection, user: User, change: Change) -> dict[str, Any]:

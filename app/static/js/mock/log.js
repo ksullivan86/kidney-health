@@ -201,7 +201,7 @@
       const row = { id: this._nextEntryId++, date, meal, food_id: food.id, food_name: food.name, servings: Number(servings),
         grams: grams == null ? null : Number(grams), note: note == null ? null : note, status,
         nutrients: scaleNutrients(food.nutrients, Number(servings)), purpose: purpose === HYPO_PURPOSE ? HYPO_PURPOSE : null,
-        client_id: clientId || null, created_at: now, updated_at: now };
+        client_id: clientId || M.newClientId(), created_at: now, updated_at: now }; // schema step 38: every entry has one (note 39 §8.2)
       this._entries.push(row);
       return row;
     },

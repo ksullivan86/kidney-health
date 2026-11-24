@@ -213,6 +213,9 @@
     try { return KH.gtin.normalize(v, 'unknown'); } catch (e) { if (e instanceof KH.gtin.GtinError) throw new Error(e.message); throw e; }
   };
   const gtinField = T.str({ max: 32, nullable: true, after: validateGtin });
+  // data_import.Importer.free_id: the file's client_id when the person has no row of that kind with it yet, else none (the row gets
+  // a new one), so moving to another device by file keeps each row's ID (design note 39 §8.2).
+  const freeId = (rows, cid) => (cid != null && !(rows || []).some((r) => r.client_id === cid) ? cid : null);
   const validateClientId = (v) => {
     if (v == null) return null;
     if (!/^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(v)) throw new Error('must be a UUID such as 0f8fad5b-d9cb-469f-a165-70867728950e');
@@ -232,6 +235,7 @@
     ['source_url', T.str({ max: 200, nullable: true, after: (v) => { if (v === USDA_HOME_URL || OFF_PAGE.test(v)) return v; throw new Error('must be an Open Food Facts product page or the FoodData Central address'); } })],
     ['source_license', T.str({ max: 40, nullable: true, after: (v) => { if (LICENSES.includes(v)) return v; throw new Error('is not a licence this app writes'); } })],
     ['quality', T.list(qualityModel, { max: 30 }), required], ['additives', T.list(short$(40), { max: 40 }), required], ['ingredients_text', short$(4000, 0, true)],
+    ['client_id', T.str({ nullable: true, after: validateClientId })], // schema step 38 (design note 39 §8.2): kept when it is free
   ]);
   const linkedModel = T.model('ImportLinkedFood', [['id', ID, required], ['name', short$(200), required], ['source', T.lit(['usda', 'off']), required], ['fdc_id', idOrNull],
     ['linked_at', tsOrNull], ['gtin', gtinField], ['food', (v, loc) => (v == null ? null : foodModel(v, loc))]], {
@@ -253,7 +257,7 @@
     ['steps', (v, loc) => (v == null ? null : T.list(short$(500, 1), { max: 20 })(v, loc))],
     ['source_url', T.str({ strip: true, min: 1, max: 900, nullable: true, after: (v) => { const e = M.checkSourceUrl(v); if (e) throw new Error(e.replace(/^Value error, /, '')); return v; } })],
     ['per_serving', (v, loc) => (v == null ? null : T.dict()(v, loc))], ['unknown', (v, loc) => (v == null ? null : T.dict()(v, loc))],
-    ['created_at', TS, required], ['updated_at', TS, required]]);
+    ['created_at', TS, required], ['updated_at', TS, required], ['client_id', T.str({ nullable: true, after: validateClientId })]]);
 
   // A model the demo API already checks for a request body (LabCreate, SymptomCreate): the first problem it finds, as "where: message"
   // cut at 120 characters, which is how the server words it (import._as_typed, _as_recorded).
@@ -270,23 +274,24 @@
   const labModel = T.model('ImportLab', [
     ['id', ID, required], ['analyte', T.lit(KH.kidney.ANALYTE_KEYS), required], ['value', T.num({ ge: 0, le: MAX_NUTRIENT_VALUE }), required], ['unit', short$(40), required],
     ['entered_value', T.num({ ge: 0, le: MAX_NUTRIENT_VALUE }), required], ['entered_unit', short$(40), required], ['taken_on', T.str(), required],
-    ['note', short$(500, 0, true)], ['created_at', TS, required]], {
+    ['note', short$(500, 0, true)], ['created_at', TS, required], ['client_id', T.str({ nullable: true, after: validateClientId })]], {
     after: (r) => { viaRequestBody(() => M.instance._labBody({ analyte: r.analyte, value: r.entered_value, unit: r.entered_unit, taken_on: r.taken_on, note: r.note || '' }), 'result'); return r; } });
   const symptomModel = T.model('ImportSymptom', [
     ['id', ID, required], ['date', T.str(), required], ['symptom', T.lit(KH.symptomRules.KEYS), required], ['label', short$(KH.symptomRules.MAX_LABEL, 0, true)],
-    ['severity', T.int({ ge: 1, le: 3 }), required], ['note', short$(KH.symptomRules.MAX_NOTE, 0, true)], ['created_at', TS, required]], {
+    ['severity', T.int({ ge: 1, le: 3 }), required], ['note', short$(KH.symptomRules.MAX_NOTE, 0, true)], ['created_at', TS, required], ['client_id', T.str({ nullable: true, after: validateClientId })]], {
     after: (r) => { viaRequestBody(() => M.instance._symptomBody({ date: r.date, symptom: r.symptom, severity: r.severity, label: r.label || '', note: r.note || '' }), 'symptom'); return r; } });
   // Weights and blood pressure readings (schema step 18): checked exactly like POST /api/body/weights and /blood-pressure; the id is never used.
   const BR = KH.bodyRules;
   const weightModel = T.model('ImportWeight', [
     ['id', ID, required], ['date', T.str(), required], ['time', T.str({ nullable: true })], ['kg', T.num({}), required],
     ['context', T.lit(BR.WEIGHT_CONTEXTS), required], ['note', short$(BR.LIMITS.max_note, 0, true)], ['source', T.lit(BR.SOURCES), required],
-    ['source_key', short$(BR.LIMITS.max_source_key, 0, true)], ['created_at', TS, required], ['updated_at', TS, required]], {
+    ['source_key', short$(BR.LIMITS.max_source_key, 0, true)], ['created_at', TS, required], ['updated_at', TS, required], ['client_id', T.str({ nullable: true, after: validateClientId })]], {
     after: (r) => { viaRequestBody(() => M.instance._weightBody(weightRequest(r)), 'weight'); return r; } });
   const readingModel = T.model('ImportBloodPressure', [
     ['id', ID, required], ['date', T.str(), required], ['time', T.str({ nullable: true })], ['systolic', T.int({}), required], ['diastolic', T.int({}), required],
     ['pulse', (v, loc) => (v == null ? null : T.int({})(v, loc))], ['context', T.lit(BR.BLOOD_PRESSURE_CONTEXTS), required], ['note', short$(BR.LIMITS.max_note, 0, true)],
-    ['source', T.lit(BR.SOURCES), required], ['source_key', short$(BR.LIMITS.max_source_key, 0, true)], ['created_at', TS, required], ['updated_at', TS, required]], {
+    ['source', T.lit(BR.SOURCES), required], ['source_key', short$(BR.LIMITS.max_source_key, 0, true)], ['created_at', TS, required], ['updated_at', TS, required],
+    ['client_id', T.str({ nullable: true, after: validateClientId })]], {
     after: (r) => { viaRequestBody(() => M.instance._readingBody(readingRequest(r)), 'reading'); return r; } });
   const weightRequest = (r) => ({ date: r.date, time: r.time === undefined ? null : r.time, kg: r.kg, context: r.context, note: r.note || '' });
   const readingRequest = (r) => ({ date: r.date, time: r.time === undefined ? null : r.time, systolic: r.systolic, diastolic: r.diastolic,
@@ -500,7 +505,8 @@
       bump(this.counts, 'custom_foods');
       return this.api._insertFood({ source: 'custom', name: food.name, brand: food.brand || null, category: food.category || null, serving_desc: food.serving_desc,
         serving_g: food.serving_g, nutrients: food.nutrients, flags: scan.flags, kidney_notes: scan.kidney_notes, hidden: food.hidden, fdc_id: food.fdc_id,
-        gtin: food.gtin, source_url: food.source_url, source_license: food.source_license, ingredients_text: scan.ingredients_text, additives: scan.additives });
+        gtin: food.gtin, source_url: food.source_url, source_license: food.source_license, ingredients_text: scan.ingredients_text, additives: scan.additives,
+        client_id: freeId(this.api._foods.filter((f) => f.source === 'custom'), food.client_id) });
     }
     sharedMatch(linked) {
       const shared = this.api._foods.filter((f) => f.source === linked.source).sort((a, b) => a.id - b.id);
@@ -571,7 +577,7 @@
         const key = tupleKey(e.date, e.meal, target, pyRound(e.servings, 3), grams == null ? null : pyRound(grams, 1), e.status, e.created_at);
         if ((have.get(key) || 0) > 0) { have.set(key, have.get(key) - 1); bump(this.already, 'log_entries'); return; }
         const row = api._insertEntry({ date: e.date, meal: e.meal, food, servings: e.servings, grams, note: e.note || null, status: e.status, purpose: e.purpose,
-          createdAt: e.created_at });
+          createdAt: e.created_at, clientId: freeId(api._entries, e.client_id) });
         row.updated_at = e.updated_at;
         bump(this.counts, 'log_entries');
       });
@@ -601,7 +607,7 @@
         const key = tupleKey(fold(m.name), note, m.meal_hint || null, items.map((i) => [i.food_id, pyRound(i.servings, 3)]));
         if ((have.get(key) || 0) > 0) { have.set(key, have.get(key) - 1); bump(this.already, 'meal_templates'); return; }
         const t = api._insertTemplate({ name: m.name, note: note || null, items, mealHint: m.meal_hint, createdAt: m.created_at,
-          servingsMade: m.servings_made ?? null, steps: m.steps ?? null, sourceUrl: m.source_url ?? null });
+          servingsMade: m.servings_made ?? null, steps: m.steps ?? null, sourceUrl: m.source_url ?? null, clientId: freeId(api._templates, m.client_id) });
         t.updated_at = m.updated_at;
         bump(this.counts, 'meal_templates');
       });
@@ -616,7 +622,7 @@
         const result = K.convert(lab.analyte, lab.entered_value, lab.entered_unit);
         const key = tupleKey(result.analyte, lab.taken_on, K.formatValue(result.analyte, result.value));
         if ((have.get(key) || 0) > 0) { have.set(key, have.get(key) - 1); bump(this.already, 'lab_results'); continue; }
-        api._insertLab(this.userId, result, lab.taken_on, lab.note || '', lab.created_at);
+        api._insertLab(this.userId, result, lab.taken_on, lab.note || '', lab.created_at, freeId(api._labsOf(this.userId), lab.client_id));
         bump(this.counts, 'lab_results');
       }
     }
@@ -635,7 +641,8 @@
           this.skip('symptoms', index, label || R2.NAMES[s.symptom], `that day already has ${R2.MAX_PER_DAY} symptoms, the most one day holds`);
           return;
         }
-        api._insertSymptom(this.userId, { date: s.date, symptom: s.symptom, label, severity: s.severity, note }, s.created_at);
+        api._insertSymptom(this.userId, { date: s.date, symptom: s.symptom, label, severity: s.severity, note }, s.created_at,
+          freeId(api._symptomsOf(this.userId), s.client_id));
         bump(perDay, s.date);
         bump(this.counts, 'symptoms');
       });
@@ -664,7 +671,8 @@
           this.skip('weights', index, `${kg.toFixed(2)} kg on ${rec.date}`, `that day already has ${BR.LIMITS.max_weights_per_day} weights, the most one day holds`);
           return;
         }
-        api._insertWeight(this.userId, rec, { source: w.source, sourceKey: w.source_key == null ? null : w.source_key, createdAt: w.created_at });
+        api._insertWeight(this.userId, rec, { source: w.source, sourceKey: w.source_key == null ? null : w.source_key, createdAt: w.created_at,
+          clientId: freeId(api._weightsOf(this.userId), w.client_id) });
         const row = api._weights[api._weights.length - 1];
         row.updated_at = w.updated_at;
         if (w.source_key != null) keys.add(w.source_key);
@@ -694,7 +702,8 @@
             `that day already has ${BR.LIMITS.max_readings_per_day} blood pressure readings, the most one day holds`);
           return;
         }
-        api._insertReading(this.userId, rec, { source: b.source, sourceKey: b.source_key == null ? null : b.source_key, createdAt: b.created_at });
+        api._insertReading(this.userId, rec, { source: b.source, sourceKey: b.source_key == null ? null : b.source_key, createdAt: b.created_at,
+          clientId: freeId(api._readingsOf(this.userId), b.client_id) });
         const row = api._readings[api._readings.length - 1];
         row.updated_at = b.updated_at;
         if (b.source_key != null) keys.add(b.source_key);
