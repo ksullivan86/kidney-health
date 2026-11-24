@@ -140,11 +140,15 @@
   }
 
   // A photo (a Blob) as base64 for the bridge.
+  const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   async function base64(blob) {
-    const buf = new Uint8Array(await blob.arrayBuffer());
-    let text = '';
-    for (let i = 0; i < buf.length; i += 0x8000) text += String.fromCharCode(...buf.subarray(i, i + 0x8000));
-    return btoa(text);
+    const b = new Uint8Array(await blob.arrayBuffer());
+    const out = [];
+    for (let i = 0; i < b.length; i += 3) {
+      const n = (b[i] << 16) | ((b[i + 1] || 0) << 8) | (b[i + 2] || 0);
+      out.push(B64[(n >> 18) & 63], B64[(n >> 12) & 63], i + 1 < b.length ? B64[(n >> 6) & 63] : '=', i + 2 < b.length ? B64[n & 63] : '=');
+    }
+    return out.join('');
   }
 
   // An answer of the server's AI, made safe to use on this phone, whose rows have their own ids until two-way sync (note 39 step 6):
