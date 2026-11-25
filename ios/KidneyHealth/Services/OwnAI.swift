@@ -112,7 +112,7 @@ final class OwnAI: ObservableObject {
     }
 
     static func isPlausibleKey(_ key: String) -> Bool {
-        (20...300).contains(key.count) && key.allSatisfy { $0.isASCII && !$0.isWhitespace && !$0.isNewline && $0.asciiValue.map { $0 > 32 && $0 < 127 } == true }
+        (20...300).contains(key.count) && key.unicodeScalars.allSatisfy { (33...126).contains($0.value) }
     }
 
     static func isPlausibleModel(_ model: String) -> Bool {

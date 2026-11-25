@@ -1203,12 +1203,13 @@
         forget();
         msg.textContent = opt.checked ? 'AI features are on.' : 'AI features are off.';
         renderAddSlot();
+        if (!(me.phone || {}).both_ways) { const list = $('#set-ai-where-box'); if (list) api.me().then((fresh) => list.replaceChildren(whereList(fresh.phone || {}))).catch(() => {}); }
       } catch (e) { opt.checked = !opt.checked; if (!e.handled) showError(err, e); }
     });
     const p = me.phone || {};
     return [h('p', {}, d.available ? DEVICE_TEXT : (d.message || 'Apple\'s on-device AI is not available on this iPhone.')),
       check('Use AI features', opt, 'Off by default. The app\'s own rules always run first. The AI never gives insulin or medicine doses.'), msg, err,
-      ...(p.both_ways ? phonePart(me) : [subtitle('Where each AI feature runs'), whereList(p)]), ...ownKeyPart(me)];
+      ...(p.both_ways ? phonePart(me) : [subtitle('Where each AI feature runs'), h('div', { id: 'set-ai-where-box' }, whereList(p))]), ...ownKeyPart(me)];
   }
 
   // "How AI help is set up": the three questions of docs/ai.md ("The setup in three questions") and the handbook's
