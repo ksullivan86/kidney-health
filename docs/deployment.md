@@ -177,7 +177,7 @@ NetworkPolicy and the compose, Quadlet and `.env.example` comments name the same
 | `INSTANCE_NAME`, `REGISTRATION_MODE`, `INVITE_TTL_DAYS`, `AUDIT_RETENTION_DAYS` | Kidney Health, `invite`, 7, 365 | The name shown in the app, who may make an account (`invite`, `closed`, `open`), how many days an invite link works, and how long the activity log is kept. |
 | `USDA_SHARED_ENABLED`, `USDA_ALLOW_USER_KEYS`, `USDA_SHARED_DAILY_LIMIT` | `true`, `true`, 200 | Whether people use the server's USDA key, whether they may add their own, and the shared key's searches per person per day (0: no limit). |
 | `LAB_RULES_ENABLED`, `LAB_FRESH_DAYS_POTASSIUM`, `_PHOSPHATE`, `_ALBUMIN`, `_BICARBONATE`, `DEFAULT_ACTIVITY` | `true`, 90, 90, 180, 180, `inactive` | Whether lab results change suggested targets, how many days each result counts, and the activity level used until a person picks theirs. See [targets-and-labs.md](targets-and-labs.md). |
-| `UI_THEME`, `LAB_UNITS`, `WEIGHT_UNITS` | `system`, `us`, `lb` | The theme and units for everyone who has not picked their own. A lock here also stops people picking, so list these in `SETTINGS_INITIAL_ONLY`. |
+| `UI_THEME`, `LAB_UNITS`, `WEIGHT_UNITS`, `HEIGHT_UNITS` | `system`, `us`, `lb`, `ft_in` | The theme and units for everyone who has not picked their own. A lock here also stops people picking, so list these in `SETTINGS_INITIAL_ONLY`. |
 | `SETTINGS_INITIAL_ONLY` | empty | A comma list of the variables above (or `*` for all) that are first values, not locks. See [Set it up by code](#set-it-up-by-code). |
 
 Every server setting in Server administration has a variable here, except which shared AI provider is the local one and which

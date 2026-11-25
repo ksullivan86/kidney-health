@@ -1430,7 +1430,7 @@ still forgets a preview and invalidates an outstanding dry run.
 * **Profile.** Only with `replace_profile=1` (default off): the profile fields, the targets (replaced, not merged;
   `profile.apply_profile_changes`, the body of `PUT /api/profile`; a stage or diabetes type the file marks "not chosen
   yet" stays unchosen) and the settings `guidance`, `ui.theme`, `user.units.labs`, `food.scan_prefer_camera`, `user.units.weight`,
-  `body.weight_alarm` and `body.bp_goal` (the last two are the numbers the person's care team gave them; validated by the registry; a locked one
+  `user.units.height`, `body.weight_alarm` and `body.bp_goal` (the last two are the numbers the person's care team gave them; validated by the registry; a locked one
   is skipped and listed). They are clinical settings the person may have
   agreed with their care team on this server.
 * **One transaction.** After parsing, `BEGIN IMMEDIATE`, then everything above, then (import only) the audit row and
@@ -1879,7 +1879,8 @@ lab validation messages, history, deletion, the kidney-function card, ~150 sugge
   or replace a newer Lab results/Profile summary. Concurrent readers share one read until invalidated; older readers then
   converge on the fresh result.
 * **Today**: a `{min}`-only target (fiber) is a goal bar ("of at least X", no over state); a range with
-  `min === max` reads "about X". **Settings**: Preferences → *Units for lab results* (`user.units.labs`);
+  `min === max` reads "about X". **Settings**: Preferences → *Units for lab results* (`user.units.labs`) and *Units for height*
+  (`user.units.height`, see below);
   Admin → server settings group *Personalised targets and lab results* (`targets.*`, `user.units.labs` default).
 
 ## M2 API: guidance
@@ -3863,12 +3864,26 @@ weights; the project's own number) and keep the default 1 MiB body limit.
 
 ### Settings (registered in `app/settings_registry.py`)
 
-`user.units.weight` (`user_default`, `kg` or `lb`, default `lb`), `body.weight_alarm` (`user`; `{amount_kg: 0.2 to 10 or null, over: "between_sessions" |
+`user.units.weight` (`user_default`, `kg` or `lb`, default `lb`), `user.units.height` (`user_default`, `ft_in` or `cm`, default `ft_in`,
+env `HEIGHT_UNITS`: Profile's height in feet and inches, or in centimetres; the profile's `height_cm` is stored as before, see *Height units*
+below), `body.weight_alarm` (`user`; `{amount_kg: 0.2 to 10 or null, over: "between_sessions" |
 "days", days: 1 to 7}`, default `{null, "days", 1}`) and `body.bp_goal` (`user`; `{systolic: 80 to 200 or null, diastolic: 40 to 130 or null}`, default both
 null; **the top number must be above the bottom one** when both are set). There is **no default alarm and no default goal**: the right numbers are the
 care team's (note 10 §2 and F3: KDIGO's 120 is for standardized office readings). They are in the export's `settings` and carried over by an import with
 `replace_profile`. The unit's default for everyone is in Admin → Server settings → Default for everyone. The browser twin is `js/engine/settings.js` (a `num`
 type for the float, `nullable` fields), checked by `tests/data/settings_vectors.json`.
+
+### Height units (`user.units.height`)
+
+The profile stores `height_cm` as before; the setting changes only Profile → About you. With `ft_in` (the default) Profile shows a
+fieldset "Height" with two boxes, `#pf-height-ft` (3–8) and `#pf-height-in` (0–11.5, step 0.5); with `cm`, the old `#pf-height` box
+(the other is hidden). `KH.bodyRules` (`js/engine/body.js`) converts: `feetInchesToCm` uses 1 in = 2.54 cm exactly and rounds half up
+to 0.5 cm, the box's step; `cmToFeetInches` rounds to the nearest 0.5 in and carries 12 in to the next foot, so every height the
+boxes take comes back the same. A height the person did not touch keeps the saved centimetres (`readHeightCm` in `js/views/profile.js`),
+so showing it in feet and inches never changes it or counts as an unsaved change. Profile reads the unit from `GET /api/me/settings`
+when it opens; Settings → Preferences → *Units for height* saves it and calls `KH.views.profile.setHeightUnit`, which shows the same
+height, typed or saved, in the new unit. The first-sync card in Settings shows the height in the person's unit. There is no server
+twin: the server never converts a height. Tests: `tests/js/height_units.test.mjs`, `tests/test_height_units.py`.
 
 ### The handbook's words (what the app says, and where it comes from)
 
@@ -4879,7 +4894,7 @@ Code `app/app_gateway.py`, `GatewayCaller` in `app/auth/deps.py`, `app:sync` in 
   `opt_in`: any other key is `403` before the route runs); since plan step 8 also `GET` and `PUT /api/profile`, `GET /api/me/settings`,
   `GET /api/guidance/preferences`, `PUT` and `DELETE /api/guidance/preferences/{food_id}`, `GET /api/foods` and `GET /api/foods/{food_id}`
   (the profile, targets, account settings and food preferences, which the server owns; the two food reads name a preference's food), with
-  `PATCH /api/me/settings` taking also `user.units.labs`, `user.units.weight`, `body.weight_alarm`, `body.bp_goal` and `guidance` (never the
+  `PATCH /api/me/settings` taking also `user.units.labs`, `user.units.weight`, `user.units.height`, `body.weight_alarm`, `body.bp_goal` and `guidance` (never the
   theme, the camera, the AI's trust or route; at most 16 KiB); since plan step 9 also `GET /api/recipe-import`, `POST /api/recipe-import/page`
   (the page is read by the server's `RecipeFetcher` through the SSRF-checked transport), `GET /api/instacart`, `POST /api/instacart/preview`,
   `/api/instacart/send`, `GET /api/list-sync`, `POST /api/list-sync/preview` and `/api/list-sync/send`, each answering as for the web app
@@ -5638,8 +5653,8 @@ server stays the full version; this mode never exists in the installed app.
   "Import from a file" screen (`js/views/settings.js`, which shows it instead of "no server to import into" while the mode is on). The same
   rules: `format` `kidney-health-export` version 1; **depth limit 32**; NaN/Infinity refused; every record kind a small schema (the server's pydantic models
   with `extra="forbid"`, strict types, bounded lists and strings) checked in the same order, so the **first problem is the same one**, named by record
-  kind and position and never repeating a value; the `user` and AI sections accepted but never read; **`settings` carries over only the seven
-  allowlisted keys** (`guidance`, `ui.theme`, `user.units.labs`, `food.scan_prefer_camera`, `user.units.weight`, `body.weight_alarm`, `body.bp_goal`) and only with `replace_profile` (`ai` and the consents never);
+  kind and position and never repeating a value; the `user` and AI sections accepted but never read; **`settings` carries over only the eight
+  allowlisted keys** (`guidance`, `ui.theme`, `user.units.labs`, `food.scan_prefer_camera`, `user.units.weight`, `user.units.height`, `body.weight_alarm`, `body.bp_goal`) and only with `replace_profile` (`ai` and the consents never);
   ids remapped; an own food identical to one already there is reused; built-in foods found by FoodData Central id (older files: id and name);
   shared foods linked or kept as the person's own copy or reported; an account that has data is refused (409, or `can_import: false` on a dry
   run) unless `merge`; what is already there is left out; the profile and targets are replaced, not merged; a dry run runs the same code and puts
@@ -5969,7 +5984,7 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
   * **The profile, targets, account settings and food preferences** (step 8, D5), `js/mock/server_account.js` (`M.serverAccount`):
     after each run (at most every 5 minutes unless Sync now) it reads `GET /push/v1/api/profile`, `/me/settings` and
     `/guidance/preferences` and copies them into the phone's profile, its user settings of `ACCOUNT_KEYS` (`user.units.labs`,
-    `user.units.weight`, `body.weight_alarm`, `body.bp_goal`, `guidance`; the `guidance` lists that name this phone's ids,
+    `user.units.weight`, `user.units.height`, `body.weight_alarm`, `body.bp_goal`, `guidance`; the `guidance` lists that name this phone's ids,
     `repeat_ok_foods`, `repeat_ok_meals`, `hidden_usual_meals`, stay as they are here) and its food preferences, each food found by
     `GET /push/v1/api/foods/{id}` and remembered (`foodIds`). While the phone is paired both ways with an account (offline too), the
     phone's `PUT /api/profile`, `PATCH /api/me/settings` (the account keys; the theme and the camera stay local), `PUT`/`DELETE

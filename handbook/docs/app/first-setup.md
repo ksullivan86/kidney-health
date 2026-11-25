@@ -53,7 +53,7 @@ Open **Profile** and enter:
 | Field | What to enter | Tip |
 |---|---|---|
 | Weight (kg) | Your weight today. On dialysis, your **dry (target) weight** after a session | pounds ÷ 2.2 = kg: 154 lb = 70 kg |
-| Height (cm) | Your height | inches × 2.54 = cm: 5 ft 7 in = 67 in = 170 cm |
+| Height | Your height in feet and inches | to type centimetres instead, choose **Units for height** in Settings → Preferences. The app saves the height in centimetres either way |
 | CKD stage | 1, 2, 3a, 3b, 4 or 5, from your nephrologist | after a transplant, the stage of the new kidney. A new account shows **Not chosen yet**; until you pick, the app uses stage 3b |
 | Dialysis | None, Hemodialysis or Peritoneal | |
 | Dialysis days | The weekdays of your hemodialysis sessions | lets the app total potassium, sodium and fluid between sessions ([Dialysis days](../eat/dialysis-days.md)) |

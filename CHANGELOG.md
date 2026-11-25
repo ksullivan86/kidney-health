@@ -79,6 +79,10 @@ The iPhone app works with no server, and with your own server both ways (design 
 * With a token both ways, the iPhone app can import a recipe from a web page, open the shopping list in Instacart, and send it to
   your own list app, through your server and only when it has them turned on (design note 39, step 9). The list app is still set up
   in the web app. Without such a server these stay off on the phone.
+* Profile → About you takes your height in feet and inches. To use centimetres, choose **Units for height** in Settings →
+  Preferences. The height is still saved in centimetres, so nothing changes for a height you saved before. The new setting
+  `user.units.height` (`ft_in` or `cm`, default `ft_in`) works like the weight unit: an admin can set the default for everyone, the
+  variable is `HEIGHT_UNITS`, it moves with an import, and the iPhone app with a token both ways can set it.
 
 ### Fixed
 

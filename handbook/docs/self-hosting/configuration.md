@@ -235,7 +235,7 @@ restart keeps their choice; changing the variable later does nothing ([design no
 | `INSTANCE_NAME`, `REGISTRATION_MODE`, `INVITE_TTL_DAYS`, `AUDIT_RETENTION_DAYS` | Kidney Health, `invite`, 7, 365 | The server's name, who may make an account, how long an invite link works, how long the activity log is kept. |
 | `USDA_SHARED_ENABLED`, `USDA_ALLOW_USER_KEYS`, `USDA_SHARED_DAILY_LIMIT` | `true`, `true`, 200 | The server's USDA key: shared or not, people's own keys allowed or not, searches per person per day. |
 | `LAB_RULES_ENABLED`, `LAB_FRESH_DAYS_POTASSIUM`, `_PHOSPHATE`, `_ALBUMIN`, `_BICARBONATE`, `DEFAULT_ACTIVITY` | `true`, 90, 90, 180, 180, `inactive` | Whether lab results change suggested targets, how long each result counts, and the activity level used until a person picks theirs. |
-| `UI_THEME`, `LAB_UNITS`, `WEIGHT_UNITS` | `system`, `us`, `lb` | The theme and units for people who have not picked their own. A lock stops people picking, so list these in `SETTINGS_INITIAL_ONLY`. |
+| `UI_THEME`, `LAB_UNITS`, `WEIGHT_UNITS`, `HEIGHT_UNITS` | `system`, `us`, `lb`, `ft_in` | The theme and units for people who have not picked their own. A lock stops people picking, so list these in `SETTINGS_INITIAL_ONLY`. |
 
 `python -m app.admin env-template` prints all of these as a `.env` file to fill in, with each one's values and
 default (`--initial-only` starts it with `SETTINGS_INITIAL_ONLY=*`). Run `python -m app.admin check` in the container
