@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # height-units: Profile height in feet and inches, with centimetres as an option
 
@@ -26,7 +26,7 @@ Owner, 2026-11-25: "for the About you (height) it should be in feet inches with 
 * ruff clean; run_vectors clean; targeted pytest files pass.
 
 ## Next
-* Full pytest run (started in background; log in the scratchpad height-full.log).
+* Nothing. Full pytest run: exit 0, no failures (100%).
 
 ## Findings for the report
 * Profile's weight boxes (#pf-weight "Weight (kg)", #pf-weight-6mo "Weight 6 months ago (kg)") are kilograms only; user.units.weight
