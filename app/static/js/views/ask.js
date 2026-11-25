@@ -46,8 +46,9 @@
   const DEMO_TEXT = 'The AI assistant works in the installed app, with an AI your admin sets up. This preview has no AI, so there is nothing to ask here.';
   // The iPhone app, when Ask cannot run now (js/mock/ai.js serverReason).
   const ASK_NEEDS = 'Ask uses your Kidney Health server\'s AI.';
-  // Ask reads your log on the server, so neither your own AI key nor this iPhone's own AI can answer it.
-  const OWN_KEY_ASK = 'Your own AI key and this iPhone\'s own AI help with describing a meal on the Add screen, but Ask needs the server, because it reads your log there.';
+  // Ask reads your log on the server with the server's own tools and checks every answer there, so neither your own AI key nor this
+  // iPhone's own AI can answer it (design note 39 §6.6).
+  const OWN_KEY_ASK = 'Your own AI key and this iPhone\'s own AI help with describing a meal, meal ideas and recipes, but Ask needs the server, because it reads your log there and checks every answer.';
   const PHONE_TEXT = {
     not_paired: `${ASK_NEEDS} ${OWN_KEY_ASK} If you have a Kidney Health server, connect this iPhone to it with a token for the iPhone app, both ways, in Settings → This device → Apple Health and server.`,
     not_both_ways: `${ASK_NEEDS} This iPhone's token only sends your log. Make a token for the iPhone app, both ways, and pair again in Settings → This device → Apple Health and server.`,

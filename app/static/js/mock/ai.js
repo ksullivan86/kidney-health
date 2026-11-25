@@ -52,6 +52,13 @@
    go to it, and a request whose data holds the profile's name or birth month is not sent to it (identityIn). The consent sheet
    names the provider and host before the first call; the consent is kept with the log. Ask stays the server's: it reads the log
    there. Nothing about a prompt or a reply is kept.
+   MORE ON THE PHONE'S OWN AIs (the owner, 2026-11-25; design note 39 §6.6). Meal ideas (mode "ideas" only) and AI recipes run on
+   the own key and on the iPhone's own model too, in the same order, with the server's candidates, data block and checks
+   (js/engine/aimeal.js, pinned by tests/data/ai_meal_vectors.json) and cooking steps off. The page names the person's condition in
+   the server's own words and, for the own key, the candidate ids; the iPhone's model gets fewer candidates (DATA_CHARS) because its
+   window is small. On iOS 27 the iPhone's model also reads a label or plate photo (photoOnDevice; aiStatus.photos), after the own
+   key. AI order, swaps and day plans stay the server's, and so does Ask: it reads the log with the server's tools and the server
+   checks every answer, which no twin here does.
    Outside device mode nothing here changes. */
 (() => {
   'use strict';
