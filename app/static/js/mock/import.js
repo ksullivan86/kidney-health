@@ -31,7 +31,7 @@
   const MAX_DEPTH = 32;
   const MAX_IMPORT_BYTES = 16 * 1024 * 1024;
   const MIN_SERVING_G = 0.1, MAX_SERVING_G = 100000, MAX_SERVINGS = 1000, MAX_GRAMS = 100000, MAX_NUTRIENT_VALUE = 1000000;
-  const IMPORTED_SETTINGS = ['guidance', 'ui.theme', 'user.units.labs', 'food.scan_prefer_camera', 'user.units.weight', 'body.weight_alarm', 'body.bp_goal'];
+  const IMPORTED_SETTINGS = ['guidance', 'ui.theme', 'user.units.labs', 'food.scan_prefer_camera', 'user.units.weight', 'user.units.height', 'body.weight_alarm', 'body.bp_goal'];
   const SKIPPED_SECTIONS = ['user', 'ai_audit', 'activity', 'ai_usage', 'ai_consents', 'ai_provider', 'activity_days', 'activity_workouts', 'activity_extra', 'care_suggestions', 'reminders', 'care_notes'];
   const NOT_IMPORTED = [
     'Your username, password and sign-in sessions',

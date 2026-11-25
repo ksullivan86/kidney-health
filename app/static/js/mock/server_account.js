@@ -33,7 +33,7 @@
   if (!KH.flags || KH.flags.DEVICE !== true || !M) return;
 
   // The account settings that come from the server (app/settings_registry.py, scope "user"). Every other one stays on the phone.
-  const ACCOUNT_KEYS = ['user.units.labs', 'user.units.weight', 'body.weight_alarm', 'body.bp_goal', 'guidance'];
+  const ACCOUNT_KEYS = ['user.units.labs', 'user.units.weight', 'user.units.height', 'body.weight_alarm', 'body.bp_goal', 'guidance'];
   // Parts of `guidance` that name this phone's rows by their ids here: they stay on the phone and are never sent.
   const LOCAL_GUIDANCE = ['repeat_ok_foods', 'repeat_ok_meals', 'hidden_usual_meals'];
   // The fields of PUT /api/profile (models.ProfileUpdate) that the person edits.

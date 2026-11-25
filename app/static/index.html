@@ -712,11 +712,26 @@
             <input id="pf-birth-month" name="birth_month" type="month" autocomplete="off" placeholder="YYYY-MM" aria-describedby="pf-birth-month-hint">
             <span class="hint" id="pf-birth-month-hint">Year and month, for example 1971-03. Age changes calories, protein from 65 and calcium.</span>
           </div>
-          <div class="field">
+          <!-- Height: feet and inches or centimetres (user.units.height, Settings → Preferences). Stored in centimetres. -->
+          <div class="field" id="pf-height-cm-field" hidden>
             <label for="pf-height">Height (cm)</label>
             <input id="pf-height" name="height_cm" type="number" inputmode="decimal" min="100" max="250" step="0.5" placeholder="Optional" aria-describedby="pf-height-hint">
             <span class="hint" id="pf-height-hint">Lets the app adjust for a weight above or below the healthy range.</span>
           </div>
+          <fieldset class="field" id="pf-height-ftin-field">
+            <legend class="sr-only">Height</legend>
+            <div class="height-ftin">
+              <span class="height-part">
+                <label for="pf-height-ft">Height (feet)</label>
+                <input id="pf-height-ft" name="height_ft" type="number" inputmode="numeric" min="3" max="8" step="1" placeholder="Optional" aria-describedby="pf-height-ftin-hint">
+              </span>
+              <span class="height-part">
+                <label for="pf-height-in">inches</label>
+                <input id="pf-height-in" name="height_in" type="number" inputmode="decimal" min="0" max="11.5" step="0.5" placeholder="0" aria-describedby="pf-height-ftin-hint">
+              </span>
+            </div>
+            <span class="hint" id="pf-height-ftin-hint">Lets the app adjust for a weight above or below the healthy range. To use centimetres, change Units for height in Settings.</span>
+          </fieldset>
           <div class="field">
             <label for="pf-weight" id="pf-weight-label">Weight (kg)</label>
             <input id="pf-weight" name="weight_kg" type="number" inputmode="decimal" min="20" max="300" step="0.1" placeholder="e.g. 70" aria-describedby="pf-weight-hint">
@@ -1268,6 +1283,15 @@
             </select>
             <span class="hint" id="set-lab-units-hint">The unit offered first when you add a lab result; any unit on your report can still be chosen.</span>
             <span class="setting-source" id="set-lab-units-source"></span>
+          </div>
+          <div class="field">
+            <label for="set-height-units">Units for height</label>
+            <select id="set-height-units" aria-describedby="set-height-units-hint set-height-units-source">
+              <option value="ft_in">Feet and inches</option>
+              <option value="cm">Centimetres (cm)</option>
+            </select>
+            <span class="hint" id="set-height-units-hint">How your height is shown and typed in Profile. It is saved in centimetres either way.</span>
+            <span class="setting-source" id="set-height-units-source"></span>
           </div>
         </div>
         <p class="status-msg" id="set-prefs-status" role="status" aria-live="polite"></p>

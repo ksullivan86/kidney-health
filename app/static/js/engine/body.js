@@ -14,7 +14,8 @@
 
    Exposes KH.bodyRules = { KG_PER_LB, WEIGHT_CONTEXTS, BLOOD_PRESSURE_CONTEXTS, SOURCES, UNITS, LIMITS, FLAG_SYSTOLIC, FLAG_DIASTOLIC,
    HREF, LINK_TEXT, RED_FLAGS, flagOf, bpFlag, roundKg, lbToKg, shownWeight, formatWeight, compareRows, shiftDay, daysBetween,
-   weightAlarmCheck, bloodPressureWeek, sixMonthChange, summarise, rowToWeight, rowToReading }. */
+   weightAlarmCheck, bloodPressureWeek, sixMonthChange, summarise, rowToWeight, rowToReading, CM_PER_INCH, HEIGHT_UNITS, feetInchesToCm,
+   cmToFeetInches, formatHeight }. The height helpers are for Profile's height in feet and inches (user.units.height). */
 (() => {
   'use strict';
   const root = typeof window !== 'undefined' ? window : globalThis;
@@ -85,6 +86,33 @@
   // The number shown for a stored weight in `unit`: one decimal, half up (154.25 shows 154.3).
   const shownWeight = (kg, unit) => halfUp(unit === 'kg' ? Number(kg) : Number(kg) / KG_PER_LB, 1);
   const formatWeight = (kg, unit) => `${shownWeight(kg, unit).toFixed(1)} ${unit}`;
+
+  // ---- height (user.units.height: "ft_in" or "cm"). Stored in centimetres; only what is shown and typed changes.
+  const CM_PER_INCH = 2.54; // exactly: the international inch (1959), NIST SP 811 Appendix B
+  const HEIGHT_UNITS = ['ft_in', 'cm'];
+  // Feet and inches typed by the person → centimetres, half up to 0.5 cm (the Profile field's step). Null when nothing is typed or a
+  // box is not a number. An empty inches box counts as 0.
+  function feetInchesToCm(feet, inches) {
+    const blank = (v) => v == null || String(v).trim() === '';
+    if (blank(feet) && blank(inches)) return null;
+    const ft = blank(feet) ? 0 : Number(feet);
+    const inch = blank(inches) ? 0 : Number(inches);
+    if (!Number.isFinite(ft) || !Number.isFinite(inch)) return null;
+    return halfUp((ft * 12 + inch) * CM_PER_INCH * 2, 0) / 2;
+  }
+  // A stored height in centimetres → { feet, inches }, the inches to the nearest 0.5 (half up); 12 inches carry to the next foot.
+  function cmToFeetInches(cm) {
+    if (cm == null || cm === '' || !Number.isFinite(Number(cm))) return null;
+    const halves = halfUp((Number(cm) / CM_PER_INCH) * 2, 0); // whole half-inches
+    return { feet: Math.floor(halves / 24), inches: (halves % 24) / 2 };
+  }
+  // "5 ft 10 in" or "178 cm", for a line of text.
+  function formatHeight(cm, unit) {
+    if (cm == null || cm === '') return '';
+    if (unit === 'cm') return `${Number(cm)} cm`;
+    const fi = cmToFeetInches(cm);
+    return fi ? `${fi.feet} ft ${fi.inches} in` : '';
+  }
 
   // ---- days
   function dayMs(day) {
@@ -212,5 +240,5 @@
 
   KH.bodyRules = { KG_PER_LB, WEIGHT_CONTEXTS, BLOOD_PRESSURE_CONTEXTS, SOURCES, UNITS, LIMITS, FLAG_SYSTOLIC, FLAG_DIASTOLIC, HREF, LINK_TEXT, RED_FLAGS,
     flagOf, bpFlag, roundKg, lbToKg, shownWeight, formatWeight, compareRows, shiftDay, daysBetween, weightAlarmCheck, bloodPressureWeek,
-    sixMonthChange, summarise, rowToWeight, rowToReading };
+    sixMonthChange, summarise, rowToWeight, rowToReading, CM_PER_INCH, HEIGHT_UNITS, feetInchesToCm, cmToFeetInches, formatHeight };
 })();

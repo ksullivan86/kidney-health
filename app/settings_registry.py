@@ -403,6 +403,15 @@ register(
         help="lb or kg (the app's US default is lb). Only how a weight is shown and typed changes; weights are stored in kilograms.",
     ),
     SettingDef(
+        key="user.units.height",
+        model=Literal["ft_in", "cm"],
+        default="ft_in",
+        scope="user_default",
+        env="HEIGHT_UNITS",
+        label="Units for height",
+        help="ft_in (feet and inches, the app's US default) or cm. Only how your height is shown and typed changes; it is stored in centimetres.",
+    ),
+    SettingDef(
         key="body.weight_alarm",
         model=WeightAlarm,
         default=WeightAlarm(),

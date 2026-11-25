@@ -122,8 +122,8 @@ ALLOWED: frozenset[tuple[str, str]] = frozenset({
 BODY_KEYS: dict[tuple[str, str], frozenset[str]] = {
     # The Open Food Facts consent (step 3), and the account settings the server owns (step 8): units, the weight alarm, the blood
     # pressure goal and the meal guidance choices. Never the theme or the camera (this iPhone's own), the AI's trust or route.
-    ("PATCH", "/api/me/settings"): frozenset({"food.off_consent", "user.units.labs", "user.units.weight", "body.weight_alarm", "body.bp_goal",
-                                              "guidance"}),
+    ("PATCH", "/api/me/settings"): frozenset({"food.off_consent", "user.units.labs", "user.units.weight", "user.units.height",
+                                              "body.weight_alarm", "body.bp_goal", "guidance"}),
     ("PATCH", "/api/me/ai"): frozenset({"opt_in"}),
 }
 ONLY_KEYS = "From the iPhone app this can change only: {keys}."
