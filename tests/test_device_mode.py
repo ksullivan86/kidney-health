@@ -72,11 +72,12 @@ def test_the_first_start_setup_and_the_tidy_settings_are_device_only():
     for step in ("Welcome to Kidney Health", "About you", "Your own server (optional)", "You are set"):
         assert step in welcome, step
     assert "KH.mock.local.restart({ sample: true })" in welcome  # the sample data is a choice, never the default
-    # Owner, 2026-11-21: the server step says what a server adds (other devices, the server's AI and keys), and says plainly
-    # which parts come later, so the setup never promises what the app does not do yet.
+    # Owner, 2026-11-21 and 2026-11-25: the server step says what a server adds (the log both ways, the server's AI and keys),
+    # all of it built since note 39, and nothing is promised as "coming later".
     server = welcome[welcome.index("function stepServer()"):welcome.index("function stepDone()")]
-    assert "Your log on your other devices." in server and "Coming later: your server\\'s AI, the keys" in server
-    assert 'Make a token for "The iPhone app"' in server and "scan its QR code" in server
+    assert "Your log on all your devices." in server and "Your server\\'s AI, and the keys" in server
+    assert "later:" not in server.lower() and "coming later" not in server.lower()
+    assert 'Make a token for "The iPhone app, both ways"' in server and "scan its QR code" in server
     index = (static / "index.html").read_text(encoding="utf-8")
     assert '<dialog id="sheet-welcome"' in index and '<script src="js/views/welcome.js"></script>' in index
     assert "'/js/views/welcome.js'," in (static / "sw.js").read_text(encoding="utf-8")
