@@ -98,7 +98,7 @@
   const ROUTES = { photos: 'Photos (labels and plates)', meal_ideas: 'Meal ideas', describe: 'Describe a meal', chat: 'Ask',
     labs: 'Lab report photos', recipes: 'Recipes' }; // app/ai/routing.py LABEL
   const PURPOSE = { photos: 'photos', meal_ideas: 'text', describe: 'text', chat: 'chat', labs: 'labs', recipes: 'text' };
-  const ON_DEVICE = ['describe', 'labs'];
+  const ON_DEVICE = ['describe', 'labs', 'meal_ideas', 'recipes']; // and photos on iOS 27 (onDevice below)
 
   // ---------------------------------------------------------------------------
   // The person's own AI key (owner, 2026-11-25; design note 39 §6.5), with or without a server
@@ -109,7 +109,7 @@
   // (ai-prompts.json "own_key") and knows three tasks only. Lab reports never go to it, and the page never sends it anything that
   // holds the person's name or birth month (identityIn below): such a request goes to this iPhone's own model or nowhere.
   const OWN_ID = -1; // the own key's provider id in consent requests (the server's are positive, Apple's model is 0)
-  const OWN_ROUTES = ['describe', 'photos']; // describe a meal; label and plate photos only with the person's photo switch on
+  const OWN_ROUTES = ['describe', 'meal_ideas', 'recipes', 'photos']; // photos only with the person's photo switch on
   const OWN_POLICY = { // app/ai/presets.py POLICY_LINES (tests/test_phone_own_key.py compares them)
     openai: 'OpenAI does not use API data for training; it keeps abuse-monitoring logs for up to 30 days.',
     openrouter: 'OpenRouter routes the request only to model providers that do not collect data.',
@@ -124,7 +124,7 @@
     if (!a || a.ok !== true || a.set !== true || !OWN_POLICY[a.provider]) return null;
     return { provider: a.provider, label: String(a.label || ''), host: String(a.host || ''), model: String(a.model || ''), photos: a.photos === true };
   }
-  const ownRuns = (own, featureRoute) => !!own && (featureRoute === 'describe' || (featureRoute === 'photos' && own.photos));
+  const ownRuns = (own, featureRoute) => !!own && OWN_ROUTES.includes(featureRoute) && (featureRoute !== 'photos' || own.photos);
   function ownSummary(own) {
     return { id: OWN_ID, label: `${own.label} (your own key)`, model: own.model, host: own.host, vision_model: null, scope: 'user',
       kind: 'cloud', policy: OWN_POLICY[own.provider], own_key: true };
@@ -325,8 +325,8 @@
         photos: ownPhotos ? ownConsent(api, own, 'photos') : phonePhotos ? { ...CONSENT } : null,
         chat: null, labs: phone ? { ...CONSENT } : null, voice: null },
       routing: { mode: 'routed' }, routes, policy_version: 'device', daily_limit: null, remaining_today: null,
-      features: { next_meal: false, parse_meal: ownText || phone, label: ownPhotos || phonePhotos, plate: ownPhotos || phonePhotos, chat: false, voice: false, lab_report: false,
-        lab_report_text: phone, recipes: false, recipe_steps: false },
+      features: { next_meal: ownText || phone, parse_meal: ownText || phone, label: ownPhotos || phonePhotos, plate: ownPhotos || phonePhotos, chat: false, voice: false, lab_report: false,
+        lab_report_text: phone, recipes: ownText || phone, recipe_steps: false },
       voice: null, trust: { setting: 'ask', allowed: false, effective: 'ask' }, prompt_version: J().PROMPT_VERSION, device: true,
       own_key: own ? { label: own.label, host: own.host, model: own.model, photos: own.photos } : null,
     };
@@ -472,16 +472,245 @@
       return KH.mock.serverApi.failWith(res);
     });
   });
-  // Meal ideas and AI recipes: the server's AI only (the iPhone's model has neither).
+  // Meal ideas and AI recipes (note 39 §6.6): the server's AI first; else the person's own key, then the iPhone's own model, with
+  // the server's candidates, data block and checks (twins in js/engine/aimeal.js); else the feature's way without AI.
   for (const [path, featureRoute] of [['/api/ai/next-meal', 'meal_ideas'], ['/api/ai/recipes', 'recipes']]) {
     route('POST', path, function ({ body, qp }) {
       if (!device()) fail(404, 'Not Found');
+      const b = featureRoute === 'meal_ideas' ? nextMealBody(body) : recipesBody(body);
       return viaServer(this, featureRoute, 'POST', `${path}${query(qp)}`, { body: forServer(body) }).then((got) => {
         if (got.value !== undefined) return got.value;
-        if (got.skip === 'unreachable') fail(503, SERVER_GONE, { reason: 'server_unreachable' });
-        return fail(404, 'Not Found'); // no AI for this feature: its way without AI
+        return (featureRoute === 'meal_ideas' ? mealIdeasHere : recipesHere)(this, b, qp('dry_run') === 'true', got.skip);
       });
     });
+  }
+  // app/ai/routes.py NextMealBody and RecipesBody.
+  const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'];
+  function excludeIds(c, body) {
+    if (!c.has('exclude_food_ids')) { c.out.exclude_food_ids = []; return; }
+    const v = body.exclude_food_ids;
+    if (!Array.isArray(v)) { c.err('exclude_food_ids', 'Input should be a valid list'); return; }
+    if (v.length > 60) { c.err('exclude_food_ids', `List should have at most 60 items after validation, not ${v.length}`); return; }
+    v.forEach((x, i) => { if (!(Number.isInteger(x) && x >= 1)) c.err(`exclude_food_ids.${i}`, 'Input should be a valid integer greater than or equal to 1'); });
+    c.out.exclude_food_ids = v;
+  }
+  function nextMealBody(body) {
+    const c = new Check(body);
+    extraKeys(c, body, ['meal', 'date', 'mode', 'entry_id', 'food_id', 'servings', 'exclude_food_ids']);
+    c.choice('meal', MEALS, { required: true });
+    c.str('date');
+    c.choice('mode', ['ideas', 'rerank', 'swap', 'plan'], { def: 'ideas' });
+    for (const k of ['entry_id', 'food_id']) c.num(k, { ge: 1, int: true, maxId: true });
+    c.num('servings', { gt: 0, le: 20 });
+    excludeIds(c, body);
+    return c.done();
+  }
+  function recipesBody(body) {
+    const c = new Check(body);
+    extraKeys(c, body, ['mode', 'target', 'meal', 'date', 'dish', 'makes', 'meal_id', 'exclude_food_ids']);
+    c.choice('mode', ['suggest', 'change'], { def: 'suggest' });
+    c.choice('target', ['meal', 'day'], { def: 'meal' });
+    c.choice('meal', MEALS, { nullable: true });
+    c.str('date');
+    c.choice('dish', Object.keys(KH.aiMeal.DISH_WORD), { nullable: true });
+    c.choice('makes', [1, 2, 4, 6], { def: 4 });
+    c.num('meal_id', { ge: 1, int: true, maxId: true });
+    excludeIds(c, body);
+    const b = c.done();
+    if (b.mode === 'suggest' && (b.dish == null || b.meal_id != null)) fail(400, 'suggest needs dish (and no meal_id)');
+    if (b.mode === 'change' && (b.meal_id == null || b.dish != null)) fail(400, 'change needs meal_id (and no dish)');
+    return b;
+  }
+  // The person block of meal ideas and recipes (prompts.person_block with context.explicit_preferences): the profile's stage,
+  // dialysis and diabetes, the AI preferences text, the foods and groups the person marked, age band and sex only with consent.
+  function personHere(api) {
+    const s = api._guidanceSetting('guidance') || {};
+    const rows = [...api._foodPreferences()].map(([id, row], i) => ({ id, i, row }))
+      .sort((a, b) => ((b.row.updated_at || b.row.created_at || '') < (a.row.updated_at || a.row.created_at || '') ? -1
+        : (b.row.updated_at || b.row.created_at || '') > (a.row.updated_at || a.row.created_at || '') ? 1 : b.i - a.i));
+    const names = (kind, setting) => {
+      const out = rows.filter((r) => r.row.preference === kind).map((r) => (api._foods.find((f) => f.id === r.id) || {}).name).filter(Boolean);
+      for (const g of [...(s[setting] || [])].reverse()) if (!out.includes(g)) out.push(g);
+      return out.slice(0, 10);
+    };
+    const tastes = { likes: names('like', 'like_categories'), less_often: names('less', 'less_categories'),
+      not_for_me: names('not_for_me', 'exclude_categories') };
+    return KH.aiMeal.personBlock(api._profileView(), prefs(api), KH.util.todayStr(), tastes);
+  }
+  function guidanceCtx(api, day, options) {
+    const ctx = api._guidanceContext(day, options);
+    const s = api._guidanceSetting('guidance') || {};
+    ctx.prefs.plan_repeat_meals = [...(s.plan_repeat_meals || [])];
+    return ctx;
+  }
+  // How much of the data block each AI takes. The server trims candidates (lowest ranked first) until its estimate of the whole
+  // request (characters ÷ 3.5) and the answer fit the provider's prompt budget (features._fits). The own key's providers have the
+  // server's cloud budget (32,768 tokens), which the data block never comes near; the cap below only guards against a runaway list.
+  // The iPhone's own model has about 4,096 tokens for everything: the rules (about 1,000), the answer's shape and the answer itself
+  // (about 1,000) leave about 2,000 tokens, and JSON reads at fewer characters per token than prose, so its data block is cut to
+  // 5,000 characters: with the fixed parts that leaves room for about eight candidates. Fewer candidates, the same checks.
+  const DATA_CHARS = { own: 80000, iphone: 5000 };
+  const CONTEXT_TOO_SMALL = 'The AI provider\'s prompt budget (AI_CONTEXT_TOKENS) is too small for this request.';
+  const ONLY_IDEAS_HERE = 'On this iPhone the AI gives meal ideas only. AI order, AI swaps and AI day plans need your server\'s AI.';
+  // The phone's AIs for a feature route, in order: the own key, then the iPhone's model. [] when neither can run it.
+  async function phoneAis(api, featureRoute) {
+    const [own, st] = await Promise.all([ownStatus(api), aiStatus()]);
+    const out = [];
+    if (ownRuns(own, featureRoute)) out.push({ kind: 'own', own });
+    if (st.available) out.push({ kind: 'iphone' });
+    return out;
+  }
+  // Ask one of the phone's AIs a meal ideas or recipe task. build(limit) gives { text, ids, condition, trimmed } with the data block
+  // trimmed to `limit` characters, or null when even the smallest list does not fit. Returns { raw } (the model's JSON), { verdict }
+  // (a refusal or a failure, in the server's words), { skip } (try the next AI) or a dry run.
+  async function askPhoneAi(api, ai, featureRoute, task, build, dry) {
+    const req = build(DATA_CHARS[ai.kind]);
+    if (ai.kind === 'own') {
+      if (!req) return { skip: 'too_small' };
+      if (identityIn(api, req.text)) return { skip: 'identity' };
+      if (!ownConsent(api, ai.own, 'text')) {
+        fail(409, 'Agree to send this to the AI provider first.', { consent_required: true, consent: ownConsentRequest(ai.own, 'text') });
+      }
+      const provider = { id: OWN_ID, label: `${ai.own.label} (your own key)`, model: ai.own.model, host: ai.own.host };
+      if (dry) {
+        return { dry: { dry_run: true, device: true, own_key: true, feature: task, mode: null, destination: `https://${ai.own.host}`, host: ai.own.host,
+          provider: { id: OWN_ID, label: provider.label, preset: ai.own.provider, scope: 'user', local: false }, method: 'POST',
+          headers: { Authorization: 'Bearer [your key, not shown]' }, body: { task, data: req.text, condition: req.condition, ids: req.ids },
+          image_bytes: 0, images: [], trimmed_candidates: req.trimmed,
+          message: `This iPhone sends this to ${ai.own.label} at ${ai.own.host} with your own key, with the app's fixed instructions. Your name and date of birth are never sent.` } };
+      }
+      const res = await KH.mock.device.lookup({ kind: 'ownAI', task, text: req.text, condition: req.condition, ids: req.ids });
+      if (!res || res.ok !== true) {
+        const code = res && res.error;
+        if (['offline', 'not_available', 'own_off', 'no_app'].includes(code)) return { skip: 'unreachable' };
+        if (code === 'rate_limited') fail(429, res.message || OWN_ERROR, { reason: 'rate_limited' });
+        fail(502, (res && res.message) || OWN_ERROR, { reason: code || 'ai_failed', audit_id: null });
+      }
+      if (typeof res.refusal === 'string' && res.refusal) return { provider, req, verdict: { status: 'refused', message: J().REFUSED_TEXT } };
+      const parsed = J().extractJson(res.content);
+      return parsed === null ? { provider, req, verdict: { status: 'error', reason: 'schema', message: ERROR_TEXT.schema } } : { provider, req, raw: parsed };
+    }
+    if (!req) fail(503, CONTEXT_TOO_SMALL, { reason: 'context_too_small' });
+    if (dry) return { dry: { ...dryRun(task, task, req.text), body: { kind: 'ai', task, text: req.text, condition: req.condition }, trimmed_candidates: req.trimmed } };
+    const got = await ask(task, req.text, { condition: req.condition });
+    return got.verdict ? { provider: { ...PROVIDER }, req, verdict: got.verdict } : { provider: { ...PROVIDER }, req, raw: got.answer };
+  }
+  // The first answer of the phone's AIs, in order (the caller checked there is one).
+  function noPhoneAi(serverSkip) {
+    if (serverSkip === 'unreachable') fail(503, SERVER_GONE, { reason: 'server_unreachable' });
+    fail(404, 'Not Found'); // no AI for this feature: its way without AI
+  }
+  async function onPhone(api, featureRoute, task, build, dry) {
+    const ais = await phoneAis(api, featureRoute);
+    if (!prefs(api).opt_in) unavailable('not_opted_in');
+    let skipped = null;
+    for (const ai of ais) {
+      const got = await askPhoneAi(api, ai, featureRoute, task, build, dry);
+      if (got.skip) { skipped = got.skip; continue; }
+      return got;
+    }
+    if (skipped === 'identity') fail(503, OWN_IDENTITY, { reason: 'identity' });
+    if (skipped === 'too_small') fail(503, CONTEXT_TOO_SMALL, { reason: 'context_too_small' });
+    fail(503, OWN_GONE, { reason: 'own_unreachable' });
+  }
+  const phoneAnswer = (feature, mode, got, verdict, notes) => ({ ...verdict, repaired: false, retried: false, trimmed: got.req.trimmed, feature, mode,
+    provider: got.provider, prompt_version: J().PROMPT_VERSION, audit_id: null, cached: false, notes });
+
+  // app/ai/routes.py _prepare_next_meal and features.prepare_next_meal, mode "ideas" only.
+  async function mealIdeasHere(api, b, dry, serverSkip) {
+    const A = KH.aiMeal;
+    if (!(await phoneAis(api, 'meal_ideas')).length) noPhoneAi(serverSkip);
+    if (b.mode !== 'ideas') fail(503, ONLY_IDEAS_HERE, { reason: 'not_on_phone' });
+    const day = b.date ? b.date : KH.util.todayStr();
+    const off = api._guidanceGate();
+    if (off) return off;
+    const ctx = guidanceCtx(api, day);
+    if (!api._guidanceHasTargets(ctx.profile)) return api._guidanceUnavailable('no_targets', KH.guidanceEngine.M.NO_TARGETS);
+    const person = personHere(api);
+    const condition = A.conditionText(person);
+    const full = A.candidatesForAi(ctx, b.meal, new Set(b.exclude_food_ids));
+    const mealsLeft = KH.guidanceEngine.budget.openSlots(b.meal, ctx.day);
+    let bridge = full;
+    const build = (limit) => {
+      bridge = full;
+      for (let trimmed = 0; ; trimmed += 1) {
+        const text = J().dataPayload(A.nextMealContext(bridge, ctx, b.meal, mealsLeft, person));
+        if (text.length <= limit) {
+          const ids = [...new Set([...bridge.foods.map((f) => f.food_id), ...bridge.meals.flatMap((m) => m.items.map((it) => it.food_id))])].sort((x, y) => x - y);
+          return { text, ids, condition, trimmed };
+        }
+        if (bridge.foods.length <= 1) return null;
+        bridge = { ...bridge, foods: bridge.foods.slice(0, -1) }; // lowest ranked first (rule order)
+      }
+    };
+    const got = await onPhone(api, 'meal_ideas', 'next_meal', build, dry);
+    if (got.dry) return got.dry;
+    let verdict = got.verdict;
+    if (!verdict) {
+      const checked = A.checkIdeas(got.raw);
+      verdict = checked.ok ? A.judgeIdeas(checked.answer, ctx, b.meal, bridge, got.provider.label, got.provider.model)
+        : { status: 'error', reason: 'schema', message: ERROR_TEXT.schema };
+    }
+    if (['dropped_all', 'no_fit', 'error'].includes(verdict.status)) verdict = { ...verdict, fallback: A.fallback(bridge) };
+    return phoneAnswer('next_meal', 'ideas', got, verdict, [KH.guidanceEngine.M.DISCLAIMER]);
+  }
+
+  // app/ai/routes.py _prepare_recipes and recipes.prepare_recipes, with cooking steps off.
+  async function recipesHere(api, b, dry, serverSkip) {
+    const A = KH.aiMeal;
+    const GE = KH.guidanceEngine;
+    if (!(await phoneAis(api, 'recipes')).length) noPhoneAi(serverSkip);
+    const day = b.date ? b.date : KH.util.todayStr();
+    const off = api._guidanceGate();
+    if (off) return off;
+    let makes = Number(b.makes);
+    let wanted = [];
+    let name = null;
+    if (b.mode === 'change') {
+      const t = api._template(b.meal_id);
+      wanted = t.items.map((it) => [Number(it.food_id), Number(it.servings)]);
+      makes = Number(t.servings_made || 1);
+      name = String(t.name);
+    }
+    const ctx = guidanceCtx(api, day, { history60: false, savedMeals: false, combos: false });
+    if (!api._guidanceHasTargets(ctx.profile)) return api._guidanceUnavailable('no_targets', GE.M.NO_TARGETS);
+    const original = wanted.map(([id, q]) => [ctx.foods.get(id), q]);
+    if (b.mode === 'change') {
+      if (!original.length || original.some(([f]) => f == null)) return { status: 'unavailable', message: 'This recipe has a food that is no longer in your list.', ai_called: false };
+      if (original.some(([f]) => f.hypo)) return { status: 'not_sent', message: 'This recipe has a food the app never sends to AI, so it cannot be reworked. Fit to my targets still works without AI.', ai_called: false };
+    }
+    const meal = b.target === 'day' ? null : (b.meal || GE.nextOpenMeal(ctx));
+    const target = { kind: b.target, meal };
+    const person = personHere(api);
+    const condition = A.conditionText(person);
+    const full = A.recipeCandidates(ctx, target, original.map(([f]) => f), new Set(b.exclude_food_ids));
+    const forMeal = target.kind === 'meal' && target.meal ? target.meal : full.meal;
+    const mealsLeft = target.kind === 'meal' ? GE.budget.openSlots(forMeal, ctx.day) : [];
+    const request = b.mode === 'suggest' ? { mode: 'suggest', makes, dish: b.dish } : { mode: 'change', makes };
+    const keep = new Set(original.map(([f]) => f.id));
+    let bridge = full;
+    const build = (limit) => {
+      bridge = full;
+      for (let trimmed = 0; ; trimmed += 1) {
+        const block = b.mode === 'change' ? A.recipeChangeBlock(ctx, bridge, original, makes, target) : null;
+        const text = J().dataPayload(A.recipeContext(bridge, ctx, target.kind === 'meal' ? forMeal : 'day', mealsLeft, person, request, block));
+        if (text.length <= limit) return { text, ids: bridge.foods.map((f) => f.food_id).sort((x, y) => x - y), condition, trimmed };
+        const removable = bridge.foods.map((f, i) => [f, i]).filter(([f]) => !keep.has(Number(f.food_id))).map(([, i]) => i);
+        if (removable.length <= 1) return null;
+        const foods = [...bridge.foods];
+        foods.splice(removable[removable.length - 1], 1); // the lowest-ranked food that is not the recipe's own
+        bridge = { ...bridge, foods };
+      }
+    };
+    const got = await onPhone(api, 'recipes', 'recipes', build, dry);
+    if (got.dry) return got.dry;
+    let verdict = got.verdict;
+    if (!verdict) {
+      const checked = A.checkRecipes(got.raw);
+      verdict = checked.ok ? A.judgeRecipes(checked.answer, ctx, target, bridge, { mode: b.mode, makes, original, name,
+        providerLabel: got.provider.label, model: got.provider.model }) : { status: 'error', reason: 'schema', message: ERROR_TEXT.schema };
+    }
+    return phoneAnswer('recipes', b.mode, got, verdict, [...GE.M.RECIPE_NOTES, GE.M.DISCLAIMER]);
   }
   // Photos (a label, a plate, a lab report page): the server's AI only, the photo as the JPEG the page made (no location data).
   // A label or plate photo then goes to the person's own key, only while their photo switch is on. A lab report photo never does.

@@ -153,5 +153,136 @@ const photoModel = (req) => ({ answer: req.task === 'plate' ? PLATE : req.task =
   ok(() => assert.ok(sent('ownAI').every((r) => r.task !== 'read_lab_report_text')));
 }
 
+// Meal ideas and AI recipes (step 2). The stand-in models answer with the ids they were given, plus one made-up id.
+const TARGETS = { potassium_mg: { max: 3000 }, phosphorus_mg: { max: 1000 }, sodium_mg: { max: 2000 }, carbs_per_meal_g: 60, protein_g: 60,
+  fluid_ml: { max: 1500 } };
+const candidatesOf = (req) => JSON.parse(req.text).candidates;
+const ideasFrom = (req) => {
+  const c = candidatesOf(req);
+  return { ideas: [{ theme: 'hearty', items: [{ food_id: c[0].id, quarters: 4 }, { food_id: c[1].id, quarters: 2 }], reason_codes: ['you_like', 'low_sodium'],
+    handbook: ['potassium', 'http://x'] }, { theme: 'light', items: [{ food_id: 987654321, quarters: 4 }], reason_codes: ['low_sodium'], handbook: [] }],
+  status: 'ok', refusal: 'none' };
+};
+const recipesFrom = (req) => {
+  const c = candidatesOf(req).filter((f) => !f.flags.includes('processed'));
+  return { recipes: [{ dish: 'stew', theme: 'hearty', ingredients: [{ food_id: c[0].id, quarters: 4 }, { food_id: c[1].id, quarters: 4 }, { food_id: c[2].id, quarters: 4 }],
+    steps: ['Simmer for 20 minutes.'], reason_codes: ['adds_protein'] }], status: 'ok', refusal: 'none' };
+};
+const mealModel = (req) => ({ answer: req.task === 'next_meal' ? ideasFrom(req) : req.task === 'recipes' ? recipesFrom(req) : photoModel(req).answer });
+const ideasBody = { meal: 'dinner', mode: 'ideas' };
+async function withTargets(opts) {
+  const P = await page(opts);
+  Object.assign(P.api._profile, { targets: TARGETS, ckd_stage: '4', diabetes: 'type1', ckd_stage_chosen: true, diabetes_chosen: true });
+  return P;
+}
+
+// 5. Meal ideas and recipes on the iPhone's own model: the server's candidates, trimmed to fit its small window, and its checks.
+{
+  const { api, sent, KH } = await withTargets({ model: mealModel });
+  const st = await api.request('GET', '/api/ai/status');
+  ok(() => assert.deepEqual([st.features.next_meal, st.features.recipes, st.features.recipe_steps], [true, true, false]), 'meal ideas and recipes, no AI steps');
+  const me = await api.request('GET', '/api/me/ai');
+  ok(() => assert.deepEqual([me.phone.where.meal_ideas, me.phone.where.recipes], ['iphone', 'iphone']));
+  const got = await api.request('POST', '/api/ai/next-meal', ideasBody);
+  const req = sent('ai').at(-1);
+  ok(() => assert.equal(req.task, 'next_meal'));
+  ok(() => assert.ok(req.text.length <= 5000, `${req.text.length} characters`), 'the data block fits the iPhone model');
+  ok(() => assert.ok(got.trimmed > 0, 'candidates were trimmed'), 'trimmed, as the server trims');
+  ok(() => assert.equal(req.condition, 'chronic kidney disease (CKD, stage 4) and type 1 diabetes'), 'one of the server\'s wordings');
+  ok(() => assert.deepEqual(Object.keys(req).sort(), ['condition', 'kind', 'task', 'text']));
+  ok(() => assert.equal(got.provider.label, 'Apple\'s on-device model'));
+  ok(() => assert.equal(got.status, 'ok'));
+  ok(() => assert.equal(got.ideas.length, 1), 'the made-up food is dropped');
+  ok(() => assert.deepEqual(plain(got.dropped), [{ index: 1, reason: 'not_a_candidate' }]));
+  ok(() => assert.ok(!got.ideas[0].reason_codes.includes('you_like')), 'a false "you like" claim is removed');
+  ok(() => assert.deepEqual(plain(got.ideas[0].handbook.map((p) => p.slug)), ['potassium']), 'only allowed handbook pages');
+  ok(() => assert.equal(got.ideas[0].checked, true));
+  ok(() => assert.equal(got.audit_id, null), 'nothing kept');
+  const data = JSON.parse(req.text);
+  ok(() => assert.deepEqual(Object.keys(data).sort(), ['candidates', 'handbook_pages', 'judged', 'meal', 'meal_budget', 'meals_left', 'person', 'repeat_ok',
+    'saved_meals', 'targets', 'today', 'week_avg']), 'the server\'s data block');
+  ok(() => assert.equal(data.person.age_band, null), 'no age without consent');
+  ok(() => assert.ok(!req.text.toLowerCase().includes('robin')), 'never the name');
+  for (const mode of ['rerank', 'swap', 'plan']) {
+    await fails(api.request('POST', '/api/ai/next-meal', { meal: 'dinner', mode, food_id: 1, servings: 1 }), 503, (e) => e.extra.reason === 'not_on_phone');
+  }
+  const recipe = await api.request('POST', '/api/ai/recipes', { mode: 'suggest', dish: 'stew', makes: 4, meal: 'dinner' });
+  const rreq = sent('ai').at(-1);
+  ok(() => assert.equal(rreq.task, 'recipes'));
+  ok(() => assert.ok(rreq.text.length <= 5000));
+  ok(() => assert.equal(recipe.feature, 'recipes'));
+  ok(() => assert.equal(recipe.status, 'ok', JSON.stringify(recipe.dropped)), 'a checked recipe');
+  if (recipe.status === 'ok') {
+    ok(() => assert.deepEqual(plain(recipe.recipes[0].steps), []), 'never AI steps on the phone');
+    ok(() => assert.equal(recipe.recipes[0].body.steps.length, 0));
+    ok(() => assert.equal(recipe.steps_dropped, 1));
+  }
+  ok(() => assert.deepEqual(plain(recipe.notes), [...KH.guidanceEngine.M.RECIPE_NOTES, KH.guidanceEngine.M.DISCLAIMER]));
+  const before = sent('ai').length;
+  const dry = await api.request('POST', '/api/ai/next-meal?dry_run=true', ideasBody);
+  ok(() => assert.deepEqual([dry.dry_run, dry.provider.local], [true, true]));
+  ok(() => assert.equal(sent('ai').length, before), 'the dry run sends nothing');
+  await fails(api.request('POST', '/api/ai/recipes', { mode: 'suggest', makes: 4 }), 400);
+}
+
+// 6. A wrong answer and a refusal from the iPhone's model: the server's errors and the rule ideas instead.
+{
+  const { api, state } = await withTargets({ model: () => ({ answer: { ideas: 'pasta', status: 'ok', refusal: 'none' } }) });
+  let got = await api.request('POST', '/api/ai/next-meal', ideasBody);
+  ok(() => assert.deepEqual([got.status, got.reason], ['error', 'schema']));
+  ok(() => assert.ok(got.fallback && got.fallback.foods.length > 0), 'the app\'s own ideas instead');
+  state.model = () => ({ answer: { ideas: [], status: 'refused', refusal: 'outside_scope' } });
+  got = await api.request('POST', '/api/ai/next-meal', ideasBody);
+  ok(() => assert.equal(got.status, 'refused'));
+  state.model = () => ({ error: 'ai_failed' });
+  got = await api.request('POST', '/api/ai/next-meal', ideasBody);
+  ok(() => assert.deepEqual([got.status, got.reason], ['error', 'ai_failed']));
+}
+
+// 7. The own key: meal ideas and recipes with the full candidate list, its ids, the consent first; it goes before the iPhone.
+{
+  const { api, sent, state } = await withTargets({ own: OPENAI, model: mealModel,
+    provider: (req) => ({ content: JSON.stringify(req.task === 'next_meal' ? ideasFrom(req) : recipesFrom(req)) }) });
+  const me = await api.request('GET', '/api/me/ai');
+  ok(() => assert.deepEqual([me.phone.where.meal_ideas, me.phone.where.recipes], ['own', 'own']));
+  await fails(api.request('POST', '/api/ai/next-meal', ideasBody), 409, (e) => e.extra.consent.host === 'api.openai.com');
+  ok(() => assert.equal(sent('ownAI').length, 0), 'nothing sent before the person agrees');
+  await api.request('POST', '/api/ai/consent', { provider_id: -1, purpose: 'text', skip_preview: true });
+  const got = await api.request('POST', '/api/ai/next-meal', ideasBody);
+  const req = sent('ownAI').at(-1);
+  ok(() => assert.equal(got.provider.label, 'OpenAI (your own key)'));
+  ok(() => assert.equal(got.trimmed, 0), 'the cloud budget takes the whole list');
+  ok(() => assert.deepEqual(Object.keys(req).sort(), ['condition', 'ids', 'kind', 'task', 'text']));
+  const ids = new Set(candidatesOf(req).map((c) => c.id));
+  ok(() => assert.ok([...ids].every((id) => req.ids.includes(id)) && req.ids.every((id, i) => i === 0 || req.ids[i - 1] < id)), 'the candidate ids, sorted');
+  ok(() => assert.deepEqual([got.status, got.ideas.length], ['ok', 1]));
+  const recipe = await api.request('POST', '/api/ai/recipes', { mode: 'suggest', dish: 'stew', makes: 4 });
+  ok(() => assert.equal(recipe.provider.label, 'OpenAI (your own key)'));
+  ok(() => assert.equal(sent('ownAI').at(-1).task, 'recipes'));
+  // the name in the AI preferences text: never to the own key; the iPhone's model takes it (it stays on the phone)
+  await api.request('PATCH', '/api/me/ai', { preferences: 'Robin likes soup' });
+  const n = sent('ownAI').length;
+  const local = await api.request('POST', '/api/ai/next-meal', ideasBody);
+  ok(() => assert.equal(local.provider.label, 'Apple\'s on-device model'), 'the iPhone instead');
+  ok(() => assert.equal(sent('ownAI').length, n), 'not sent to the own key');
+  state.iphone = false;
+  await fails(api.request('POST', '/api/ai/next-meal', ideasBody), 503, (e) => e.extra.reason === 'identity');
+  await api.request('PATCH', '/api/me/ai', { preferences: 'likes soup' });
+  state.provider = () => ({ error: 'offline' });
+  await fails(api.request('POST', '/api/ai/next-meal', ideasBody), 503, (e) => e.extra.reason === 'own_unreachable');
+  state.iphone = { photos: false };
+  const again = await api.request('POST', '/api/ai/next-meal', ideasBody);
+  ok(() => assert.equal(again.provider.label, 'Apple\'s on-device model'), 'unreachable provider: the iPhone');
+  const bodies = sent('ownAI').map((r) => JSON.stringify(r).toLowerCase());
+  for (const needle of ['robin', 'quillfeather', '1971']) ok(() => assert.ok(bodies.every((b) => !b.includes(needle))), `no "${needle}" to the own key`);
+}
+
+// 8. No AI on the phone at all: the features stay off and the routes answer as a server with AI off.
+{
+  const { api } = await withTargets({ iphone: false });
+  await fails(api.request('POST', '/api/ai/next-meal', ideasBody), 404);
+  await fails(api.request('POST', '/api/ai/recipes', { mode: 'suggest', dish: 'soup' }), 404);
+}
+
 console.log(`phone AI more: ${checks} checks passed`);
 process.exit(0);

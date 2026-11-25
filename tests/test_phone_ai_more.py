@@ -10,6 +10,7 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 
 from app.ai import schemas
@@ -83,3 +84,57 @@ def test_the_answer_shapes_are_the_servers_schemas() -> None:
     code = _code(ON_DEVICE).lower()
     for word in ("insulin", "dose", "dosing", "bolus"):
         assert word not in code, word
+
+
+def test_the_ai_meal_vectors_are_current() -> None:
+    """tests/data/ai_meal_vectors.json is what the server's code gives now (tests/js/run_vectors.mjs replays it on the twin)."""
+    done = subprocess.run([sys.executable, str(ROOT / "tests" / "data" / "gen_ai_meal_vectors.py"), "--check"], capture_output=True,
+                          text=True, timeout=600, check=False, cwd=ROOT)
+    assert done.returncode == 0, done.stderr[-3000:]
+
+
+def test_the_twins_constants_and_texts_are_the_servers() -> None:
+    from app.ai import guard, prompts
+    from app.ai import recipes as AR
+
+    twin = (ROOT / "app" / "static" / "js" / "engine" / "aimeal.js").read_text(encoding="utf-8")
+
+    def js_list(name: str) -> list[str]:
+        m = re.search(rf"const {name} = \[([^\]]*)\];", twin)
+        assert m, name
+        return re.findall(r"'([^']*)'", m.group(1))
+
+    assert js_list("THEMES") == list(schemas.THEMES)
+    assert js_list("REASON_CODES") == list(schemas.REASON_CODES)
+    assert js_list("AI_HANDBOOK_SLUGS") == list(prompts.AI_HANDBOOK_SLUGS)
+    assert set(js_list("COOK_LATER")) == AR.COOK_LATER
+    assert set(js_list("SHOWN_FLAGS")) == prompts.SHOWN_FLAGS
+    assert js_list("TARGET_KEYS") == list(prompts.TARGET_KEYS) and js_list("TOTAL_KEYS") == list(prompts.TOTAL_KEYS)
+    assert js_list("DAY_JUDGED") == list(prompts.DAY_JUDGED) and js_list("WEEK_JUDGED") == list(prompts.WEEK_JUDGED)
+    assert f"const AI_RECIPE_FOODS_MAX = {AR.AI_RECIPE_FOODS_MAX};" in twin
+    assert f"const AI_RECIPE_INGREDIENTS_MIN = {AR.AI_RECIPE_INGREDIENTS_MIN};" in twin
+    assert f"const HEARTY_KCAL = {guard.HEARTY_KCAL};" in twin
+    assert AR.NEVER_ADD.pattern in twin
+    for text in (guard.REFUSED_TEXT, guard.NO_FIT_TEXT, guard.PORTION_LOWERED_TEXT, guard.PORTIONS_LOWERED_TEXT, AR.NO_FIT_TEXT,
+                 AR.DROPPED_ALL_TEXT, AR.FOOD_SWAPPED_TEXT, AR.PORTION_LOWERED_TEXT, AR.PORTIONS_LOWERED_TEXT, AR.NOT_SENT_TEXT):
+        assert text.replace("'", "\\'") in twin + (ROOT / "app" / "static" / "js" / "mock" / "ai.js").read_text(encoding="utf-8"), text
+    for code, text in guard.REASON_TEXT.items():
+        assert f"{code}: '{text}'" in twin, code
+    for theme, text in guard.THEME_TITLE.items():
+        assert f"{theme}: '{text}'" in twin, theme
+    assert "`AI idea · ${label} · ${model} · checked against your targets · not medical advice`" in twin
+    assert guard.NOTICE == "AI idea · {label} · {model} · checked against your targets · not medical advice"
+
+
+def test_the_iphone_data_budget_fits_its_window() -> None:
+    """js/mock/ai.js cuts the iPhone model's data block to DATA_CHARS.iphone characters. With the longest rules and a reply of
+    about 1,000 tokens that stays inside the model's 4,096 tokens, counting 3 characters a token (JSON reads at fewer than prose)."""
+    from app.ai import prompts
+
+    mock = (ROOT / "app" / "static" / "js" / "mock" / "ai.js").read_text(encoding="utf-8")
+    m = re.search(r"const DATA_CHARS = \{ own: (\d+), iphone: (\d+) \};", mock)
+    assert m
+    iphone = int(m.group(2))
+    rules = max(len(prompts.system_prompt(None)), len(prompts.recipe_system_prompt(None)))
+    assert (rules + iphone + 400) / 3 + 1000 <= 4096
+    assert iphone <= 8000  # OnDeviceAI.swift maxTextChars

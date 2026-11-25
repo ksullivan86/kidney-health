@@ -128,6 +128,6 @@ def test_ai_prompts_json_is_the_servers_prompt(tmp_path) -> None:
 
 def test_the_device_ai_never_offers_more_than_its_tasks() -> None:
     mock = (ROOT / "app" / "static" / "js" / "mock" / "ai.js").read_text(encoding="utf-8")
-    tasks = set(re.findall(r"ask\('([a-z_]+)'", mock))
+    tasks = set(re.findall(r"ask\('([a-z_]+)'", mock)) | set(re.findall(r"onPhone\(api, '[a-z_]+', '([a-z_]+)'", mock))
     assert tasks == {"parse_meal", "read_lab_report_text", "next_meal", "recipes"}  # and photos through photoOnDevice (note 39 §6.6)
     assert "localStorage" not in mock and "indexedDB" not in mock  # nothing about a prompt or reply is kept
