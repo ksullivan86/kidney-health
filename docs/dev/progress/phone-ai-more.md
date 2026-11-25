@@ -1,4 +1,4 @@
-Status: in progress (full pytest run going; everything else done)
+Status: complete
 
 # phone-ai-more: more on the iPhone's own AI (owner, 2026-11-25)
 
@@ -38,6 +38,10 @@ server-only, reason below).
   server_services.mjs, ask_phone.test.mjs, test_ai_device_vectors, test_ios_app, test_phone_own_key, test_server_ask_phone;
   PhoneTests.swift (2 cases); tools/e2e/device_mode.py phone_ai_walk (114 passed in total).
 * Docs: note 39 §6.6 + status line, ARCHITECTURE Device mode, handbook app/install.md + app/ai.md, docs/privacy.md, CHANGELOG.
+
+## Full run (2026-11-25)
+All passed apart from two, both fixed and rerun: tests/data/README.md needed the key list for ai_meal_vectors.json, and
+test_ai_privacy_filter.py still expected the line from before the own key (phone-own-key a5f1bc4 added `&& !consent.own_key`).
 
 ## Commands
 node tests/js/phone_ai_more.mjs; node tests/js/own_key.mjs; node tests/js/device_mode.mjs; node tests/js/server_services.mjs

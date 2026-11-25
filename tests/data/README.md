@@ -104,10 +104,16 @@ AI meal ideas and AI recipes on the iPhone app, for the person's own AI key and 
 * Browser twin: `app/static/js/engine/aimeal.js` (used by `app/static/js/mock/ai.js`).
 * Made by `tests/data/gen_ai_meal_vectors.py`, from the inputs of `gen_guidance_vectors.py`.
 
-Top-level keys: `about`, `label` and `model` (the provider named in the judged answers), `foods` (as in `guidance_vectors.json`)
-and `cases`: `{id, input, call: {fn, ...}, output}`. `input` has the shape of a guidance case. `fn` is one of `condition_text`,
-`person_block`, `ai_candidates`, `ai_validate`, `ai_judge_ideas`, `ai_next_meal_data` (the data block and the fallback),
-`ai_recipe_candidates`, `ai_recipe_data` and `ai_judge_recipes`.
+Top-level keys:
+
+* `format`: the file's format number.
+* `about`: where the file comes from.
+* `label`: the provider named in the judged answers.
+* `model`: its model.
+* `foods`: the food rows, as in `guidance_vectors.json`.
+* `cases`: `{id, input, call: {fn, ...}, output}`. `input` has the shape of a guidance case. `fn` is one of `condition_text`,
+  `person_block`, `ai_candidates`, `ai_validate`, `ai_judge_ideas`, `ai_next_meal_data` (the data block and the fallback),
+  `ai_recipe_candidates`, `ai_recipe_data` and `ai_judge_recipes`.
 
 ## ai_device_vectors.json
 

@@ -404,5 +404,5 @@ def test_the_page_shows_the_filter_line_and_leaves_the_filtering_to_the_server()
     js = (Path(__file__).resolve().parent.parent / "app" / "static" / "js" / "views" / "ai.js").read_text(encoding="utf-8")
     assert "dry.privacy_filter ? h('div', { class: 'kv-row' }, h('dt', {}, 'Privacy filter'), h('dd', {}, dry.privacy_filter.text))" in js
     assert "f.privacy_filter ? h('div', { class: 'kv-row' }, h('dt', {}, 'Privacy filter'), h('dd', {}, f.privacy_filter.text))" in js
-    assert "!consent.local && !voice && !notice ? h('p', { class: 'hint ai-privacy-filter' }, PRIVACY_FILTER_TEXT)" in js
+    assert "!consent.local && !voice && !notice && !consent.own_key ? h('p', { class: 'hint ai-privacy-filter' }, PRIVACY_FILTER_TEXT)" in js
     assert "[PERSON_" not in js.replace("[PERSON_1]", "")  # no label logic in the page
