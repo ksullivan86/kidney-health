@@ -395,7 +395,7 @@ def own_key_walk(browser, base: str) -> None:
     page.get_by_role("button", name="Find foods").click()
     page.wait_for_selector("#sheet-ai-consent[open]", timeout=10000)
     sheet = page.locator("#sheet-ai-consent").inner_text()
-    check(f"[{tag}] the consent sheet names the provider and its host first", "this iPhone sends" in sheet and "api.openai.com" in sheet
+    check(f"[{tag}] the consent sheet names the provider and its host first", "this iPhone sends" in sheet and any(word == "api.openai.com" for word in re.split(r"[\s,;:()]+", sheet))
           and "privacy filter" not in sheet, sheet[:300])
     check(f"[{tag}] nothing was sent before agreeing", page.evaluate("window.__kh.own.length") == 0)
     page.locator("#sheet-ai-consent").get_by_role("button", name="Agree and send").click()
