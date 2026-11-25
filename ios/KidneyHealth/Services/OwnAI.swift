@@ -7,9 +7,10 @@
 // Rules, as on the server:
 // * The key is written once to the Keychain (this device only) and never shown again, never sent to the page, never logged.
 // * The page names a task and hands its data; the app builds the request from the server's own prompts and schemas
-//   (ai-prompts.json "own_key", written by scripts/build_preview.py --device from app/ai). Only three tasks exist: describe a
-//   meal, and, only while the person's photo switch is on, a label photo and a plate photo. There is no lab report task: lab
-//   reports, and anything showing the person's name or date of birth, go only to a local model.
+//   (ai-prompts.json "own_key", written by scripts/build_preview.py --device from app/ai). Only these tasks exist: describe a
+//   meal, meal ideas and AI recipes (note 39 §6.6), and, only while the person's photo switch is on, a label photo and a plate
+//   photo. There is no lab report task: lab reports, and anything showing the person's name or date of birth, go only to a local
+//   model.
 // * No cookies, no cache, no redirects, a size limit each way. Nothing about a prompt or a reply is kept.
 // * The model is never asked to dose. The page checks every answer with the server's checks before the person sees it.
 import Foundation
@@ -76,10 +77,15 @@ final class OwnAI: ObservableObject {
     static let shared = OwnAI()
 
     /// The tasks the page may ask for. Never a lab report task.
-    static let tasks: Set<String> = ["parse_meal", "read_label", "plate"]
+    static let tasks: Set<String> = ["parse_meal", "read_label", "plate", "next_meal", "recipes"]
     static let photoTasks: Set<String> = ["read_label", "plate"]
-    /// The page's data for describe a meal is about 400 characters (300 typed, cleaned and escaped as JSON).
-    static let maxText = 4_000
+    /// Meal ideas and recipes: the page names the person's condition (one of ai-prompts.json "conditions") and its candidate ids.
+    static let candidateTasks: Set<String> = ["next_meal", "recipes"]
+    static let candidateIds = "\"__CANDIDATE_IDS__\""
+    /// The page's data: about 400 characters to describe a meal (300 typed, cleaned and escaped as JSON); meal ideas and recipes
+    /// send their candidates, trimmed by the page to fit the provider's prompt (as the server's features._fits).
+    static let maxText = 60_000
+    static let maxIds = 60
     /// A photo as base64 (the page sends a JPEG of at most 1,600 pixels on the long side).
     static let maxPhoto = 6 * 1024 * 1024
     static let maxAnswer = 1_000_000
@@ -195,22 +201,63 @@ final class OwnAI: ObservableObject {
         } else {
             guard jpeg == nil, let text, !text.isEmpty, text.count <= Self.maxText else { return Self.problem("bad_request") }
         }
+        let condition = request["condition"] as? String
+        let ids = Self.wholeNumbers(request["ids"])
+        if Self.candidateTasks.contains(task) {
+            guard condition != nil, let ids, !ids.isEmpty, ids.count <= Self.maxIds else { return Self.problem("bad_request") }
+        } else {
+            guard request["condition"] == nil, request["ids"] == nil else { return Self.problem("bad_request") }
+        }
         guard let provider, ready else { return Self.problem("own_off") }
         guard !photo || photosOn else { return Self.problem("photos_off") }
-        guard let prompts = AIPrompts.load(), let body = Self.body(prompts, provider: provider, model: model, task: task, text: text, jpeg: jpeg) else {
+        guard let prompts = AIPrompts.load(), let body = Self.body(prompts, provider: provider, model: model, task: task, text: text, jpeg: jpeg,
+                                                                   condition: condition, ids: ids) else {
             return Self.problem("no_prompts")
         }
         return await send(provider, body: body)
     }
 
+    /// The page's candidate ids: whole numbers from 1 up, or nil.
+    static func wholeNumbers(_ value: Any?) -> [Int]? {
+        guard let list = value as? [Any] else { return nil }
+        var out: [Int] = []
+        for item in list {
+            guard let number = item as? NSNumber, CFGetTypeID(number) != CFBooleanGetTypeID(), number.doubleValue == number.doubleValue.rounded(),
+                  number.doubleValue >= 1, number.doubleValue < 9e15 else { return nil }
+            out.append(number.intValue)
+        }
+        return out
+    }
+
+    /// The schema with the page's candidate ids where the server puts its list (gen_own_key_prompts.py CANDIDATE_IDS).
+    static func withIds(_ node: Any, _ ids: [Int]) -> Any {
+        if let text = node as? String, "\"\(text)\"" == candidateIds { return ids }
+        if let dict = node as? [String: Any] { return dict.mapValues { withIds($0, ids) } }
+        if let list = node as? [Any] { return list.map { withIds($0, ids) } }
+        return node
+    }
+
     /// The Chat Completions body, as the server's client.build_body makes it for this provider.
-    static func body(_ prompts: AIPrompts, provider: OwnAIProvider, model: String, task: String, text: String?, jpeg: String?) -> [String: Any]? {
-        guard tasks.contains(task), let own = prompts.raw["own_key"] as? [String: Any], let system = own["system"] as? String,
+    static func body(_ prompts: AIPrompts, provider: OwnAIProvider, model: String, task: String, text: String?, jpeg: String?,
+                     condition: String? = nil, ids: [Int]? = nil) -> [String: Any]? {
+        guard tasks.contains(task), let own = prompts.raw["own_key"] as? [String: Any], let taskSystem = own["system"] as? String,
               let maxTokens = own["max_tokens"] as? Int, let entry = (own["tasks"] as? [String: Any])?[task] as? [String: Any],
-              let schema = entry["schema"] as? [String: Any], let name = entry["schema_name"] as? String,
+              var schema = entry["schema"] as? [String: Any], let name = entry["schema_name"] as? String,
               var message = entry[provider.schemaInRequest ? "json_schema" : "prompt"] as? String else { return nil }
         let photo = entry["image"] as? Bool == true
         guard photo == photoTasks.contains(task) else { return nil }
+        var system = taskSystem
+        if candidateTasks.contains(task) {
+            // The meal ideas or recipe rules with the person's condition (only a wording the server itself uses), and the ids.
+            guard entry["ids"] as? Bool == true, let ids, !ids.isEmpty,
+                  let condition, let rules = prompts.system(task: task, condition: condition),
+                  let marked = withIds(schema, ids) as? [String: Any] else { return nil }
+            system = rules
+            schema = marked
+            message = message.replacingOccurrences(of: candidateIds, with: "[" + ids.map(String.init).joined(separator: ",") + "]")
+        } else if condition != nil || ids != nil {
+            return nil
+        }
         if let text {
             guard !photo, message.contains("{text}") else { return nil }
             message = message.replacingOccurrences(of: "{text}", with: text)

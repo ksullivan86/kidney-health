@@ -5962,8 +5962,27 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
     has no name or birth field, and a request whose data holds the profile's name or birth month is not sent to the own key
     (`identityIn`): it goes to the iPhone's model or answers 503 `identity`. Lab text and lab photos never reach `viaOwnKey`.
     `GET /api/me/ai` → `phone.own_key` and `phone.where` (`server`, `own`, `iphone`); `phone.photos` adds `own_photos_off`.
-  * **Not on the own key**: Ask (its tools read the log on the server), meal ideas and recipes (their candidates and checks are
-    not in the page yet), lab reports, voice.
+  * **Not on the own key**: Ask (its tools read the log on the server), lab reports, voice.
+* **More on the phone's own AIs (design note 39 §6.6)**. Meal ideas (mode `ideas` only) and AI recipes (cooking steps off) run on
+  the own key and on the iPhone's model in the same order; on iOS 27 the iPhone's model also reads a label or plate photo, after
+  the own key.
+  * **Twins** (`js/engine/aimeal.js`, `KH.aiMeal`; vectors `tests/data/ai_meal_vectors.json` from `tests/data/gen_ai_meal_vectors.py`):
+    `candidates_for_ai` (ideas), `validate_ai_items`, `lower_to_fit`, `guard.judge_ideas`, `guard.fallback`,
+    `recipes.recipe_candidates`, `recipes.judge_recipes`, `prompts.next_meal_context`, `recipe_context`, `person_block`,
+    `condition_text`, and the V2 checks of `IdeasAnswer` and `RecipesAnswer`.
+  * **The page** (`js/mock/ai.js` `mealIdeasHere`, `recipesHere`): the server's route checks and guidance gate, the candidates,
+    trimmed lowest-ranked first until the data block fits (`DATA_CHARS`: 80,000 characters for the own key, 5,000 for the iPhone's
+    model), then the server's judge. Requests: `{kind: 'ownAI', task: 'next_meal' | 'recipes', text, condition, ids}` and
+    `{kind: 'ai', task, text, condition}`; `condition` is `prompts.condition_text` of the person block. Rerank, swap and plan answer
+    503 `not_on_phone`.
+  * **The app**: `ai-prompts.json` holds `systems` (the meal ideas and recipe rules with `[[CONDITION]]`), `conditions` (every
+    wording `condition_text` can give; anything else is refused) and per task `{template, system, image}`. `own_key` gets
+    `next_meal` and `recipes` with the schema holding `"__CANDIDATE_IDS__"` where the server puts its id list
+    (`scripts/gen_own_key_prompts.py`); `OwnAI.swift` puts the page's whole-number ids in the schema and in the schema line.
+    `OnDeviceAI.swift` answers with `@Generable` shapes of the server's schemas (the ids are plain whole numbers there; the judge
+    drops any that is not a candidate). Photos: `OnDeviceVision.swift`, compiled with `KH_ONDEVICE_IMAGES` only (the one guessed
+    iOS 27 call, probed by CI); `aiStatus` says `photos`.
+  * **Ask** stays the server's: free text checked by the server's chat checks, which have no twin here.
 * **Sync both ways (design note 39, steps 6 and 7)**: `js/mock/server_changes.js` (device mode only, `M.serverChanges`) reads the
   change feed and sends the phone's edits and deletes ("The change feed" above), through `M.serverApi.call` and the app's
   `serverApi` message (allow-list: `GET /push/v1/changes` with `after` and `limit`, `POST /push/v1/changes`, `POST /push/v1/match`).

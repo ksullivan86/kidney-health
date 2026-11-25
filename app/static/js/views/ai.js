@@ -1065,8 +1065,9 @@
     if (line) slot.append(line);
     slot.hidden = !btns.length && !line;
   }
-  // Why the iPhone app has no "Plate photo (AI)" now (js/mock/ai.js serverReason). Photos never go to the iPhone's own model.
-  const PHOTO_NEEDS = 'A photo of your meal or of a label needs your Kidney Health server\'s AI, or your own AI key with photos turned on.';
+  // Why the iPhone app has no "Plate photo (AI)" now (js/mock/ai.js serverReason). The iPhone's own model reads photos only on
+  // iOS 27 (note 39 §6.6); when it can, the button is there and this line is not shown.
+  const PHOTO_NEEDS = 'A photo of your meal or of a label needs your Kidney Health server\'s AI, your own AI key with photos turned on, or Apple\'s on-device AI on iOS 27.';
   const OWN_KEY_PLACE = 'Settings → This device → Apple Health and server → Keys and services';
   const PHOTO_NOT_HERE = {
     own_photos_off: `${PHOTO_NEEDS} To send photos to your own AI key, turn on "Also send meal and label photos to this AI" in ${OWN_KEY_PLACE}.`,
@@ -1138,9 +1139,10 @@
 
   // Device mode (the iPhone app with no server): Apple's on-device model, and one switch. Nothing is sent anywhere, so there is no
   // provider, key, consent or activity list; prompts and answers are not kept.
-  const DEVICE_TEXT = 'Describe a meal and reading the text of a lab report PDF use Apple\'s on-device model. It runs on this iPhone: '
-    + 'nothing you write or read is sent to any company or server, and the questions and answers are not kept. The app checks every '
-    + 'answer, and you check each line before anything is saved.';
+  const DEVICE_TEXT = 'Describe a meal, meal ideas, AI recipes and reading the text of a lab report PDF use Apple\'s on-device model. '
+    + 'On iOS 27 it also reads a photo of your plate or of a label. It runs on this iPhone: nothing you write, read or photograph is '
+    + 'sent to any company or server, and the questions and answers are not kept. Its window is small, so meal ideas and recipes '
+    + 'choose from fewer of your foods. The app checks every answer, and you check each line before anything is saved.';
   // Design note 39 §6.1: with a token both ways, the server's AI runs what it can; this iPhone's runs the rest. The person may
   // choose to use only this iPhone's AI.
   const WHERE_TEXT = { server: 'your server\'s AI', iphone: 'this iPhone\'s AI', own: 'your own key' };
@@ -1156,7 +1158,7 @@
     const k = p.own_key;
     return [subtitle('Your own AI key'),
       h('p', { id: 'set-ai-own-key' }, k
-        ? `Describing a meal${k.photos ? ', and photos of a meal or a label,' : ''} can use ${k.label} (${k.host}) with your own key`
+        ? `Describing a meal, meal ideas and AI recipes${k.photos ? ', and photos of a meal or a label,' : ''} can use ${k.label} (${k.host}) with your own key`
           + `${p.both_ways ? ' when your server\'s AI cannot' : ''}. Lab reports, and anything with your name or date of birth, are never sent to it.`
           + `${k.photos ? '' : ' Photos are not sent to it unless you turn that on.'} Ask needs your server.`
         : `You can add your own key from OpenAI, OpenRouter or Nous Portal in ${OWN_KEY_PLACE}. No server is needed.`)];

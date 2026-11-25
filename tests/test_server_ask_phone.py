@@ -129,7 +129,7 @@ def test_the_phone_never_shows_the_demo_text_and_says_why_ask_is_off():
     ai = (STATIC / "js" / "views" / "ai.js").read_text(encoding="utf-8")
     for reason in ("not_paired", "not_both_ways", "offline", "device_only", "not_synced", "not_opted_in", "server_off"):
         assert re.search(rf"\n    {reason}: `\$\{{PHOTO_NEEDS\}} ", ai), reason
-    assert "A photo of your meal or of a label needs your Kidney Health server\\'s AI, or your own AI key with photos turned on." in ai
+    assert "A photo of your meal or of a label needs your Kidney Health server\\'s AI, your own AI key with photos turned on, or Apple\\'s on-device AI on iOS 27." in ai
 
 
 def test_ask_on_the_phone_uses_only_the_servers_chat_route_and_never_trusts():
@@ -141,8 +141,10 @@ def test_ask_on_the_phone_uses_only_the_servers_chat_route_and_never_trusts():
     assert "features.voice = false;" in code
     # the server's low and emergency answers are passed on untouched
     assert "answer.kind === 'treat_low' || answer.kind === 'get_help_now') return answer;" in code
-    # photos only through the server's photo routes; the iPhone's model has no photo task
-    assert "photo" not in code[code.index("async function ask(task, text)"):code.index("function extraKeys")]
+    # the iPhone's model reads a plate or label photo only through photoOnDevice (iOS 27, note 39 §6.6), never a lab photo
+    assert "photo" not in code[code.index("async function ask(task, text"):code.index("function extraKeys")]
+    on_device = code[code.index("async function photoOnDevice"):code.index("// Ask (app/ai/routes.py chat)")]
+    assert re.search(r"\blab", on_device) is None
     from app.app_gateway import ALLOWED
     assert ("POST", "/api/ai/chat") in ALLOWED and ("POST", "/api/vision/plate") in ALLOWED
     assert ("POST", "/push/v1/api/ai/chat") in allow_list()

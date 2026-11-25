@@ -34,7 +34,7 @@ const on = () => ({ enabled: true, available: true, features: { chat: true, voic
   routes: { chat: { text: 'Runs on your local AI (ai.home.lan).' } }, phone: { ask: null } });
 
 const WORDS = {
-  not_paired: /Ask uses your Kidney Health server's AI\. Your own AI key and this iPhone's own AI help with describing a meal on the Add screen, but Ask needs the server, because it reads your log there\. If you have a Kidney Health server, connect this iPhone/,
+  not_paired: /Ask uses your Kidney Health server's AI\. Your own AI key and this iPhone's own AI help with describing a meal, meal ideas and recipes, but Ask needs the server, because it reads your log there and checks every answer\. If you have a Kidney Health server, connect this iPhone/,
   not_both_ways: /only sends your log/,
   offline: /could not be reached/,
   device_only: /only this iPhone's AI/,

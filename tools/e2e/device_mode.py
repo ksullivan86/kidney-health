@@ -251,7 +251,7 @@ def no_server_ask(page, base: str, tag: str) -> None:
     page.wait_for_selector("#ai-photo-where", timeout=10000)
     line = page.locator("#ai-photo-where").inner_text()
     check(f"[{tag}] Add says a photo of a meal needs the server's AI or an own key",
-          "A photo of your meal or of a label needs your Kidney Health server's AI, or your own AI key with photos turned on." in line, line)
+          "A photo of your meal or of a label needs your Kidney Health server's AI, your own AI key with photos turned on, or Apple's on-device AI on iOS 27." in line, line)
 
 
 # Design note 39: Ask on the phone. The change feed as in SYNC (empty), the server's AI status with Ask and photos, and its chat,
@@ -408,6 +408,71 @@ def own_key_walk(browser, base: str) -> None:
     page.wait_for_selector("#ask-demo:not([hidden])", timeout=10000)
     ask = page.locator("#ask-demo").inner_text()
     check(f"[{tag}] Ask says it needs a server, and what the own key does", "Ask needs the server" in ask and "Your own AI key" in ask, ask[:300])
+    over = page.evaluate("document.documentElement.scrollWidth > window.innerWidth + 1")
+    check(f"[{tag}] no sideways scroll", not over)
+    check(f"[{tag}] no request to another host", not others, "; ".join(others[:3]))
+    check(f"[{tag}] no console or page error", not errors, "; ".join(errors[:3]))
+    ctx.close()
+
+
+# More on the iPhone's own AI (the owner, 2026-11-25; design note 39 §6.6): no server, no own key, Apple's model on iOS 27 (photos
+# too). The stand-in model answers meal ideas with the first two candidates it was given.
+PHONE_AI = ("window.__kh = { copies: [], phone: [], ai: [] };"
+            "window.webkit = { messageHandlers: { safetyCopy: { postMessage: (t) => window.__kh.copies.push(String(t)) },"
+            " phone: { postMessage: (m) => window.__kh.phone.push(String(m)) },"
+            " bridge: { postMessage: async (r) => r.kind === 'services' ? { ok: true, off: false, usda: false, scan: false }"
+            " : r.kind === 'serverInfo' ? { ok: true, paired: false }"
+            " : r.kind === 'aiStatus' ? { ok: true, available: true, reason: null, photos: true }"
+            " : r.kind === 'ownAIStatus' ? { ok: true, set: false }"
+            " : r.kind === 'ai' ? (window.__kh.ai.push(r), r.task === 'next_meal' ? (() => { const c = JSON.parse(r.text).candidates;"
+            "   return { ok: true, answer: { ideas: [{ theme: 'light', items: [{ food_id: c[0].id, quarters: 2 }, { food_id: c[1].id, quarters: 2 }],"
+            "   reason_codes: ['low_sodium'], handbook: [] }], status: 'ok', refusal: 'none' } }; })()"
+            "   : { ok: true, answer: { status: 'ok', items: [] } })"
+            " : { error: 'not_paired' } } } };")
+
+
+def phone_ai_walk(browser, base: str) -> None:
+    """No server and no own key: Settings says meal ideas, recipes and photos run on this iPhone; Add offers AI meal ideas and a
+    plate photo; meal ideas come back checked, from a data block small enough for the iPhone's model."""
+    tag = "phone-ai"
+    ctx = browser.new_context(viewport={"width": 375, "height": 812}, color_scheme="light")
+    ctx.add_init_script(PHONE_AI)
+    page = ctx.new_page()
+    errors: list[str] = []
+    others: list[str] = []
+    page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.on("request", lambda r: others.append(r.url) if not r.url.startswith(base) else None)
+    page.goto(f"{base}/index.html#today")
+    page.wait_for_selector("#view-today:not([hidden])", timeout=30000)
+    page.wait_for_timeout(800)
+    page.evaluate("KH.request('PUT', '/api/device/setup', { done: true }).then(() => {"
+                  " Object.assign(KH.mock.instance._profile, { targets: { potassium_mg: { max: 3000 }, phosphorus_mg: { max: 1000 },"
+                  " sodium_mg: { max: 2000 }, carbs_per_meal_g: 60 } }); return KH.mock.local.flush(); })")
+    page.wait_for_timeout(300)
+    page.goto(f"{base}/index.html#settings")
+    page.reload()
+    page.wait_for_selector("#view-settings:not([hidden])", timeout=30000)
+    page.wait_for_selector("#set-ai-slot input[type=checkbox]", timeout=30000)
+    page.locator("#set-ai-slot input[type=checkbox]").first.check()
+    page.wait_for_selector("#set-ai-where", timeout=10000)
+    text = page.locator("#set-ai-slot").inner_text()
+    for feature in ("Meal ideas", "Recipes", "Photos (labels and plates)"):
+        check(f"[{tag}] Settings says {feature} runs on this iPhone", f"{feature}: this iPhone's AI" in text, text[:400])
+    page.goto(f"{base}/index.html#add")
+    page.wait_for_selector("#view-add:not([hidden])", timeout=30000)
+    page.get_by_role("button", name="Plate photo (AI)").wait_for(timeout=30000)
+    check(f"[{tag}] Add offers a plate photo with no line about where photos go", page.locator("#ai-photo-where").count() == 0)
+    page.get_by_role("button", name="AI meal ideas").click()
+    page.get_by_role("button", name="Ask AI for ideas").click()
+    page.wait_for_selector("#sheet-ai .ai-results h3, #sheet-ai .ai-results .card", timeout=10000)
+    sent = page.evaluate("window.__kh.ai")
+    last = sent[-1] if sent else {}
+    check(f"[{tag}] meal ideas went to this iPhone's model", last.get("task") == "next_meal" and len(last.get("text", "")) <= 5000,
+          json.dumps(last)[:200])
+    check(f"[{tag}] with the condition worded as the server does", str(last.get("condition", "")).startswith("chronic kidney disease"))
+    results = page.locator("#sheet-ai .ai-results").inner_text()
+    check(f"[{tag}] the idea is shown, checked by the app", "A light" in results and "Apple" in results, results[:300])
     over = page.evaluate("document.documentElement.scrollWidth > window.innerWidth + 1")
     check(f"[{tag}] no sideways scroll", not over)
     check(f"[{tag}] no request to another host", not others, "; ".join(others[:3]))
@@ -620,6 +685,7 @@ def main(argv: list[str] | None = None) -> int:
                 sync_walk(browser, base)
                 ask_walk(browser, base)
                 own_key_walk(browser, base)
+                phone_ai_walk(browser, base)
             finally:
                 browser.close()
     finally:

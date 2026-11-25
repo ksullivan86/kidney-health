@@ -108,7 +108,7 @@ def test_the_own_key_prompts_are_the_servers(tmp_path) -> None:
     own = json.loads((tmp_path / "ai-prompts.json").read_text(encoding="utf-8"))["own_key"]
     assert own["system"] == prompts.TASK_SYSTEM_PROMPT and own["prompt_version"] == prompts.PROMPT_VERSION
     assert own["max_tokens"] == config.DEFAULT_MAX_TOKENS
-    assert set(own["tasks"]) == {"parse_meal", "read_label", "plate"}  # never a lab report task
+    assert set(own["tasks"]) == {"parse_meal", "read_label", "plate", "next_meal", "recipes"}  # never a lab report task
     data = prompts.parse_meal_data("2 eggs & <toast>")
     payload = prompts.data_block(data)[len("<data>\n"):-len("\n</data>")]
     for mode in ("json_schema", "prompt"):
@@ -121,10 +121,24 @@ def test_the_own_key_prompts_are_the_servers(tmp_path) -> None:
             assert t["schema"] == schema and t["schema_name"] == schema_name and t["image"] is True
             assert t[mode] == prompts.user_message(key, None, mode=mode, schema=schema) and "{text}" not in t[mode]
     assert "Never give, calculate or adjust insulin doses" in own["system"]
+    # meal ideas and recipes (note 39 §6.6): the server's schema with the page's ids put in, and its message with them in the schema line
+    ids = [3, 17, 102]
+    for name, key, schema, schema_name, system in (
+            ("next_meal", "ideas", schemas.ideas_schema(ids, prompts.AI_HANDBOOK_SLUGS), "kidney_ideas", "meal"),
+            ("recipes", "recipes_suggest", schemas.recipes_schema(ids, steps=False), "kidney_recipes", "recipe")):
+        t = own["tasks"][name]
+        assert t["schema_name"] == schema_name and t["image"] is False and t["ids"] is True and t["system"] == system
+        filled = json.loads(json.dumps(t["schema"]).replace('"__CANDIDATE_IDS__"', json.dumps(ids)))
+        assert filled == schema
+        data = {"candidates": [], "meal": "lunch"}
+        payload = prompts.data_block(data)[len("<data>\n"):-len("\n</data>")]
+        for mode in ("json_schema", "prompt"):
+            message = t[mode].replace('"__CANDIDATE_IDS__"', "[" + ",".join(map(str, ids)) + "]").replace("{text}", payload)
+            assert message == prompts.user_message(key, data, mode=mode, schema=schema), (name, mode)
 
 
 def test_the_app_talks_only_to_the_fixed_hosts_with_the_keychain_key_and_logs_nothing() -> None:
-    assert 'static let tasks: Set<String> = ["parse_meal", "read_label", "plate"]' in CODE
+    assert 'static let tasks: Set<String> = ["parse_meal", "read_label", "plate", "next_meal", "recipes"]' in CODE
     assert 'static let photoTasks: Set<String> = ["read_label", "plate"]' in CODE
     for word in ("lab_report", "read_lab_", "lab report", "transcri", "chat"):
         assert word not in CODE.lower().replace("/chat/completions", ""), word  # no lab task, no Ask, no voice

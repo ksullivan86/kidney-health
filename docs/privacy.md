@@ -276,9 +276,12 @@ leave the server.
   stops at once ([push.md](push.md#the-iphone-app-both-ways)).
 * **Your own AI key on the iPhone app**, if you add one in Keys and services (no server needed). The app then sends the AI company
   you chose (OpenAI, OpenRouter or Nous Portal) only what the feature needs: the words of a meal you describe, cleaned as the
-  server cleans them, and, only if you turn photos on, the photo of a meal or a label, redrawn without location data. It never
-  sends a lab report, your name, your date of birth, your profile, targets or log. A description that holds your name or birth
-  month is not sent. The key stays in the iPhone's Keychain, the server never sees it, and nothing about the request or the answer
+  server cleans them, and, only if you turn photos on, the photo of a meal or a label, redrawn without location data. For meal
+  ideas and AI recipes it sends what your server would send its AI: the foods the app's rules chose (names and amounts), your
+  targets, today's totals, the week's average, your kidney stage, dialysis and diabetes type, your AI preferences and the foods you
+  marked, and your age band and sex only if you agreed to share them. It never sends a lab report, your name or your date of birth.
+  A request that holds your name or birth month is not sent. Apple's AI on the iPhone gets the same for these features and, on
+  iOS 27, a photo of a meal or a label; it runs on the phone and sends nothing. The key stays in the iPhone's Keychain, the server never sees it, and nothing about the request or the answer
   is kept. The company receives what is sent, under its own terms.
 * **Admins** manage accounts but have no screen or API that shows another person's log, foods or
   profile. However:

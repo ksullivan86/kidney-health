@@ -98,6 +98,12 @@ The iPhone app works with no server, and with your own server both ways (design 
   reports, and anything with your name or date of birth, are never sent to it. The app runs your server's own checks before
   and after every request, and a low, an emergency or a dose question gets the app's own card without asking the AI. Ask still
   needs your server. **Settings → AI features** says which AI each feature uses.
+* In the iPhone app, AI meal ideas and AI recipes work with your own AI key and with Apple's AI on the phone, when your server's AI
+  is not there (design note 39 §6.6). They use the same foods, targets and checks as your server. Apple's AI on the phone is small,
+  so it chooses from fewer of your foods. AI order, AI swaps and AI day plans still need your server, and recipes on the phone
+  never include cooking steps written by AI. On iOS 27, Apple's AI on the phone can also read a photo of your plate or of a label;
+  the photo stays on the phone. As before, you tick each food and choose Eaten or Planned. Ask still needs your server: it reads
+  your log there and checks every answer.
 
 ### Fixed
 

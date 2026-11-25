@@ -257,7 +257,7 @@ const ok = (fn, label) => { checks += 1; try { fn(); } catch (e) { e.message = `
   ok(() => assert.equal(me.settings.opt_in, true), 'turned on');
   st = await api.request('GET', '/api/ai/status');
   ok(() => deep([st.available, st.features.parse_meal, st.features.lab_report_text, st.features.next_meal, st.features.chat],
-    [true, true, true, false, false]), 'only the two on-device features');
+    [true, true, true, true, false]), 'the on-device features: describe, lab text, meal ideas (note 39 §6.6); never Ask');
   ok(() => assert.equal(st.provider.label, 'Apple\'s on-device model'), 'the provider is the on-device model');
   ok(() => assert.equal(st.routes.describe.consent.skip_preview, true), 'no consent sheet: nothing leaves the phone');
 

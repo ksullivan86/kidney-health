@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Decided 2026-11-24 (§12), with the usual good practice the owner asked for. The plan is §11. Built, server side: step 2 (the gateway, `app:sync`, `GET /push/v1/about`; `app/app_gateway.py`) and step 5 (the change feed, schema step 38; `app/sync_feed.py`). Built on the phone: step 1, the phone side of steps 3 and 4 (the `serverApi` bridge and its allow-list, ARCHITECTURE "Device mode"), and steps 6 and 7 (receive, the first sync's review, the account check, edits and deletes with conflict cards; `js/mock/server_changes.js`). Step 8 is built on both sides: saved meals and recipes sync both ways; the profile, targets, account settings and food preferences come from the server and are changed through it (`js/mock/server_account.js`); the "N to review" badge and the "needs review" mark on Today. Step 9 is built on both sides: recipe pages, Instacart and the list app through the gateway. The demo's twins of step 5's versions, `If-Match` and `client_id` are built and pinned by vectors. Ask is on the phone now that sync works both ways: it uses the server's AI while the phone syncs both ways, always asks before it saves, and saves on the phone (ARCHITECTURE "Device mode"). Its voice stays off. 2026-11-25: the person's own AI key works on the phone, with or without a server (§6.5). |
+| Status | Decided 2026-11-24 (§12), with the usual good practice the owner asked for. The plan is §11. Built, server side: step 2 (the gateway, `app:sync`, `GET /push/v1/about`; `app/app_gateway.py`) and step 5 (the change feed, schema step 38; `app/sync_feed.py`). Built on the phone: step 1, the phone side of steps 3 and 4 (the `serverApi` bridge and its allow-list, ARCHITECTURE "Device mode"), and steps 6 and 7 (receive, the first sync's review, the account check, edits and deletes with conflict cards; `js/mock/server_changes.js`). Step 8 is built on both sides: saved meals and recipes sync both ways; the profile, targets, account settings and food preferences come from the server and are changed through it (`js/mock/server_account.js`); the "N to review" badge and the "needs review" mark on Today. Step 9 is built on both sides: recipe pages, Instacart and the list app through the gateway. The demo's twins of step 5's versions, `If-Match` and `client_id` are built and pinned by vectors. Ask is on the phone now that sync works both ways: it uses the server's AI while the phone syncs both ways, always asks before it saves, and saves on the phone (ARCHITECTURE "Device mode"). Its voice stays off. 2026-11-25: the person's own AI key works on the phone, with or without a server (§6.5); meal ideas, recipes and, on iOS 27, meal and label photos work on the phone's own AIs (§6.6). |
 | Owner's words | "Connecting a server should let the iPhone app use the server's AI and the other keys and services set up there, and sync between devices." (2026-11-21) And: "finish whatever is left on the roadmap." (2026-11-24) |
 | Builds on | [Note 38](38-iphone-app-without-a-server.md) (the app alone, device mode, step 4's one-way sending, §5.5 and §5.6, D2), [note 02](02-ios-pwa.md) R5 (the outbox, entry versions, "never overwrite another device's change"), [note 12](12-phone-push-tokens.md) (device tokens, `/push/v1`), [note 32](32-choose-local-or-cloud-ai.md) and [note 36](36-lab-pdf-text.md) (AI routing, lab text on the local model only). |
 | Scope | What the iPhone app can do once it is paired with the person's server: read and edit the person's data there, use the server's AI, use the server's food services and keys, and keep the phone and the server in step both ways. This is note 38 §9 step 6. |
@@ -195,8 +195,7 @@ Decided and built:
   A safety answer and a checked answer are shown as they are.
 * **Features**: describe a meal; label and plate photos only with the photo switch on. Never lab text or lab photos, never a
   request whose data holds the profile's name or birth month, never voice. **Ask stays server-only**: its tools read the log on
-  the server, and the Ask tab says so. Meal ideas and AI recipes are not on the own key yet: their candidates and checks
-  (`app/guidance/ai_bridge.py`, `app/ai/guard.py`, `app/ai/recipes.py`) have no page twin.
+  the server, and the Ask tab says so. Meal ideas and AI recipes came later (§6.6).
 * **Same prompts and checks as the server**: the app builds the request from `ai-prompts.json` `own_key` (the server's messages and
   schemas, `response_format` json_schema where the preset enforces it), the page runs the server's prefilter before asking and its
   judges on every answer (`js/engine/aijudge.js`, vectors), and shows the server's consent sheet before the first call.
@@ -204,6 +203,35 @@ Decided and built:
   cache, no redirects and size limits each way, and keeps and logs nothing.
 * The phone has no twin of the server's privacy filter. It sends only what the feature needs, and refuses to send the person's
   name or birth month (ARCHITECTURE "Device mode").
+
+### 6.6 2026-11-25: more on the phone's own AIs
+
+The owner asked for meal ideas, recipes and a simple Ask on the iPhone's own AI too, and: "can the apple Ai take a photo of a meal
+and add it to the log or plan?"
+
+Built:
+
+* **Plate and label photos on the iPhone's model**, iOS 27 only. The app gives the model the JPEG the page made, the server's task
+  rules and message, and the answer shapes of `PlateAnswer` and `LabelAnswer`; the page runs the server's plate and label checks.
+  Order: the server's AI, the own key (with its photo switch on), the iPhone's model, no AI. The photo never leaves the phone.
+  Apple's image input was written without an SDK at hand: it assumes a `CGImage` can sit in a `Prompt` beside the text. That one
+  call compiles only with the Swift flag `KH_ONDEVICE_IMAGES`. CI builds once with it and, if that fails, builds without it, so a
+  wrong guess only removes the feature (`OnDeviceVision.swift`). The project turns the flag on once CI shows it compiles.
+* **Log or plan**: the plate photo flow already ends with the person ticking each food and choosing Eaten or Planned for the day on
+  screen. Planned puts the foods in that day's plan. It does not make a saved meal, on the server or on the phone.
+* **Meal ideas and AI recipes** on the own key and on the iPhone's model, same order. The page builds the server's data block from
+  twins of the server's candidate lists and checks (`js/engine/aimeal.js`, vectors made from the server's code), and the app adds
+  the server's rules with the person's condition in the server's own words (one of a fixed list). The own key also gets the
+  candidate ids in the answer's schema, as the server sends them. The iPhone's model has a window of about 4,096 tokens, so its data
+  block is cut to 5,000 characters by dropping the lowest-ranked candidates, as the server trims for its own budget; that leaves
+  about eight foods. Only mode "ideas": AI order, AI swaps and AI day plans stay the server's. Recipes never carry cooking steps
+  from AI on the phone (the server's default too).
+* **Ask stays the server's.** Its answers are free text. The server reads the log with its own tools, checks every answer for dose
+  talk and numbers, and turns saves into cards; none of that has a twin on the phone. A reduced Ask on a small model would write
+  about a person's numbers with none of those checks, so it was not built. The Ask tab says so.
+
+Rules kept: no dosing task; lab text and photos only to a local model; nothing with the person's name or birth month to the own key;
+nothing kept.
 
 ## 7. The server's keys and food services from the phone
 

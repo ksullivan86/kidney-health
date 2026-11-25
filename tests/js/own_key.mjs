@@ -105,7 +105,7 @@ const P1 = await page({ provider: () => ({ content: meal([item('2 eggs', 'egg', 
   ok(() => assert.equal(sent('serverApi').length, 0), 'no server was asked anything');
   const st = await api.request('GET', '/api/ai/status');
   ok(() => assert.deepEqual([st.features.parse_meal, st.features.label, st.features.plate, st.features.lab_report_text, st.features.chat, st.features.next_meal],
-    [true, false, false, false, false, false]), 'only describe a meal');
+    [true, false, false, false, false, true]), 'describe a meal and meal ideas (note 39 §6.6); no photos, labs or Ask');
   ok(() => assert.equal(st.routes.describe.runs_on.host, 'api.openai.com'));
   // the consent sheet first, naming the provider and its host
   await fails(parse(api, '2 eggs'), 409, (e) => e.extra.consent_required === true && e.extra.consent.host === 'api.openai.com'
