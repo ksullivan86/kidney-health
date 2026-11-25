@@ -2,11 +2,12 @@
 // a meal and add it to the log or plan?"; design note 39 §6.6). The photo is the JPEG the page made (no location data), the same
 // one the server's photo routes take. It never leaves the phone and is not kept.
 //
-// THE ONE GUESSED API. Image input to Foundation Models is new in iOS 27 and this code was written without an SDK to compile
-// against. It assumes the most commonly reported form: a CGImage is a PromptRepresentable, so it can sit in a Prompt beside the
-// text, and session.respond(to: Prompt, generating:) reads both:
+// THE IMAGE API. Image input to Foundation Models is new in iOS 27. A plain CGImage is not a prompt part (the first try, on
+// 2026-11-25, failed with "Only Prompt and PromptRepresentable are supported"). The iOS 27.2 SDK's FoundationModels interface,
+// printed by the CI probe, declares `struct Attachment<Content>: PromptRepresentable` with
+// `init(_ cgImage: CGImage, orientation:)` where Content == ImageAttachmentContent, so the photo goes in as an Attachment:
 //
-//     let prompt = Prompt { message; image }
+//     let prompt = Prompt { message; Attachment(image) }
 //     try await session.respond(to: prompt, generating: PlateReply.self)
 //
 // So that a wrong guess can only remove this feature and never break the build, the guessed lines compile only with the Swift
@@ -55,7 +56,7 @@ enum OnDeviceVision {
         if #available(iOS 27.0, *) {
             let prompt = Prompt {
                 message
-                picture
+                FoundationModels.Attachment(picture)  // the iOS 27 SDK's Attachment<ImageAttachmentContent>, a PromptRepresentable
             }
             switch task {
             case "plate":
