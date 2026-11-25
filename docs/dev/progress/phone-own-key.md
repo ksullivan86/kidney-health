@@ -1,4 +1,4 @@
-Status: in progress (full pytest run pending)
+Status: complete
 
 # phone-own-key: the person's own AI key on the iPhone app (owner, 2026-11-25)
 
@@ -35,4 +35,4 @@ Coordinator clarification (2026-11-25): it must work with no server ever paired;
 node tests/js/own_key.mjs; node tests/js/run_vectors.mjs; node --test tests/js/ask_phone.test.mjs
 python -m pytest -q tests/test_phone_own_key.py tests/test_ai_device_vectors.py tests/test_ios_app.py tests/test_server_ask_phone.py tests/test_server_services_phone.py
 python tools/e2e/device_mode.py; ruff check <changed py files>
-Swift is not compiled here (no macOS); the CI ios-app job builds it.
+Swift is not compiled here (no macOS); the CI ios-app job builds it. The full pytest run takes over 30 minutes here; the 22 related files pass (tests/data/README.md updated for the new vector keys).

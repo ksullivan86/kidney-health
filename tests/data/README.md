@@ -120,6 +120,10 @@ Top-level keys:
 * `numbers_in_cases`: `{text: string, numbers: [number]}`, sorted.
 * `lab_judge_cases`: `{answer: LabReportAnswer, output: object}`.
 * `lab_text_cases`: `{answer: LabReportAnswer, text: string, output: object}`.
+* `extract_json_cases`: `{text: string, output: object | null}`: `app/ai/client.py` `extract_json` on a model's text (null when
+  it finds no JSON object). For the person's own AI key (design note 39 §6.5).
+* `label_cases`: `{answer: LabelAnswer, output: object}`: `features.label_draft`.
+* `plate_cases`: `{answer: PlateAnswer, output: object}`: the plate judge of `features.prepare_plate`, with the fixed search.
 
 What a replayer must get right:
 
