@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Decided 2026-11-24 (§12), with the usual good practice the owner asked for. The plan is §11. Built, server side: step 2 (the gateway, `app:sync`, `GET /push/v1/about`; `app/app_gateway.py`) and step 5 (the change feed, schema step 38; `app/sync_feed.py`). Built on the phone: step 1, the phone side of steps 3 and 4 (the `serverApi` bridge and its allow-list, ARCHITECTURE "Device mode"), and steps 6 and 7 (receive, the first sync's review, the account check, edits and deletes with conflict cards; `js/mock/server_changes.js`). Step 8 is built on both sides: saved meals and recipes sync both ways; the profile, targets, account settings and food preferences come from the server and are changed through it (`js/mock/server_account.js`); the "N to review" badge and the "needs review" mark on Today. Step 9 is built on both sides: recipe pages, Instacart and the list app through the gateway. The demo's twins of step 5's versions, `If-Match` and `client_id` are built and pinned by vectors. Ask is on the phone now that sync works both ways: it uses the server's AI while the phone syncs both ways, always asks before it saves, and saves on the phone (ARCHITECTURE "Device mode"). Its voice stays off. |
+| Status | Decided 2026-11-24 (§12), with the usual good practice the owner asked for. The plan is §11. Built, server side: step 2 (the gateway, `app:sync`, `GET /push/v1/about`; `app/app_gateway.py`) and step 5 (the change feed, schema step 38; `app/sync_feed.py`). Built on the phone: step 1, the phone side of steps 3 and 4 (the `serverApi` bridge and its allow-list, ARCHITECTURE "Device mode"), and steps 6 and 7 (receive, the first sync's review, the account check, edits and deletes with conflict cards; `js/mock/server_changes.js`). Step 8 is built on both sides: saved meals and recipes sync both ways; the profile, targets, account settings and food preferences come from the server and are changed through it (`js/mock/server_account.js`); the "N to review" badge and the "needs review" mark on Today. Step 9 is built on both sides: recipe pages, Instacart and the list app through the gateway. The demo's twins of step 5's versions, `If-Match` and `client_id` are built and pinned by vectors. Ask is on the phone now that sync works both ways: it uses the server's AI while the phone syncs both ways, always asks before it saves, and saves on the phone (ARCHITECTURE "Device mode"). Its voice stays off. 2026-11-25: the person's own AI key works on the phone, with or without a server (§6.5). |
 | Owner's words | "Connecting a server should let the iPhone app use the server's AI and the other keys and services set up there, and sync between devices." (2026-11-21) And: "finish whatever is left on the roadmap." (2026-11-24) |
 | Builds on | [Note 38](38-iphone-app-without-a-server.md) (the app alone, device mode, step 4's one-way sending, §5.5 and §5.6, D2), [note 02](02-ios-pwa.md) R5 (the outbox, entry versions, "never overwrite another device's change"), [note 12](12-phone-push-tokens.md) (device tokens, `/push/v1`), [note 32](32-choose-local-or-cloud-ai.md) and [note 36](36-lab-pdf-text.md) (AI routing, lab text on the local model only). |
 | Scope | What the iPhone app can do once it is paired with the person's server: read and edit the person's data there, use the server's AI, use the server's food services and keys, and keep the phone and the server in step both ways. This is note 38 §9 step 6. |
@@ -175,6 +175,35 @@ always asks the server for `trust: "ask"`, so the server saves nothing and answe
 phone, with the card's `client_id`, and sync sends it to the server once. One source of truth, and no row is made twice. When Ask
 or a plate photo cannot run, the screen says why (not paired both ways, offline, only this iPhone's AI, not in step, or off on
 the server). Photos go only to the server's photo routes, never to the iPhone's own model.
+
+### 6.5 2026-11-25: the person's own key on the phone
+
+The owner's words: "if its not connected to the server it it should be able to use their own keys", and "what if I dont want to
+setup with a server I should be able to use my own AI keys". This changes note 38's "the phone never calls a cloud AI" and §6.1's
+"the phone adds no new path to a cloud AI", for a key the person adds themselves. These rules of the owner's still hold and are
+absolute: "Lab reports, and anything showing my name or date of birth, go to the local model only. Never to the cloud, never as a
+fallback." "Don't store prompts or replies anywhere." "Never give the AI an insulin or medicine dosing task." Meal and label photos
+had been "stay local", so photos go to the person's own key only behind a separate switch, off by default.
+
+Decided and built:
+
+* **Providers**: only the server's presets a person may use with their own key (`app/ai/presets.py`, `user_allowed`): OpenAI,
+  OpenRouter and Nous Portal, each with its one fixed HTTPS host. All three take the OpenAI Chat Completions format. A custom
+  address is not offered on the phone.
+* **The order** per feature: the server's AI (§6.1, unchanged) → the own key → the iPhone's own model → no AI. It works with no
+  server ever paired. "Use only this iPhone's AI" skips the own key too. Only an unreachable or failing provider moves on.
+  A safety answer and a checked answer are shown as they are.
+* **Features**: describe a meal; label and plate photos only with the photo switch on. Never lab text or lab photos, never a
+  request whose data holds the profile's name or birth month, never voice. **Ask stays server-only**: its tools read the log on
+  the server, and the Ask tab says so. Meal ideas and AI recipes are not on the own key yet: their candidates and checks
+  (`app/guidance/ai_bridge.py`, `app/ai/guard.py`, `app/ai/recipes.py`) have no page twin.
+* **Same prompts and checks as the server**: the app builds the request from `ai-prompts.json` `own_key` (the server's messages and
+  schemas, `response_format` json_schema where the preset enforces it), the page runs the server's prefilter before asking and its
+  judges on every answer (`js/engine/aijudge.js`, vectors), and shows the server's consent sheet before the first call.
+* **The app** keeps the key in the Keychain (this device only), sends it only in a header to the fixed host, with no cookies, no
+  cache, no redirects and size limits each way, and keeps and logs nothing.
+* The phone has no twin of the server's privacy filter. It sends only what the feature needs, and refuses to send the person's
+  name or birth month (ARCHITECTURE "Device mode").
 
 ## 7. The server's keys and food services from the phone
 

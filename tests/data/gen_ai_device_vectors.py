@@ -14,7 +14,9 @@ server's own code and replayed by ``node tests/js/run_vectors.mjs``:
 * ``payload_cases``: the escaped JSON of the data block ``prompts.user_message`` builds for ``parse_meal`` (``prompts.clean``)
   and ``lab_report_text`` (``features.lab_text_lines``), and the whole message;
 * ``parse_meal_cases``: the describe-a-meal judge of ``features.prepare_parse_meal``, with a fixed food search;
-* ``printed_date_cases``, ``numbers_in_cases``, ``lab_judge_cases`` and ``lab_text_cases``: ``app/ai/lab_report.py``.
+* ``printed_date_cases``, ``numbers_in_cases``, ``lab_judge_cases`` and ``lab_text_cases``: ``app/ai/lab_report.py``;
+* ``extract_json_cases``, ``label_cases`` and ``plate_cases`` (the person's own AI key, design note 39 §6.5): ``client.extract_json``,
+  ``features.label_draft`` and the plate judge of ``features.prepare_plate``.
 
 No date in a case is near today, so the cases do not depend on the day they are replayed. Deterministic (seeded); no network.
 """
@@ -245,6 +247,82 @@ def lab_cases() -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
     return judged, texted
 
 
+# The person's own AI key (design note 39 §6.5): a company's model answers as text, so the page reads the JSON out of it
+# (client.extract_json) and checks label and plate photos (features.label_draft, prepare_plate's judge).
+EXTRACT_TEXTS = [
+    '{"status":"ok","items":[]}', '  {"a": 1}  ', "﻿{\"a\": 1}", '```json\n{"a": {"b": "}"}}\n```', '```\n{"a": 2}```',
+    'Here you go: {"a": "x\\"}"} and more {"b": 1}', '{"a": 1', '{bad} {"ok": true}', "", "   ", "no json here", "```", "[1, 2]",
+    '{"a": "\\u00e9"}', 'text {"nested": {"deep": [1, {"x": 2}]}} tail', '{"a": 1}}', '}{"a": 3}',
+]
+
+
+def extract_json_cases() -> list[dict[str, Any]]:
+    from app.ai import client
+
+    out = []
+    for text in EXTRACT_TEXTS:
+        try:
+            value = client.extract_json(text)
+        except client.JsonNotFound:
+            value = None
+        out.append({"text": text, "output": value})
+    return out
+
+
+def _label(**over: Any) -> dict[str, Any]:
+    base = {"status": "ok", "product_name": "Crackers", "serving_text": "5 crackers (30 g)", "serving_g": 30.0, "basis": "per_serving",
+            "per_serving": {k: None for k in schemas.LABEL_NUTRIENTS}, "salt_g": None,
+            "percent_dv": {k: None for k in schemas.PERCENT_DV_KEYS}, "ingredients_text": None, "label_style": "us_nutrition_facts"}
+    for key, value in over.items():
+        if key in ("per_serving", "percent_dv"):
+            base[key] = {**base[key], **value}
+        else:
+            base[key] = value
+    return base
+
+
+def label_cases() -> list[dict[str, Any]]:
+    answers = [
+        _label(per_serving={"calories_kcal": 130, "fat_g": 4.5, "carbs_g": 21, "protein_g": 2, "sodium_mg": 210, "potassium_mg": 35}),
+        _label(per_serving={"calories_kcal": 500, "fat_g": 4.5, "carbs_g": 21, "protein_g": 2, "fiber_g": 1}),
+        _label(basis="per_100g", serving_g=45.0, per_serving={"calories_kcal": 450, "sodium_mg": None, "phosphorus_mg": 120.05},
+               salt_g=1.25),
+        _label(basis="per_100ml", serving_g=None, serving_text=None, per_serving={"calories_kcal": 42, "carbs_g": 10.6}, salt_g=0.1),
+        _label(percent_dv={"sodium": 10, "potassium": 4, "phosphorus": 8, "calcium": 2.5}),
+        _label(per_serving={"sodium_mg": 12000, "potassium_mg": 7000, "fat_g": 20, "carbs_g": 20, "protein_g": 1}),
+        _label(product_name="  Cola​  ", ingredients_text="Carbonated water, sugar, phosphoric acid, caramel color,\n\n"
+               "natural flavors, potassium benzoate", per_serving={"calories_kcal": 140, "carbs_g": 39, "sodium_mg": 45}),
+        _label(product_name=None, serving_g=None, serving_text=None, per_serving={"calories_kcal": 90}),
+        _label(product_name="Lo Salt", ingredients_text="Potassium chloride, sodium chloride"),
+        {**_label(), "status": "not_a_label"},
+        {**_label(), "status": "unreadable"},
+        _label(serving_g=28.35, serving_text=None, per_serving={"calories_kcal": 160, "fat_g": 10, "carbs_g": 15, "protein_g": 2}),
+    ]
+    return [{"answer": a, "output": features.label_draft(schemas.LabelAnswer.model_validate(a))} for a in answers]
+
+
+def plate_cases() -> list[dict[str, Any]]:
+    def item(name: str, term: str, grams: Any, confidence: str) -> dict[str, Any]:
+        return {"name": name, "search": term, "grams_estimate": grams, "confidence": confidence}
+
+    answers = [
+        {"status": "ok", "items": [item("Boiled eggs", "egg", 100, "high"), item("White rice", "rice", 150.5, "medium"),
+                                   item("Butter", "butter", None, "low"), item("Toast", "toast", 0, "medium")]},
+        {"status": "ok", "items": [item("insulin pen", "pen", 10, "high"), item("rice", "www.rice.com", 50, "high"),
+                                   item("Chicken", "chicken", 2.5, "high"), item("Milk", "milk", 3.5, "low")]},
+        {"status": "no_food", "items": []},
+        {"status": "unsure", "items": [item("rice", "rice", 100, "low")]},
+        {"status": "ok", "items": []},
+    ]
+    real = features.build_body
+    features.build_body = lambda *args, **kwargs: {}  # the request body is not what these cases check
+    try:
+        prep = features.prepare_plate(SimpleNamespace(structured="json_schema"), SimpleNamespace(data=b""), search=search)  # type: ignore[arg-type]
+    finally:
+        features.build_body = real
+    return [{"answer": a, "output": prep.judge(schemas.PlateAnswer.model_validate(a))} for a in answers]
+
+
 def build() -> dict[str, Any]:
     rng = random.Random(SEED)
     sq, sf = serving_cases(rng)
@@ -266,6 +344,9 @@ def build() -> dict[str, Any]:
         "numbers_in_cases": numbers_in_cases(rng),
         "lab_judge_cases": judged,
         "lab_text_cases": texted,
+        "extract_json_cases": extract_json_cases(),
+        "label_cases": label_cases(),
+        "plate_cases": plate_cases(),
     }
 
 

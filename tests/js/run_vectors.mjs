@@ -1356,10 +1356,23 @@ function aiDeviceVectors() {
     expect(`lab judge ${JSON.stringify(c.answer)}`, L.judge(checked.answer), c.output);
   }
   for (const c of doc.lab_text_cases) expect(`lab judge_text ${JSON.stringify(c.text)}`, L.judgeText(c.answer, c.text), c.output);
+  // The person's own AI key (design note 39 §6.5).
+  for (const c of doc.extract_json_cases) expect(`extract_json ${JSON.stringify(c.text)}`, J.extractJson(c.text), c.output);
+  for (const c of doc.label_cases) {
+    const checked = J.checkLabel(c.answer);
+    expect(`label answer fits ${JSON.stringify(c.answer)}`, checked.ok, true);
+    expect(`label draft ${JSON.stringify(c.answer)}`, J.labelDraft(checked.answer), c.output);
+  }
+  for (const c of doc.plate_cases) {
+    const checked = J.checkPlate(c.answer);
+    expect(`plate answer fits ${JSON.stringify(c.answer)}`, checked.ok && checked.malformed.length === 0, true);
+    expect(`plate judge ${JSON.stringify(c.answer)}`, J.judgePlate(checked.answer, search, checked.malformed), c.output);
+  }
   const n = (k) => doc[k].length;
   return [checks, failures, `${n('prefilter_cases')} prefilter, ${n('name_policy_cases')} name policy, ${n('serving_quantity_cases')} serving quantity, `
     + `${n('servings_for_cases')} servings, ${n('payload_cases')} payload, ${n('parse_meal_cases')} parse-meal, ${n('printed_date_cases')} date, `
-    + `${n('numbers_in_cases')} number, ${n('lab_judge_cases')} lab judge and ${n('lab_text_cases')} lab text cases`];
+    + `${n('numbers_in_cases')} number, ${n('lab_judge_cases')} lab judge, ${n('lab_text_cases')} lab text, ${n('extract_json_cases')} JSON, `
+    + `${n('label_cases')} label and ${n('plate_cases')} plate cases`];
 }
 
 function report(name, file, [checks, failures, summary]) {

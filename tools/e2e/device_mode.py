@@ -250,7 +250,8 @@ def no_server_ask(page, base: str, tag: str) -> None:
     page.wait_for_selector("#view-add:not([hidden])", timeout=30000)
     page.wait_for_selector("#ai-photo-where", timeout=10000)
     line = page.locator("#ai-photo-where").inner_text()
-    check(f"[{tag}] Add says a photo of a meal needs the server's AI", "A photo of your meal or of a label needs your Kidney Health server's AI." in line, line)
+    check(f"[{tag}] Add says a photo of a meal needs the server's AI or an own key",
+          "A photo of your meal or of a label needs your Kidney Health server's AI, or your own AI key with photos turned on." in line, line)
 
 
 # Design note 39: Ask on the phone. The change feed as in SYNC (empty), the server's AI status with Ask and photos, and its chat,
@@ -335,6 +336,78 @@ def ask_walk(browser, base: str) -> None:
     button = page.get_by_role("button", name="Plate photo (AI)")
     button.wait_for(timeout=30000)
     check(f"[{tag}] Add offers Plate photo (AI) from the server", button.is_visible() and page.locator("#ai-photo-where").count() == 0)
+    over = page.evaluate("document.documentElement.scrollWidth > window.innerWidth + 1")
+    check(f"[{tag}] no sideways scroll", not over)
+    check(f"[{tag}] no request to another host", not others, "; ".join(others[:3]))
+    check(f"[{tag}] no console or page error", not errors, "; ".join(errors[:3]))
+    ctx.close()
+
+
+# The person's own AI key with no server ever set up (the owner, 2026-11-25; design note 39 §6.5): no pairing, no Apple model on this
+# iPhone, an OpenAI key in the app, and a stand-in provider behind it.
+OWN_KEY = ("window.__kh = { copies: [], phone: [], own: [] };"
+           "window.webkit = { messageHandlers: { safetyCopy: { postMessage: (t) => window.__kh.copies.push(String(t)) },"
+           " phone: { postMessage: (m) => window.__kh.phone.push(String(m)) },"
+           " bridge: { postMessage: async (r) => r.kind === 'services' ? { ok: true, off: false, usda: false, scan: false }"
+           " : r.kind === 'serverInfo' ? { ok: true, paired: false }"
+           " : r.kind === 'aiStatus' ? { ok: true, available: false, reason: 'not_eligible' }"
+           " : r.kind === 'ownAIStatus' ? { ok: true, set: true, provider: 'openai', label: 'OpenAI', host: 'api.openai.com', model: 'gpt-6-luna', photos: false }"
+           " : r.kind === 'ownAI' ? (window.__kh.own.push(r), { ok: true, refusal: null, finish: 'stop',"
+           "   content: JSON.stringify({ items: [{ text: '2 eggs', search: 'egg', amount: 2, unit: 'serving' }], status: 'ok' }) })"
+           " : { error: 'not_paired' } } } };")
+
+
+def own_key_walk(browser, base: str) -> None:
+    """No server at all: Settings says where each feature runs, describe a meal goes to the person's own key after the consent sheet,
+    Ask says it needs a server, and Add says how photos can work."""
+    tag = "own-key"
+    ctx = browser.new_context(viewport={"width": 375, "height": 812}, color_scheme="light")
+    ctx.add_init_script(OWN_KEY)
+    page = ctx.new_page()
+    errors: list[str] = []
+    others: list[str] = []
+    page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.on("request", lambda r: others.append(r.url) if not r.url.startswith(base) else None)
+    page.goto(f"{base}/index.html#today")
+    page.wait_for_selector("#view-today:not([hidden])", timeout=30000)
+    page.wait_for_timeout(800)
+    page.evaluate("KH.request('PUT', '/api/device/setup', { done: true }).then(() => KH.mock.local.flush())")
+    page.wait_for_timeout(300)
+    page.goto(f"{base}/index.html#settings")
+    page.reload()
+    page.wait_for_selector("#view-settings:not([hidden])", timeout=30000)
+    page.wait_for_selector("#set-ai-slot input[type=checkbox]", timeout=30000)
+    page.locator("#set-ai-slot input[type=checkbox]").first.check()
+    page.wait_for_selector("#set-ai-where", timeout=10000)
+    text = page.locator("#set-ai-slot").inner_text()
+    check(f"[{tag}] Settings says describe a meal uses the own key", "Describe a meal: your own key with OpenAI" in text, text[:300])
+    check(f"[{tag}] and that lab reports never go to it", "Lab reports, and anything with your name or date of birth, are never sent to it." in text)
+    page.goto(f"{base}/index.html#add")
+    page.wait_for_selector("#view-add:not([hidden])", timeout=30000)
+    button = page.get_by_role("button", name="Describe a meal (AI)")
+    button.wait_for(timeout=30000)
+    line = page.locator("#ai-photo-where").inner_text()
+    check(f"[{tag}] Add says photos can go to the own key once turned on", "turn on \"Also send meal and label photos to this AI\"" in line, line)
+    button.click()
+    page.wait_for_selector("#sheet-ai[open] textarea", timeout=10000)
+    page.fill("#sheet-ai textarea", "2 eggs, scrambled")
+    page.get_by_role("button", name="Find foods").click()
+    page.wait_for_selector("#sheet-ai-consent[open]", timeout=10000)
+    sheet = page.locator("#sheet-ai-consent").inner_text()
+    check(f"[{tag}] the consent sheet names the provider and its host first", "this iPhone sends" in sheet and "api.openai.com" in sheet
+          and "privacy filter" not in sheet, sheet[:300])
+    check(f"[{tag}] nothing was sent before agreeing", page.evaluate("window.__kh.own.length") == 0)
+    page.locator("#sheet-ai-consent").get_by_role("button", name="Agree and send").click()
+    page.wait_for_selector("#sheet-ai .ai-parse-item", timeout=10000)
+    sent = page.evaluate("window.__kh.own")
+    check(f"[{tag}] describe a meal goes to the own key with the server's data only",
+          sent[-1:] == [{"kind": "ownAI", "task": "parse_meal", "text": '{"text":"2 eggs, scrambled"}'}], json.dumps(sent)[:200])
+    page.keyboard.press("Escape")
+    page.goto(f"{base}/index.html#ask")
+    page.wait_for_selector("#ask-demo:not([hidden])", timeout=10000)
+    ask = page.locator("#ask-demo").inner_text()
+    check(f"[{tag}] Ask says it needs a server, and what the own key does", "Ask needs the server" in ask and "Your own AI key" in ask, ask[:300])
     over = page.evaluate("document.documentElement.scrollWidth > window.innerWidth + 1")
     check(f"[{tag}] no sideways scroll", not over)
     check(f"[{tag}] no request to another host", not others, "; ".join(others[:3]))
@@ -546,6 +619,7 @@ def main(argv: list[str] | None = None) -> int:
                 both_ways_walk(browser, base)
                 sync_walk(browser, base)
                 ask_walk(browser, base)
+                own_key_walk(browser, base)
             finally:
                 browser.close()
     finally:

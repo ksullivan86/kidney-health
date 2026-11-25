@@ -5941,6 +5941,29 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
     `not_synced`, `not_opted_in`, `server_off`); the Ask tab is always shown on the phone and words the reason (`js/views/ask.js`),
     and the Add screen says where a meal photo comes from when "Plate photo (AI)" is not offered (`js/views/ai.js`). The phone never
     shows the web demo's Ask text.
+* **The person's own AI key (design note 39 §6.5, the owner's decision of 2026-11-25)**, with or without a server. The order per
+  feature is: the server's AI (D2, unchanged) → the own key → the iPhone's model → no AI; "Use only this iPhone's AI" skips the
+  own key too. Only an unreachable or failing provider (`offline`, `not_available`) moves on; a refusal or a checked answer is
+  shown as it is.
+  * **The app** (`ios/KidneyHealth/Services/OwnAI.swift`, Keys and services): providers are the server's `user_allowed` presets
+    (OpenAI `api.openai.com/v1`, OpenRouter `openrouter.ai/api/v1`, Nous Portal `inference-api.nousresearch.com/v1`), with their
+    token field, structured mode, temperature and extra body fields; a model name; the key in the Keychain (`ownAIKey`, this
+    device only). Bridge kinds: `{kind: 'ownAIStatus'}` → `{ok, set, provider, label, host, model, photos}` (never the key);
+    `{kind: 'ownAI', task, text | jpeg}` → `{ok, content, refusal, finish}` or `{error: own_off | photos_off | key_refused |
+    rate_limited | not_available | offline | ai_failed | bad_request, message}`. Tasks: `parse_meal`, and `read_label` and
+    `plate` only with the photo switch on (off by default). The app builds the Chat Completions body from `ai-prompts.json`
+    `own_key` (the server's `TASK_SYSTEM_PROMPT`, task messages for `json_schema` and `prompt` mode, schemas and names, written
+    by `scripts/build_preview.py --device` from `app/ai`), and posts it over HTTPS to the fixed host with the key in
+    `Authorization`, through the transport with no cookies, no cache and no redirects, with size limits; nothing is logged or kept.
+  * **The page** (`js/mock/ai.js`): the server's prefilter first; then the own key, after a consent sheet naming the provider and
+    host (purpose `text` or `photos`, provider id `-1`, kept with the log); the answer is read with the twin of
+    `client.extract_json` and checked with the server's judges (`js/engine/aijudge.js`: `checkParseMeal`/`judgeParseMeal`,
+    `checkLabel`/`labelDraft`, `checkPlate`/`judgePlate`, vectors in `tests/data/ai_device_vectors.json`). The data for these tasks
+    has no name or birth field, and a request whose data holds the profile's name or birth month is not sent to the own key
+    (`identityIn`): it goes to the iPhone's model or answers 503 `identity`. Lab text and lab photos never reach `viaOwnKey`.
+    `GET /api/me/ai` → `phone.own_key` and `phone.where` (`server`, `own`, `iphone`); `phone.photos` adds `own_photos_off`.
+  * **Not on the own key**: Ask (its tools read the log on the server), meal ideas and recipes (their candidates and checks are
+    not in the page yet), lab reports, voice.
 * **Sync both ways (design note 39, steps 6 and 7)**: `js/mock/server_changes.js` (device mode only, `M.serverChanges`) reads the
   change feed and sends the phone's edits and deletes ("The change feed" above), through `M.serverApi.call` and the app's
   `serverApi` message (allow-list: `GET /push/v1/changes` with `after` and `limit`, `POST /push/v1/changes`, `POST /push/v1/match`).

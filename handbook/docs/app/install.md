@@ -133,6 +133,7 @@ phone and needs no server ([design note 38][NOTE38]):
     Readings from a watch are not added.
   - **Keys and services**: look up more foods with your own free USDA key, or barcodes on Open Food Facts. Each is off until you
     turn it on, and sends only the words you type or the barcode you scan.
+  - **Your own AI key**, also in Keys and services: no server is needed. See [Your own AI key](#your-own-ai-key-on-the-iphone).
   - **Lock with Face ID or passcode**: off unless you turn it on.
   - Connecting your own server is optional. With a token made for the iPhone app, the app sends each new row you add to your
     server when it can be reached ([Connect the Kidney Health iPhone app](weight-and-blood-pressure.md#connect-the-kidney-health-iphone-app)).
@@ -173,18 +174,20 @@ phone and needs no server ([design note 38][NOTE38]):
   saved on the phone at once, so it works offline. When your server cannot be reached, the phone uses its own keys from Keys and
   services, if you added them, and otherwise the food list it already has. No key ever moves between the phone and the server.
 - **AI features** use your server's AI when your server can be reached and offers the feature, with the choices and consent you
-  made there. Otherwise they use the iPhone's own AI where it has one, and otherwise the app works without AI, as before.
+  made there. Otherwise they use your own AI key if you added one, then the iPhone's own AI where it has one, and otherwise the
+  app works without AI, as before.
   **Settings → AI features** lists which AI each feature uses.
-- **Use only this iPhone's AI** in Settings → AI features keeps everything you write away from any AI but the iPhone's own.
+- **Use only this iPhone's AI** in Settings → AI features keeps everything you write away from any AI but the iPhone's own,
+  your own key included.
 - An answer from your server is shown as it is. If it says to treat a low or to get help now, the app does not ask another AI.
 - A lab report goes only to an AI on your own network or on the iPhone, never to a company's AI.
 - **Ask**, the AI assistant, works on the phone when your server's admin has turned it on. It uses your server's AI, so it needs
   a connection and a phone that syncs both ways. On the phone it always asks before it saves: tap **Save** on the card and the
   entry is saved on the phone, then sent to your server. Talking to Ask is not on the phone. When Ask cannot be used, the Ask
   tab says why and what to do.
-- **Plate photo (AI)** on the Add screen names the foods in a photo of your meal. It uses your server's AI only, never the
-  iPhone's own AI and never a company's AI from the phone. Your server decides which AI may see photos. When your server does
-  not offer it, the Add screen says so under the AI buttons.
+- **Plate photo (AI)** on the Add screen names the foods in a photo of your meal. It uses your server's AI, or your own AI key
+  if you turned on photos for it, never the iPhone's own AI. Your server decides which of its AIs may see photos. When no AI
+  can read a photo, the Add screen says so under the AI buttons.
 - **A recipe from a web page**, **Open in Instacart** and **Send to** your own list app work on the phone when your server has
   them turned on. Your server reads the page and sends the list, with its own keys, so they need a connection. The recipe's
   ingredients are matched with the foods on your phone. The shopping list comes from the plan on your server, so plans you made
@@ -194,6 +197,32 @@ phone and needs no server ([design note 38][NOTE38]):
   phone. Turn it on in **Settings → AI features**. Nothing you write or read leaves the iPhone, and the questions and answers are
   not kept. The app checks every answer, and you check each line before anything is saved. The AI never gives insulin or
   medicine doses. On other iPhones these buttons do not appear, and everything else works.
+
+### Your own AI key on the iPhone
+
+You can use AI features with a key of your own from an AI company, with no server at all.
+
+1. Open **Settings → This device → Apple Health and server → Keys and services**.
+2. Under **Your own AI key**, choose **OpenAI**, **OpenRouter** or **Nous Portal**.
+3. Enter the model's name as the company writes it, and paste your key. Tap **Save the key**. The key is kept on this iPhone only
+   and is not shown again. **Test the key** sends one short fixed question to check it.
+4. In the app, turn on **Settings → AI features → Use AI features**. The first time you use it, the app shows where it will send
+   your request and asks you to agree.
+
+What it does:
+
+- **Describe a meal** uses your own key. If you have a server, your server's AI is used first, and your own key only when your
+  server cannot be reached or does not offer it.
+- **Photos of a meal or a label** go to your own key only if you turn on **Also send meal and label photos to this AI**. It is off
+  at first.
+- **Lab reports, and anything with your name or date of birth, are never sent to it.** If you type your name in a meal
+  description, the app does not send it.
+- **Ask** still needs your server, because it reads your log there.
+- The app checks every answer the same way your server would. A low, an emergency or a question about a dose gets the app's own
+  card, and the AI is not asked. The AI never gives insulin or medicine doses.
+- Nothing about your questions or the answers is kept on the phone. The company receives what is sent, under its own terms.
+- **Remove the key** deletes it from the phone. **Use only this iPhone's AI** in Settings → AI features also stops the app from
+  using your key.
 
 ## Updates
 

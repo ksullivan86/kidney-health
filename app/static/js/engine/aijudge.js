@@ -328,9 +328,194 @@
     return { status: 'ok', items, dropped, notice: PARSE_NOTICE };
   }
 
+  // ---------------------------------------------------------------------------
+  // The person's own AI key (owner, 2026-11-25; design note 39 §6.5): a company's model answers as text, so the page reads the
+  // JSON out of it as the server does, and checks label and plate photos with the server's judges.
+  // ---------------------------------------------------------------------------
+  const MAX_JSON_SCAN = 32768; // client.MAX_JSON_SCAN
+  // client.extract_json: strip a BOM and code fences, then parse the first balanced top-level {...} in 32 KiB. null when none.
+  function extractJson(text) {
+    if (typeof text !== 'string' || !T.pyStrip(text)) return null;
+    let s = T.pyStrip(text.replace(/^﻿+/, ''));
+    if (s.startsWith('```')) {
+      s = s.includes('\n') ? s.slice(s.indexOf('\n') + 1) : '';
+      if (s.replace(/\s+$/, '').endsWith('```')) s = s.replace(/\s+$/, '').slice(0, -3);
+    }
+    s = T.cpSlice(s, 0, MAX_JSON_SCAN);
+    let start = s.indexOf('{');
+    while (start !== -1) {
+      let depth = 0, inString = false, escaped = false;
+      for (let i = start; i < s.length; i += 1) {
+        const ch = s[i];
+        if (inString) {
+          if (escaped) escaped = false;
+          else if (ch === '\\') escaped = true;
+          else if (ch === '"') inString = false;
+          continue;
+        }
+        if (ch === '"') inString = true;
+        else if (ch === '{') depth += 1;
+        else if (ch === '}') {
+          depth -= 1;
+          if (depth === 0) {
+            try { return JSON.parse(s.slice(start, i + 1)); } catch (e) { break; }
+          }
+        }
+      }
+      start = s.indexOf('{', start + 1);
+    }
+    return null;
+  }
+
+  // schemas.LabelAnswer and PlateAnswer (page only, as checkParseMeal).
+  const LABEL_NUTRIENTS = ['calories_kcal', 'protein_g', 'fat_g', 'sat_fat_g', 'carbs_g', 'fiber_g', 'sugar_g', 'sodium_mg', 'potassium_mg',
+    'phosphorus_mg', 'calcium_mg'];
+  const PERCENT_DV_KEYS = ['sodium', 'potassium', 'phosphorus', 'calcium'];
+  const MAX_PLATE_ITEMS = 8;
+  const amountOk = (v) => v === null || (isNumber(v) && v >= 0 && v <= 1000000); // schemas.Number
+  const optText = (v, max) => v === null || shortText(v, max);
+  function checkLabel(raw) {
+    const keys = ['status', 'product_name', 'serving_text', 'serving_g', 'basis', 'per_serving', 'salt_g', 'percent_dv', 'ingredients_text', 'label_style'];
+    const ok = sameKeys(raw, keys) && ['ok', 'not_a_label', 'unreadable'].includes(raw.status) && optText(raw.product_name, 400)
+      && optText(raw.serving_text, 200) && (raw.serving_g === null || (isNumber(raw.serving_g) && raw.serving_g > 0 && raw.serving_g <= 100000))
+      && ['per_serving', 'per_100g', 'per_100ml'].includes(raw.basis)
+      && sameKeys(raw.per_serving, LABEL_NUTRIENTS) && LABEL_NUTRIENTS.every((k) => amountOk(raw.per_serving[k]))
+      && amountOk(raw.salt_g) && sameKeys(raw.percent_dv, PERCENT_DV_KEYS) && PERCENT_DV_KEYS.every((k) => amountOk(raw.percent_dv[k]))
+      && optText(raw.ingredients_text, 8000) && ['us_nutrition_facts', 'eu_nutrition_declaration', 'other'].includes(raw.label_style);
+    return ok ? { ok: true, answer: raw } : { ok: false };
+  }
+  function checkPlate(raw) {
+    if (!sameKeys(raw, ['status', 'items']) || !['ok', 'no_food', 'unsure'].includes(raw.status) || !Array.isArray(raw.items)
+      || raw.items.length > MAX_PLATE_ITEMS) return { ok: false };
+    const malformed = [];
+    raw.items.forEach((it, index) => {
+      const good = sameKeys(it, ['name', 'search', 'grams_estimate', 'confidence']) && shortText(it.name, MAX_TEXT_CHARS)
+        && shortText(it.search, MAX_TEXT_CHARS) && (it.grams_estimate === null || (isNumber(it.grams_estimate) && it.grams_estimate >= 0 && it.grams_estimate <= 5000))
+        && ['low', 'medium', 'high'].includes(it.confidence);
+      if (!good) malformed.push(index);
+    });
+    return { ok: true, answer: { status: raw.status, items: raw.items }, malformed };
+  }
+
+  // features.py: label plausibility and the label draft (label_checks, label_draft), and the plate judge (prepare_plate's judge).
+  const FDA_DAILY_VALUES = [['sodium', 'sodium_mg', 2300.0], ['potassium', 'potassium_mg', 4700.0], ['phosphorus', 'phosphorus_mg', 1250.0],
+    ['calcium', 'calcium_mg', 1300.0]];
+  const SODIUM_PER_SALT = 1000.0 / 2.5;
+  const LABEL_NOTICE = 'Read by AI from your photo. Check every number against the label before saving.';
+  const PLATE_BANNER = 'AI estimate from a photo. In studies, portion estimates were off by about a third and too small for big '
+    + 'plates. Weigh or measure when it matters, and do not dose insulin from this alone.';
+  const PLATE_NOTICE = 'AI estimate from a photo. Check each food and amount; entries are added as planned.';
+  const ATWATER = [['carbs_g', 4.0], ['protein_g', 4.0], ['fat_g', 9.0]];
+  const MG_CEILINGS = [['sodium_mg', 10000.0], ['potassium_mg', 6000.0], ['phosphorus_mg', 3000.0], ['calcium_mg', 3000.0]];
+  const capital = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+  const g = (x) => KH.rules.pyG(x);
+  function labelChecks(values, servingG) {
+    const checks = [];
+    const kcal = values.calories_kcal;
+    if (kcal != null && ATWATER.every(([k]) => values[k] != null)) {
+      const computed = ATWATER.reduce((sum, [k, f]) => sum + Number(values[k] || 0) * f, 0);
+      if (Math.abs(computed - kcal) > 0.20 * Math.max(kcal, computed) + 20.0) {
+        checks.push({ code: 'energy_mismatch', message: 'The calories do not match the fat, carbohydrate and protein; check those numbers.' });
+      }
+    }
+    if (servingG) {
+      let grams = ['fat_g', 'carbs_g', 'protein_g', 'fiber_g'].reduce((sum, k) => sum + Number(values[k] || 0), 0);
+      grams -= Number(values.fiber_g || 0);
+      if (grams > servingG * 1.05) checks.push({ code: 'grams_exceed_serving', message: 'The grams add up to more than the serving weighs; check the serving size.' });
+    }
+    for (const [key, ceiling] of MG_CEILINGS) {
+      const v = values[key];
+      if (v != null && v > ceiling) checks.push({ code: `implausible:${key}`, message: `${capital(key.split('_')[0])} looks too high for one serving; check mg against g.` });
+    }
+    return checks;
+  }
+  function labelDraft(answer) {
+    if (answer.status !== 'ok') {
+      const message = answer.status === 'not_a_label' ? 'This does not look like a nutrition label.' : 'The label could not be read; try a sharper photo with less glare.';
+      return { status: answer.status, message, draft: null };
+    }
+    let values = Object.fromEntries(LABEL_NUTRIENTS.map((k) => [k, answer.per_serving[k]]));
+    const fromPhoto = LABEL_NUTRIENTS.filter((k) => values[k] !== null);
+    const estimated = [];
+    const checks = [];
+    let servingG = answer.serving_g;
+    let servingText = T.cleanText(answer.serving_text, { maxLen: 60 });
+    let servingRead = !!servingG || !!servingText;
+    if (answer.basis === 'per_100g' || answer.basis === 'per_100ml') {
+      const unit = answer.basis === 'per_100g' ? 'g' : 'ml';
+      if (servingG) {
+        const factor = servingG / 100.0;
+        values = Object.fromEntries(Object.entries(values).map(([k, v]) => [k, v === null ? null : v * factor]));
+        checks.push({ code: 'scaled', message: `The label lists values per 100 ${unit}; they were scaled to one serving of ${g(servingG)} ${unit}.` });
+      } else {
+        servingG = 100.0;
+        servingText = `100 ${unit}`;
+        servingRead = false;
+        estimated.push('serving_desc', 'serving_g');
+        checks.push({ code: 'per_100', message: `No serving size was read, so the food is saved per 100 ${unit}.` });
+      }
+    }
+    const salt = answer.salt_g;
+    if (values.sodium_mg == null && salt !== null) {
+      const factor = answer.basis !== 'per_serving' && answer.serving_g ? servingG / 100.0 : 1.0;
+      values.sodium_mg = salt * factor * SODIUM_PER_SALT;
+      estimated.push('sodium_mg');
+      checks.push({ code: 'sodium_from_salt', message: 'Sodium was worked out from salt (salt ÷ 2.5).' });
+    }
+    if (answer.basis === 'per_serving') {
+      for (const [name, key, dv] of FDA_DAILY_VALUES) {
+        const pct = answer.percent_dv[name];
+        if (values[key] == null && pct !== null) {
+          values[key] = (pct / 100.0) * dv;
+          estimated.push(key);
+          checks.push({ code: `estimated:${key}`, message: `${capital(name)} was estimated from the % Daily Value (${g(pct)} % of ${g(dv)} mg).` });
+        }
+      }
+    }
+    if (values.potassium_mg == null) checks.push({ code: 'potassium_unknown', message: 'Potassium is not on this label; it is saved as unknown, not zero.' });
+    checks.push(...labelChecks(values, servingG));
+    const name = T.cleanText(answer.product_name, { maxLen: 200 });
+    const ingredients = T.cleanText(answer.ingredients_text, { maxLen: 4000, keepNewlines: true });
+    for (const f of KH.additives.scan(null, ingredients, name).findings) {
+      checks.push({ code: `additive:${f.kind}`, message: `The ingredients list ${f.name}; saving keeps the warning if it is still in the ingredients you confirm.` });
+    }
+    const nutrients = Object.fromEntries(Object.entries(values).map(([k, v]) => [k, v == null ? null : KH.rules.pyRound(Number(v), 1)]));
+    nutrients.fluid_ml = null;
+    const draft = {
+      name: name || '', brand: null, category: null,
+      serving_desc: servingText || (servingG ? `1 serving (${g(servingG)} g)` : '1 serving'),
+      serving_g: servingG ? KH.rules.pyRound(Number(servingG), 1) : null,
+      nutrients, flags: [], kidney_notes: null, ingredients_text: ingredients,
+    };
+    if (servingRead) fromPhoto.push('serving_desc', ...(draft.serving_g !== null ? ['serving_g'] : []));
+    const needs = [['name', !draft.name], ['serving_g', draft.serving_g === null]].filter(([, missing]) => missing).map(([field]) => field);
+    return { status: 'ok', draft, from_photo: [...fromPhoto, ...(name ? ['name'] : []), ...(ingredients ? ['ingredients_text'] : [])],
+      estimated, needs, checks, notice: LABEL_NOTICE };
+  }
+  function judgePlate(answer, search, malformed = []) {
+    if (answer.status !== 'ok' || !answer.items.length) {
+      const message = answer.status === 'no_food' ? 'No food was recognised in this photo.' : 'The AI was not sure what is in this photo; search for the foods instead.';
+      return { status: answer.status !== 'ok' ? answer.status : 'no_food', message, items: [], banner: PLATE_BANNER };
+    }
+    const items = [], dropped = [];
+    answer.items.forEach((item, index) => {
+      if (malformed.includes(index)) { dropped.push({ index, reason: 'malformed_item' }); return; }
+      const [name, why] = namePolicy(item.name, MAX_NAME_CHARS);
+      const [query, why2] = namePolicy(item.search, MAX_NAME_CHARS);
+      if (name === null || query === null) { dropped.push({ index, reason: `text_policy:${why || why2}` }); return; }
+      const grams = item.grams_estimate;
+      const candidates = search(query).slice(0, 3).map((food) => ({ food, servings: grams ? servingsFor(grams, 'g', food) : null }));
+      const whole = grams === null ? null : roundHalfEven(grams);
+      items.push({ name, search: query, grams_estimate: whole, portion_text: grams === null ? null : `about ${whole} g`,
+        confidence: item.confidence, ticked: item.confidence !== 'low', candidates });
+    });
+    return { status: 'ok', items, dropped, banner: PLATE_BANNER, notice: PLATE_NOTICE };
+  }
+
   KH.aiJudge = {
     pyRe, pyFloat, asciiDigits, roundHalfEven, SOURCES, RED_FLAG_CARD, MEDICINE_CARD, doseReason, labWords, medicineQuestion, redFlag, prefilter,
     namePolicy, servingQuantity, servingsFor, clean, pyJson, escapeData, dataPayload, labTextLines, parseMealData,
     UNITS, PARSE_TEXT_CHARS, MAX_LAB_TEXT_CHARS, MAX_PARSE_ITEMS, MAX_LAB_ROWS, PROMPT_VERSION, checkParseMeal, checkLabReport, judgeParseMeal, REFUSED_TEXT, PARSE_NOTICE,
+    extractJson, checkLabel, checkPlate, labelChecks, labelDraft, judgePlate, LABEL_NOTICE, PLATE_BANNER,
   };
 })();

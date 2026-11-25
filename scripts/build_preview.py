@@ -259,7 +259,47 @@ def ai_prompts() -> dict:
             raise SystemExit(f"app/ai/prompts.py: the {key} message is not a task line and one data block")
         template = message[: -len(block)] + "<data>\n" + AI_PROMPT_PLACEHOLDER + "\n</data>"
         tasks[task] = {"template": template}
-    return {"system": prompts.TASK_SYSTEM_PROMPT, "tasks": tasks}
+    return {"system": prompts.TASK_SYSTEM_PROMPT, "tasks": tasks, "own_key": own_key_prompts()}
+
+
+# The tasks the person's own AI key may do from the iPhone app (owner, 2026-11-25; design note 39 §6.5): the bridge's task name ->
+# (app/ai/prompts.py TASK_LINES key, app/ai/schemas.py schema builder, the schema's name in the request, a photo task). Never a lab
+# report task: lab text and lab photos go only to a local model.
+AI_OWN_KEY_TASKS = {
+    "parse_meal": ("parse_meal", "parse_meal_schema", "kidney_parse_meal", False),
+    "read_label": ("read_label", "read_label_schema", "nutrition_label", True),
+    "plate": ("plate", "plate_schema", "plate_photo", True),
+}
+
+
+def own_key_prompts() -> dict:
+    """``own_key`` in ``ai-prompts.json``: what the iPhone app sends the person's own AI key, as the server's
+    ``features.prepare_parse_meal``, ``prepare_read_label`` and ``prepare_plate`` build it. For each task: the answer's JSON schema
+    and its name (sent as ``response_format`` to a provider that enforces it), and two user messages: ``json_schema`` for such a
+    provider, ``prompt`` (with the schema line) for one that does not. A text task holds one ``{text}`` where the page's data JSON
+    goes; a photo task has no data block (the photo is sent beside it)."""
+    sys.path.insert(0, str(ROOT))
+    try:
+        from app.ai import config, prompts, schemas
+    finally:
+        sys.path.pop(0)
+    tasks = {}
+    for task, (key, builder, name, image) in AI_OWN_KEY_TASKS.items():
+        schema = getattr(schemas, builder)()
+        entry: dict = {"schema_name": name, "schema": schema, "image": image}
+        for mode in ("json_schema", "prompt"):
+            if image:
+                entry[mode] = prompts.user_message(key, None, mode=mode, schema=schema)
+                continue
+            marker = {"marker": "x"}
+            message = prompts.user_message(key, marker, mode=mode, schema=schema)
+            block = prompts.data_block(marker)
+            if not message.endswith("\n" + block) or AI_PROMPT_PLACEHOLDER in message:
+                raise SystemExit(f"app/ai/prompts.py: the {key} message is not a task line and one data block")
+            entry[mode] = message[: -len(block)] + "<data>\n" + AI_PROMPT_PLACEHOLDER + "\n</data>"
+        tasks[task] = entry
+    return {"prompt_version": prompts.PROMPT_VERSION, "system": prompts.TASK_SYSTEM_PROMPT, "max_tokens": config.DEFAULT_MAX_TOKENS,
+            "tasks": tasks}
 
 
 def build_device(out_dir: Path, static_dir: Path = STATIC, foods_json: Path = FOODS_JSON) -> list[Path]:

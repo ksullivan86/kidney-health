@@ -129,7 +129,7 @@ def test_the_phone_never_shows_the_demo_text_and_says_why_ask_is_off():
     ai = (STATIC / "js" / "views" / "ai.js").read_text(encoding="utf-8")
     for reason in ("not_paired", "not_both_ways", "offline", "device_only", "not_synced", "not_opted_in", "server_off"):
         assert re.search(rf"\n    {reason}: `\$\{{PHOTO_NEEDS\}} ", ai), reason
-    assert "A photo of your meal or of a label needs your Kidney Health server\\'s AI." in ai
+    assert "A photo of your meal or of a label needs your Kidney Health server\\'s AI, or your own AI key with photos turned on." in ai
 
 
 def test_ask_on_the_phone_uses_only_the_servers_chat_route_and_never_trusts():

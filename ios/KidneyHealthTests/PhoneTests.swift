@@ -103,4 +103,41 @@ final class PhoneTests: XCTestCase {
         let empty = await OnDeviceAI.answer(["task": "parse_meal", "text": ""])
         XCTAssertEqual(empty["error"] as? String, "bad_request")
     }
+
+    /// Design note 39 §6.5: the person's own AI key. No lab task, photos only with the switch on, nothing without a key, and the
+    /// request is the server's: its prompt, its schema as response_format, the provider's own quirks.
+    @MainActor
+    func testTheOwnAIKeyDoesItsThreeTasksOnly() async {
+        let own = OwnAI(defaults: UserDefaults(suiteName: "PhoneTests-\(UUID().uuidString)")!)
+        XCTAssertFalse(own.photosOn)
+        XCTAssertEqual(own.status()["set"] as? Bool, own.ready)
+        XCTAssertNil(own.status()["key"])
+        for bad: [String: Any] in [["task": "read_lab_report_text", "text": "Potassium 4.6"], ["task": "lab_report", "jpeg": "/9j/AA=="],
+                                   ["task": "chat", "text": "x"], ["task": "parse_meal", "text": ""], ["task": "parse_meal", "jpeg": "/9j/AA=="],
+                                   ["task": "plate", "text": "x"], ["task": "plate", "jpeg": "iVBORw0KGgo="]] {
+            let answer = await own.answer(bad)
+            XCTAssertEqual(answer["error"] as? String, "bad_request", "\(bad)")
+        }
+        XCTAssertFalse(OwnAI.tasks.contains("read_lab_report_text"))
+        XCTAssertFalse(OwnAI.isPlausibleKey("short"))
+        XCTAssertFalse(OwnAI.isPlausibleModel("gpt 6"))
+        XCTAssertTrue(OwnAI.isPlausibleModel("openai/gpt-6-luna"))
+        let prompts = AIPrompts(raw: ["own_key": ["system": "S", "max_tokens": 1500, "tasks": [
+            "parse_meal": ["schema_name": "kidney_parse_meal", "schema": ["type": "object"], "image": false,
+                           "json_schema": "T\n<data>\n{text}\n</data>", "prompt": "T\nRESPONSE SCHEMA: {}\n<data>\n{text}\n</data>"],
+            "plate": ["schema_name": "plate_photo", "schema": ["type": "object"], "image": true, "json_schema": "P", "prompt": "P2"]]]])
+        let body = OwnAI.body(prompts, provider: .openai, model: "gpt-6-luna", task: "parse_meal", text: "{\"text\":\"eggs\"}", jpeg: nil)
+        let messages = body?["messages"] as? [[String: Any]]
+        XCTAssertEqual(messages?.last?["content"] as? String, "T\n<data>\n{\"text\":\"eggs\"}\n</data>")
+        XCTAssertEqual(body?["max_completion_tokens"] as? Int, 1500)
+        XCTAssertEqual(body?["store"] as? Bool, false)
+        XCTAssertNotNil(body?["response_format"])
+        let nous = OwnAI.body(prompts, provider: .nousPortal, model: "Hermes-5", task: "parse_meal", text: "{}", jpeg: nil)
+        XCTAssertNil(nous?["response_format"])
+        XCTAssertEqual(nous?["max_tokens"] as? Int, 1500)
+        let plate = OwnAI.body(prompts, provider: .openrouter, model: "a/b", task: "plate", text: nil, jpeg: "/9j/AA==")
+        XCTAssertEqual(plate?["temperature"] as? Double, 0.0)
+        XCTAssertNil(OwnAI.body(prompts, provider: .openai, model: "m", task: "read_lab_report_text", text: "x", jpeg: nil))
+        XCTAssertEqual(Set(OwnAIProvider.allCases.map(\.host)), ["api.openai.com", "openrouter.ai", "inference-api.nousresearch.com"])
+    }
 }

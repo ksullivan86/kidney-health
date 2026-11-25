@@ -274,6 +274,12 @@ leave the server.
   the phone. It never sees the key of your list app. It sees only your own data, never as an
   admin, and the activity list shows "The iPhone app read your data" once a day. Revoke the token in Settings → Phone shortcuts and it
   stops at once ([push.md](push.md#the-iphone-app-both-ways)).
+* **Your own AI key on the iPhone app**, if you add one in Keys and services (no server needed). The app then sends the AI company
+  you chose (OpenAI, OpenRouter or Nous Portal) only what the feature needs: the words of a meal you describe, cleaned as the
+  server cleans them, and, only if you turn photos on, the photo of a meal or a label, redrawn without location data. It never
+  sends a lab report, your name, your date of birth, your profile, targets or log. A description that holds your name or birth
+  month is not sent. The key stays in the iPhone's Keychain, the server never sees it, and nothing about the request or the answer
+  is kept. The company receives what is sent, under its own terms.
 * **Admins** manage accounts but have no screen or API that shows another person's log, foods or
   profile. However:
   * the person who runs the server can technically read the database file and its backups;
