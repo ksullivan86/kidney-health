@@ -5980,8 +5980,8 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
     `next_meal` and `recipes` with the schema holding `"__CANDIDATE_IDS__"` where the server puts its id list
     (`scripts/gen_own_key_prompts.py`); `OwnAI.swift` puts the page's whole-number ids in the schema and in the schema line.
     `OnDeviceAI.swift` answers with `@Generable` shapes of the server's schemas (the ids are plain whole numbers there; the judge
-    drops any that is not a candidate). Photos: `OnDeviceVision.swift`, compiled with `KH_ONDEVICE_IMAGES` only (the one guessed
-    iOS 27 call, probed by CI); `aiStatus` says `photos`.
+    drops any that is not a candidate). Photos: `OnDeviceVision.swift`, iOS 27 or later (the photo is a
+    `FoundationModels.Attachment` in the prompt); `aiStatus` says `photos`.
   * **Ask** stays the server's: free text checked by the server's chat checks, which have no twin here.
 * **Sync both ways (design note 39, steps 6 and 7)**: `js/mock/server_changes.js` (device mode only, `M.serverChanges`) reads the
   change feed and sends the phone's edits and deletes ("The change feed" above), through `M.serverApi.call` and the app's

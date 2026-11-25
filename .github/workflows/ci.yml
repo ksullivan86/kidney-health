@@ -141,27 +141,9 @@ jobs:
           udid=$(xcrun simctl list devices available -j | python3 ios/pick_simulator.py)
           echo "simulator: $udid"
           results="$RUNNER_TEMP/tests.xcresult"
-          # Photos on the iPhone's own model (ios/KidneyHealth/Services/OnDeviceVision.swift) use an iOS 27 call written without
-          # an SDK. Probe it: if it compiles, build and test with it; if not, without it, so a wrong guess never fails this job.
-          flags=()
-          photo_flag="SWIFT_ACTIVE_COMPILATION_CONDITIONS=\$(inherited) DEBUG KH_ONDEVICE_IMAGES"  # $(inherited) is for xcodebuild, not the shell
-          if xcodebuild build-for-testing -quiet \
-            -project ios/KidneyHealth.xcodeproj -scheme KidneyHealth -destination "id=$udid" \
-            -derivedDataPath "$RUNNER_TEMP/probe" "$photo_flag"; then
-            echo "::notice::The iPhone model's photo reading (KH_ONDEVICE_IMAGES) compiles with this SDK."
-            flags=("$photo_flag")
-          else
-            echo "::warning::The iPhone model's photo reading (KH_ONDEVICE_IMAGES) does not compile with this SDK; built without it."
-            # So the next try uses the SDK's real names: print what FoundationModels declares about images and prompts.
-            sdk=$(xcrun --sdk iphonesimulator --show-sdk-path)
-            iface=$(find "$sdk/System/Library/Frameworks/FoundationModels.framework" -name '*.swiftinterface' | head -n 1 || true)
-            if [ -n "$iface" ]; then
-              grep -n -i -E 'image|attachment|PromptRepresentable|struct Prompt' "$iface" | head -n 120 || true
-            fi
-          fi
           if ! xcodebuild test -quiet \
             -project ios/KidneyHealth.xcodeproj -scheme KidneyHealth \
-            -destination "id=$udid" -derivedDataPath "$RUNNER_TEMP/derived" -resultBundlePath "$results" ${flags[@]+"${flags[@]}"}; then
+            -destination "id=$udid" -derivedDataPath "$RUNNER_TEMP/derived" -resultBundlePath "$results"; then
             xcrun xcresulttool get test-results summary --path "$results" || true
             xcrun xcresulttool get test-results tests --path "$results" | head -c 20000 || true
             exit 1

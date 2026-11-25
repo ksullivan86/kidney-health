@@ -214,9 +214,8 @@ Built:
 * **Plate and label photos on the iPhone's model**, iOS 27 only. The app gives the model the JPEG the page made, the server's task
   rules and message, and the answer shapes of `PlateAnswer` and `LabelAnswer`; the page runs the server's plate and label checks.
   Order: the server's AI, the own key (with its photo switch on), the iPhone's model, no AI. The photo never leaves the phone.
-  Apple's image input was written without an SDK at hand: it assumes a `CGImage` can sit in a `Prompt` beside the text. That one
-  call compiles only with the Swift flag `KH_ONDEVICE_IMAGES`. CI builds once with it and, if that fails, builds without it, so a
-  wrong guess only removes the feature (`OnDeviceVision.swift`). The project turns the flag on once CI shows it compiles.
+  The photo goes into the prompt as `FoundationModels.Attachment` (`OnDeviceVision.swift`). It was first written without an SDK at
+  hand; a CI probe printed the iOS 27.2 SDK's real API, and on 2026-11-25 the call compiled and the app's tests passed with it.
 * **Log or plan**: the plate photo flow already ends with the person ticking each food and choosing Eaten or Planned for the day on
   screen. Planned puts the foods in that day's plan. It does not make a saved meal, on the server or on the phone.
 * **Meal ideas and AI recipes** on the own key and on the iPhone's model, same order. The page builds the server's data block from

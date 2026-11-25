@@ -2,7 +2,7 @@
 
 * tests/js/phone_ai_more.mjs drives the page with a stand-in app: plate and label photos on the iPhone's model, meal ideas and AI
   recipes on the own key and on the iPhone's model, all with the server's checks.
-* The Swift side (read as text): the guessed iOS 27 image call is only compiled with KH_ONDEVICE_IMAGES, which CI probes first;
+* The Swift side (read as text): the iOS 27 image call, only on iOS 27 or later;
   the answer shapes are the server's schemas; no network, nothing kept, never a dosing task.
 """
 from __future__ import annotations
@@ -33,18 +33,13 @@ def test_the_page_with_a_stand_in_app() -> None:
     assert "checks passed" in done.stdout
 
 
-def test_the_guessed_image_call_never_breaks_the_build() -> None:
-    """The one guessed iOS 27 API (a CGImage in a Prompt) compiles only with the flag; CI probes it and builds without it if not."""
+def test_the_image_call_is_ios_27_only_and_built_in_ci() -> None:
+    """Apple's image input (iOS 27): the photo goes in as FoundationModels.Attachment, the one image prompt in the app, only on
+    iOS 27 or later. CI compiled it against the iOS 27.2 SDK on 2026-11-25, so no build flag guards it any more."""
     code = _code(VISION)
-    flagged = code[code.index("#if KH_ONDEVICE_IMAGES"):code.index("#endif", code.index("#if KH_ONDEVICE_IMAGES"))]
-    assert "Prompt {" in flagged and "if #available(iOS 27.0, *)" in flagged
+    assert "FoundationModels.Attachment(picture)" in code and "if #available(iOS 27.0, *)" in code
     assert code.count("Prompt {") == 1 and "Prompt {" not in _code(ON_DEVICE)
-    assert "#if canImport(FoundationModels) && KH_ONDEVICE_IMAGES" in code
-    project = (ROOT / "ios" / "KidneyHealth.xcodeproj" / "project.pbxproj").read_text(encoding="utf-8")
-    assert "KH_ONDEVICE_IMAGES" not in project  # off until the CI probe shows the guess compiles
-    ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
-    job = ci[ci.index("  ios-app:"):ci.index("  lint:")]
-    assert "build-for-testing" in job and "KH_ONDEVICE_IMAGES" in job and '${flags[@]+"${flags[@]}"}' in job
+    assert "KH_ONDEVICE_IMAGES" not in VISION
     for word in ("URLSession", "UserDefaults", ".write(to:", "Keychain", "print(", "NSLog"):
         assert word not in VISION, word  # the photo stays on the phone and is not kept
 

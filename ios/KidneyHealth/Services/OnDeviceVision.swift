@@ -10,11 +10,9 @@
 //     let prompt = Prompt { message; Attachment(image) }
 //     try await session.respond(to: prompt, generating: PlateReply.self)
 //
-// So that a wrong guess can only remove this feature and never break the build, the guessed lines compile only with the Swift
-// flag KH_ONDEVICE_IMAGES, which the project does not set. The CI job "iOS app" first builds once with the flag (a probe that may
-// fail) and, if that compiles, runs the tests with it; it says which in its log. Turn it on for good by adding KH_ONDEVICE_IMAGES
-// to SWIFT_ACTIVE_COMPILATION_CONDITIONS in ios/KidneyHealth.xcodeproj once the probe passes. Without it, `available` is false
-// and the page offers photos only through the server or the person's own AI key.
+// The CI job "iOS app" compiled this against the iOS 27.2 SDK on 2026-11-25 and ran the app's tests with it. On a phone before
+// iOS 27, or a build without FoundationModels, `available` is false and the page offers photos only through the server or the
+// person's own AI key.
 import Foundation
 import ImageIO
 #if canImport(FoundationModels)
@@ -22,16 +20,16 @@ import FoundationModels
 #endif
 
 enum OnDeviceVision {
-    /// This build has the guessed iOS 27 image call (the KH_ONDEVICE_IMAGES flag).
+    /// This build has the iOS 27 image call (FoundationModels is part of the SDK).
     static var compiled: Bool {
-        #if canImport(FoundationModels) && KH_ONDEVICE_IMAGES
+        #if canImport(FoundationModels)
         return true
         #else
         return false
         #endif
     }
 
-    /// The iPhone's model can be given a photo here: the flag is on and the phone runs iOS 27 or later.
+    /// The iPhone's model can be given a photo here: the phone runs iOS 27 or later.
     static var available: Bool {
         guard compiled else { return false }
         if #available(iOS 27.0, *) { return true }
@@ -52,7 +50,6 @@ enum OnDeviceVision {
     @available(iOS 26.0, *)
     static func answer(_ session: LanguageModelSession, task: String, message: String, jpeg: String) async throws -> [String: Any]? {
         guard let picture = image(fromBase64: jpeg) else { return nil }
-        #if KH_ONDEVICE_IMAGES
         if #available(iOS 27.0, *) {
             let prompt = Prompt {
                 message
@@ -67,7 +64,6 @@ enum OnDeviceVision {
                 return nil
             }
         }
-        #endif
         _ = (session, task, message, picture)
         return nil
     }
