@@ -5,11 +5,15 @@
 // two-way sync; that the phone always sends trust "ask", so the server saves nothing; that a card's foods become the phone's and
 // its Save goes through the phone's own routes once, with the server's client_id; that a card naming a food the phone does not have
 // becomes a question; that the server's low and emergency answers pass untouched; that an older server's own save loses Undo and
-// asks for a sync; that consent and an unreachable server are the server's answers; and that voice stays off. pytest runs it
-// (tests/test_server_ask_phone.py). Exits 1 on any mismatch.
+// asks for a sync; that consent and an unreachable server are the server's answers; and that voice stays off.
+//   node tests/js/server_ask.mjs --relay   the real server: each bridge request is written to stdout as "@@ {json}" and its answer
+//                                          read from stdin (tests/test_server_ask_phone.py carries it to the real gateway, with a
+//                                          fake AI that asks to log a banana and a person who trusts it "always").
+// pytest runs both (tests/test_server_ask_phone.py). Exits 1 on any mismatch.
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { createInterface } from 'node:readline';
 import { fileURLToPath } from 'node:url';
 import { loadDemo } from './demo_loader.mjs';
 import { createFakeIndexedDB } from './fake_idb.mjs';
@@ -25,6 +29,7 @@ const CLONE_SRC = `(function clone(v) {
   const o = {}; for (const k of Object.keys(v)) o[k] = clone(v[k]); return o;
 })`;
 const D = new Date().toISOString().slice(0, 10);
+const RELAY = process.argv.includes('--relay');
 const plain = (v) => JSON.parse(JSON.stringify(v));
 let checks = 0;
 const ok = (fn, label) => { checks += 1; try { fn(); } catch (e) { e.message = `${label}: ${e.message}`; throw e; } };
@@ -43,7 +48,7 @@ const serverStatus = (on, extra = {}) => ({
 });
 const ABOUT = { account: 'acct-1', api_version: 1, sync: { gateway: true, changes: true }, features: { ai: { enabled: true } } };
 
-async function page({ paired = true, gw = {}, synced = true } = {}) {
+async function page({ paired = true, gw = {}, synced = true, bridge = null } = {}) {
   const db = createFakeIndexedDB();
   const KH = loadDemo({ navigator: { userAgent: 'node', onLine: true, storage: {} }, globals: { KDL_PREVIEW: true, KDL_DEVICE: true } });
   KH.mock.instance = new KH.mock.MockApi({ foodsData: JSON.parse(FOODS), seed: false });
@@ -55,6 +60,7 @@ async function page({ paired = true, gw = {}, synced = true } = {}) {
   const log = [];
   global.webkit = { messageHandlers: { bridge: { postMessage: async (req) => {
     log.push(plain(req));
+    if (bridge) return bridge(plain(req));
     if (req.kind === 'serverInfo') return paired ? { ok: true, paired: true, server: 'food.example.org' } : { ok: true, paired: false };
     if (req.kind === 'serverApi') {
       if (!paired) return { error: 'not_paired' };
@@ -75,6 +81,7 @@ const chat = (api, text = 'Log an apple for lunch', q = '') => api.request('POST
   { messages: [{ role: 'user', text }], request_id: 'ask-0123456789abcdef01234567' });
 const reason = async (api) => { const me = await api.request('GET', '/api/me/ai'); return [me.phone.ask, me.phone.photos]; };
 
+async function fakeRuns() {
 // 1. Why Ask and a photo of a meal cannot run, for each kind of pairing.
 {
   const none = await page({ paired: false });
@@ -204,5 +211,52 @@ const reason = async (api) => { const me = await api.request('GET', '/api/me/ai'
   ok(() => assert.match(gateway('/push/v1/api/ai/chat').at(-1).path, /\?dry_run=true$/), 'the dry run asks the server');
 }
 
-console.log(`server ask: ${checks} checks passed`);
+}
+
+// ---------------------------------------------------------------------------------------------------------------- the real server
+// Each line "@@ {json}" asks the pytest driver: { bridge: request } → the app's answer; { count: true } → the server's entries today.
+function relay() {
+  const rl = createInterface({ input: process.stdin });
+  const waiting = [];
+  rl.on('line', (line) => { const next = waiting.shift(); if (next) next(JSON.parse(line)); });
+  return (msg) => new Promise((resolve) => { waiting.push(resolve); process.stdout.write(`@@ ${JSON.stringify(msg)}\n`); });
+}
+async function realRuns() {
+  const ask = relay();
+  const { KH, api } = await page({ synced: false, bridge: (req) => ask({ bridge: req }) });
+  const serverCount = async () => (await ask({ count: true })).entries;
+  const syncNow = async () => { KH.mock.serverApi.forget(); await KH.mock.serverSync.sendNow(); return KH.mock.serverChanges.status(); };
+  const first = await syncNow();
+  ok(() => assert.equal(first.active, true, JSON.stringify(first)), 'R1 the phone syncs both ways with the real server');
+  const st = await api.request('GET', '/api/ai/status');
+  ok(() => assert.deepEqual([st.features.chat, st.features.voice, st.trust.effective], [true, false, 'ask']), 'R1 Ask is on, voice off, it asks first');
+  // The real chat request, through the real gateway: the person trusts the assistant "always" on the server, and the phone asks for "ask".
+  const answer = await api.request('POST', '/api/ai/chat', { messages: [{ role: 'user', text: 'I had a banana for breakfast' }],
+    request_id: 'ask-0123456789abcdef01234567' });
+  ok(() => assert.equal(answer.kind, 'confirm_save', JSON.stringify(answer).slice(0, 300)), 'R2 a card, not a save');
+  ok(() => assert.equal(answer.trust, 'ask'), 'R2 the server used "ask"');
+  ok(() => assert.deepEqual(plain(answer.saved), []), 'R2 the server saved nothing');
+  const card = answer.pending_save;
+  const here = api._food(card.payload.entries[0].food_id);
+  ok(() => assert.equal(here && here.name, card.items[0].name), 'R2 the card names the phone\'s own food');
+  ok(() => assert.equal(here.source, 'builtin'));
+  const before = await serverCount();
+  ok(() => assert.equal(before, 0), 'R2 nothing on the server yet');
+  // Save as eaten, as the card does (js/views/ask.js postCard): the phone's own route, then sync sends it up
+  await api.request('POST', '/api/log/batch', { entries: card.payload.entries.map((e) => ({ ...e, status: 'eaten' })) });
+  await syncNow();
+  const after = await serverCount();
+  ok(() => assert.equal(after, 1), 'R3 one entry on the server after sync');
+  await syncNow();
+  const again = await serverCount();
+  ok(() => assert.equal(again, 1), 'R3 and still one after another sync');
+  const cid = card.payload.entries[0].client_id;
+  ok(() => assert.equal(api._entries.filter((e) => e.client_id === cid).length, 1), 'R3 one on the phone, with the card\'s client_id');
+  // A low is the server's own card, untouched; nothing is saved
+  const low = await api.request('POST', '/api/ai/chat', { messages: [{ role: 'user', text: 'my blood sugar is 52, what do I do' }] });
+  ok(() => assert.equal(low.kind, 'treat_low', JSON.stringify(low).slice(0, 200)), 'R4 a low gets the server\'s card');
+}
+
+if (RELAY) await realRuns(); else await fakeRuns();
+console.log(`server ask${RELAY ? ' (real server)' : ''}: ${checks} checks passed`);
 process.exit(0);

@@ -178,7 +178,13 @@ phone and needs no server ([design note 38][NOTE38]):
 - **Use only this iPhone's AI** in Settings → AI features keeps everything you write away from any AI but the iPhone's own.
 - An answer from your server is shown as it is. If it says to treat a low or to get help now, the app does not ask another AI.
 - A lab report goes only to an AI on your own network or on the iPhone, never to a company's AI.
-- **Ask** is not on the phone yet.
+- **Ask**, the AI assistant, works on the phone when your server's admin has turned it on. It uses your server's AI, so it needs
+  a connection and a phone that syncs both ways. On the phone it always asks before it saves: tap **Save** on the card and the
+  entry is saved on the phone, then sent to your server. Talking to Ask is not on the phone. When Ask cannot be used, the Ask
+  tab says why and what to do.
+- **Plate photo (AI)** on the Add screen names the foods in a photo of your meal. It uses your server's AI only, never the
+  iPhone's own AI and never a company's AI from the phone. Your server decides which AI may see photos. When your server does
+  not offer it, the Add screen says so under the AI buttons.
 - **A recipe from a web page**, **Open in Instacart** and **Send to** your own list app work on the phone when your server has
   them turned on. Your server reads the page and sends the list, with its own keys, so they need a connection. The recipe's
   ingredients are matched with the foods on your phone. The shopping list comes from the plan on your server, so plans you made

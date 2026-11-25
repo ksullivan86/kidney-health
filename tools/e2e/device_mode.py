@@ -24,6 +24,11 @@ stands in for the iPhone app's message handlers. At 375x812 light and 1280x800 d
 * sync both ways (design note 39, steps 6 and 7; 375x812 light), with a stand-in for the change feed: Sync now brings an entry made
   on the server to Today; the phone's edit of an entry also changed on the server shows the conflict card with "Keep the saved one"
   and "Use mine"; "Use mine" sends the edit again on the server's version; Settings says it syncs both ways.
+* without a server both ways, the Ask tab is there and says why Ask cannot run, never the web demo's text; Add says a photo of a
+  meal needs the server's AI.
+* Ask on the phone (design note 39; 375x812 light), with a stand-in for the change feed and the server's chat: the Ask tab offers the
+  conversation and says it always asks before saving; the question goes to the server with trust "ask"; the server's card names
+  the phone's own food; Save as eaten adds the entry on the phone with the card's ID; Add offers Plate photo (AI).
 
 Nothing leaves the machine. Prints PASS / FAIL lines and writes ``<out>/report.json``; exit status 1 on any failure.
 """
@@ -191,6 +196,7 @@ def walk(browser, base: str, width: int, height: int, scheme: str) -> None:
     check(f"[{tag}] the entry survives a reload", food["name"].split(",")[0].lower() in page.locator("#view-today").inner_text().lower())
     check(f"[{tag}] the setup does not come back once finished", not page.locator("#sheet-welcome[open]").count())
     ai_walk(page, base, tag)
+    no_server_ask(page, base, tag)
     over = page.evaluate("document.documentElement.scrollWidth > window.innerWidth + 1")
     check(f"[{tag}] no sideways scroll", not over)
     check(f"[{tag}] no request to another host", not others, "; ".join(others[:3]))
@@ -228,6 +234,112 @@ def ai_walk(page, base: str, tag: str) -> None:
     check(f"[{tag}] a low gets the Treating a low card, and the model is not asked",
           "Treating a low" in page.locator("#sheet-ai .ai-results").inner_text() and len(page.evaluate("window.__kh.ai")) == len(sent))
     page.keyboard.press("Escape")
+
+
+def no_server_ask(page, base: str, tag: str) -> None:
+    """No server both ways: the Ask tab says why it cannot run (never the demo's text); Add says where a meal photo comes from."""
+    page.goto(f"{base}/index.html#ask")
+    page.wait_for_selector("#view-ask:not([hidden])", timeout=30000)
+    page.wait_for_selector("#ask-demo:not([hidden])", timeout=10000)
+    text = page.locator("#ask-demo").inner_text()
+    check(f"[{tag}] the Ask tab is there on the phone", page.locator("#tab-ask").is_visible())
+    check(f"[{tag}] Ask says it uses the server's AI, not the demo's text",
+          "Ask uses your Kidney Health server's AI." in text and "installed app" not in text and "preview" not in text, text[:200])
+    check(f"[{tag}] and there is nothing to type into", page.locator("#ask-composer").is_hidden())
+    page.goto(f"{base}/index.html#add")
+    page.wait_for_selector("#view-add:not([hidden])", timeout=30000)
+    page.wait_for_selector("#ai-photo-where", timeout=10000)
+    line = page.locator("#ai-photo-where").inner_text()
+    check(f"[{tag}] Add says a photo of a meal needs the server's AI", "A photo of your meal or of a label needs your Kidney Health server's AI." in line, line)
+
+
+# Design note 39: Ask on the phone. The change feed as in SYNC (empty), the server's AI status with Ask and photos, and its chat,
+# which answers with a card naming a built-in food by the server's own id.
+ASK = ("window.__kh = { copies: [], phone: [], api: [], chats: [] };"
+       "window.__kh.status = { enabled: true, opted_in: true, available: true, reason: null, message: null, provider: { label: 'Home AI', host: 'ai.home.lan' },"
+       " consent: { text: null, photos: { host: 'ai.home.lan', skip_preview: true }, chat: { host: 'ai.home.lan', skip_preview: true }, labs: null, voice: null },"
+       " routing: { mode: 'routed' }, routes: { chat: { feature: 'chat', available: true, text: 'Runs on your local AI (ai.home.lan).', consent: { host: 'ai.home.lan', skip_preview: true } },"
+       " photos: { feature: 'photos', available: true, consent: { host: 'ai.home.lan', skip_preview: true } } },"
+       " features: { chat: true, voice: true, plate: true, label: true }, trust: { setting: 'always', allowed: true, effective: 'always' }, daily_limit: null, remaining_today: null };"
+       "window.__kh.card = () => { const f = KH.mock.instance._foods.find((x) => x.source === 'builtin' && /^banana/i.test(x.name));"
+       " return { kind: 'confirm_save', text: 'Nothing has been saved yet. Check this, then press Save, or Cancel.', cards: [], numbers: [], notes: [], trust: 'ask', saved: [], questions: [],"
+       " pending_save: { tool: 'log_food', date: KH.state.date, meal: 'breakfast', status: 'eaten', purpose: null, imports: [],"
+       " items: [{ name: f.name, brand: null, as_asked: '1', servings: 1, grams: null, food_id: 4242, fdc_id: null, new_food: false, counted_as_treating_a_low: false }],"
+       " numbers: [], payload: { entries: [{ date: KH.state.date, meal: 'breakfast', food_id: 4242, status: 'eaten', servings: 1,"
+       " client_id: '3f2504e0-4f89-41d3-9a0c-0305e82c3301' }] } } }; };"
+       "window.__kh.gateway = (r) => { window.__kh.api.push({ method: r.method, path: r.path });"
+       " const reply = (json) => ({ ok: true, status: 200, json: JSON.stringify(json) });"
+       " if (r.path === '/push/v1/about') return reply({ account: 'acct-1', api_version: 1, sync: { gateway: true, changes: true } });"
+       " if (r.path.startsWith('/push/v1/changes') && r.method === 'GET') return reply({ changes: [], foods: [], next: '0', more: false });"
+       " if (r.path === '/push/v1/changes') return reply({ results: JSON.parse(r.body).changes.map((c) => ({ kind: c.kind, id: c.id, status: 'done', version: c.version })) });"
+       " if (r.path === '/push/v1/match') return reply({ known: {}, unknown: {} });"
+       " if (r.path === '/push/v1/api/ai/status') return reply(window.__kh.status);"
+       " if (r.path.startsWith('/push/v1/api/ai/chat')) { window.__kh.chats.push(JSON.parse(r.body)); return reply(window.__kh.card()); }"
+       " return { ok: true, status: 404, json: '{\"detail\": \"Not Found\"}' }; };"
+       "window.webkit = { messageHandlers: { safetyCopy: { postMessage: (t) => window.__kh.copies.push(String(t)) },"
+       " phone: { postMessage: (m) => window.__kh.phone.push(String(m)) },"
+       " bridge: { postMessage: async (r) => r.kind === 'services' ? { ok: true, off: false, usda: false, scan: false }"
+       " : r.kind === 'serverInfo' ? { ok: true, paired: true, server: 'food.example.org' }"
+       " : r.kind === 'serverSyncCheck' ? { ok: true, status: 200, json: '{\"ok\": true}' }"
+       " : r.kind === 'serverSync' ? { ok: true, status: 200, json: JSON.stringify({ added: {}, already_there: {}, skipped: { food_not_found: 0, day_full: 0 } }) }"
+       " : r.kind === 'serverApi' ? window.__kh.gateway(r)"
+       " : r.kind === 'aiStatus' ? { ok: true, available: false, reason: 'not_eligible' }"
+       " : { error: 'off_off', message: 'off' } } } };")
+
+
+def ask_walk(browser, base: str) -> None:
+    """Design note 39: Ask on the phone through the server, a card saved on the phone, and Plate photo (AI) on Add."""
+    tag = "ask"
+    ctx = browser.new_context(viewport={"width": 375, "height": 812}, color_scheme="light")
+    ctx.add_init_script(ASK)
+    page = ctx.new_page()
+    errors: list[str] = []
+    others: list[str] = []
+    page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.on("request", lambda r: others.append(r.url) if not r.url.startswith(base) else None)
+    page.goto(f"{base}/index.html#today")
+    page.wait_for_selector("#view-today:not([hidden])", timeout=30000)
+    page.wait_for_timeout(800)
+    page.evaluate("KH.request('PUT', '/api/device/setup', { done: true }).then(() => KH.mock.local.flush())")  # past the first-start setup
+    page.evaluate("KH.request('PATCH', '/api/me/ai', { opt_in: true })")
+    page.evaluate("KH.mock.serverApi.forget(); KH.mock.serverSync.sendNow()")
+    for _ in range(50):
+        if page.evaluate("KH.mock.serverChanges.active()"):
+            break
+        page.wait_for_timeout(100)
+    page.evaluate("KH.mock.local.flush()")
+    page.goto(f"{base}/index.html#ask")
+    page.reload()
+    page.wait_for_selector("#view-ask:not([hidden])", timeout=30000)
+    page.wait_for_selector("#ask-composer:not([hidden])", timeout=10000)
+    page.wait_for_selector("#ask-trust:not([hidden])", timeout=10000)
+    check(f"[{tag}] Ask offers the conversation", page.locator("#ask-demo").is_hidden() and page.locator("#ask-input").is_visible())
+    line = page.locator("#ask-trust-line").inner_text()
+    check(f"[{tag}] and says it always asks before saving", "always asks before it saves" in line, line)
+    page.fill("#ask-input", "I had a banana for breakfast")
+    page.click("#ask-send")
+    page.wait_for_selector("#ask-thread .ask-pending", timeout=10000)
+    sent = page.evaluate("window.__kh.chats")
+    check(f"[{tag}] the question goes to the server with trust ask", len(sent) == 1 and sent[0].get("trust") == "ask", json.dumps(sent)[:200])
+    page.get_by_role("button", name="Save as eaten").click()
+    page.wait_for_selector("#ask-thread .ask-saved", timeout=10000)
+    got = page.evaluate("KH.mock.instance._entries.filter((e) => e.client_id === '3f2504e0-4f89-41d3-9a0c-0305e82c3301')"
+                        ".map((e) => [KH.mock.instance._food(e.food_id).source, e.food_name])")
+    check(f"[{tag}] Save adds the entry on the phone once, with the phone's own food", len(got) == 1 and got[0][0] == "builtin"
+          and "banana" in got[0][1].lower(), json.dumps(got))
+    saved_at = [r["path"] for r in page.evaluate("window.__kh.api")]
+    check(f"[{tag}] and not through the server's log route", not any("/api/log" in x for x in saved_at), json.dumps(saved_at)[:200])
+    page.goto(f"{base}/index.html#add")
+    page.wait_for_selector("#view-add:not([hidden])", timeout=30000)
+    button = page.get_by_role("button", name="Plate photo (AI)")
+    button.wait_for(timeout=30000)
+    check(f"[{tag}] Add offers Plate photo (AI) from the server", button.is_visible() and page.locator("#ai-photo-where").count() == 0)
+    over = page.evaluate("document.documentElement.scrollWidth > window.innerWidth + 1")
+    check(f"[{tag}] no sideways scroll", not over)
+    check(f"[{tag}] no request to another host", not others, "; ".join(others[:3]))
+    check(f"[{tag}] no console or page error", not errors, "; ".join(errors[:3]))
+    ctx.close()
 
 
 def both_ways_walk(browser, base: str) -> None:
@@ -433,6 +545,7 @@ def main(argv: list[str] | None = None) -> int:
                     walk(browser, base, width, height, scheme)
                 both_ways_walk(browser, base)
                 sync_walk(browser, base)
+                ask_walk(browser, base)
             finally:
                 browser.close()
     finally:

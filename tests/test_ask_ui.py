@@ -91,13 +91,15 @@ def test_the_keys_the_words_and_the_states():
 
 
 def test_the_demo_shows_the_tab_with_a_note_and_never_a_mock_answer():
-    assert "if (MOCK) { tab.hidden = false; return true; }" in ASK_JS
+    assert "if (MOCK && !DEVICE) { tab.hidden = false; return true; }" in ASK_JS
     assert "The AI assistant works in the installed app, with an AI your admin sets up." in ASK_JS
-    assert "els.composer.hidden = true;" in ASK_JS  # no input in the demo
+    assert "if (MOCK && !DEVICE) { notice(DEMO_TEXT); return; }" in ASK_JS
+    assert "els.composer.hidden = !!text;" in ASK_JS  # no input in the demo
     assert "chat_enabled: false" in MOCK_AI  # the demo is a server with the chat off (and no trusted saves)
-    # js/mock/ai.js has no chat route: every other /api/ai/* route is 404, like a server with AI off. Device mode (design note 38 §5.6)
-    # answers only describe a meal and a lab report's text, and its status says the chat is off.
-    assert "/api/ai/chat" not in MOCK_AI and "ask('chat'" not in MOCK_AI and "chat: false, voice: false" in MOCK_AI
+    # js/mock/ai.js answers the chat only in device mode, through the paired server (tests/test_server_ask_phone.py); in the demo
+    # it is 404, like every other /api/ai/* route on a server with AI off. The iPhone's own model has no chat.
+    assert "route('POST', '/api/ai/chat', function ({ body, qp }) {\n    if (!device()) fail(404, 'Not Found');" in MOCK_AI
+    assert "ask('chat'" not in MOCK_AI and "chat: false, voice: false" in MOCK_AI
     assert re.search(r"route\('\*', /\^\\/api\\/\(\?:ai\|vision\)\\//", MOCK_AI)
 
 
@@ -216,4 +218,4 @@ def test_the_trust_line_and_the_link_to_settings_are_in_the_ask_view():
     assert "id: 'set-ai-trust'" in TRUST_JS
     for css in (".ask-trust {", ".ask-save {", ".ask-save-items {", ".ask-save-actions {", ".trust-points {"):
         assert css in ASK_CSS, css
-    assert "if (MOCK) { box.hidden = true; return; }" in SAVING_JS  # the demo has no assistant, so no trust line
+    assert "if (MOCK && !DEVICE) { box.hidden = true; return; }" in SAVING_JS  # the demo has no assistant, so no trust line

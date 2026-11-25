@@ -2,7 +2,7 @@
 
 | | |
 |---|---|
-| Status | Decided 2026-11-24 (§12), with the usual good practice the owner asked for. The plan is §11. Built, server side: step 2 (the gateway, `app:sync`, `GET /push/v1/about`; `app/app_gateway.py`) and step 5 (the change feed, schema step 38; `app/sync_feed.py`). Built on the phone: step 1, the phone side of steps 3 and 4 (the `serverApi` bridge and its allow-list, ARCHITECTURE "Device mode"), and steps 6 and 7 (receive, the first sync's review, the account check, edits and deletes with conflict cards; `js/mock/server_changes.js`). Step 8 is built on both sides: saved meals and recipes sync both ways; the profile, targets, account settings and food preferences come from the server and are changed through it (`js/mock/server_account.js`); the "N to review" badge and the "needs review" mark on Today. Step 9 is built on both sides: recipe pages, Instacart and the list app through the gateway. The demo's twins of step 5's versions, `If-Match` and `client_id` are built and pinned by vectors. Ask stays off on the phone. |
+| Status | Decided 2026-11-24 (§12), with the usual good practice the owner asked for. The plan is §11. Built, server side: step 2 (the gateway, `app:sync`, `GET /push/v1/about`; `app/app_gateway.py`) and step 5 (the change feed, schema step 38; `app/sync_feed.py`). Built on the phone: step 1, the phone side of steps 3 and 4 (the `serverApi` bridge and its allow-list, ARCHITECTURE "Device mode"), and steps 6 and 7 (receive, the first sync's review, the account check, edits and deletes with conflict cards; `js/mock/server_changes.js`). Step 8 is built on both sides: saved meals and recipes sync both ways; the profile, targets, account settings and food preferences come from the server and are changed through it (`js/mock/server_account.js`); the "N to review" badge and the "needs review" mark on Today. Step 9 is built on both sides: recipe pages, Instacart and the list app through the gateway. The demo's twins of step 5's versions, `If-Match` and `client_id` are built and pinned by vectors. Ask is on the phone now that sync works both ways: it uses the server's AI while the phone syncs both ways, always asks before it saves, and saves on the phone (ARCHITECTURE "Device mode"). Its voice stays off. |
 | Owner's words | "Connecting a server should let the iPhone app use the server's AI and the other keys and services set up there, and sync between devices." (2026-11-21) And: "finish whatever is left on the roadmap." (2026-11-24) |
 | Builds on | [Note 38](38-iphone-app-without-a-server.md) (the app alone, device mode, step 4's one-way sending, §5.5 and §5.6, D2), [note 02](02-ios-pwa.md) R5 (the outbox, entry versions, "never overwrite another device's change"), [note 12](12-phone-push-tokens.md) (device tokens, `/push/v1`), [note 32](32-choose-local-or-cloud-ai.md) and [note 36](36-lab-pdf-text.md) (AI routing, lab text on the local model only). |
 | Scope | What the iPhone app can do once it is paired with the person's server: read and edit the person's data there, use the server's AI, use the server's food services and keys, and keep the phone and the server in step both ways. This is note 38 §9 step 6. |
@@ -167,7 +167,14 @@ their JavaScript twins and vectors, whichever is built first.
 ### 6.4 Features through the gateway
 
 Meal ideas, describe a meal, recipes, the Ask chat, label and plate photos, lab report photos and text, consent, and AI status.
-The Ask microphone, where the server has speech to text, sends the clip to the server's route as the web app does.
+The gateway also carries the Ask microphone's route, where the server has speech to text, but the phone does not use it yet:
+Ask's voice stays off on the phone.
+
+As built (2026-11-25): Ask runs only while the phone syncs both ways, since the assistant reads the log on the server. The phone
+always asks the server for `trust: "ask"`, so the server saves nothing and answers with a card. Save on the card saves on the
+phone, with the card's `client_id`, and sync sends it to the server once. One source of truth, and no row is made twice. When Ask
+or a plate photo cannot run, the screen says why (not paired both ways, offline, only this iPhone's AI, not in step, or off on
+the server). Photos go only to the server's photo routes, never to the iPhone's own model.
 
 ## 7. The server's keys and food services from the phone
 

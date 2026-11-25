@@ -79,6 +79,14 @@ The iPhone app works with no server, and with your own server both ways (design 
 * With a token both ways, the iPhone app can import a recipe from a web page, open the shopping list in Instacart, and send it to
   your own list app, through your server and only when it has them turned on (design note 39, step 9). The list app is still set up
   in the web app. Without such a server these stay off on the phone.
+* Ask, the AI assistant, works in the iPhone app when it syncs both ways with your server and your server has Ask on (design note
+  39). It uses your server's AI with the same safety rules as the web app. On the phone it always asks before it saves: **Save** on
+  the card saves on the phone, and sync sends it to your server once. When Ask cannot be used, the Ask tab says why and what to
+  do, instead of the demo's text. Talking to Ask stays off on the phone. A page can now ask the server for "ask before every save"
+  whatever the person chose (`trust: "ask"` in `POST /api/ai/chat`); the iPhone app always does.
+* In the iPhone app, **Plate photo (AI)** on the Add screen uses your server's AI when your server offers it. When it does not,
+  the Add screen says that a photo of your meal needs your server's AI, and why it cannot be used now. Photos never go to the
+  iPhone's own AI.
 
 ### Fixed
 

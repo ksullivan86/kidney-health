@@ -190,7 +190,7 @@ const about = { json: { account: 'acct-1', api_version: 1, features: { sync: fal
   const me = await api.request('PATCH', '/api/me/ai', { opt_in: true });
   ok(() => assert.deepEqual(JSON.parse(gateway('/push/v1/api/me/ai')[0].body), { opt_in: true }), 'the AI switch goes to the server too, alone');
   ok(() => assert.deepEqual([me.phone.both_ways, me.phone.where.describe, me.phone.where.labs, me.phone.where.chat], [true, 'server', 'server', null]),
-    'Settings: where each feature runs (Ask stays off on the phone)');
+    'Settings: where each feature runs (Ask waits for two-way sync, which this server does not offer)');
   const st = await api.request('GET', '/api/ai/status');
   ok(() => assert.deepEqual([st.features.parse_meal, st.features.next_meal, st.features.label, st.features.chat, st.features.voice],
     [true, true, true, false, false]), 'the server\'s features, without Ask and voice');

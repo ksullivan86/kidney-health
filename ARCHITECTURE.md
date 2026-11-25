@@ -5909,12 +5909,23 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
     a safety card, a consent question (409), a limit (429) or a failure, is the server's and is shown as it is. "Use only this
     iPhone's AI" (`GET`/`PUT /api/device/ai-choice`, kept with the log) skips the server. `GET /api/ai/status` merges the two: the
     server's route, features and consent for what it runs, the iPhone's for the rest; voice is off. Lab text and photos go only to
-    the server's lab routes (local AI only) or the iPhone's model. Ask stays off on the phone: the server's assistant can save to
-    the server's log, which the phone sees only with two-way sync (step 6). Answers pass `M.serverApi.localize`: foods sent in full
+    the server's lab routes (local AI only) or the iPhone's model. Answers pass `M.serverApi.localize`: foods sent in full
     are kept and renamed to the phone's ids, other `food_id`s are matched by the built-in food of that exact name or the one food of
     that name, and an idea or card naming a food the phone lacks is left out (`dropped: not_on_this_iphone`); server row ids
     (`entry_id`, `meal_id`) are never kept; a safety answer is never cut. Requests drop `exclude_food_ids` (the phone's ids).
     Photos go from `KH.ai.uploadPhoto` to the in-page API, which sends them as `jpeg`.
+  * **Ask on the phone** (`POST /api/ai/chat` in `js/mock/ai.js`): the server's AI only, and only while the phone syncs both ways
+    (`M.serverChanges.active()`), since the assistant reads the person's log on the server. Waiting phone rows are sent first (5 s at
+    most). The page always sends `trust: "ask"`, which the server honours whatever the person stored (`chat_save.effective_trust`),
+    so the server writes nothing and answers with a card. The card's foods are renamed to the phone's ids (`M.serverApi.foodHere`:
+    the built-in food of that name, else the one food of that name, else the one with that brand); a card that names a food the
+    phone lacks becomes a question. Save on the card posts to the phone's own routes with the server's `client_id`, and step 4 sends
+    the row up once. The rule-based low and emergency answers pass untouched. An older server that saved at once: the `saved`
+    cards lose Undo (`undo: null, on_server: true`) and a sync follows. Voice stays off. `GET /api/me/ai` → `phone.ask` and
+    `phone.photos` give why the server's AI cannot run Ask or photos now (`not_paired`, `not_both_ways`, `offline`, `device_only`,
+    `not_synced`, `not_opted_in`, `server_off`); the Ask tab is always shown on the phone and words the reason (`js/views/ask.js`),
+    and the Add screen says where a meal photo comes from when "Plate photo (AI)" is not offered (`js/views/ai.js`). The phone never
+    shows the web demo's Ask text.
 * **Sync both ways (design note 39, steps 6 and 7)**: `js/mock/server_changes.js` (device mode only, `M.serverChanges`) reads the
   change feed and sends the phone's edits and deletes ("The change feed" above), through `M.serverApi.call` and the app's
   `serverApi` message (allow-list: `GET /push/v1/changes` with `after` and `limit`, `POST /push/v1/changes`, `POST /push/v1/match`).
