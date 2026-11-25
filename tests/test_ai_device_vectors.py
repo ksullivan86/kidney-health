@@ -94,7 +94,7 @@ def test_ai_prompts_json_is_the_servers_prompt(tmp_path) -> None:
     files = {f.relative_to(tmp_path).as_posix() for f in builder.build_device(tmp_path)}
     assert {"ai-prompts.json", "vendor/pdfjs-dist-6.4.299/pdf.min.mjs", "vendor/pdfjs-dist-6.4.299/pdf.worker.min.mjs"} <= files
     doc = json.loads((tmp_path / "ai-prompts.json").read_text(encoding="utf-8"))
-    assert set(doc) == {"system", "tasks"} and set(doc["tasks"]) == {"parse_meal", "read_lab_report_text"}
+    assert set(doc) == {"system", "tasks", "own_key"} and set(doc["tasks"]) == {"parse_meal", "read_lab_report_text"}  # own_key: test_phone_own_key.py
     assert doc["system"] == prompts.TASK_SYSTEM_PROMPT
     for task in doc["tasks"].values():
         assert set(task) == {"template"} and task["template"].count("{text}") == 1
