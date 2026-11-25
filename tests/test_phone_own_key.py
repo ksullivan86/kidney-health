@@ -8,6 +8,7 @@
 """
 from __future__ import annotations
 
+import ast
 import importlib.util
 import json
 import re
@@ -72,6 +73,30 @@ def test_the_providers_are_the_servers_own_key_presets() -> None:
     assert 'case .openai: ["store": false]' in CODE and dict(presets.get("openai").extra_body) == {"store": False}
     assert 'case .openrouter: ["provider": ["data_collection": "deny", "require_parameters": true]]' in CODE
     assert dict(presets.get("openrouter").extra_body) == {"provider": {"data_collection": "deny", "require_parameters": True}}
+
+
+def test_the_committed_own_key_prompts_are_current() -> None:
+    """scripts/build_preview.py packs app/ai/own_key_prompts.json with plain Python; this keeps it equal to the server's code."""
+    spec = importlib.util.spec_from_file_location("gen_own_key_prompts", ROOT / "scripts" / "gen_own_key_prompts.py")
+    gen = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(gen)
+    committed = (ROOT / "app" / "ai" / "own_key_prompts.json").read_text(encoding="utf-8")
+    assert committed == gen.render(), "app/ai/own_key_prompts.json is stale: run python3 scripts/gen_own_key_prompts.py"
+
+
+def test_the_pack_step_needs_no_app_dependencies() -> None:
+    """The macOS jobs run scripts/build_preview.py --device with plain Python (2026-11-25: an import of app.ai.config there broke
+    the iOS build). It may import only app.ai.prompts, whose imports are the standard library and app.textclean."""
+    tree = ast.parse((ROOT / "scripts" / "build_preview.py").read_text(encoding="utf-8"))
+    modules = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            modules.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            modules.update(f"{node.module}.{alias.name}" for alias in node.names)
+    app_modules = {m for m in modules if m.startswith("app.")}
+    assert app_modules == {"app.ai.prompts", "app.guidance.topics.APP_LINKS"}, app_modules  # both need only the standard library
 
 
 def test_the_own_key_prompts_are_the_servers(tmp_path) -> None:
