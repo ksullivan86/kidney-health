@@ -43,6 +43,15 @@
    (nothing is saved). An older server that saved at once all the same: its "saved" cards lose Undo (their ids are the server's),
    say so, and a sync brings the rows here. Voice stays off on the phone. GET /api/me/ai → phone.ask and phone.photos say why Ask or
    a photo of a meal cannot run, for the screens' own words.
+   THE PERSON'S OWN AI KEY (the owner, 2026-11-25: "if its not connected to the server it should be able to use their own keys";
+   design note 39 §6.5). With or without a server, the person may add a key from OpenAI, OpenRouter or Nous Portal in the iPhone
+   app (Keys and services). The order is then: the server's AI (as above) → the own key, for describe a meal and, only with the
+   person's photo switch on, label and plate photos → the iPhone's own model → no AI. "Use only this iPhone's AI" skips the own key
+   too. Only an unreachable provider (or one that is down) moves on; a refusal or a checked answer is shown as it is. The server's
+   prefilter runs before the own key is asked, and the server's checks run on its answer (js/engine/aijudge.js). Lab reports never
+   go to it, and a request whose data holds the profile's name or birth month is not sent to it (identityIn). The consent sheet
+   names the provider and host before the first call; the consent is kept with the log. Ask stays the server's: it reads the log
+   there. Nothing about a prompt or a reply is kept.
    Outside device mode nothing here changes. */
 (() => {
   'use strict';
@@ -90,6 +99,106 @@
     labs: 'Lab report photos', recipes: 'Recipes' }; // app/ai/routing.py LABEL
   const PURPOSE = { photos: 'photos', meal_ideas: 'text', describe: 'text', chat: 'chat', labs: 'labs', recipes: 'text' };
   const ON_DEVICE = ['describe', 'labs'];
+
+  // ---------------------------------------------------------------------------
+  // The person's own AI key (owner, 2026-11-25; design note 39 §6.5), with or without a server
+  // ---------------------------------------------------------------------------
+  // The iPhone app holds the key (Keychain) and talks to the provider's fixed host (ios/.../OwnAI.swift); the page only asks
+  // { kind: 'ownAIStatus' } → { ok, set, provider, label, host, model, photos } and { kind: 'ownAI', task, text | jpeg } →
+  // { ok, content, refusal } or { error, message }. The app builds the request from the server's own prompts and schemas
+  // (ai-prompts.json "own_key") and knows three tasks only. Lab reports never go to it, and the page never sends it anything that
+  // holds the person's name or birth month (identityIn below): such a request goes to this iPhone's own model or nowhere.
+  const OWN_ID = -1; // the own key's provider id in consent requests (the server's are positive, Apple's model is 0)
+  const OWN_ROUTES = ['describe', 'photos']; // describe a meal; label and plate photos only with the person's photo switch on
+  const OWN_POLICY = { // app/ai/presets.py POLICY_LINES (tests/test_phone_own_key.py compares them)
+    openai: 'OpenAI does not use API data for training; it keeps abuse-monitoring logs for up to 30 days.',
+    openrouter: 'OpenRouter routes the request only to model providers that do not collect data.',
+    nous_portal: 'Nous Research\'s API receives the request; read their privacy policy before agreeing.',
+  };
+  const OWN_ERROR = 'Your own AI key could not answer. Try again later.';
+  const OWN_IDENTITY = 'This has your name or date of birth in it, so it was not sent to your own AI key. Take them out and try again.';
+  const OWN_GONE = 'Your AI provider could not be reached, so this AI feature is not available right now. Try again later.';
+  async function ownStatus(api) {
+    if (choiceOf(api).device_only) return null; // "Use only this iPhone's AI" skips the own key too
+    const a = await KH.mock.device.lookup({ kind: 'ownAIStatus' });
+    if (!a || a.ok !== true || a.set !== true || !OWN_POLICY[a.provider]) return null;
+    return { provider: a.provider, label: String(a.label || ''), host: String(a.host || ''), model: String(a.model || ''), photos: a.photos === true };
+  }
+  const ownRuns = (own, featureRoute) => !!own && (featureRoute === 'describe' || (featureRoute === 'photos' && own.photos));
+  function ownSummary(own) {
+    return { id: OWN_ID, label: `${own.label} (your own key)`, model: own.model, host: own.host, vision_model: null, scope: 'user',
+      kind: 'cloud', policy: OWN_POLICY[own.provider], own_key: true };
+  }
+  const ownConsents = (api) => ({ ...(api._aiOwnConsent || {}) }); // { purpose: { provider, host, at } }, kept with the log
+  function ownConsent(api, own, purpose) {
+    const c = ownConsents(api)[purpose];
+    return c && c.provider === own.provider && c.host === own.host ? { host: own.host, policy_version: 'own', skip_preview: true, at: c.at } : null;
+  }
+  function ownConsentRequest(own, purpose) {
+    return { provider_id: OWN_ID, provider_label: `${own.label} (your own key)`, host: own.host, purpose, policy: OWN_POLICY[own.provider],
+      policy_version: 'own', kind: 'cloud', upstream: null, local: false, own_key: true };
+  }
+  function ownRouteView(api, feature, own, optedIn) {
+    return { feature, label: ROUTES[feature], purpose: PURPOSE[feature], route: 'cloud', role: null, chosen: false, available: optedIn,
+      reason: optedIn ? null : 'not_opted_in', message: optedIn ? null : UNAVAILABLE.not_opted_in,
+      text: `Goes to ${own.label} (${own.host}) with your own key.`, runs_on: ownSummary(own), runs_on_phone: 'own', fallback: null,
+      consent: ownConsent(api, own, PURPOSE[feature]) };
+  }
+  // Does `text` hold the person's name or birth month? Then it never goes to the own key (CLAUDE.md, the owner's rule).
+  const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+  function identityIn(api, text) {
+    const p = api._profile || {};
+    const folded = String(text || '').normalize('NFKC').toLowerCase();
+    const name = typeof p.name === 'string' ? p.name.normalize('NFKC').toLowerCase().trim() : '';
+    if (name) {
+      if (folded.includes(name)) return true;
+      for (const word of name.split(/[^\p{L}\p{N}'-]+/u)) {
+        if (word.length >= 3 && new RegExp(`(^|[^\\p{L}\\p{N}])${word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}($|[^\\p{L}\\p{N}])`, 'u').test(folded)) return true;
+      }
+    }
+    const m = /^(\d{4})-(\d{2})$/.exec(typeof p.birth_month === 'string' ? p.birth_month : '');
+    if (m) {
+      const [, y, mm] = m;
+      const n = String(Number(mm));
+      const month = MONTHS[Number(mm) - 1] || '';
+      const forms = [`${y}-${mm}`, `${y}/${mm}`, `${mm}/${y}`, `${n}/${y}`, `${mm}-${y}`, `${n}-${y}`, `${mm}.${y}`, `${month} ${y}`,
+        `${month.slice(0, 3)} ${y}`];
+      if (forms.some((f) => f && folded.includes(f))) return true;
+    }
+    return false;
+  }
+  // One task on the own key. { value } with the checked answer, or { skip } when the next step of the order must run: the own key
+  // is not set or not for this feature, the provider could not be reached or is down, or the data names the person.
+  async function viaOwnKey(api, featureRoute, task, payload, dry, check) {
+    const own = await ownStatus(api);
+    if (!ownRuns(own, featureRoute)) return { skip: 'not_available' };
+    if (typeof payload.text === 'string' && identityIn(api, payload.text)) return { skip: 'identity' };
+    if (!prefs(api).opt_in) unavailable('not_opted_in');
+    const purpose = PURPOSE[featureRoute];
+    if (!ownConsent(api, own, purpose)) {
+      fail(409, 'Agree to send this to the AI provider first.', { consent_required: true, consent: ownConsentRequest(own, purpose) });
+    }
+    if (dry) {
+      return { value: { dry_run: true, device: true, own_key: true, feature: task, mode: null, destination: `https://${own.host}`, host: own.host,
+        provider: { id: OWN_ID, label: `${own.label} (your own key)`, preset: own.provider, scope: 'user', local: false },
+        method: 'POST', headers: { Authorization: 'Bearer [your key, not shown]' }, body: payload.text != null ? { task, data: payload.text } : { task },
+        image_bytes: payload.jpeg ? Math.floor((payload.jpeg.length * 3) / 4) : 0, images: [],
+        message: `This iPhone sends this to ${own.label} at ${own.host} with your own key, with the app's fixed instructions. Your name and date of birth are never sent.` } };
+    }
+    const res = await KH.mock.device.lookup({ kind: 'ownAI', task, ...payload });
+    if (!res || res.ok !== true) {
+      const code = res && res.error;
+      if (code === 'offline' || code === 'not_available' || code === 'own_off' || code === 'photos_off' || code === 'no_app') return { skip: 'unreachable' };
+      if (code === 'rate_limited') fail(429, res.message || OWN_ERROR, { reason: 'rate_limited' });
+      fail(502, (res && res.message) || OWN_ERROR, { reason: code || 'ai_failed', audit_id: null });
+    }
+    const provider = { id: OWN_ID, label: `${own.label} (your own key)`, model: own.model, host: own.host };
+    const done = (verdict) => ({ ...verdict, repaired: false, retried: false, trimmed: 0, feature: task, mode: null, provider,
+      prompt_version: J().PROMPT_VERSION, audit_id: null, cached: false, notes: [] });
+    if (typeof res.refusal === 'string' && res.refusal) return { value: done({ status: 'refused', message: J().REFUSED_TEXT }) };
+    const parsed = J().extractJson(res.content);
+    return { value: done(parsed === null ? { status: 'error', reason: 'schema', message: ERROR_TEXT.schema } : check(parsed)) };
+  }
 
   async function aiStatus() {
     const a = await KH.mock.device.lookup({ kind: 'aiStatus' });
@@ -151,14 +260,17 @@
     const known = S ? S.status() : null;
     const where = whereEach(ss, dev);
     const serverAi = Object.values(where).includes('server');
+    const ownKey = dev && dev.own_key ? dev.own_key : null;
+    const photosWhy = serverReason(api, ss, 'photos');
     return {
-      ...OFF_VIEW(), enabled: st.available || serverAi, settings: prefs(api), user_keys_allowed: false, daily_limit: null, remaining_today: null,
-      routing: st.available ? { mode: 'routed', features: Object.keys(ROUTES).map((f) => routeView(f, true, null)) } : null,
+      ...OFF_VIEW(), enabled: st.available || serverAi || !!ownKey, settings: prefs(api), user_keys_allowed: false, daily_limit: null, remaining_today: null,
+      routing: dev ? { mode: 'routed', features: Object.keys(ROUTES).map((f) => ({ ...dev.routes[f], available: true })) } : null,
       device: { available: st.available, reason: st.reason, message: st.reason ? UNAVAILABLE[st.reason] : null, provider: summary() },
       // Note 39 §6.1: the server's AI, when a token both ways is paired; and the person's choice to use only this iPhone's.
       phone: { server: known && known.state === 'both' ? known.server : null, both_ways: !!(known && known.state === 'both'),
-        device_only: choiceOf(api).device_only, server_ai: serverAi, where, labels: { ...ROUTES },
-        ask: serverReason(api, ss, 'chat'), photos: serverReason(api, ss, 'photos') }, // why not, or null
+        device_only: choiceOf(api).device_only, server_ai: serverAi, where, labels: { ...ROUTES }, own_key: ownKey,
+        ask: serverReason(api, ss, 'chat'), // why not, or null; the own key has no Ask (it reads the log on the server)
+        photos: photosWhy && ownKey && !ownKey.photos ? 'own_photos_off' : photosWhy },
     };
   }
   route('GET', '/api/me/ai', function () { return device() ? meView(this) : OFF_VIEW(); });
@@ -186,21 +298,27 @@
     return told.then(() => { forgetServer(); return meView(this); });
   });
   // The iPhone's own AI as GET /api/ai/status shows it, or null when this iPhone has none.
+  // The own key (above) is part of it: it runs describe a meal, and photos when the person turned that on.
   async function deviceStatus(api) {
-    return aiStatus().then((st) => {
-      if (!st.available) return null; // as a server with AI off
-      const optedIn = !!prefs(api).opt_in;
-      const routes = Object.fromEntries(Object.keys(ROUTES).map((f) => [f, routeView(f, optedIn, 'not_opted_in')]));
-      return {
-        enabled: true, opted_in: optedIn, available: optedIn, reason: optedIn ? null : 'not_opted_in',
-        message: optedIn ? null : UNAVAILABLE.not_opted_in, provider: summary(),
-        consent: { text: optedIn ? { ...CONSENT } : null, photos: null, chat: null, labs: optedIn ? { ...CONSENT } : null, voice: null },
-        routing: { mode: 'routed' }, routes, policy_version: 'device', daily_limit: null, remaining_today: null,
-        features: { next_meal: false, parse_meal: optedIn, label: false, plate: false, chat: false, voice: false, lab_report: false,
-          lab_report_text: optedIn, recipes: false, recipe_steps: false },
-        voice: null, trust: { setting: 'ask', allowed: false, effective: 'ask' }, prompt_version: J().PROMPT_VERSION, device: true,
-      };
-    });
+    const [st, own] = await Promise.all([aiStatus(), ownStatus(api)]);
+    if (!st.available && !own) return null; // as a server with AI off
+    const optedIn = !!prefs(api).opt_in;
+    const phone = st.available && optedIn;
+    const routes = Object.fromEntries(Object.keys(ROUTES).map((f) => [f, ownRuns(own, f) ? ownRouteView(api, f, own, optedIn)
+      : routeView(f, phone, st.available ? 'not_opted_in' : st.reason)]));
+    const ownText = ownRuns(own, 'describe') && optedIn;
+    const ownPhotos = ownRuns(own, 'photos') && optedIn;
+    return {
+      enabled: true, opted_in: optedIn, available: optedIn, reason: optedIn ? null : 'not_opted_in',
+      message: optedIn ? null : UNAVAILABLE.not_opted_in, provider: own ? ownSummary(own) : summary(),
+      consent: { text: ownText ? ownConsent(api, own, 'text') : phone ? { ...CONSENT } : null, photos: ownPhotos ? ownConsent(api, own, 'photos') : null,
+        chat: null, labs: phone ? { ...CONSENT } : null, voice: null },
+      routing: { mode: 'routed' }, routes, policy_version: 'device', daily_limit: null, remaining_today: null,
+      features: { next_meal: false, parse_meal: ownText || phone, label: ownPhotos, plate: ownPhotos, chat: false, voice: false, lab_report: false,
+        lab_report_text: phone, recipes: false, recipe_steps: false },
+      voice: null, trust: { setting: 'ask', allowed: false, effective: 'ask' }, prompt_version: J().PROMPT_VERSION, device: true,
+      own_key: own ? { label: own.label, host: own.host, model: own.model, photos: own.photos } : null,
+    };
   }
 
   // ---------------------------------------------------------------------------
@@ -254,11 +372,12 @@
     return out;
   }
   const query = (qp) => (qp('dry_run') === 'true' ? '?dry_run=true' : '');
-  // Where each feature runs now, for Settings: 'server', 'iphone' or null.
+  // Where each feature runs now, for Settings: 'server', 'own' (the person's own AI key), 'iphone' or null.
   function whereEach(ss, dev) {
     const out = {};
     for (const f of Object.keys(ROUTES)) {
-      out[f] = serverRuns(ss, f) ? 'server' : dev && dev.routes[f] && dev.routes[f].available ? 'iphone' : null;
+      const here = dev && dev.routes[f] && dev.routes[f].available ? dev.routes[f] : null;
+      out[f] = serverRuns(ss, f) ? 'server' : here ? (here.runs_on_phone === 'own' ? 'own' : 'iphone') : null;
     }
     return out;
   }
@@ -325,6 +444,14 @@
   // Consent to the server's AI provider (the same sheet as the web app): only for the server, whose consent it is.
   route('POST', '/api/ai/consent', function ({ body }) {
     if (!device()) fail(404, 'Not Found');
+    if (isDict(body) && body.provider_id === OWN_ID) { // the person's own key: kept with the log on this phone
+      return ownStatus(this).then((own) => {
+        if (!own || !['text', 'photos'].includes(body.purpose)) fail(404, 'Not Found');
+        const at = new Date().toISOString();
+        this._aiOwnConsent = { ...ownConsents(this), [body.purpose]: { provider: own.provider, host: own.host, at } };
+        return { provider_id: OWN_ID, purpose: body.purpose, host: own.host, policy_version: 'own', skip_preview: body.skip_preview !== false, at };
+      });
+    }
     return serverStatus(this).then(async (ss) => {
       if (!ss) fail(404, 'Not Found');
       const res = await KH.mock.serverApi.call('POST', '/api/ai/consent', { body });
@@ -346,12 +473,31 @@
     });
   }
   // Photos (a label, a plate, a lab report page): the server's AI only, the photo as the JPEG the page made (no location data).
+  // A label or plate photo then goes to the person's own key, only while their photo switch is on. A lab report photo never does.
+  const OWN_PHOTO = {
+    '/api/vision/label': ['read_label', () => (raw) => {
+      const checked = J().checkLabel(raw);
+      return checked.ok ? J().labelDraft(checked.answer) : { status: 'error', reason: 'schema', message: ERROR_TEXT.schema };
+    }],
+    '/api/vision/plate': ['plate', (api) => (raw) => {
+      const checked = J().checkPlate(raw);
+      return checked.ok ? J().judgePlate(checked.answer, searchFor(api), checked.malformed) : { status: 'error', reason: 'schema', message: ERROR_TEXT.schema };
+    }],
+  };
   for (const [path, featureRoute] of [['/api/vision/label', 'photos'], ['/api/vision/plate', 'photos'], ['/api/ai/read-lab-report', 'labs']]) {
     route('POST', path, function ({ body, qp }) {
       if (!device()) fail(404, 'Not Found');
       if (!body || typeof body.arrayBuffer !== 'function') fail(415, 'Send the photo as a JPEG (Content-Type: image/jpeg).', { reason: 'not_jpeg' });
-      return KH.mock.serverApi.base64(body).then((jpeg) => viaServer(this, featureRoute, 'POST', `${path}${query(qp)}`, { jpeg })).then((got) => {
+      const toBase64 = KH.mock.serverApi ? KH.mock.serverApi.base64(body) : Promise.reject(new Error('no server api'));
+      return toBase64.then(async (jpeg) => {
+        let got = await viaServer(this, featureRoute, 'POST', `${path}${query(qp)}`, { jpeg });
         if (got.value !== undefined) return got.value;
+        const own = OWN_PHOTO[path]; // never the lab report route
+        if (own) {
+          const mine = await viaOwnKey(this, featureRoute, own[0], { jpeg }, qp('dry_run') === 'true', own[1](this));
+          if (mine.value !== undefined) return mine.value;
+          if (mine.skip === 'unreachable') fail(503, OWN_GONE, { reason: 'own_unreachable' });
+        }
         if (got.skip === 'unreachable') fail(503, SERVER_GONE, { reason: 'server_unreachable' });
         return fail(404, 'Not Found');
       });
@@ -432,12 +578,34 @@
     // Note 39 §6.1: the server's AI first. Its own prefilter answers a low or a red flag; that answer is shown as it is.
     return viaServer(this, 'describe', 'POST', `/api/ai/parse-meal${query(qp)}`, { body }).then((got) => {
       if (got.value !== undefined) return got.value;
-      return parseMealOnDevice(this, b, qp);
+      return parseMealHere(this, b, qp);
     });
   });
-  function parseMealOnDevice(api, b, qp) {
+  // keep: the fields of a matched food the server's judge shows
+  const MATCH_KEYS = ['id', 'name', 'brand', 'category', 'source', 'serving_desc', 'serving_g', 'nutrients', 'flags', 'warnings', 'kidney_rating'];
+  const searchFor = (api) => (words) => api._searchFoods(words, null, null, 3).map((f) => Object.fromEntries(MATCH_KEYS.map((k) => [k, f[k] === undefined ? null : f[k]])));
+  // Step 2 and 3 of the order: the own key, then the iPhone's own model. The server's prefilter runs first: a low, an emergency or
+  // a dose question gets the server's card and no AI is asked.
+  function parseMealHere(api, b, qp) {
     const cards = J().prefilter(b.text, api._guidancePrefs().hypo_dose_g); // G7, G8, G2/G3: the AI is not asked
     if (cards) return cards;
+    const dry = qp('dry_run') === 'true';
+    const text = J().dataPayload(J().parseMealData(b.text));
+    const check = (raw) => {
+      const checked = J().checkParseMeal(raw);
+      if (!checked.ok) return { status: 'error', reason: 'schema', message: ERROR_TEXT.schema };
+      return J().judgeParseMeal(checked.answer, searchFor(api), checked.malformed);
+    };
+    return viaOwnKey(api, 'describe', 'parse_meal', { text }, dry, check).then(async (got) => {
+      if (got.value !== undefined) return got.value;
+      if ((got.skip === 'unreachable' || got.skip === 'identity') && !(await aiStatus()).available) {
+        if (got.skip === 'identity') fail(503, OWN_IDENTITY, { reason: 'identity' });
+        fail(503, OWN_GONE, { reason: 'own_unreachable' });
+      }
+      return parseMealOnDevice(api, b, qp);
+    });
+  }
+  function parseMealOnDevice(api, b, qp) {
     const dry = qp('dry_run') === 'true';
     return ready(api).then(async () => {
       const text = J().dataPayload(J().parseMealData(b.text));
@@ -446,9 +614,7 @@
       if (got.verdict) return answer('parse_meal', got.verdict);
       const checked = J().checkParseMeal(got.answer);
       if (!checked.ok) return answer('parse_meal', { status: 'error', reason: 'schema', message: ERROR_TEXT.schema });
-      const keep = ['id', 'name', 'brand', 'category', 'source', 'serving_desc', 'serving_g', 'nutrients', 'flags', 'warnings', 'kidney_rating'];
-      const search = (words) => api._searchFoods(words, null, null, 3).map((f) => Object.fromEntries(keep.map((k) => [k, f[k] === undefined ? null : f[k]])));
-      return answer('parse_meal', J().judgeParseMeal(checked.answer, search, checked.malformed));
+      return answer('parse_meal', J().judgeParseMeal(checked.answer, searchFor(api), checked.malformed));
     });
   }
 

@@ -44,6 +44,9 @@
   };
   // The privacy filter (note 31): on for every AI that is not the local one, with no switch. The server does the filtering;
   // "What will be sent?" shows its result and this line says what it does.
+  // The person's own AI key on the iPhone app (js/mock/ai.js): the phone has no privacy filter, so it sends only what the feature needs.
+  const OWN_KEY_CONSENT_TEXT = 'This goes with your own key. Only what this feature needs is sent: the words you typed, or the photo. '
+    + 'Lab reports, and anything with your name or date of birth, are never sent to it.';
   const PRIVACY_FILTER_TEXT = 'Before anything leaves, a privacy filter takes names, places, dates, phone numbers, e-mail addresses '
     + 'and record numbers out of the text and puts them back in the answer. It reads text only, not photos.';
   const FEATURE_TEXT = { next_meal: 'Meal ideas', parse_meal: 'Describe a meal', read_label: 'Read a label', plate: 'Plate photo', chat: 'AI assistant', voice: 'Voice',
@@ -369,11 +372,12 @@
     const notice = consent.purpose === 'labs' && Array.isArray(consent.notice) ? consent.notice : null;
     body.append(...[ // an absent part is null: leave it out (append(null) would write the word "null")
       notice ? h('div', { class: 'ai-consent-notice' }, notice.map((line) => h('p', {}, line)))
-        : voice ? null : h('p', {}, `To use AI for this, the server sends ${PURPOSE_TEXT[consent.purpose] || 'data'} to `, h('strong', {}, consent.provider_label),
+        : voice ? null : h('p', {}, `To use AI for this, ${consent.own_key ? 'this iPhone' : 'the server'} sends ${PURPOSE_TEXT[consent.purpose] || 'data'} to `, h('strong', {}, consent.provider_label),
           ' at ', h('strong', { class: 'ai-host' }, consent.host), consent.local ? ', which runs on your own network.' : '.'),
       consent.as_fallback ? h('p', { class: 'hint' }, `This is the cloud AI your admin set as the fallback. ${consent.rule || ''}`) : null,
       note('caution', h('p', {}, consent.policy)),
-      !consent.local && !voice && !notice ? h('p', { class: 'hint ai-privacy-filter' }, PRIVACY_FILTER_TEXT) : null,
+      !consent.local && !voice && !notice && !consent.own_key ? h('p', { class: 'hint ai-privacy-filter' }, PRIVACY_FILTER_TEXT) : null,
+      consent.own_key ? h('p', { class: 'hint ai-own-key' }, OWN_KEY_CONSENT_TEXT) : null,
       fb ? h('div', { class: 'ai-consent-fallback' },
         h('p', {}, 'Only if the local AI\'s answer fails the app\'s checks, the same request goes a second time to ', h('strong', {}, fb.provider_label),
           ' at ', h('strong', { class: 'ai-host' }, fb.host), ', outside your network.'),
@@ -1062,9 +1066,11 @@
     slot.hidden = !btns.length && !line;
   }
   // Why the iPhone app has no "Plate photo (AI)" now (js/mock/ai.js serverReason). Photos never go to the iPhone's own model.
-  const PHOTO_NEEDS = 'A photo of your meal or of a label needs your Kidney Health server\'s AI.';
+  const PHOTO_NEEDS = 'A photo of your meal or of a label needs your Kidney Health server\'s AI, or your own AI key with photos turned on.';
+  const OWN_KEY_PLACE = 'Settings → This device → Apple Health and server → Keys and services';
   const PHOTO_NOT_HERE = {
-    not_paired: `${PHOTO_NEEDS} Connect this iPhone to your server with a token for the iPhone app, both ways, in Settings → This device → Apple Health and server.`,
+    own_photos_off: `${PHOTO_NEEDS} To send photos to your own AI key, turn on "Also send meal and label photos to this AI" in ${OWN_KEY_PLACE}.`,
+    not_paired: `${PHOTO_NEEDS} With no server, add your own AI key and turn on photos in ${OWN_KEY_PLACE}.`,
     not_both_ways: `${PHOTO_NEEDS} This iPhone's token only sends your log. Make a token for the iPhone app, both ways, and pair again in Settings → This device → Apple Health and server.`,
     offline: `${PHOTO_NEEDS} Your server could not be reached just now. Try again later.`,
     device_only: `${PHOTO_NEEDS} You chose to use only this iPhone's AI in Settings → AI features.`,
@@ -1137,7 +1143,24 @@
     + 'answer, and you check each line before anything is saved.';
   // Design note 39 §6.1: with a token both ways, the server's AI runs what it can; this iPhone's runs the rest. The person may
   // choose to use only this iPhone's AI.
-  const WHERE_TEXT = { server: 'your server\'s AI', iphone: 'this iPhone\'s AI' };
+  const WHERE_TEXT = { server: 'your server\'s AI', iphone: 'this iPhone\'s AI', own: 'your own key' };
+  const whereText = (w, p) => (w === 'own' && p.own_key ? `your own key with ${p.own_key.label}` : WHERE_TEXT[w]);
+  // Where each feature runs now (server, own key, this iPhone), for anyone: with a server, an own key, or neither.
+  function whereList(p) {
+    const rows = Object.entries(p.where || {}).filter(([, w]) => w).map(([f, w]) => h('li', {}, `${(p.labels || {})[f] || f}: ${whereText(w, p)}`));
+    return rows.length ? h('ul', { class: 'list', id: 'set-ai-where' }, ...rows) : h('p', { class: 'hint' }, 'No AI feature can run just now.');
+  }
+  // The person's own AI key (js/mock/ai.js; the key is set in the iPhone app, never in the page).
+  function ownKeyPart(me) {
+    const p = me.phone || {};
+    const k = p.own_key;
+    return [subtitle('Your own AI key'),
+      h('p', { id: 'set-ai-own-key' }, k
+        ? `Describing a meal${k.photos ? ', and photos of a meal or a label,' : ''} can use ${k.label} (${k.host}) with your own key`
+          + `${p.both_ways ? ' when your server\'s AI cannot' : ''}. Lab reports, and anything with your name or date of birth, are never sent to it.`
+          + `${k.photos ? '' : ' Photos are not sent to it unless you turn that on.'} Ask needs your server.`
+        : `You can add your own key from OpenAI, OpenRouter or Nous Portal in ${OWN_KEY_PLACE}. No server is needed.`)];
+  }
   function phonePart(me) {
     const p = me.phone;
     if (!p || !p.both_ways) return [];
@@ -1154,21 +1177,21 @@
         renderAddSlot();
       } catch (e) { only.checked = !only.checked; if (!e.handled) showError(err, e); }
     });
-    const rows = Object.entries(p.where || {}).filter(([, w]) => w).map(([f, w]) => h('li', {}, `${(p.labels || {})[f] || f}: ${WHERE_TEXT[w]}`));
     return [subtitle('Your server\'s AI'),
       h('p', {}, `This iPhone is paired with ${p.server} both ways. A feature uses your server's AI when your server can be reached and offers it, `
-        + 'with the choices and consent you made there. Otherwise it uses this iPhone\'s own AI where it has one. A lab report goes only to an AI on '
-        + 'your own network or on this iPhone, never to a company\'s AI.'),
-      rows.length ? h('ul', { class: 'list', id: 'set-ai-where' }, ...rows) : h('p', { class: 'hint' }, 'No AI feature can run just now.'),
-      check('Use only this iPhone\'s AI', only, 'Nothing you write is sent to any AI, not even your server\'s. Features this iPhone\'s AI cannot do are off.'),
+        + 'with the choices and consent you made there. Otherwise it uses your own AI key, then this iPhone\'s own AI, where they can. A lab report goes '
+        + 'only to an AI on your own network or on this iPhone, never to a company\'s AI.'),
+      whereList(p),
+      check('Use only this iPhone\'s AI', only, 'Nothing you write is sent to any AI, not your server\'s and not your own key. Features this iPhone\'s AI cannot do are off.'),
       msg, err];
   }
   function devicePart(me) {
     const d = me.device || {};
-    if (!me.enabled && me.phone && me.phone.both_ways) return phonePart(me);
+    if (!me.enabled && me.phone && me.phone.both_ways) return [...phonePart(me), ...ownKeyPart(me)];
     if (!me.enabled) {
       return [h('p', { class: 'setting-status' }, h('span', { class: 'state-pill off' }, 'Not available on this iPhone')),
-        h('p', {}, d.message || 'Apple\'s on-device AI is not available on this iPhone, so the AI features are off. Everything else works.')];
+        h('p', {}, d.message || 'Apple\'s on-device AI is not available on this iPhone, so the AI features are off. Everything else works.'),
+        ...ownKeyPart(me)];
     }
     const msg = statusMsg();
     const err = formError();
@@ -1182,9 +1205,10 @@
         renderAddSlot();
       } catch (e) { opt.checked = !opt.checked; if (!e.handled) showError(err, e); }
     });
-    return [h('p', {}, DEVICE_TEXT),
+    const p = me.phone || {};
+    return [h('p', {}, d.available ? DEVICE_TEXT : (d.message || 'Apple\'s on-device AI is not available on this iPhone.')),
       check('Use AI features', opt, 'Off by default. The app\'s own rules always run first. The AI never gives insulin or medicine doses.'), msg, err,
-      ...phonePart(me)];
+      ...(p.both_ways ? phonePart(me) : [subtitle('Where each AI feature runs'), whereList(p)]), ...ownKeyPart(me)];
   }
 
   // "How AI help is set up": the three questions of docs/ai.md ("The setup in three questions") and the handbook's

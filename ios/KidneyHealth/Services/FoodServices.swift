@@ -98,6 +98,10 @@ final class FoodServices: ObservableObject {
             return OnDeviceAI.status()
         case "ai":
             return await OnDeviceAI.answer(request)
+        case "ownAIStatus": // the person's own AI key (OwnAI.swift): never the key itself
+            return OwnAI.shared.status()
+        case "ownAI":
+            return await OwnAI.shared.answer(request)
         case "enableOff":
             setOn(.openFoodFacts, true) // the page asked the person first, naming the host and what is sent (note 38, D5)
             return ["ok": true]
