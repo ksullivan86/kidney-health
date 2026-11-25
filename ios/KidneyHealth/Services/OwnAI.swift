@@ -270,8 +270,9 @@ final class OwnAI: ObservableObject {
                     content += part["text"] as? String ?? ""
                 }
             }
-            return ["ok": true, "content": content, "refusal": message["refusal"] as? String ?? NSNull(),
-                    "finish": choice["finish_reason"] as? String ?? NSNull()]
+            let refusal: Any = (message["refusal"] as? String).map { $0 as Any } ?? NSNull()
+            let finish: Any = (choice["finish_reason"] as? String).map { $0 as Any } ?? NSNull()
+            return ["ok": true, "content": content, "refusal": refusal, "finish": finish]
         } catch {
             return Self.problem("offline")
         }
