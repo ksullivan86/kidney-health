@@ -90,17 +90,20 @@ enum OnDeviceAI {
                 let session = LanguageModelSession(instructions: instructions)
                 switch task {
                 case "parse_meal":
-                    return ["ok": true, "answer": try await session.respond(to: message, generating: MealAnswer.self).content.json]
+                    let reply = try await session.respond(to: message, generating: MealAnswer.self)
+                    return ["ok": true, "answer": reply.content.json]
                 case "read_lab_report_text":
-                    return ["ok": true, "answer": try await session.respond(to: message, generating: LabAnswer.self).content.json]
+                    let reply = try await session.respond(to: message, generating: LabAnswer.self)
+                    return ["ok": true, "answer": reply.content.json]
                 case "next_meal":
-                    return ["ok": true, "answer": try await session.respond(to: message, generating: IdeasReply.self).content.json]
+                    let reply = try await session.respond(to: message, generating: IdeasReply.self)
+                    return ["ok": true, "answer": reply.content.json]
                 case "recipes":
-                    return ["ok": true, "answer": try await session.respond(to: message, generating: RecipesReply.self).content.json]
+                    let reply = try await session.respond(to: message, generating: RecipesReply.self)
+                    return ["ok": true, "answer": reply.content.json]
                 default: // a photo: read_label or plate
-                    guard let jpeg, let answer = try await OnDeviceVision.answer(session, task: task, message: message, jpeg: jpeg) else {
-                        return problem("photos_unavailable", "The iPhone's own AI cannot read photos on this phone.")
-                    }
+                    let answer = try await OnDeviceVision.answer(session, task: task, message: message, jpeg: jpeg ?? "")
+                    guard let answer else { return problem("photos_unavailable", "The iPhone's own AI cannot read photos on this phone.") }
                     return ["ok": true, "answer": answer]
                 }
             } catch {
