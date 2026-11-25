@@ -185,18 +185,21 @@ phone and needs no server ([design note 38][NOTE38]):
   a connection and a phone that syncs both ways. On the phone it always asks before it saves: tap **Save** on the card and the
   entry is saved on the phone, then sent to your server. Talking to Ask is not on the phone. When Ask cannot be used, the Ask
   tab says why and what to do.
-- **Plate photo (AI)** on the Add screen names the foods in a photo of your meal. It uses your server's AI, or your own AI key
-  if you turned on photos for it, never the iPhone's own AI. Your server decides which of its AIs may see photos. When no AI
-  can read a photo, the Add screen says so under the AI buttons.
+- **Plate photo (AI)** on the Add screen names the foods in a photo of your meal. It uses your server's AI, then your own AI key
+  if you turned on photos for it, then the iPhone's own AI on iOS 27. Your server decides which of its AIs may see photos. When
+  no AI can read a photo, the Add screen says so under the AI buttons. You tick each food, then choose **Eaten** or **Planned**:
+  Planned puts the foods in the plan for the day you are looking at.
 - **A recipe from a web page**, **Open in Instacart** and **Send to** your own list app work on the phone when your server has
   them turned on. Your server reads the page and sends the list, with its own keys, so they need a connection. The recipe's
   ingredients are matched with the foods on your phone. The shopping list comes from the plan on your server, so plans you made
   on the phone show there once they are sent. You set up your list app in the web app, not on the phone. Pasting ingredients
   works offline. Without a token both ways, these buttons do not appear.
-- On an iPhone with Apple Intelligence, **Describe a meal** and reading the text of a lab report PDF can use Apple's AI on the
-  phone. Turn it on in **Settings → AI features**. Nothing you write or read leaves the iPhone, and the questions and answers are
-  not kept. The app checks every answer, and you check each line before anything is saved. The AI never gives insulin or
-  medicine doses. On other iPhones these buttons do not appear, and everything else works.
+- On an iPhone with Apple Intelligence, **Describe a meal**, **AI meal ideas**, **AI recipes** and reading the text of a lab
+  report PDF can use Apple's AI on the phone. On iOS 27 it can also read a photo of your plate or of a label. Turn it on in
+  **Settings → AI features**. Nothing you write, read or photograph leaves the iPhone, and the questions and answers are not kept.
+  Apple's AI on the phone is small, so its meal ideas and recipes choose from fewer of your foods. The app checks every answer the
+  same way your server would, and you check each line before anything is saved. The AI never gives insulin or medicine doses.
+  AI order, AI swaps and AI day plans need your server. On other iPhones these buttons do not appear, and everything else works.
 
 ### Your own AI key on the iPhone
 
@@ -211,13 +214,14 @@ You can use AI features with a key of your own from an AI company, with no serve
 
 What it does:
 
-- **Describe a meal** uses your own key. If you have a server, your server's AI is used first, and your own key only when your
-  server cannot be reached or does not offer it.
+- **Describe a meal**, **AI meal ideas** and **AI recipes** use your own key. If you have a server, your server's AI is used
+  first, and your own key only when your server cannot be reached or does not offer it. Meal ideas and recipes send the foods the
+  app's rules chose, your targets and today's totals, as your server would. They never send your name or date of birth.
 - **Photos of a meal or a label** go to your own key only if you turn on **Also send meal and label photos to this AI**. It is off
   at first.
 - **Lab reports, and anything with your name or date of birth, are never sent to it.** If you type your name in a meal
   description, the app does not send it.
-- **Ask** still needs your server, because it reads your log there.
+- **Ask** still needs your server, because it reads your log there and checks every answer.
 - The app checks every answer the same way your server would. A low, an emergency or a question about a dose gets the app's own
   card, and the AI is not asked. The AI never gives insulin or medicine doses.
 - Nothing about your questions or the answers is kept on the phone. The company receives what is sent, under its own terms.
