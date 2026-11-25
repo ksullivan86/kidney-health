@@ -1078,8 +1078,32 @@
       msg.textContent = sel.value === 'si' ? 'Lab results now offer SI units first.' : 'Lab results now offer US units first.';
     } catch (err) { if (!err.handled) toastError(err); } finally { sel.disabled = false; renderLabUnits(); }
   });
+  // Height units (user.units.height): how Profile shows and takes the height, feet and inches or centimetres.
+  function renderHeightUnits() {
+    const sel = $('#set-height-units');
+    const src = clear($('#set-height-units-source'));
+    const item = cache.mySettings && !(cache.mySettings instanceof Error) ? cache.mySettings['user.units.height'] : null;
+    if (!item) return;
+    sel.value = item.value === 'cm' ? 'cm' : 'ft_in';
+    sel.disabled = item.editable === false;
+    src.className = `setting-source src-${item.source}`;
+    if (item.source === 'env') src.append(lockIcon());
+    src.append(h('span', {}, sourceText(item.source, null)));
+    if (KH.views.profile) KH.views.profile.setHeightUnit(sel.value);
+  }
+  $('#set-height-units').addEventListener('change', async (e) => {
+    const sel = e.target;
+    const msg = $('#set-prefs-status');
+    sel.disabled = true;
+    try {
+      const res = await api.updateMySettings({ 'user.units.height': sel.value });
+      cache.mySettings = res.settings;
+      msg.textContent = sel.value === 'cm' ? 'Profile now shows your height in centimetres.' : 'Profile now shows your height in feet and inches.';
+    } catch (err) { if (!err.handled) toastError(err); } finally { sel.disabled = false; renderHeightUnits(); }
+  });
   function renderPrefs() {
     renderLabUnits();
+    renderHeightUnits();
     $('#set-theme').value = KH.theme.stored();
     $('#set-week-start').value = state.profile && state.profile.week_start === 'sunday' ? 'sunday' : 'monday';
     clear($('#set-prefs-status'));
@@ -1675,14 +1699,18 @@
   }
   // Design note 39 §8.7 point 5 (js/mock/server_account.js): this iPhone's profile and targets differed from the server's at the
   // first sync. The server's is used until the person picks; only the lines that differ are shown.
-  const PROFILE_LABEL = { name: 'Name', weight_kg: 'Weight (kg)', height_cm: 'Height (cm)', ckd_stage: 'Kidney disease stage', dialysis: 'Dialysis',
+  const PROFILE_LABEL = { name: 'Name', weight_kg: 'Weight (kg)', height_cm: 'Height', ckd_stage: 'Kidney disease stage', dialysis: 'Dialysis',
     diabetes: 'Diabetes', warn_fraction: 'Warn at', about_tolerance_pct: 'Counts as on target within (%)', dialysis_days: 'Dialysis days',
     week_start: 'Week starts on', birth_month: 'Born', sex: 'Sex', activity: 'Activity', transplant_date: 'Transplant date',
     frail_or_sarcopenic: 'Frail', weight_6_months_ago_kg: 'Weight 6 months ago (kg)', pregnant_or_breastfeeding: 'Pregnant or breastfeeding',
     hyperkalemia_history: 'High potassium before', urine_output_ml: 'Urine a day (ml)', pd_uf_ml: 'PD fluid removed (ml)',
     pd_dialysate_kcal: 'PD calories (kcal)' };
-  function profileValue(v) {
+  function profileValue(v, key = null) {
     if (v == null || v === '') return 'Not set';
+    if (key === 'height_cm') { // in the person's unit (user.units.height), as Profile shows it
+      const item = cache.mySettings && !(cache.mySettings instanceof Error) ? cache.mySettings['user.units.height'] : null;
+      return KH.bodyRules.formatHeight(v, item && item.value === 'cm' ? 'cm' : 'ft_in');
+    }
     if (v === true) return 'Yes';
     if (v === false) return 'No';
     if (Array.isArray(v)) return v.length ? v.join(', ') : 'None';
@@ -1692,7 +1720,9 @@
   function profileLines(server, mine) {
     const out = [];
     for (const k of Object.keys(PROFILE_LABEL)) {
-      const a = profileValue(server[k]); const b = profileValue(mine[k]);
+      let a = profileValue(server[k], k); let b = profileValue(mine[k], k);
+      // Two heights that round to the same feet and inches: show the centimetres, so the difference can be seen.
+      if (a === b && k === 'height_cm' && profileValue(server[k]) !== profileValue(mine[k])) { a = `${profileValue(server[k])} cm`; b = `${profileValue(mine[k])} cm`; }
       if (a !== b) out.push([PROFILE_LABEL[k], a, b]);
     }
     const keys = [...new Set([...Object.keys(server.targets || {}), ...Object.keys(mine.targets || {})])].sort();
@@ -2337,7 +2367,7 @@
       'auth.oidc.admin_groups']],
     ['Food data', ['food.off_enabled', 'food.off_contact', 'food.off_rate_per_minute', 'food.barcode_negative_ttl_hours', 'food.usda_branded_barcode',
       'providers.usda.shared_enabled', 'providers.usda.user_keys_allowed', 'providers.usda.daily_limit_per_user']],
-    ['Default for everyone', ['ui.theme', 'user.units.labs', 'user.units.weight']],
+    ['Default for everyone', ['ui.theme', 'user.units.labs', 'user.units.weight', 'user.units.height']],
     ['Personalised targets and lab results', ['targets.lab_rules_enabled', 'targets.default_activity', 'targets.lab_fresh_days.potassium',
       'targets.lab_fresh_days.phosphate', 'targets.lab_fresh_days.albumin', 'targets.lab_fresh_days.bicarbonate']],
     ['Meal guidance', ['guidance.enabled', 'guidance.pool_per_role', 'guidance.beam_width', 'guidance.plan_days_max', 'guidance.plan_days_ai_max']],
@@ -2365,6 +2395,7 @@
     'ui.theme': { system: 'Match each device', light: 'Light', dark: 'Dark' },
     'user.units.labs': { us: 'US: mg/dL, g/dL, mg/g, %', si: 'SI: mmol/L, µmol/L, g/L, mg/mmol, mmol/mol' },
     'user.units.weight': { lb: 'Pounds (lb)', kg: 'Kilograms (kg)' },
+    'user.units.height': { ft_in: 'Feet and inches', cm: 'Centimetres (cm)' },
     'targets.default_activity': { inactive: 'Inactive', low_active: 'Low active', active: 'Active', very_active: 'Very active' },
   };
   function valueText(key, value) {
@@ -2861,6 +2892,7 @@
     cache.myKeys = keys.status === 'fulfilled' ? keys.value : keys.reason;
     renderThemeSource();
     renderLabUnits();
+    renderHeightUnits();
     renderFood();
     if (!state.profile) { try { await KH.loadProfile(); renderPrefs(); if (kidneyOnly()) renderAbout(); } catch (e) { /* Preferences shows Monday */ } }
   }

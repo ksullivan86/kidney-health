@@ -283,7 +283,8 @@ def test_the_allow_list_is_pinned(anon_client):
         assert (method, "/api/list-sync") not in ALLOWED
     assert ("POST", "/api/list-sync/test") not in ALLOWED
     assert app_gateway.BODY_KEYS == {
-        ("PATCH", "/api/me/settings"): {"food.off_consent", "user.units.labs", "user.units.weight", "body.weight_alarm", "body.bp_goal", "guidance"},
+        ("PATCH", "/api/me/settings"): {"food.off_consent", "user.units.labs", "user.units.weight", "user.units.height", "body.weight_alarm",
+                                        "body.bp_goal", "guidance"},
         ("PATCH", "/api/me/ai"): {"opt_in"}}
     from app.auth.deps import current_user
 
@@ -313,10 +314,13 @@ def test_two_settings_and_only_those_keys(admin, token):
     r = call(admin.app, token, "PATCH", f"{GATEWAY}/me/settings", json={"food.off_consent": True})
     assert r.status_code == 200, r.text
     assert admin.get("/api/me/settings").json()["settings"]["food.off_consent"]["value"] is True
+    r = call(admin.app, token, "PATCH", f"{GATEWAY}/me/settings", json={"user.units.height": "cm"})  # Profile's height unit
+    assert r.status_code == 200, r.text
+    assert admin.get("/api/me/settings").json()["settings"]["user.units.height"]["value"] == "cm"
     for body in ({"food.off_consent": True, "ui.theme": "dark"}, {"ui.theme": "dark"}, {}, [], "x"):
         r = call(admin.app, token, "PATCH", f"{GATEWAY}/me/settings", json=body)
-        assert r.status_code == 403 and r.json()["detail"] == ("From the iPhone app this can change only: body.bp_goal, body.weight_alarm, food.off_consent, guidance, user.units.labs, "
-                                                               "user.units.weight."), body
+        assert r.status_code == 403 and r.json()["detail"] == ("From the iPhone app this can change only: body.bp_goal, body.weight_alarm, food.off_consent, guidance, user.units.height, "
+                                                               "user.units.labs, user.units.weight."), body
     r = call(admin.app, token, "PATCH", f"{GATEWAY}/me/settings", content=b"{not json", headers={"Content-Type": "application/json"})
     assert r.status_code == 403
     assert admin.get("/api/me/settings").json()["settings"]["ui.theme"]["value"] == "system"

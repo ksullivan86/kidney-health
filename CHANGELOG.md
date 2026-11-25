@@ -87,6 +87,10 @@ The iPhone app works with no server, and with your own server both ways (design 
 * In the iPhone app, **Plate photo (AI)** on the Add screen uses your server's AI when your server offers it. When it does not,
   the Add screen says that a photo of your meal needs your server's AI, and why it cannot be used now. Photos never go to the
   iPhone's own AI.
+* Profile → About you takes your height in feet and inches. To use centimetres, choose **Units for height** in Settings →
+  Preferences. The height is still saved in centimetres, so nothing changes for a height you saved before. The new setting
+  `user.units.height` (`ft_in` or `cm`, default `ft_in`) works like the weight unit: an admin can set the default for everyone, the
+  variable is `HEIGHT_UNITS`, it moves with an import, and the iPhone app with a token both ways can set it.
 
 ### Fixed
 

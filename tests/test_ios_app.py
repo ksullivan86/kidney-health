@@ -325,12 +325,12 @@ def test_the_server_api_bridge_carries_only_its_allow_list():
         for word in ("/admin", "/auth", "/tokens", "/sessions", "/provider", "/me/import", "/export", "/keys", "delete", "transcribe"):
             assert word not in path, path
     # a settings route takes only its own key; the person's AI switch only opt_in
-    assert ('bodyKeys: ["food.off_consent", "user.units.labs", "user.units.weight", "body.weight_alarm", "body.bp_goal", "guidance"]'
-            in core)
+    assert ('bodyKeys: ["food.off_consent", "user.units.labs", "user.units.weight", "user.units.height", "body.weight_alarm", "body.bp_goal", '
+            '"guidance"]' in core)
     from app.app_gateway import BODY_KEYS
 
-    assert BODY_KEYS[("PATCH", "/api/me/settings")] == {"food.off_consent", "user.units.labs", "user.units.weight", "body.weight_alarm",
-                                                       "body.bp_goal", "guidance"}  # the app and the server agree
+    assert BODY_KEYS[("PATCH", "/api/me/settings")] == {"food.off_consent", "user.units.labs", "user.units.weight", "user.units.height",
+                                                       "body.weight_alarm", "body.bp_goal", "guidance"}  # the app and the server agree
     assert 'Route("PATCH", "/push/v1/api/me/ai", bodyKeys: ["opt_in"])' in core
     sync = CODE["KidneyHealth/Services/ServerSync.swift"]
     assert 'case "serverApi":' in sync

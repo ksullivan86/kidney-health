@@ -57,7 +57,7 @@ public enum ServerAPI {
         // The person's answer to the server's Open Food Facts question (the consent its barcode lookups ask for), and the account
         // settings the server owns (step 8). Never this iPhone's own: its theme, its camera, the AI's trust.
         Route("PATCH", "/push/v1/api/me/settings",
-              bodyKeys: ["food.off_consent", "user.units.labs", "user.units.weight", "body.weight_alarm", "body.bp_goal", "guidance"]),
+              bodyKeys: ["food.off_consent", "user.units.labs", "user.units.weight", "user.units.height", "body.weight_alarm", "body.bp_goal", "guidance"]),
         // The server's AI (note 39 §6.4, step 4): status, the person's AI switch, consent, and the features
         Route("GET", "/push/v1/api/ai/status"),
         Route("PATCH", "/push/v1/api/me/ai", bodyKeys: ["opt_in"]),

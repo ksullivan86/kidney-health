@@ -527,7 +527,8 @@ def run_config(pw_browser, cfg: str, w: int, h: int, scheme: str) -> None:
         shot(page, A, "02-profile-empty")
         page.fill("#pf-name", "Alex Regress")
         page.fill("#pf-weight", "70")
-        page.fill("#pf-height", "175")
+        page.fill("#pf-height-ft", "5")  # feet and inches by default (user.units.height): 5 ft 9 in = 175.26 cm, saved as 175.5
+        page.fill("#pf-height-in", "9")
         page.select_option("#pf-stage", "3b")
         page.select_option("#pf-dialysis", "none")
         page.select_option("#pf-diabetes", "type1")
@@ -550,7 +551,7 @@ def run_config(pw_browser, cfg: str, w: int, h: int, scheme: str) -> None:
         def norm(d):
             return {k: (str(float(v)) if v not in ("", None) else "") for k, v in d.items()}
         check(A, "Suggest targets fills the form with the server's numbers (not saved yet)", norm(form) == norm(exp_form), f"form={form} expected={exp_form}")
-        check(A, "Suggested targets for 70 kg / 175 cm / 3b / type 1 match note 05 (0.8 g/kg protein floor, fiber goal)",
+        check(A, "Suggested targets for 70 kg / 175.5 cm / 3b / type 1 match note 05 (0.8 g/kg protein floor, fiber goal)",
               t == {"calories_kcal": 2100, "protein_g": {"min": 56, "max": 56}, "carbs_g": 236, "carbs_per_meal_g": 60, "fiber_g": {"min": 29},
                     "sodium_mg": 2000, "potassium_mg": 3500, "phosphorus_mg": 1000, "calcium_mg": 1000, "fluid_ml": None}, str(t))
         notes_text = page.inner_text("#suggest-notes")
@@ -572,7 +573,7 @@ def run_config(pw_browser, cfg: str, w: int, h: int, scheme: str) -> None:
         stored = bare(prof["targets"])
         check(A, "Save profile with suggested targets: server stores them", ri.value.status == 200 and stored == bare(t),
               f"stored={stored} suggested={t} body={body.get('targets')}")
-        check(A, "Profile name / weight / height saved", prof["name"] == "Alex Regress" and prof["weight_kg"] == 70 and prof["height_cm"] == 175, str(prof))
+        check(A, "Profile name / weight / height saved", prof["name"] == "Alex Regress" and prof["weight_kg"] == 70 and prof["height_cm"] == 175.5, str(prof))
         page.wait_for_function("() => document.getElementById('profile-saved').textContent.includes('Last saved')")
         check(A, "'Last saved' appears after saving", "Last saved" in page.inner_text("#profile-saved"))
 

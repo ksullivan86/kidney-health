@@ -131,11 +131,11 @@ MAX_MESSAGE_CHARS = 200
 MAX_NOTE_CHARS = 1000  # a saved meal's note, as MealTemplateCreate allows
 
 # Personal settings carried over with "replace my profile and targets": the meal-guidance preferences (carb tolerance
-# and the grams the person takes for a low come from their diabetes team), three display preferences and the weight log's
+# and the grams the person takes for a low come from their diabetes team), four display preferences (the height unit among them) and the weight log's
 # three (the unit, and the weight-gain alarm and blood pressure goal the person's care team gave them). Consents
 # (Open Food Facts barcodes, AI) are never carried over: they are agreed again where they take effect.
 IMPORTED_SETTINGS: tuple[str, ...] = ("guidance", "ui.theme", "user.units.labs", "food.scan_prefer_camera", "user.units.weight",
-                                      "body.weight_alarm", "body.bp_goal")
+                                      "user.units.height", "body.weight_alarm", "body.bp_goal")
 
 # Sections the export writes that belong to the server, not to the person's records: accepted, never read.
 SKIPPED_SECTIONS: tuple[str, ...] = ("user", "ai_audit", "activity", "ai_usage", "ai_consents", "ai_provider", "activity_days",
