@@ -87,6 +87,13 @@ The iPhone app works with no server, and with your own server both ways (design 
 * In the iPhone app, **Plate photo (AI)** on the Add screen uses your server's AI when your server offers it. When it does not,
   the Add screen says that a photo of your meal needs your server's AI, and why it cannot be used now. Photos never go to the
   iPhone's own AI.
+* The iPhone app can use your own AI key, with or without a server (design note 39 §6.5). In **Keys and services**, choose
+  OpenAI, OpenRouter or Nous Portal, enter the model and paste your key. The key stays on the phone and is never shown again;
+  **Test the key** sends one short fixed question. Describing a meal then uses it when your server's AI is not there. Photos of a
+  meal or a label go to it only if you turn on **Also send meal and label photos to this AI**, which is off at first. Lab
+  reports, and anything with your name or date of birth, are never sent to it. The app runs your server's own checks before
+  and after every request, and a low, an emergency or a dose question gets the app's own card without asking the AI. Ask still
+  needs your server. **Settings → AI features** says which AI each feature uses.
 
 ### Fixed
 

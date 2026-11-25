@@ -370,6 +370,20 @@ the app with a personal token from **Settings → Outside AI apps**
 
 How to set it up is in the [assistant guide][ASSISTANT-DOC] for whoever runs your server.
 
+## On the iPhone app
+
+The iPhone app can use AI in three ways. For each feature it uses the first one that can answer:
+
+1. **Your server's AI**, when the app is paired with your server both ways and your server offers the feature.
+2. **Your own AI key** from OpenAI, OpenRouter or Nous Portal, added in **Keys and services**. No server is needed. It describes
+   a meal, and reads photos of a meal or a label only if you turn that on.
+3. **Apple's AI on the iPhone**, on phones with Apple Intelligence. It describes a meal and reads the text of a lab report PDF.
+
+**Settings → AI features** lists which one each feature uses now. Lab reports, and anything with your name or date of birth,
+go only to your own server's local AI or to the iPhone's own AI, never to your own key. Ask needs your server. The same safety
+rules apply on every path: the app checks every answer, and a low, an emergency or a dose question gets the app's own card
+without asking any AI. How to add your key is in [Install the app](install.md#your-own-ai-key-on-the-iphone).
+
 ## If something goes wrong
 
 - **"The AI ideas did not fit your targets today, so these are the app's own."** Every AI idea failed the rules,
