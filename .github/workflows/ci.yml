@@ -144,11 +144,12 @@ jobs:
           # Photos on the iPhone's own model (ios/KidneyHealth/Services/OnDeviceVision.swift) use an iOS 27 call written without
           # an SDK. Probe it: if it compiles, build and test with it; if not, without it, so a wrong guess never fails this job.
           flags=()
+          photo_flag="SWIFT_ACTIVE_COMPILATION_CONDITIONS=\$(inherited) DEBUG KH_ONDEVICE_IMAGES"  # $(inherited) is for xcodebuild, not the shell
           if xcodebuild build-for-testing -quiet \
             -project ios/KidneyHealth.xcodeproj -scheme KidneyHealth -destination "id=$udid" \
-            -derivedDataPath "$RUNNER_TEMP/probe" SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) DEBUG KH_ONDEVICE_IMAGES'; then
+            -derivedDataPath "$RUNNER_TEMP/probe" "$photo_flag"; then
             echo "::notice::The iPhone model's photo reading (KH_ONDEVICE_IMAGES) compiles with this SDK."
-            flags=(SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) DEBUG KH_ONDEVICE_IMAGES')
+            flags=("$photo_flag")
           else
             echo "::warning::The iPhone model's photo reading (KH_ONDEVICE_IMAGES) does not compile with this SDK; built without it."
           fi
