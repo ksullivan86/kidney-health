@@ -1008,7 +1008,8 @@ class ChatBody(BaseModel):
     the model makes in this request carries a key made from it, so a request sent twice saves once. ``trust:
     "conversation"`` is the page saying this conversation is trusted (it forgets that at New conversation and after 12
     hours); the server honours it only for a person who chose "Trust it for this conversation" and only while the admin
-    switch ``ai.allow_trusted_saves`` is on (:func:`app.ai.chat_save.effective_trust`)."""
+    switch ``ai.allow_trusted_saves`` is on (:func:`app.ai.chat_save.effective_trust`). ``trust: "ask"`` asks before every
+    save whatever the person chose: the iPhone app sends it and saves the card on the phone (design note 39)."""
 
     model_config = ConfigDict(extra="forbid")
     messages: Annotated[list[ChatMessage], Field(min_length=1, max_length=CH.MAX_MESSAGES)]

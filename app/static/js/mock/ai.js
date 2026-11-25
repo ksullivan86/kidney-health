@@ -31,9 +31,18 @@
    consent question (409) opens the same consent sheet as the web app, a daily limit (429) is the server's.
    Lab report text and photos go only to the server's lab routes, which run only on its local AI, or to the iPhone's own model. They
    are never put in any other request and never fall back to a cloud model. The server's foods in an answer are kept on this phone
-   and named by its own ids (M.serverApi.localize); an idea that names a food this phone does not have is left out. Ask (the chat)
-   stays off on the phone for now: the server's assistant can save to the log on the server, which reaches the phone only with
-   two-way sync (note 39 step 6).
+   and named by its own ids (M.serverApi.localize); an idea that names a food this phone does not have is left out.
+
+   ASK ON THE PHONE (the chat, POST /api/ai/chat). Only the server's AI, and only while this phone syncs both ways with it
+   (js/mock/server_changes.js active()): the assistant reads the person's log on the server, so the two must be in step. The iPhone's
+   own model has no chat. The server runs everything as for the web app: its rules answer a low or an emergency without the model,
+   its checks withhold dose talk, its consent sheet is the same. One source of truth for saves: the phone always sends `trust: 'ask'`,
+   so the server writes nothing and answers with a card; Save on the card goes through this phone's own routes (POST /api/log/batch,
+   /api/meals, a food preference), with the card's foods named by this phone's ids and the server's client_id kept on each entry, and
+   step 4 then sends the new rows to the server like any other. A card that names a food this phone does not have becomes a question
+   (nothing is saved). An older server that saved at once all the same: its "saved" cards lose Undo (their ids are the server's),
+   say so, and a sync brings the rows here. Voice stays off on the phone. GET /api/me/ai → phone.ask and phone.photos say why Ask or
+   a photo of a meal cannot run, for the screens' own words.
    Outside device mode nothing here changes. */
 (() => {
   'use strict';
@@ -148,7 +157,8 @@
       device: { available: st.available, reason: st.reason, message: st.reason ? UNAVAILABLE[st.reason] : null, provider: summary() },
       // Note 39 §6.1: the server's AI, when a token both ways is paired; and the person's choice to use only this iPhone's.
       phone: { server: known && known.state === 'both' ? known.server : null, both_ways: !!(known && known.state === 'both'),
-        device_only: choiceOf(api).device_only, server_ai: serverAi, where, labels: { ...ROUTES } },
+        device_only: choiceOf(api).device_only, server_ai: serverAi, where, labels: { ...ROUTES },
+        ask: serverReason(api, ss, 'chat'), photos: serverReason(api, ss, 'photos') }, // why not, or null
     };
   }
   route('GET', '/api/me/ai', function () { return device() ? meView(this) : OFF_VIEW(); });
@@ -198,7 +208,8 @@
   // ---------------------------------------------------------------------------
   const FEATURE_ROUTE = { next_meal: 'meal_ideas', parse_meal: 'describe', label: 'photos', plate: 'photos', chat: 'chat', voice: 'chat',
     lab_report: 'labs', lab_report_text: 'labs', recipes: 'recipes', recipe_steps: 'recipes' };
-  const NOT_ON_PHONE = new Set(['chat']); // Ask stays off on the phone until two-way sync (see the top)
+  // Ask needs this phone in step with the server both ways (see the top).
+  const twoWay = () => { try { return !!(KH.mock.serverChanges && KH.mock.serverChanges.active()); } catch (e) { return false; } };
   const SERVER_GONE = 'Your server could not be reached, so this AI feature is not available right now. Try again later.';
   const STATUS_TTL_MS = 30000;
   const choiceOf = (api) => ({ device_only: false, ...(api._aiPhone || {}) });
@@ -219,19 +230,20 @@
   }
   // Step 1 of the rule: does the server run this feature route for this person now?
   function serverRuns(ss, featureRoute) {
-    if (!ss || NOT_ON_PHONE.has(featureRoute) || ss.opted_in === false) return false;
+    if (!ss || (featureRoute === 'chat' && !twoWay()) || ss.opted_in === false) return false;
     const r = ss.routes && ss.routes[featureRoute];
     return isDict(r) && r.available === true;
   }
   // One feature through the server. { value } with its answer (kept foods named by this phone's ids), or { skip } when the next
   // step of the rule must run: { skip: 'unreachable' } or { skip: 'not_available' }. Any other answer is thrown as the server's.
-  async function viaServer(api, featureRoute, method, path, opts = {}) {
+  // `raw`: the caller names the foods itself (Ask's cards).
+  async function viaServer(api, featureRoute, method, path, opts = {}, { raw = false } = {}) {
     const ss = await serverStatus(api);
     if (!serverRuns(ss, featureRoute)) return { skip: 'not_available' };
     const res = await KH.mock.serverApi.call(method, path, opts);
     if (res.offline || res.error) { forgetServer(); return { skip: 'unreachable' }; }
     if (res.status === 503 || res.status === 404) { forgetServer(); return { skip: 'not_available' }; }
-    if (res.status >= 200 && res.status < 300) return { value: KH.mock.serverApi.localize(api, res.json) };
+    if (res.status >= 200 && res.status < 300) return { value: raw ? res.json : KH.mock.serverApi.localize(api, res.json) };
     return KH.mock.serverApi.failWith(res);
   }
   // A body for the server: nothing that names this phone's own rows (the server's ids differ until two-way sync).
@@ -250,6 +262,19 @@
     }
     return out;
   }
+  // Why the server's AI cannot run a feature route for this phone now, or null when it can. The screens say it in their own words.
+  function serverReason(api, ss, featureRoute) {
+    const S = KH.mock.serverApi;
+    const k = S ? S.status() : null;
+    if (!k || k.state === 'not_paired' || k.state === 'no_app') return 'not_paired';
+    if (k.state === 'add_only' || k.state === 'old_server') return 'not_both_ways';
+    if (k.state !== 'both') return 'offline'; // offline, or an answer the app could not use: asked again later
+    if (choiceOf(api).device_only) return 'device_only';
+    if (featureRoute === 'chat' && !twoWay()) return 'not_synced';
+    if (ss && ss.opted_in === false) return 'not_opted_in';
+    return serverRuns(ss, featureRoute) ? null : 'server_off';
+  }
+
   // GET /api/ai/status in device mode: the server's view for the features it runs, the iPhone's for the rest.
   async function mergedStatus(api) {
     const [ss, dev] = await Promise.all([serverStatus(api, { fresh: true }), deviceStatus(api)]);
@@ -276,6 +301,7 @@
     return {
       ...ss, enabled: true, opted_in: true, available, reason: available ? null : ss.reason, message: available ? null : ss.message,
       routes, features, consent, voice: null, device: true, server: KH.mock.serverApi.status() ? KH.mock.serverApi.status().server : null,
+      trust: { setting: 'ask', allowed: false, effective: 'ask', phone: true }, // Ask on the phone always asks before it saves (see the top)
       remaining_today: ss.remaining_today == null ? null : ss.remaining_today,
     };
   }
@@ -331,6 +357,69 @@
       });
     });
   }
+  // Ask (app/ai/routes.py chat): the server's AI only, with this phone's rows in step (see the top).
+  const ASK_OFF = 'Ask is not available from your server just now.';
+  const SEND_FIRST_MS = 5000;
+  route('POST', '/api/ai/chat', function ({ body, qp }) {
+    if (!device()) fail(404, 'Not Found');
+    const dry = qp('dry_run') === 'true';
+    const sent = isDict(body) ? { ...body, trust: 'ask' } : body; // the server saves nothing: Save on the card saves here
+    // This phone's newest rows go first, so the assistant reads the log the person sees (waited for a few seconds at most).
+    const S = KH.mock.serverSync;
+    const first = S && !dry && S.status().waiting > 0
+      ? Promise.race([S.run().catch(() => null), new Promise((r) => { const t = setTimeout(r, SEND_FIRST_MS); if (t && t.unref) t.unref(); })])
+      : Promise.resolve();
+    return first.then(() => viaServer(this, 'chat', 'POST', `/api/ai/chat${query(qp)}`, { body: sent }, { raw: true })).then((got) => {
+      if (got.value !== undefined) return chatForPhone(this, got.value);
+      if (got.skip === 'unreachable') fail(503, SERVER_GONE, { reason: 'server_unreachable' });
+      return fail(503, ASK_OFF, { reason: 'not_available' });
+    });
+  });
+  const NOT_HERE = (name) => `"${name}" is not on this iPhone yet, so nothing was saved. Sync this iPhone with your server in Settings → This device, then ask again.`;
+  // The server's food (a card item or target: name, brand) as this phone's food id, or null.
+  function phoneFood(api, item) {
+    if (!isDict(item) || typeof item.name !== 'string') return null;
+    return KH.mock.serverApi.foodHere(api, item.name, item.brand == null ? null : item.brand);
+  }
+  // A card to confirm, with this phone's food ids; { missing } with the names this phone does not have.
+  function cardHere(api, card) {
+    if (card.tool === 'set_food_preference') {
+      const t = card.target;
+      if (!isDict(t) || t.kind !== 'food') return { card }; // a food group names no row
+      const id = phoneFood(api, t);
+      return id == null ? { missing: [t.name] } : { card: { ...card, target: { ...t, food_id: id } } };
+    }
+    const list = card.tool === 'log_food' ? card.payload && card.payload.entries : card.payload && card.payload.items;
+    const items = Array.isArray(card.items) ? card.items : [];
+    if (!Array.isArray(list) || list.length !== items.length) return { missing: items.map((i) => i.name) };
+    const ids = [];
+    const missing = [];
+    for (const item of items) {
+      if (item.fdc_id != null && item.new_food) { ids.push(null); continue; } // a USDA food: the card's Save adds it first (imports)
+      const id = phoneFood(api, item);
+      if (id == null) missing.push(item.name);
+      ids.push(id);
+    }
+    if (missing.length) return { missing };
+    const named = (row, i) => (ids[i] == null ? { ...row } : { ...row, food_id: ids[i] });
+    const payload = card.tool === 'log_food' ? { ...card.payload, entries: list.map(named) } : { ...card.payload, items: list.map(named) };
+    return { card: { ...card, items: items.map(named), payload } };
+  }
+  function chatForPhone(api, answer) {
+    if (!isDict(answer) || answer.dry_run || answer.kind === 'treat_low' || answer.kind === 'get_help_now') return answer; // no rows named
+    const out = { ...answer, questions: [...(answer.questions || [])] };
+    if (isDict(answer.pending_save)) {
+      const here = cardHere(api, answer.pending_save);
+      out.pending_save = here.card || null;
+      for (const name of here.missing || []) out.questions.push({ food: String(name), question: NOT_HERE(String(name)) });
+    }
+    if ((answer.saved || []).length) { // an older server saved at once: the rows come here with the next sync
+      out.saved = answer.saved.map((card) => ({ ...card, undo: null, on_server: true }));
+      if (KH.mock.serverSync) KH.mock.serverSync.soon(500);
+    }
+    return out;
+  }
+
   // Describe a meal (app/ai/routes.py parse_meal; app/ai/features.py prepare_parse_meal), device mode only.
   route('POST', '/api/ai/parse-meal', function ({ body, qp }) {
     if (!device()) fail(404, 'Not Found');

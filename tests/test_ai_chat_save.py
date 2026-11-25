@@ -103,7 +103,7 @@ def unchanged(c: TestClient) -> tuple[int, int, int, int]:
     (False, "conversation", "conversation", "ask"),
     (True, "ask", None, "ask"), (True, "ask", "conversation", "ask"),  # the page cannot grant what the person did not choose
     (True, "conversation", None, "ask"), (True, "conversation", "ask", "ask"), (True, "conversation", "conversation", "conversation"),
-    (True, "always", None, "always"), (True, "always", "ask", "always"), (True, "always", "conversation", "always"),
+    (True, "always", None, "always"), (True, "always", "ask", "ask"), (True, "always", "conversation", "always"),
     (True, "sometimes", "conversation", "ask"),  # a stored value nobody knows is never trust
 ])
 def test_effective_trust_matrix(allowed, stored, requested, expected):

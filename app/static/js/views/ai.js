@@ -201,6 +201,8 @@
       // /api/me/ai is always there; /api/ai/status answers 404 while AI is off (as if not registered).
       const me = await api.me();
       statusCache = me.enabled ? await api.status() : { enabled: false };
+      // The iPhone app: why Ask or a photo of a meal cannot use the server's AI now (js/mock/ai.js meView → phone).
+      if (DEVICE && me.phone) statusCache = { ...statusCache, phone: me.phone };
     } catch (err) {
       if (err.status === 404) statusCache = { enabled: false };
       else { if (!err.handled) console.warn('AI status unavailable:', err.message); return statusCache || { enabled: false, error: true }; }
@@ -1029,7 +1031,18 @@
     if (!slot) return;
     const st = await status();
     clear(slot);
-    if (!st || !st.enabled) { slot.hidden = true; return; }
+    // The iPhone app: a photo of a meal (or a label) only goes to the paired server's AI, so say where it comes from.
+    const photoLine = () => {
+      if (!DEVICE || (st && st.features && st.features.plate)) return null;
+      const why = PHOTO_NOT_HERE[st && st.phone ? st.phone.photos || 'server_off' : 'not_paired'];
+      return why ? h('p', { class: 'muted small ai-photo-where', id: 'ai-photo-where' }, why) : null;
+    };
+    if (!st || !st.enabled) {
+      const line = photoLine();
+      if (line) slot.append(line);
+      slot.hidden = !line;
+      return;
+    }
     if (!st.available) {
       slot.append(h('p', { class: 'muted small' }, st.reason === 'not_opted_in' ? 'AI features are off for you. ' : `${st.message || 'AI is not available.'} `,
         st.reason === 'not_opted_in' ? h('button', { class: 'link-btn', type: 'button', onclick: () => KH.router.show('settings') }, 'Turn them on in Settings') : null));
@@ -1044,8 +1057,21 @@
     if (f.plate) btns.push(h('button', { class: 'btn secondary', type: 'button', onclick: (e) => openPlate({ trigger: e.currentTarget }) }, 'Plate photo (AI)'));
     slot.append(...btns);
     if (st.remaining_today != null) slot.append(h('span', { class: 'muted small ai-left' }, `${st.remaining_today} shared AI calls left today`));
-    slot.hidden = !btns.length;
+    const line = photoLine();
+    if (line) slot.append(line);
+    slot.hidden = !btns.length && !line;
   }
+  // Why the iPhone app has no "Plate photo (AI)" now (js/mock/ai.js serverReason). Photos never go to the iPhone's own model.
+  const PHOTO_NEEDS = 'A photo of your meal or of a label needs your Kidney Health server\'s AI.';
+  const PHOTO_NOT_HERE = {
+    not_paired: `${PHOTO_NEEDS} Connect this iPhone to your server with a token for the iPhone app, both ways, in Settings → This device → Apple Health and server.`,
+    not_both_ways: `${PHOTO_NEEDS} This iPhone's token only sends your log. Make a token for the iPhone app, both ways, and pair again in Settings → This device → Apple Health and server.`,
+    offline: `${PHOTO_NEEDS} Your server could not be reached just now. Try again later.`,
+    device_only: `${PHOTO_NEEDS} You chose to use only this iPhone's AI in Settings → AI features.`,
+    not_synced: `${PHOTO_NEEDS} Check Settings → This device → Apple Health and server.`,
+    not_opted_in: `${PHOTO_NEEDS} AI features are off for you on your server. Turn them on in Settings → AI features.`,
+    server_off: `${PHOTO_NEEDS} Your server does not offer it now. Your server's admin can turn on photos.`,
+  };
 
   // ---------------------------------------------------------------------------
   // Settings → AI features
