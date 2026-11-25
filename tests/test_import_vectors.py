@@ -104,10 +104,10 @@ def test_the_vectors_cover_the_flow_and_what_is_never_imported(committed):
     steps = by_name(committed)
     whole = steps["a whole file, as a dry run"]["answer"]["body"]
     assert whole["dry_run"] is True and whole["can_import"] is True and whole["counts"]["log_entries"] == 7
-    # nothing but the seven allowlisted settings (four of meal guidance and display, three of the weight log), and only with the
+    # nothing but the eight allowlisted settings (five of meal guidance and display, three of the weight log), and only with the
     # profile; the AI setting and a consent are listed as left out
     replacing = steps["a whole file, as a dry run, replacing the profile"]["answer"]["body"]
-    assert replacing["counts"]["settings"] == 7 and replacing["counts"]["profile"] == 1
+    assert replacing["counts"]["settings"] == 8 and replacing["counts"]["profile"] == 1
     skipped = {s["label"] for s in replacing["skipped"]["shown"] if s["kind"] == "settings"}
     assert skipped == {"ai", "food.off_consent"}
     assert steps["a whole file, as a dry run"]["answer"]["body"]["not_selected"] == ["your profile and targets", "your meal-guidance, display, weight and blood pressure settings"]
@@ -125,7 +125,7 @@ def test_the_vectors_cover_the_flow_and_what_is_never_imported(committed):
     assert any("most one day holds" in s["reason"] for s in skipped["shown"])
     assert {k: skipped["by_kind"][k] for k in ("symptoms", "weights", "blood_pressures")} == {"symptoms": 1, "weights": 2, "blood_pressures": 3}
     whole_counts = steps["the whole file imported, with the profile"]["answer"]["body"]["counts"]
-    assert whole_counts["weights"] == 24 and whole_counts["blood_pressures"] == 32 and whole_counts["settings"] == 7
+    assert whole_counts["weights"] == 24 and whole_counts["blood_pressures"] == 32 and whole_counts["settings"] == 8
     # imported rows are left out by their key, typed rows by what they say; a new one of either kind is added
     added = steps["a file with a weight and a reading more, added: typed rows by content, imported rows by key"]["answer"]["body"]
     assert added["counts"]["weights"] == 2 and added["already_there"]["weights"] == 2

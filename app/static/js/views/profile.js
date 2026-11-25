@@ -89,42 +89,6 @@
   }
 
   // ---------------------------------------------------------------------------
-  // The weights in the person's log, offered beside the two weight fields (note 10 §4.6; js/views/body.js profileHints). The latest
-  // weight is not offered on dialysis, where this field is the dry weight the unit sets and a scale reading is not that. Nothing here
-  // changes the profile: "Use this" fills the box, and Save profile saves it.
-  // ---------------------------------------------------------------------------
-  let bodyHints = null; // { units, latest, sixMonth } from the log, or null (none yet, no log, no connection)
-  let bodyHintsReq = 0;
-  function hintLine(box, kind, entry, input, what) {
-    clear(box);
-    box.hidden = !entry;
-    if (!entry) return;
-    const kg = KH.bodyRules.shownWeight(entry.kg, 'kg');
-    const status = h('span', { class: 'body-use-status', role: 'status' });
-    const use = h('button', { class: 'link-btn', type: 'button' }, 'Use this', h('span', { class: 'sr-only' }, ` (${kg.toFixed(1)} kg as ${what})`));
-    use.addEventListener('click', () => {
-      input.value = String(kg);
-      status.textContent = 'Filled in. Press Save profile to keep it.';
-      input.focus();
-    });
-    box.append(KH.bodyUi.profileWeightHint(kind, entry, KH.util.fmtMonthDay(entry.date), bodyHints.units), ' — ', use, status);
-  }
-  function showBodyHints() {
-    const latest = bodyHints && $('#pf-dialysis').value === 'none' ? bodyHints.latest : null;
-    hintLine($('#pf-weight-log'), 'latest', latest, $('#pf-weight'), 'your weight');
-    hintLine($('#pf-weight-6mo-log'), 'sixmonth', bodyHints ? bodyHints.sixMonth : null, $('#pf-weight-6mo'), 'your weight 6 months ago');
-  }
-  async function loadBodyHints() {
-    if (!KH.body || !KH.bodyUi) return;
-    const req = ++bodyHintsReq;
-    let hints = null;
-    try { hints = await KH.body.profileHints(); } catch (err) { hints = null; } // a note under a field is not worth an error: it is left out
-    if (req !== bodyHintsReq) return;
-    bodyHints = hints && (hints.latest || hints.sixMonth) ? hints : null;
-    showBodyHints();
-  }
-
-  // ---------------------------------------------------------------------------
   // Height in feet and inches or in centimetres (user.units.height, chosen in Settings → Preferences). The profile stores
   // centimetres (KH.bodyRules.feetInchesToCm / cmToFeetInches). A height the person has not touched keeps the saved centimetres,
   // so showing it in feet and inches never changes it.
@@ -162,6 +126,42 @@
       const item = res && res.settings ? res.settings['user.units.height'] : null;
       if (item) setHeightUnit(item.value);
     } catch (err) { /* the boxes stay in the unit last seen */ }
+  }
+
+  // ---------------------------------------------------------------------------
+  // The weights in the person's log, offered beside the two weight fields (note 10 §4.6; js/views/body.js profileHints). The latest
+  // weight is not offered on dialysis, where this field is the dry weight the unit sets and a scale reading is not that. Nothing here
+  // changes the profile: "Use this" fills the box, and Save profile saves it.
+  // ---------------------------------------------------------------------------
+  let bodyHints = null; // { units, latest, sixMonth } from the log, or null (none yet, no log, no connection)
+  let bodyHintsReq = 0;
+  function hintLine(box, kind, entry, input, what) {
+    clear(box);
+    box.hidden = !entry;
+    if (!entry) return;
+    const kg = KH.bodyRules.shownWeight(entry.kg, 'kg');
+    const status = h('span', { class: 'body-use-status', role: 'status' });
+    const use = h('button', { class: 'link-btn', type: 'button' }, 'Use this', h('span', { class: 'sr-only' }, ` (${kg.toFixed(1)} kg as ${what})`));
+    use.addEventListener('click', () => {
+      input.value = String(kg);
+      status.textContent = 'Filled in. Press Save profile to keep it.';
+      input.focus();
+    });
+    box.append(KH.bodyUi.profileWeightHint(kind, entry, KH.util.fmtMonthDay(entry.date), bodyHints.units), ' — ', use, status);
+  }
+  function showBodyHints() {
+    const latest = bodyHints && $('#pf-dialysis').value === 'none' ? bodyHints.latest : null;
+    hintLine($('#pf-weight-log'), 'latest', latest, $('#pf-weight'), 'your weight');
+    hintLine($('#pf-weight-6mo-log'), 'sixmonth', bodyHints ? bodyHints.sixMonth : null, $('#pf-weight-6mo'), 'your weight 6 months ago');
+  }
+  async function loadBodyHints() {
+    if (!KH.body || !KH.bodyUi) return;
+    const req = ++bodyHintsReq;
+    let hints = null;
+    try { hints = await KH.body.profileHints(); } catch (err) { hints = null; } // a note under a field is not worth an error: it is left out
+    if (req !== bodyHintsReq) return;
+    bodyHints = hints && (hints.latest || hints.sixMonth) ? hints : null;
+    showBodyHints();
   }
 
   // The v0.3 fields as the form shows them (empty string = not set).

@@ -18,11 +18,19 @@ Owner, 2026-11-25: "for the About you (height) it should be in feet inches with 
   everyone" + CHOICE_LABEL; conflict card PROFILE_LABEL height shown in the person's unit.
 * e2e scripts journey.py / regress.py fill feet and inches now (175 → 5 ft 9 in = 175.5 cm in regress).
 * Tests: tests/js/height_units.test.mjs, tests/test_height_units.py.
+* Docs: handbook first-setup.md (Profile table), settings-and-keys.md (Preferences), self-hosting/configuration.md and
+  docs/deployment.md (HEIGHT_UNITS), docs/push.md (gateway keys), ARCHITECTURE (settings, import list, gateway, server_account,
+  new "Height units" section), CHANGELOG 0.25.0 Added.
+* Chromium: tools/e2e/profile_reliability.py has height_walk (13/13 pass). tools/e2e/regress.py --only 375-light: the profile
+  checks pass (175.5 cm); its two failures are a GET /api/shared 404 with sharing off, not from this change.
+* ruff clean; run_vectors clean; targeted pytest files pass.
 
 ## Next
-* Docs: handbook first-setup + settings page, configuration.md + deployment.md env tables, docs/body.md?, docs/push.md,
-  ARCHITECTURE, CHANGELOG 0.25.0 Added.
-* Wider pytest run, ruff.
+* Full pytest run (started in background; log in the scratchpad height-full.log).
+
+## Findings for the report
+* Profile's weight boxes (#pf-weight "Weight (kg)", #pf-weight-6mo "Weight 6 months ago (kg)") are kilograms only; user.units.weight
+  only adds "(x lb)" to the "Latest in your log" hint (body_ui.profileWeightHint). Not changed.
 
 ## Commands
 * `node tests/js/run_vectors.mjs`; `node tests/js/height_units.test.mjs`

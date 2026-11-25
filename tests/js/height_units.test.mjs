@@ -53,7 +53,7 @@ test('every feet-and-inches height the boxes take comes back unchanged', () => {
 // Profile's height block, from "let heightUnit" to the end of loadHeightUnit, with a fake page.
 const source = read('app/static/js/views/profile.js');
 const start = source.indexOf('  let heightUnit =');
-const end = source.indexOf('  // The v0.3 fields as the form shows them');
+const end = source.indexOf("  // The weights in the person's log");
 assert.ok(start >= 0 && end > start);
 
 function profile(settings = null) {
