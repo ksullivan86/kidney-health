@@ -1065,8 +1065,9 @@
     if (line) slot.append(line);
     slot.hidden = !btns.length && !line;
   }
-  // Why the iPhone app has no "Plate photo (AI)" now (js/mock/ai.js serverReason). Photos never go to the iPhone's own model.
-  const PHOTO_NEEDS = 'A photo of your meal or of a label needs your Kidney Health server\'s AI, or your own AI key with photos turned on.';
+  // Why the iPhone app has no "Plate photo (AI)" now (js/mock/ai.js serverReason). The iPhone's own model reads photos only on
+  // iOS 27 (note 39 §6.6); when it can, the button is there and this line is not shown.
+  const PHOTO_NEEDS = 'A photo of your meal or of a label needs your Kidney Health server\'s AI, your own AI key with photos turned on, or Apple\'s on-device AI on iOS 27.';
   const OWN_KEY_PLACE = 'Settings → This device → Apple Health and server → Keys and services';
   const PHOTO_NOT_HERE = {
     own_photos_off: `${PHOTO_NEEDS} To send photos to your own AI key, turn on "Also send meal and label photos to this AI" in ${OWN_KEY_PLACE}.`,

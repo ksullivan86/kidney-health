@@ -94,10 +94,25 @@ def test_ai_prompts_json_is_the_servers_prompt(tmp_path) -> None:
     files = {f.relative_to(tmp_path).as_posix() for f in builder.build_device(tmp_path)}
     assert {"ai-prompts.json", "vendor/pdfjs-dist-6.4.299/pdf.min.mjs", "vendor/pdfjs-dist-6.4.299/pdf.worker.min.mjs"} <= files
     doc = json.loads((tmp_path / "ai-prompts.json").read_text(encoding="utf-8"))
-    assert set(doc) == {"system", "tasks", "own_key"} and set(doc["tasks"]) == {"parse_meal", "read_lab_report_text"}  # own_key: test_phone_own_key.py
+    assert set(doc) == {"system", "systems", "conditions", "tasks", "own_key"}  # own_key: test_phone_own_key.py
+    assert set(doc["tasks"]) == {"parse_meal", "read_lab_report_text", "read_label", "plate", "next_meal", "recipes"}  # note 39 §6.6
     assert doc["system"] == prompts.TASK_SYSTEM_PROMPT
-    for task in doc["tasks"].values():
-        assert set(task) == {"template"} and task["template"].count("{text}") == 1
+    for name, task in doc["tasks"].items():
+        assert set(task) == {"template", "system", "image"}
+        assert task["template"].count("{text}") == (0 if task["image"] else 1), name
+    # meal ideas and recipes: the server's rules for any profile, with only one of the server's own condition texts put in
+    person = {"ckd_stage": "4", "dialysis": "hemodialysis", "diabetes": "type1"}
+    assert prompts.condition_text(person) in doc["conditions"] and prompts.condition_text(None) in doc["conditions"]
+    assert doc["systems"]["meal"].replace("[[CONDITION]]", prompts.condition_text(person)) == prompts.system_prompt(person)
+    assert doc["systems"]["recipe"].replace("[[CONDITION]]", prompts.condition_text(person)) == prompts.recipe_system_prompt(person, steps=False)
+    assert all(c.startswith("chronic kidney disease") for c in doc["conditions"])
+    for name, key, system in (("next_meal", "ideas", "meal"), ("recipes", "recipes_suggest", "recipe")):
+        data = {"candidates": [], "meal": "lunch"}
+        payload = prompts.data_block(data)[len("<data>\n"):-len("\n</data>")]
+        assert doc["tasks"][name]["system"] == system
+        assert doc["tasks"][name]["template"].replace("{text}", payload) == prompts.user_message(key, data, mode="json_schema", schema={})
+    for name in ("read_label", "plate"):
+        assert doc["tasks"][name]["template"] == prompts.user_message(name, None, mode="json_schema", schema={})
     vectors = json.loads(VECTORS.read_text(encoding="utf-8"))["payload_cases"]
     assert {c["task"] for c in vectors} == {"parse_meal", "lab_report_text"}
     for case in vectors:  # the page sends `payload` (the twin is checked against it by run_vectors.mjs); the app fills the template
@@ -111,8 +126,8 @@ def test_ai_prompts_json_is_the_servers_prompt(tmp_path) -> None:
     assert "Never give, calculate or adjust insulin doses" in doc["system"]
 
 
-def test_the_device_ai_never_offers_more_than_the_two_tasks() -> None:
+def test_the_device_ai_never_offers_more_than_its_tasks() -> None:
     mock = (ROOT / "app" / "static" / "js" / "mock" / "ai.js").read_text(encoding="utf-8")
     tasks = set(re.findall(r"ask\('([a-z_]+)'", mock))
-    assert tasks == {"parse_meal", "read_lab_report_text"}
+    assert tasks == {"parse_meal", "read_lab_report_text", "next_meal", "recipes"}  # and photos through photoOnDevice (note 39 §6.6)
     assert "localStorage" not in mock and "indexedDB" not in mock  # nothing about a prompt or reply is kept

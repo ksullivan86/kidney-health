@@ -27,7 +27,36 @@ AI_OWN_KEY_TASKS = {
     "parse_meal": ("parse_meal", "parse_meal_schema", "kidney_parse_meal", False),
     "read_label": ("read_label", "read_label_schema", "nutrition_label", True),
     "plate": ("plate", "plate_schema", "plate_photo", True),
+    # Meal ideas and AI recipes (note 39 §6.6): the candidate ids are per request, so the schema holds CANDIDATE_IDS where the
+    # server puts its list of ids, and the app puts in the page's ids (whole numbers only). The system message is the meal ideas
+    # or recipe rules (ai-prompts.json "systems"), with the person's condition from "conditions".
+    "next_meal": ("ideas", "ideas_schema", "kidney_ideas", False),
+    "recipes": ("recipes_suggest", "recipes_schema", "kidney_recipes", False),
 }
+CANDIDATE_IDS = "__CANDIDATE_IDS__"
+SYSTEMS = {"next_meal": "meal", "recipes": "recipe"}
+
+
+def schema_for(schemas, prompts, builder: str) -> dict:
+    """The answer schema as the server builds it; for meal ideas and recipes with CANDIDATE_IDS in place of the id list."""
+    if builder == "ideas_schema":
+        schema = schemas.ideas_schema([-1], prompts.AI_HANDBOOK_SLUGS)
+    elif builder == "recipes_schema":
+        schema = schemas.recipes_schema([-1], steps=False)  # the phone never shows cooking steps from AI
+    else:
+        return getattr(schemas, builder)()
+
+    def mark(node):
+        if isinstance(node, dict):
+            return {k: (CANDIDATE_IDS if k == "enum" and v == [-1] else mark(v)) for k, v in node.items()}
+        if isinstance(node, list):
+            return [mark(v) for v in node]
+        return node
+
+    marked = mark(schema)
+    if json.dumps(marked).count(CANDIDATE_IDS) != 1:
+        raise SystemExit(f"app/ai/schemas.py: {builder} must name the candidate ids once")
+    return marked
 
 
 def own_key_prompts() -> dict:
@@ -40,8 +69,9 @@ def own_key_prompts() -> dict:
 
     tasks = {}
     for task, (key, builder, name, image) in AI_OWN_KEY_TASKS.items():
-        schema = getattr(schemas, builder)()
-        entry: dict = {"schema_name": name, "schema": schema, "image": image}
+        schema = schema_for(schemas, prompts, builder)
+        entry: dict = {"schema_name": name, "schema": schema, "image": image, "system": SYSTEMS.get(task, "task"),
+                       "ids": task in SYSTEMS}
         for mode in ("json_schema", "prompt"):
             if image:
                 entry[mode] = prompts.user_message(key, None, mode=mode, schema=schema)

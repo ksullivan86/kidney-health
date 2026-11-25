@@ -200,11 +200,17 @@
     return { value: done(parsed === null ? { status: 'error', reason: 'schema', message: ERROR_TEXT.schema } : check(parsed)) };
   }
 
+  // { available, reason, photos }: photos is whether this iPhone's model can read a photo (iOS 27, OnDeviceVision.swift).
   async function aiStatus() {
     const a = await KH.mock.device.lookup({ kind: 'aiStatus' });
-    if (a && a.ok === true) return { available: a.available === true, reason: a.available === true ? null : (UNAVAILABLE[a.reason] ? a.reason : 'not_ready') };
-    return { available: false, reason: 'no_app' };
+    if (a && a.ok === true) {
+      const on = a.available === true;
+      return { available: on, reason: on ? null : (UNAVAILABLE[a.reason] ? a.reason : 'not_ready'), photos: on && a.photos === true };
+    }
+    return { available: false, reason: 'no_app', photos: false };
   }
+  // The feature routes this iPhone's own model runs now.
+  const onDevice = (st) => (st && st.photos ? [...ON_DEVICE, 'photos'] : ON_DEVICE);
   function unavailable(reason) { fail(503, UNAVAILABLE[reason] || 'AI is not available.', { reason }); }
   function prefs(api) {
     return { opt_in: false, provider: 'auto', share_age_sex: false, preferences: '', trust: 'ask', ...(api._aiPrefs || {}) };
@@ -212,11 +218,11 @@
   function summary() {
     return { ...PROVIDER, vision_model: null, scope: 'device', kind: 'on_device', policy: POLICY };
   }
-  function routeView(feature, on, reason) {
-    const available = ON_DEVICE.includes(feature) && on;
-    return { feature, label: ROUTES[feature], purpose: PURPOSE[feature], route: ON_DEVICE.includes(feature) ? 'local' : 'off', role: null,
-      chosen: false, available, reason: available ? null : (ON_DEVICE.includes(feature) ? reason : 'feature_off'),
-      message: available ? null : (ON_DEVICE.includes(feature) ? UNAVAILABLE[reason] || null : 'This feature is not in the iPhone app.'),
+  function routeView(feature, on, reason, here = ON_DEVICE) {
+    const available = here.includes(feature) && on;
+    return { feature, label: ROUTES[feature], purpose: PURPOSE[feature], route: here.includes(feature) ? 'local' : 'off', role: null,
+      chosen: false, available, reason: available ? null : (here.includes(feature) ? reason : 'feature_off'),
+      message: available ? null : (here.includes(feature) ? UNAVAILABLE[reason] || null : 'This feature is not in the iPhone app.'),
       text: available ? 'Runs on this iPhone with Apple\'s on-device model.' : 'Not in the iPhone app.',
       runs_on: available ? summary() : null, fallback: null, consent: available ? { ...CONSENT } : null };
   }
@@ -237,9 +243,12 @@
       prompt_version: J().PROMPT_VERSION, audit_id: null, cached: false, notes: [] };
   }
   // Ask the iPhone app's model. { answer } or { verdict } (refused, failed) — 503 when it cannot answer at all.
-  async function ask(task, text) {
-    const res = await KH.mock.device.lookup({ kind: 'ai', task, text });
+  async function ask(task, text, extra = {}) {
+    const res = await KH.mock.device.lookup({ kind: 'ai', task, text, ...extra });
     if (res && res.ok === true) return { answer: res.answer };
+    return failed(res);
+  }
+  async function failed(res) {
     const code = res && res.error;
     if (code === 'ai_unavailable') {
       const st = await aiStatus();
@@ -305,16 +314,18 @@
     const optedIn = !!prefs(api).opt_in;
     const phone = st.available && optedIn;
     const routes = Object.fromEntries(Object.keys(ROUTES).map((f) => [f, ownRuns(own, f) ? ownRouteView(api, f, own, optedIn)
-      : routeView(f, phone, st.available ? 'not_opted_in' : st.reason)]));
+      : routeView(f, phone, st.available ? 'not_opted_in' : st.reason, onDevice(st))]));
     const ownText = ownRuns(own, 'describe') && optedIn;
     const ownPhotos = ownRuns(own, 'photos') && optedIn;
+    const phonePhotos = phone && st.photos; // the iPhone's model reads the photo (iOS 27); the own key, when on for photos, goes first
     return {
       enabled: true, opted_in: optedIn, available: optedIn, reason: optedIn ? null : 'not_opted_in',
       message: optedIn ? null : UNAVAILABLE.not_opted_in, provider: own ? ownSummary(own) : summary(),
-      consent: { text: ownText ? ownConsent(api, own, 'text') : phone ? { ...CONSENT } : null, photos: ownPhotos ? ownConsent(api, own, 'photos') : null,
+      consent: { text: ownText ? ownConsent(api, own, 'text') : phone ? { ...CONSENT } : null,
+        photos: ownPhotos ? ownConsent(api, own, 'photos') : phonePhotos ? { ...CONSENT } : null,
         chat: null, labs: phone ? { ...CONSENT } : null, voice: null },
       routing: { mode: 'routed' }, routes, policy_version: 'device', daily_limit: null, remaining_today: null,
-      features: { next_meal: false, parse_meal: ownText || phone, label: ownPhotos, plate: ownPhotos, chat: false, voice: false, lab_report: false,
+      features: { next_meal: false, parse_meal: ownText || phone, label: ownPhotos || phonePhotos, plate: ownPhotos || phonePhotos, chat: false, voice: false, lab_report: false,
         lab_report_text: phone, recipes: false, recipe_steps: false },
       voice: null, trust: { setting: 'ask', allowed: false, effective: 'ask' }, prompt_version: J().PROMPT_VERSION, device: true,
       own_key: own ? { label: own.label, host: own.host, model: own.model, photos: own.photos } : null,
@@ -494,8 +505,11 @@
         if (got.value !== undefined) return got.value;
         const own = OWN_PHOTO[path]; // never the lab report route
         if (own) {
-          const mine = await viaOwnKey(this, featureRoute, own[0], { jpeg }, qp('dry_run') === 'true', own[1](this));
+          const dry = qp('dry_run') === 'true';
+          const mine = await viaOwnKey(this, featureRoute, own[0], { jpeg }, dry, own[1](this));
           if (mine.value !== undefined) return mine.value;
+          const here = await photoOnDevice(this, own[0], jpeg, dry, own[1](this)); // the iPhone's own model (iOS 27)
+          if (here !== null) return here;
           if (mine.skip === 'unreachable') fail(503, OWN_GONE, { reason: 'own_unreachable' });
         }
         if (got.skip === 'unreachable') fail(503, SERVER_GONE, { reason: 'server_unreachable' });
@@ -503,6 +517,22 @@
       });
     });
   }
+  // A label or plate photo on this iPhone's own model (note 39 §6.6): iOS 27 only. The photo stays on the phone. null when this
+  // iPhone's model cannot read photos (the next step of the order runs); else the checked answer, as the server's route gives it.
+  async function photoOnDevice(api, task, jpeg, dry, check) {
+    const st = await aiStatus();
+    if (!st.available || !st.photos) return null;
+    if (!prefs(api).opt_in) unavailable('not_opted_in');
+    if (dry) {
+      return { ...dryRun(task, task, null), body: { kind: 'ai', task, jpeg: `[${jpeg.length} base64 characters]` },
+        image_bytes: Math.floor((jpeg.length * 3) / 4) - (jpeg.endsWith('==') ? 2 : jpeg.endsWith('=') ? 1 : 0) };
+    }
+    const res = await KH.mock.device.lookup({ kind: 'ai', task, jpeg });
+    if (res && res.error === 'photos_unavailable') return null;
+    const got = res && res.ok === true ? { answer: res.answer } : await failed(res);
+    return answer(task, got.verdict || check(got.answer));
+  }
+
   // Ask (app/ai/routes.py chat): the server's AI only, with this phone's rows in step (see the top).
   const ASK_OFF = 'Ask is not available from your server just now.';
   const SEND_FIRST_MS = 5000;

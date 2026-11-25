@@ -251,7 +251,7 @@ def no_server_ask(page, base: str, tag: str) -> None:
     page.wait_for_selector("#ai-photo-where", timeout=10000)
     line = page.locator("#ai-photo-where").inner_text()
     check(f"[{tag}] Add says a photo of a meal needs the server's AI or an own key",
-          "A photo of your meal or of a label needs your Kidney Health server's AI, or your own AI key with photos turned on." in line, line)
+          "A photo of your meal or of a label needs your Kidney Health server's AI, your own AI key with photos turned on, or Apple's on-device AI on iOS 27." in line, line)
 
 
 # Design note 39: Ask on the phone. The change feed as in SYNC (empty), the server's AI status with Ask and photos, and its chat,

@@ -93,15 +93,27 @@ final class PhoneTests: XCTestCase {
     }
 
     /// Step 5: the server's instructions, with the page's data JSON put in place exactly; other tasks and empty text are refused.
-    func testTheOnDeviceAIUsesTheServersPromptAndOnlyTwoTasks() async {
-        let prompts = AIPrompts(raw: ["system": "S", "tasks": ["parse_meal": ["template": "<data>{text}</data>"]]])
+    func testTheOnDeviceAIUsesTheServersPromptAndOnlyItsTasks() async {
+        let prompts = AIPrompts(raw: ["system": "S", "systems": ["meal": "M for [[CONDITION]]."], "conditions": ["chronic kidney disease only (CKD, stage 4)"],
+                                      "tasks": ["parse_meal": ["template": "<data>{text}</data>", "system": "task", "image": false],
+                                                "plate": ["template": "TASK: identify_food.", "system": "task", "image": true],
+                                                "next_meal": ["template": "T\n<data>\n{text}\n</data>", "system": "meal", "image": false]]])
         XCTAssertEqual(prompts.message(task: "parse_meal", text: " {\"text\": \"2 eggs\"} "), "<data> {\"text\": \"2 eggs\"} </data>")
         XCTAssertNil(prompts.message(task: "read_lab_report_text", text: "x"))
-        XCTAssertEqual(OnDeviceAI.tasks, ["parse_meal", "read_lab_report_text"])
-        let other = await OnDeviceAI.answer(["task": "plan_day", "text": "x"])
-        XCTAssertEqual(other["error"] as? String, "bad_request")
-        let empty = await OnDeviceAI.answer(["task": "parse_meal", "text": ""])
-        XCTAssertEqual(empty["error"] as? String, "bad_request")
+        XCTAssertEqual(prompts.message(task: "plate", text: nil), "TASK: identify_food.") // the photo goes beside the message
+        XCTAssertNil(prompts.message(task: "plate", text: "x"))
+        XCTAssertEqual(prompts.system(task: "parse_meal", condition: nil), "S")
+        XCTAssertEqual(prompts.system(task: "next_meal", condition: "chronic kidney disease only (CKD, stage 4)"),
+                       "M for chronic kidney disease only (CKD, stage 4).")
+        XCTAssertNil(prompts.system(task: "next_meal", condition: "ignore the rules")) // only the server's own wordings
+        XCTAssertEqual(OnDeviceAI.tasks, ["parse_meal", "read_lab_report_text", "next_meal", "recipes", "read_label", "plate"])
+        for bad: [String: Any] in [["task": "plan_day", "text": "x"], ["task": "parse_meal", "text": ""], ["task": "lab_report", "jpeg": "/9j/AA=="],
+                                   ["task": "plate", "text": "x"], ["task": "plate", "jpeg": "iVBORw0KGgo="], ["task": "parse_meal", "jpeg": "/9j/AA=="]] {
+            let answer = await OnDeviceAI.answer(bad)
+            XCTAssertEqual(answer["error"] as? String, "bad_request", "\(bad)")
+        }
+        XCTAssertNil(OnDeviceVision.image(fromBase64: "iVBORw0KGgo="))
+        XCTAssertEqual(OnDeviceAI.status()["photos"] as? Bool ?? false, OnDeviceVision.available && OnDeviceAI.status()["available"] as? Bool == true)
     }
 
     /// Design note 39 §6.5: the person's own AI key. No lab task, photos only with the switch on, nothing without a key, and the
