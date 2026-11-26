@@ -39,6 +39,7 @@ Run the commands from the repository root.
 | `barcode_vectors.json` | `python3 tests/data/gen_barcode_vectors.py` |
 | `body_vectors.json` | `python3 tests/data/gen_body_vectors.py` |
 | `care_vectors.json` | `python3 tests/data/gen_care_vectors.py` |
+| `device_map_vectors.json` | `python3 tests/data/gen_device_map_vectors.py` |
 | `ccda_labs_vectors.json` | `node tests/js/gen_ccda_labs_vectors.mjs` |
 | `entry_version_vectors.json` | `python3 tests/data/gen_entry_version_vectors.py` |
 | `export_vectors.json` | `python3 tests/data/gen_export_vectors.py` |
@@ -314,6 +315,28 @@ What a replayer must get right:
 * The reader never reads a clock. `today` is given, and a date more than a day after it is refused (a day of slack for time zones).
 * A date with a time and a zone becomes the day in the device's own zone, so the cases pass `tzOffsetMinutes` (minutes east of UTC) to make the answer the same on every machine. A date with no time is used as written.
 * Result rows come out newest first, with `value`, `unit`, `text` and `display`. `problems` and `summary` are sentences shown to people.
+
+## device_map_vectors.json
+
+How Withings and Whoop answers become readings, days and workouts. The iPhone app with no server reads them on the phone with
+the same rules.
+
+* Server: `app/devices/withings.py` (`readings_from_groups`) and `app/devices/whoop.py` (`build_days`, `build_workouts`).
+* Browser twin: `app/static/js/engine/device_map.js` (used in device mode by `app/static/js/mock/devices.js`).
+* Made by `tests/data/gen_device_map_vectors.py`.
+
+Top-level keys:
+
+* `withings_cases`: `{label, groups, zone, readings: [{kind, external_id, date, time, kg} | {kind, external_id, date, time, systolic,
+  diastolic, pulse}], left_out: int}`.
+* `whoop_day_cases`: `{label, cycles, recoveries, sleeps, days: [ActivityDay], left_out: int, user_id: string | null}`.
+* `whoop_workout_cases`: `{label, records, workouts: [Workout], left_out: int}`.
+
+What a replayer must get right:
+
+* A measure is `value × 10^unit` exactly; blood pressure and pulse round half up to whole numbers.
+* Times are on the person's clock: Withings gives a zone name (the group's, else the account's, else UTC); Whoop gives an offset.
+* kcal = kJ ÷ 4.184, half up. A Whoop day is the date 12 hours after its cycle starts. Values out of range are null.
 
 ## email_vectors.json
 
