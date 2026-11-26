@@ -1,4 +1,4 @@
-Status: in progress (2026-11-26)
+Status: complete (2026-11-26)
 
 # phone-reminders: Settings → Reminders as the iPhone's own notifications
 
@@ -35,4 +35,8 @@ Shared files carry other agents' hunks. Stage only mine: `python3 <scratchpad>/t
   The e2e uses `_until` polling: wait_for_function is refused by the app's CSP.
 * Docs done: note 35 §7, docs/reminders.md "In the iPhone app", handbook settings-and-keys.md #reminders-iphone and install.md,
   ARCHITECTURE.md Device mode bullet "Reminders", CHANGELOG Unreleased "Added", note 39 out-of-scope line.
-* Next: full pytest, ruff, node vectors; mark complete.
+* Final checks: node phone_reminders (28) and run_vectors pass; targeted pytest (phone_reminders, ios_app, reminders_ui,
+  device_mode, handbook_content, preview_build except a failure from another agent's recipe_import.js "<script" text) pass;
+  ruff clean. Full suite left to the orchestrator (disk space). test_device_mode.py: the hidden-list check now starts at the
+  CSS comment, since #set-care was un-hidden by phone-care.
+* Only CI (Xcode) can check LocalReminders.swift compiles and that notifications fire and taps open the screen.
