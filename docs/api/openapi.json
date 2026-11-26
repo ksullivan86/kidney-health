@@ -159,6 +159,10 @@
           "capabilities": {
             "$ref": "#/components/schemas/Capabilities"
           },
+          "care_team": {
+            "$ref": "#/components/schemas/AboutCareTeam",
+            "description": "Read-only, for Settings → Care team on the phone (owner, 2026-11-26). Sharing is changed in the web app."
+          },
           "features": {
             "$ref": "#/components/schemas/AboutFeatures"
           },
@@ -185,7 +189,8 @@
           "ai",
           "services",
           "capabilities",
-          "features"
+          "features",
+          "care_team"
         ],
         "title": "About",
         "type": "object"
@@ -215,6 +220,71 @@
           "routes"
         ],
         "title": "AboutAi",
+        "type": "object"
+      },
+      "AboutCareMember": {
+        "properties": {
+          "areas": {
+            "description": "What the person shares with them (only in `team`).",
+            "items": {
+              "type": "string"
+            },
+            "title": "Areas",
+            "type": "array"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "description": "`viewer`, `care_helper`, `caregiver`, `clinician` or `custom`, as `GET /api/me/shares`.",
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "role"
+        ],
+        "title": "AboutCareMember",
+        "type": "object"
+      },
+      "AboutCareTeam": {
+        "properties": {
+          "enabled": {
+            "description": "The Care team is turned on for this server (`sharing.enabled`).",
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "notes": {
+            "description": "Notes from the Care team are on (`care_notes.enabled`).",
+            "title": "Notes",
+            "type": "boolean"
+          },
+          "on": {
+            "description": "Whose Care team the person is on: name and role.",
+            "items": {
+              "$ref": "#/components/schemas/AboutCareMember"
+            },
+            "title": "On",
+            "type": "array"
+          },
+          "team": {
+            "description": "Who is on the person's Care team: name, role, areas. No id or user name.",
+            "items": {
+              "$ref": "#/components/schemas/AboutCareMember"
+            },
+            "title": "Team",
+            "type": "array"
+          }
+        },
+        "required": [
+          "enabled",
+          "notes",
+          "team",
+          "on"
+        ],
+        "title": "AboutCareTeam",
         "type": "object"
       },
       "AboutFeatures": {
