@@ -1,6 +1,6 @@
-# phone-recipe-import: a recipe from a web page on the iPhone, with no server
+Status: complete (2026-11-26)
 
-Status: in progress (2026-11-26)
+# phone-recipe-import: a recipe from a web page on the iPhone, with no server
 
 ## Plan
 1. Python: tests/data/gen_recipe_page_vectors.py → tests/data/recipe_page_vectors.json (ld_json_blocks over HTML cases,
@@ -29,8 +29,13 @@ Status: in progress (2026-11-26)
   view words (read_on). tests/js/phone_recipe_page.mjs (38 checks) + tests/test_phone_recipe_import.py pass.
 * Committed: 952215a, 9c7d3dc, e5bef46 (run_vectors.mjs: only my hunks staged with update-index; another agent's deviceMap hunks
   are theirs).
-## Next
-* e2e walk in tools/e2e/device_mode.py if practical; docs: handbook page, ARCHITECTURE.md, CHANGELOG, docs/ page; full pytest.
+* Docs done: ARCHITECTURE.md (Device mode bullet "A recipe page read on the iPhone", Recipe import section), handbook
+  app/install.md and app/planning-and-menus.md, CHANGELOG Unreleased, tests/data/README.md section.
+* Checks: targeted pytest (test_phone_recipe_import, test_ios_app, test_lists_recipes_ui, test_server_services_phone,
+  test_recipe_import) pass; node run_vectors passes; swift test (whole package, 54 tests) passed locally. The full suite was not
+  run, as the orchestrator asked (it runs it once for everyone). test_vectors_readme still fails for other agents' files
+  (phone_reminder, device_map), not this one.
+* Scratch folders (Swift toolchain, builds, venvs) deleted.
 * e2e recipe_walk in tools/e2e/device_mode.py: 13/13 PASS (scratch runner prt-run_recipe_e2e.py runs only this walk).
   INCIDENT: a bad one-liner of mine truncated tools/e2e/device_mode.py; I refilled it from HEAD. phone-extras' uncommitted ask_walk
   hunk (mic → words, no mic) was lost; reported to the orchestrator (main) for phone-extras to redo.
