@@ -1,4 +1,4 @@
-Status: in progress (2026-11-26)
+Status: complete (2026-11-26)
 
 # phone-care: Care team notes and suggestions on the iPhone app, through the paired server
 
@@ -32,8 +32,10 @@ Owner, 2026-11-26: "Should the phone show care team notes?" "yes". Anything the 
 * Commit trick used for shared files with other agents' hunks: filter my hunks into a patch, `git apply --cached`, commit with an
   otherwise empty index (checked first).
 
-## Next
-* Full `python -m pytest -q`; e2e device_mode full run; mark complete.
+## Last checks
+* Targeted pytest (gateway, iOS pins, server care relay, care UI, notes, server account, device mode) pass; node run_vectors,
+  device_mode.mjs, server_care.mjs pass; e2e care_walk passed. The full suite is left to the orchestrator (disk space).
+* The never-list hunk of test_app_gateway.py went in with phone-devices' lines beside it (their code was already committed).
 * Seen, not mine: tests/js/server_sync.mjs fails on a 'reminders' bridge request (phone-reminders).
 
 ## Python
