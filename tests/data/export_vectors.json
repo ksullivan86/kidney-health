@@ -16,7 +16,7 @@
   "format": "kidney-health-export",
   "version": 1,
   "exported_at": "2026-11-26T06:09:09.712991Z",
-  "app_version": "0.25.0",
+  "app_version": "0.26.0",
   "user": {
    "username": "admin",
    "display_name": "",

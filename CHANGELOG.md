@@ -7,6 +7,16 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+## 0.26.0 — 2026-11-26
+
+The iPhone app does what the web app does, with or without a server.
+
+### Upgrading from 0.25 (read this first)
+
+* Back up `kidney.db` first, change the image tag to `:0.26`, and start it. There is no schema step and no new server setting.
+* Nothing new is turned on for you.
+* The new phone features need the iPhone app from TestFlight, build 11 or later.
+
 ### Changed
 
 * Profile's two weight boxes now use your unit for weight, pounds by default, like the weight log. The labels say the unit. To

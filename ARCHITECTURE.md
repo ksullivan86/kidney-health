@@ -1118,7 +1118,9 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 
 **Unreleased (2026-11-12):** reminders by phone notification (note 35, schema step 35), off until `REMINDERS_ENABLED`.
 
-**Status (2026-11-24): v0.25.0 is prepared.** The iPhone app runs with no server (note 38: storage, food services, Apple
+**Status (2026-11-26): v0.26.0 is prepared.** The iPhone app does what the web app does, with or without a server: Ask
+by voice, the handbook inside the app, reminders, Care team notes, AI order, swaps and day plans, recipe import from a web
+page, Withings and Whoop, and the same export `.zip` as a server. No schema step and no new server setting. **v0.25.0**: The iPhone app runs with no server (note 38: storage, food services, Apple
 Health into the phone's log, the iPhone's own AI, native scanners, Home Screen shortcuts) and with your own server both ways
 (note 39: the both-ways token and its gateway, the change feed with schema steps 37 and 38, sync with conflict cards, profile
 and targets from the server, recipe import, Instacart and lists). **v0.24.1**: The iPhone app is called Kidney Health everywhere (bundle ID
