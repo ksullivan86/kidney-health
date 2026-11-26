@@ -106,6 +106,8 @@ const POTATO = 'Potato, baked, with skin';
 // 1. AI order on the iPhone's own model: the task, its data block (no ids: the answer names refs), the server's judge.
 {
   const { api, sent } = await page();
+  const st = await api.request('GET', '/api/ai/status');
+  ok(() => assert.deepEqual(plain(st.swap_plan), { available: true, label: 'Apple\'s on-device model', stays: true }), 'swaps and plans: this iPhone');
   const got = await api.request('POST', '/api/ai/next-meal', { meal: 'dinner', date: D, mode: 'rerank' });
   const req = sent('ai').at(-1);
   ok(() => assert.equal(req.task, 'rerank'), 'the rerank task');
@@ -210,6 +212,8 @@ const POTATO = 'Potato, baked, with skin';
     ok(() => assert.equal(got.status, 'ok'), `${mode} checked`);
   }
   ok(() => assert.equal(sent('ai').length, 0), 'the own key went first');
+  const st = await api.request('GET', '/api/ai/status');
+  ok(() => assert.deepEqual(plain(st.swap_plan), { available: true, label: 'OpenAI (your own key)', stays: false }), 'swaps and plans: the own key');
   const bodies = sent('ownAI').map((r) => JSON.stringify(r).toLowerCase());
   for (const needle of ['robin', 'quillfeather', '1971']) ok(() => assert.ok(bodies.every((b) => !b.includes(needle))), `no "${needle}" to the own key`);
 }
@@ -240,6 +244,8 @@ const POTATO = 'Potato, baked, with skin';
   ok(() => assert.equal(P.gateway('/push/v1/api/ai/next-meal').length, n), 'swaps and day plans are not sent to the server');
   ok(() => assert.deepEqual([swap.provider.label, plan.provider.label], ['Apple\'s on-device model', 'Apple\'s on-device model']));
   P.state.iphone = false;
+  const st = await P.api.request('GET', '/api/ai/status');
+  ok(() => assert.deepEqual([st.features.next_meal, st.swap_plan.available], [true, false]), 'the server\'s AI, but no swaps or plans here');
   await fails(P.api.request('POST', '/api/ai/next-meal', { meal: 'breakfast', date: D, mode: 'plan' }), 503,
     (e) => e.extra.reason === 'not_on_server' && /own AI key or Apple/.test(e.detail));
 }

@@ -420,9 +420,13 @@
   async function mergedStatus(api, { fresh = true } = {}) {
     const [ss, dev] = await Promise.all([serverStatus(api, { fresh }), deviceStatus(api)]);
     const runs = (f) => serverRuns(ss, f);
+    // AI swaps and AI day plans run only on this phone's own AIs (PHONE_ONLY_MODES): which one, for the buttons' words.
+    const mine = dev && isDict(dev.routes.meal_ideas) && dev.routes.meal_ideas.available ? dev.routes.meal_ideas : null;
+    const swapPlan = { available: !!mine, label: mine && isDict(mine.runs_on) ? mine.runs_on.label : null,
+      stays: !!mine && mine.runs_on_phone !== 'own' }; // stays: Apple's on-device model, so nothing leaves the phone
     if (!ss || !Object.keys(ROUTES).some(runs)) {
       if (!dev) fail(404, 'Not Found'); // no AI anywhere: as a server with AI off
-      return dev;
+      return { ...dev, swap_plan: swapPlan };
     }
     const routes = {};
     for (const f of Object.keys(ROUTES)) {
@@ -442,6 +446,7 @@
     return {
       ...ss, enabled: true, opted_in: true, available, reason: available ? null : ss.reason, message: available ? null : ss.message,
       routes, features, consent, voice: null, device: true, server: KH.mock.serverApi.status() ? KH.mock.serverApi.status().server : null,
+      swap_plan: swapPlan,
       trust: { setting: 'ask', allowed: false, effective: 'ask', phone: true }, // Ask on the phone always asks before it saves (see the top)
       remaining_today: ss.remaining_today == null ? null : ss.remaining_today,
     };

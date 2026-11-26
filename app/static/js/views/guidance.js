@@ -648,13 +648,19 @@
       h('p', { class: 'hint' }, on ? 'In the AI’s order. The numbers and fit checks are still the app’s own.'
         : 'Let AI put these foods in the order it suggests and say why. The numbers stay the app’s own.'), msg);
   }
+  // The iPhone app runs AI swaps and AI day plans on the phone's own AI only (js/mock/ai.js swap_plan): its name, or null when the
+  // phone has none (then the button is not shown). Elsewhere the server's provider.
+  function swapPlanLabel(st) {
+    if (st.swap_plan) return st.swap_plan.available ? st.swap_plan.label || 'AI' : null;
+    return st.provider ? st.provider.label : 'AI';
+  }
   // "Ask AI to pick" under the rule swaps (mode "swap": the AI picks among the rule swaps). Never for a low.
   function aiSwapBlock(c, res) {
     const box = h('div', { class: 'g-ai-swap' });
     aiAvailable().then((st) => {
-      if (!st || !document.contains(box)) return;
+      if (!st || !document.contains(box) || !swapPlanLabel(st)) return;
       const out = h('div', { class: 'g-ai-msg' });
-      const ask = h('button', { class: 'btn secondary', type: 'button' }, `Ask AI to pick · ${st.provider ? st.provider.label : 'AI'}`);
+      const ask = h('button', { class: 'btn secondary', type: 'button' }, `Ask AI to pick · ${swapPlanLabel(st)}`);
       const swapBody = () => (c.mode === 'edit' && c.entry && !c.amountTouched ? { meal: c.meal, date: c.date, mode: 'swap', entry_id: c.entry.id }
         : { meal: c.meal, date: c.date, mode: 'swap', food_id: c.food.id, servings: Math.min(20, c.servings > 0 ? c.servings : 1) });
       ask.addEventListener('click', async () => {
@@ -680,8 +686,8 @@
   // and check the whole day again; the meals it picked carry an "AI's pick" badge.
   async function aiPlanButton(foot) {
     const st = await aiAvailable();
-    if (!st || sheetEl.dataset.kind !== 'plan' || $('#g-plan-ai')) return;
-    const b = btn(`Let AI choose · ${st.provider ? st.provider.label : 'AI'}`, 'secondary', async () => {
+    if (!st || sheetEl.dataset.kind !== 'plan' || $('#g-plan-ai') || !swapPlanLabel(st)) return;
+    const b = btn(`Let AI choose · ${swapPlanLabel(st)}`, 'secondary', async () => {
       const res = planState.result;
       const out = $('#g-plan-out');
       if (!res || !res.meals.length || !out) return;
@@ -711,7 +717,9 @@
       clear(msg);
       try { await KH.ai.showSent(await KH.ai.api.nextMeal({ meal: res.meals[0].meal, date: res.date, mode: 'plan' }, true), { trigger: sent }); } catch (err) { aiError(msg, err); } finally { if (document.contains(sent)) sent.disabled = false; }
     });
-    out.before(h('p', { class: 'hint g-ai-plan-note' }, `“Let AI choose” sends the plan’s options to ${st.provider ? st.provider.label : 'the AI server'}. `, sent), msg);
+    out.before(h('p', { class: 'hint g-ai-plan-note' }, st.swap_plan && st.swap_plan.stays
+      ? '“Let AI choose” gives the plan’s options to Apple’s on-device model. They stay on this iPhone. '
+      : `“Let AI choose” sends the plan’s options to ${st.swap_plan ? swapPlanLabel(st) : st.provider ? st.provider.label : 'the AI server'}. `, sent), msg);
   }
 
   // ---------------------------------------------------------------------------
