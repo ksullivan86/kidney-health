@@ -179,7 +179,7 @@ const withingsAnswer = (groups, updatetime = 1_900_000_000) => ({ ok: true, now:
     'POST /push/v1/api/devices/withings/sync': { json: { connection: conn, result: { added: { weights: 1, readings: 0, days: 0, workouts: 0 },
       already_there: 0, skipped: 0, left_out: 0, updated: 0 }, error: null } },
     'DELETE /push/v1/api/devices/withings': (req) => ({ json: { removed: { weights: req.path.includes('delete_readings=true') ? 4 : 0, readings: 0, days: 0, workouts: 0 }, revoked: true } }),
-    'GET /push/v1/api/activity': () => (reachable ? { json: { start: 'x', end: 'y', days: serverDays, workouts: [], extra: { enabled: true, share_pct: 50, ceiling_kcal: null } } } : 'offline'),
+    'GET /push/v1/api/activity': () => (reachable === 'busy' ? { http: 503, json: { detail: 'Busy' } } : reachable ? { json: { start: 'x', end: 'y', days: serverDays, workouts: [], extra: { enabled: true, share_pct: 50, ceiling_kcal: null } } } : 'offline'),
     'PUT /push/v1/api/activity/extra': (req) => ({ json: JSON.parse(req.body) }),
   };
   const { api, asked, log } = page({ paired: true, apps: { withings: true }, gw, fetches: { withings: () => withingsAnswer([]) } });
@@ -209,6 +209,13 @@ const withingsAnswer = (groups, updatetime = 1_900_000_000) => ({ ok: true, now:
   ok(() => assert.equal(api._activitySource(), api._activityServer), 'Today uses the server\'s days and setting');
   const put = await api.request('PUT', '/api/activity/extra', { enabled: false, share_pct: 40, ceiling_kcal: 300 });
   ok(() => assert.deepEqual(put, { enabled: false, share_pct: 40, ceiling_kcal: 300 }), 'the setting is changed on the server');
+  const kept = api._activityServer;
+  // an empty kept copy (the server has no Whoop) never stands in for this phone's own days (audit, 2026-11-26)
+  reachable = 'busy'; // the server answers, with an error
+  api._activityServer = { days: [], workouts: [], extra: { enabled: false, share_pct: 77, ceiling_kcal: null } };
+  const own = await api.request('GET', `/api/activity?start=${utcDay(at(5, 0))}&end=${utcDay(NOW)}`);
+  ok(() => assert.notEqual(own.extra && own.extra.share_pct, 77), 'an error with an empty copy: the phone\'s own');
+  api._activityServer = kept;
   reachable = false;
   const cached = await api.request('GET', `/api/activity?start=${utcDay(at(5, 0))}&end=${utcDay(NOW)}`);
   ok(() => assert.deepEqual(cached.days.map((d) => d.kcal), [2600]), 'offline: the kept copy');

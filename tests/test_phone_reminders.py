@@ -137,3 +137,11 @@ def test_the_iphone_build_packs_the_reminders_screen_and_the_web_demo_does_not(t
     assert '<script src="js/mock/phone_reminders.js">' in device
     index = (STATIC / "index.html").read_text(encoding="utf-8")
     assert len(re.findall(r'data-device="keep"', index)) == 1  # Settings → Reminders only
+
+
+def test_the_reminder_dates_are_read_as_gregorian() -> None:
+    """Audit, 2026-11-26: the page writes Gregorian dates. Parts with no calendar are read in the phone's own (Buddhist, Japanese
+    …), so a reminder would be centuries off and never go off. No time zone: it goes off in the phone's own zone."""
+    swift = (ROOT / "ios" / "KidneyHealth" / "Phone" / "LocalReminders.swift").read_text(encoding="utf-8")
+    assert "DateComponents(calendar: Calendar(identifier: .gregorian), year: year, month: month, day: day, hour: hour, minute: minute)" in swift
+    assert "timeZone:" not in swift.split("static func parts(")[1].split("\n    }\n")[0]

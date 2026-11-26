@@ -110,7 +110,8 @@
     const res = await S.call('GET', `/api/activity?start=${start}&end=${end}`);
     const srv = isDict(api._activityServer) ? api._activityServer : null;
     if (res.offline || res.error || res.status !== 200 || !isDict(res.json) || !Array.isArray(res.json.days)) {
-      if (!srv) return null;
+      // Only a copy with something in it stands in, as below: an empty one must not hide this phone's own Whoop days.
+      if (!srv || !(srv.days.length || (srv.extra && srv.extra.enabled))) return null;
       const inRange = (r) => r.date >= start && r.date <= end;
       return { start, end, days: srv.days.filter(inRange), workouts: srv.workouts.filter(inRange), extra: { ...srv.extra } };
     }

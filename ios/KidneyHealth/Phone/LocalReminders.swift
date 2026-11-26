@@ -91,7 +91,9 @@ final class LocalReminders: NSObject, UNUserNotificationCenterDelegate {
         guard text.count == 16, pieces.count == 5, let year = pieces[0], let month = pieces[1], let day = pieces[2],
               let hour = pieces[3], let minute = pieces[4], (2000...2100).contains(year), (1...12).contains(month),
               (1...31).contains(day), (0...23).contains(hour), (0...59).contains(minute) else { return nil }
-        return DateComponents(year: year, month: month, day: day, hour: hour, minute: minute)
+        // Gregorian, as the page writes it: without a calendar iOS reads the parts in the phone's own one (Buddhist, Japanese …)
+        // and the reminder would be centuries off. No time zone, so it goes off in the phone's own zone.
+        return DateComponents(calendar: Calendar(identifier: .gregorian), year: year, month: month, day: day, hour: hour, minute: minute)
     }
 
     private func content(_ body: String, screen: String) -> UNMutableNotificationContent {
