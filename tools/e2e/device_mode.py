@@ -678,6 +678,92 @@ def sync_walk(browser, base: str) -> None:
     ctx.close()
 
 
+# Reminders as the iPhone's own notifications (design note 35 §7): a stand-in for the app's notifications, which iOS first asks about.
+REMINDERS = ("window.__kh = { copies: [], phone: [], rem: [], permission: sessionStorage.getItem('khPermission') || 'not_asked' };"
+             "window.webkit = { messageHandlers: { safetyCopy: { postMessage: (t) => window.__kh.copies.push(String(t)) },"
+             " phone: { postMessage: (m) => window.__kh.phone.push(String(m)) },"
+             " bridge: { postMessage: async (r) => r.kind === 'services' ? { ok: true, off: false, usda: false, scan: false }"
+             " : r.kind === 'serverInfo' ? { ok: true, paired: false }"
+             " : r.kind === 'aiStatus' ? { ok: true, available: false, reason: 'not_eligible' }"
+             " : r.kind === 'ownAIStatus' ? { ok: true, set: false }"
+             " : r.kind === 'reminders' ? (window.__kh.rem.push(JSON.parse(JSON.stringify(r))),"
+             "   r.action === 'allow' && window.__kh.permission === 'not_asked' ? (window.__kh.permission = 'allowed') : null,"
+             "   r.action === 'schedule' ? { ok: true, scheduled: r.items.length, permission: window.__kh.permission }"
+             "   : r.action === 'test' ? { ok: true } : { ok: true, permission: window.__kh.permission, pending: 0 })"
+             " : { error: 'not_paired' } } } };")
+
+
+def _until(page, js: str, seconds: float = 10) -> bool:
+    """Polls ``js`` in the page (wait_for_function evaluates a string, which the app's CSP refuses)."""
+    for _ in range(int(seconds * 10)):
+        if page.evaluate(js):
+            return True
+        page.wait_for_timeout(100)
+    return False
+
+
+def reminders_walk(browser, base: str) -> None:
+    """Settings → Reminders in the iPhone app: the safety line, "for this iPhone only", the permission asked from the tap, a reminder
+    added and planned with only its kind and time, a test, and with notifications refused the way to iOS Settings."""
+    tag = "reminders"
+    ctx = browser.new_context(viewport={"width": 375, "height": 812}, color_scheme="light")
+    ctx.add_init_script(REMINDERS)
+    page = ctx.new_page()
+    errors: list[str] = []
+    others: list[str] = []
+    page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.on("request", lambda r: others.append(r.url) if not r.url.startswith(base) else None)
+    page.goto(f"{base}/index.html#today")
+    page.wait_for_selector("#view-today:not([hidden])", timeout=30000)
+    page.wait_for_timeout(800)
+    page.evaluate("KH.request('PUT', '/api/device/setup', { done: true }).then(() => KH.mock.local.flush())")
+    page.wait_for_timeout(300)
+    page.goto(f"{base}/index.html#settings")
+    page.reload()
+    page.wait_for_selector("#set-reminders-on", state="visible", timeout=30000)
+    check(f"[{tag}] Settings lists Reminders", page.locator("#settings-nav").get_by_role("button", name="Reminders").count() == 1)
+    text = page.locator("#set-reminders-body").inner_text()
+    check(f"[{tag}] the safety line is shown", "Do not rely on them for low blood sugar; use your CGM's alerts." in text, text[:300])
+    check(f"[{tag}] it says reminders are for this iPhone only", "Reminders set here are for this iPhone only." in text)
+    check(f"[{tag}] no list of devices and no demo line", "Devices with notifications on" not in text and "demo" not in text.lower())
+    check(f"[{tag}] iOS is not asked before the tap", not any(m["action"] == "allow" for m in page.evaluate("window.__kh.rem")))
+    page.click("#set-reminders-on")
+    page.wait_for_selector("#set-reminders-test", timeout=10000)
+    check(f"[{tag}] on after allowing", "Notifications are on for this iPhone." in page.locator("#set-reminders-device").inner_text())
+    page.click("#set-reminders-add")
+    page.select_option("#set-reminder-what", "log_meal:dinner")
+    page.fill("#set-reminder-time", "23:59")
+    page.click("#set-reminder-save")
+    page.wait_for_selector("#set-reminders-list .reminder-row", timeout=10000)
+    _until(page, "window.__kh.rem.some((m) => m.action === 'schedule' && m.items.length > 0)")
+    plan = [m for m in page.evaluate("window.__kh.rem") if m["action"] == "schedule"][-1]["items"]
+    check(f"[{tag}] the plan covers the next 7 days", 6 <= len(plan) <= 7, json.dumps(plan)[:200])
+    check(f"[{tag}] the plan holds only ids, times, kinds and meals",
+          all(sorted(x) == ["at", "id", "kind", "meal"] and x["kind"] == "log_meal" and x["meal"] == "dinner" and x["at"].endswith("T23:59")
+              for x in plan), json.dumps(plan)[:200])
+    page.click("#set-reminders-test")
+    check(f"[{tag}] the test says it comes in a few seconds",
+          _until(page, "document.querySelector('#set-reminders-device-msg').textContent.includes('few seconds')"))
+    check(f"[{tag}] a test is asked of the app", any(m["action"] == "test" for m in page.evaluate("window.__kh.rem")))
+    opened = page.evaluate("KH.openScreen('add').then((ok) => ok && !document.querySelector('#view-add').hidden)")
+    check(f"[{tag}] a tapped reminder opens Add", opened is True)
+    check(f"[{tag}] only its screens can be opened", page.evaluate("KH.openScreen('admin')") is False)
+    page.evaluate("sessionStorage.setItem('khPermission', 'denied')")
+    page.goto(f"{base}/index.html#settings")
+    page.reload()
+    page.wait_for_selector("#set-reminders-open-settings", state="visible", timeout=30000)
+    blocked = page.locator("#set-reminders-blocked").inner_text()
+    check(f"[{tag}] refused: it says how to allow it in iOS Settings", "tap Notifications, then Kidney Health" in blocked, blocked)
+    page.click("#set-reminders-open-settings")
+    check(f"[{tag}] Open iPhone Settings asks the app", _until(page, "window.__kh.rem.some((m) => m.action === 'openSettings')"))
+    over = page.evaluate("document.documentElement.scrollWidth > window.innerWidth + 1")
+    check(f"[{tag}] no sideways scroll", not over)
+    check(f"[{tag}] no request to another host", not others, "; ".join(others[:3]))
+    check(f"[{tag}] no console or page error", not errors, "; ".join(errors[:3]))
+    ctx.close()
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n", 1)[0])
     ap.add_argument("--out", type=Path, default=OUT)
@@ -699,6 +785,7 @@ def main(argv: list[str] | None = None) -> int:
                 ask_walk(browser, base)
                 own_key_walk(browser, base)
                 phone_ai_walk(browser, base)
+                reminders_walk(browser, base)
             finally:
                 browser.close()
     finally:

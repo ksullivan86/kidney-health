@@ -12,7 +12,7 @@ one-shot UNCalendarNotificationTrigger). Design in docs/dev/research/35-reminder
 4. [x] Un-hide #set-reminders in device mode (base.css, settings.js DEVICE_LEFT_OUT).
 5. [x] Swift: ios/KidneyHealth/Phone/LocalReminders.swift; bridge kind `reminders` in FoodServices.swift; delegate in AppDelegate;
        taps through PageBridge.
-6. [~] Tests (node + pytest done; e2e next): tests/js/phone_reminders.mjs + tests/test_phone_reminders.py (pins Swift text and kinds); e2e in tools/e2e/device_mode.py.
+6. [x] Tests (node, pytest, e2e reminders_walk in tools/e2e/device_mode.py): tests/js/phone_reminders.mjs + tests/test_phone_reminders.py (pins Swift text and kinds); e2e in tools/e2e/device_mode.py.
 7. [ ] Docs: handbook reminders page, ARCHITECTURE.md Device mode bullet, CHANGELOG Unreleased.
 
 ## Decisions
@@ -29,3 +29,7 @@ one-shot UNCalendarNotificationTrigger). Design in docs/dev/research/35-reminder
 ## Committing shared files
 Shared files carry other agents' hunks. Stage only mine: `python3 <scratchpad>/tools/stage_hunks.py FILE MARKER...` (git apply
 --cached), check `git diff --cached`, then `git commit` with no pathspec.
+* The device build packs `js/views/reminders.js` (index.html `data-device="keep"`, honoured by scripts/build_preview.py
+  `_assets(..., device=True)`); the web demo still leaves it out.
+* e2e of only my walk: a scratch driver that imports tools/e2e/device_mode.py and runs `reminders_walk` (17 PASS).
+  The e2e uses `_until` polling: wait_for_function is refused by the app's CSP.

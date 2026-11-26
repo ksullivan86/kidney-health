@@ -120,3 +120,20 @@ def test_settings_shows_reminders_on_the_iphone_with_the_safety_line():
     index = (STATIC / "index.html").read_text(encoding="utf-8")
     assert index.index('src="js/mock/persist.js"') < index.index('src="js/mock/phone_reminders.js"') < index.index('src="js/mock/seed.js"')
     assert "'/js/mock/phone_reminders.js'," in (STATIC / "sw.js").read_text(encoding="utf-8")
+
+
+def test_the_iphone_build_packs_the_reminders_screen_and_the_web_demo_does_not(tmp_path):
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location("build_preview", ROOT / "scripts" / "build_preview.py")
+    builder = importlib.util.module_from_spec(spec)
+    assert spec.loader is not None
+    spec.loader.exec_module(builder)
+    builder.build_device(tmp_path / "device")
+    builder.build_pages(tmp_path / "pages")
+    device = (tmp_path / "device" / "index.html").read_text(encoding="utf-8")
+    pages = (tmp_path / "pages" / "index.html").read_text(encoding="utf-8")
+    assert '<script src="js/views/reminders.js">' in device and "js/views/reminders.js" not in pages
+    assert '<script src="js/mock/phone_reminders.js">' in device
+    index = (STATIC / "index.html").read_text(encoding="utf-8")
+    assert len(re.findall(r'data-device="keep"', index)) == 1  # Settings → Reminders only

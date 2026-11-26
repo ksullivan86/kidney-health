@@ -96,8 +96,9 @@ def _local_file(static_dir: Path, ref: str, what: str) -> Path:
     return path
 
 
-def _assets(html: str, static_dir: Path, where: str) -> list[tuple[str, Path]]:
-    """[('style'|'script', file)] for the stylesheets and script files of `html`, in order."""
+def _assets(html: str, static_dir: Path, where: str, *, device: bool = False) -> list[tuple[str, Path]]:
+    """[('style'|'script', file)] for the stylesheets and script files of `html`, in order. ``device``: a script marked
+    ``data-device="keep"`` is kept although the demo leaves it out (Settings → Reminders, design note 35 §7)."""
     out: list[tuple[str, Path]] = []
     for m in _ASSET_RE.finditer(html):
         tag = m.group(0)
@@ -110,7 +111,7 @@ def _assets(html: str, static_dir: Path, where: str) -> list[tuple[str, Path]]:
             continue  # manifest, icons, apple-touch-icon: the installed app's, not the preview's
         if "src" not in attrs:
             raise SystemExit("index.html: inline <script> found; the CSP allows only script files")
-        if attrs.get("data-preview") == "omit":
+        if attrs.get("data-preview") == "omit" and not (device and attrs.get("data-device") == "keep"):
             continue
         out.append(("script", _local_file(static_dir, attrs["src"], "script")))
     return out
@@ -353,7 +354,7 @@ def build_pages(out_dir: Path, static_dir: Path = STATIC, foods_json: Path = FOO
     for kind, path in _assets(head, static_dir, "head"):
         rel = copy(path)
         head_tags.append(f'<link rel="stylesheet" href="{rel}">' if kind == "style" else f'<script src="{rel}"></script>')
-    body_scripts = _assets(body, static_dir, "body")
+    body_scripts = _assets(body, static_dir, "body", device=device)
     markup = _ASSET_RE.sub("", body).strip()
     markup = re.sub(r"\n{3,}", "\n\n", markup)
     if re.search(r"<script\b", markup, re.I) or re.search(r"<link\b", markup, re.I):
