@@ -117,6 +117,8 @@ final class FoodServices: ObservableObject {
             return ["ok": true]
         case "serverInfo", "serverSyncCheck", "serverSync", "serverApi": // the person's own server (ServerSync.swift)
             return await ServerSync.answer(kind, request)
+        case "deviceStatus", "deviceConnect", "deviceFetch", "deviceDisconnect", "serverPage": // Withings and Whoop (Devices.swift)
+            return await Devices.shared.answer(kind, request)
         case "usdaSearch":
             guard let q = (request["q"] as? String)?.trimmingCharacters(in: .whitespacesAndNewlines), !q.isEmpty, q.count <= 200 else {
                 return Self.problem("bad_request")

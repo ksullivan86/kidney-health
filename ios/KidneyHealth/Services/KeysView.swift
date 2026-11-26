@@ -15,6 +15,10 @@ struct KeysView: View {
     @State private var ownKey = ""
     @State private var ownMessage: String?
     @State private var ownTesting = false
+    @ObservedObject private var devices = Devices.shared
+    @State private var deviceIDs: [DeviceCompany: String] = [:]
+    @State private var deviceSecrets: [DeviceCompany: String] = [:]
+    @State private var deviceMessages: [DeviceCompany: String] = [:]
 
     var body: some View {
         Form {
@@ -121,7 +125,50 @@ struct KeysView: View {
                     ownModel = ownProvider.defaultModel ?? ""
                 }
             }
+            ForEach(DeviceCompany.allCases, id: \.self) { company in
+                deviceSection(company)
+            }
         }
         .navigationTitle("Keys and services")
+    }
+
+    /// Withings and Whoop on this iPhone with the person's own developer app (owner, 2026-11-26). The secret is kept in the
+    /// Keychain on this iPhone only and never shown again; the page never sees it.
+    @ViewBuilder
+    private func deviceSection(_ company: DeviceCompany) -> some View {
+        Section {
+            Text(devices.apps.contains(company)
+                 ? "Your \(company.name) developer app is saved. Connect \(company.name) in the app's Settings → Connected devices."
+                 : "To connect \(company.name) without a server, make a free developer app at \(company == .withings ? "developer.withings.com" : "developer.whoop.com") and paste its client ID and secret here.")
+            TextField("Client ID", text: Binding(get: { deviceIDs[company] ?? "" }, set: { deviceIDs[company] = $0 }))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            SecureField(devices.apps.contains(company) ? "A secret is saved" : "Client secret",
+                        text: Binding(get: { deviceSecrets[company] ?? "" }, set: { deviceSecrets[company] = $0 }))
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+            Button(devices.apps.contains(company) ? "Replace the app" : "Save the app") {
+                deviceMessages[company] = devices.saveApp(company, clientID: deviceIDs[company] ?? "", secret: deviceSecrets[company] ?? "")
+                    ?? "Saved. The secret is kept on this phone only and is not shown again."
+                deviceIDs[company] = ""
+                deviceSecrets[company] = ""
+            }
+            .disabled((deviceIDs[company] ?? "").isEmpty || (deviceSecrets[company] ?? "").isEmpty)
+            if devices.apps.contains(company) {
+                Button("Remove the app", role: .destructive) {
+                    Task {
+                        await devices.removeApp(company)
+                        deviceMessages[company] = "The app and its sign-in were removed from this phone. Readings already in your log stay."
+                    }
+                }
+            }
+            if let message = deviceMessages[company] {
+                Text(message)
+            }
+        } header: {
+            Text("Your own \(company.name) app")
+        } footer: {
+            Text("In the developer portal, set the callback (redirect) address to \(DeviceLinks.relayURL). That page only sends the sign-in back to this app; it keeps nothing. Talks only to \(company.apiHost), and reads only. If your server has \(company.name) set up, it is used instead while this iPhone can reach it.")
+        }
     }
 }
