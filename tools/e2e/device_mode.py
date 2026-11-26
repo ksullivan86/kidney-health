@@ -29,6 +29,10 @@ stands in for the iPhone app's message handlers. At 375x812 light and 1280x800 d
 * Ask on the phone (design note 39; 375x812 light), with a stand-in for the change feed and the server's chat: the Ask tab offers the
   conversation and says it always asks before saving; the question goes to the server with trust "ask"; the server's card names
   the phone's own food; Save as eaten adds the entry on the phone with the card's ID; Add offers Plate photo (AI).
+* the Care team on the phone (owner, 2026-11-26; 375x812 light), with a stand-in for the server's gateway: Today shows the new note,
+  the note is plain text and marked read with the version shown, Delete reaches the server and no note text is kept; Settings →
+  Care team lists who is on it, read-only, and says to change it in the server's web app; No thanks on Plan; offline says so; with
+  no server there is no Care team section.
 
 Nothing leaves the machine. Prints PASS / FAIL lines and writes ``<out>/report.json``; exit status 1 on any failure.
 """
@@ -764,6 +768,111 @@ def reminders_walk(browser, base: str) -> None:
     ctx.close()
 
 
+# The owner, 2026-11-26: notes and suggestions from the Care team on the phone. A stand-in for the paired server's gateway: about
+# names the Care team (Dee, a Clinician), one unread note from Dee and one suggestion from Jo; `window.__kh.net` "down" is a server
+# that cannot be reached, `window.__kh.paired` false an iPhone with no server.
+CARE = ("window.__kh = { copies: [], phone: [], api: [], net: 'up', paired: sessionStorage.getItem('khPaired') !== 'no' };"
+        "window.__kh.notes = [{ id: 41, from: { name: 'Dee', removed: false }, area: 'labs', date: null,"
+        " body: 'Bring your lab results to the visit. <b>not bold</b>', version: 2, created_at: new Date().toISOString(), edited_at: null, read_at: null }];"
+        "window.__kh.sgs = [{ id: 7, share_id: 1, from_name: 'Jo', date: '2026-12-01', meal: 'dinner', note: 'Rice, like last week.',"
+        " items: [{ food_id: 900, name: 'Rice, white, cooked', servings: 1, serving_desc: '1 cup', available: true }], fit: null,"
+        " created_at: 'x', expires_at: 'y', answer: 'open' }];"
+        "window.__kh.gateway = (r) => { window.__kh.api.push({ method: r.method, path: r.path, ifMatch: r.ifMatch || null });"
+        " if (window.__kh.net === 'down') return { error: 'offline' };"
+        " const reply = (json, status = 200) => ({ ok: true, status, json: json == null ? '' : JSON.stringify(json) });"
+        " const k = window.__kh; const p = r.path.split('?')[0];"
+        " if (p === '/push/v1/about') return reply({ account: 'acct-1', api_version: 1, sync: { gateway: true, changes: false },"
+        "   care_team: { enabled: true, notes: true, team: [{ name: 'Dee', role: 'clinician', areas: ['labs'] }], on: [{ name: 'Ana', role: 'care_helper' }] } });"
+        " if (p === '/push/v1/api/me/notes') return reply({ enabled: true, unread: k.notes.filter((n) => !n.read_at).length, notes: k.notes });"
+        r" let m = p.match(/^\/push\/v1\/api\/me\/notes\/(\d+)\/read$/);"
+        " if (m) { const n = k.notes.find((x) => x.id === Number(m[1])); if (r.ifMatch !== '\"' + n.version + '\"') return reply({ detail: 'changed', current: n }, 412);"
+        "   n.read_at = new Date().toISOString(); return reply(null, 204); }"
+        r" m = p.match(/^\/push\/v1\/api\/me\/notes\/(\d+)$/);"
+        " if (m && r.method === 'DELETE') { k.notes = k.notes.filter((x) => x.id !== Number(m[1])); return reply(null, 204); }"
+        " if (p === '/push/v1/api/me/suggestions') return reply({ enabled: true, suggestions: k.sgs });"
+        r" m = p.match(/^\/push\/v1\/api\/me\/suggestions\/(\d+)\/decline$/);"
+        " if (m) { k.sgs = k.sgs.filter((x) => x.id !== Number(m[1])); return reply(null, 204); }"
+        " return reply({ detail: 'Not Found' }, 404); };"
+        "window.webkit = { messageHandlers: { safetyCopy: { postMessage: (t) => window.__kh.copies.push(String(t)) },"
+        " phone: { postMessage: (m) => window.__kh.phone.push(String(m)) },"
+        " bridge: { postMessage: async (r) => r.kind === 'services' ? { ok: true, off: false, usda: false, scan: false }"
+        " : r.kind === 'serverInfo' ? (window.__kh.paired ? { ok: true, paired: true, server: 'food.example.org' } : { ok: true, paired: false })"
+        " : r.kind === 'serverSyncCheck' ? { ok: true, status: 200, json: '{\"ok\": true}' }"
+        " : r.kind === 'serverApi' ? (window.__kh.paired ? window.__kh.gateway(r) : { error: 'not_paired' })"
+        " : r.kind === 'aiStatus' ? { ok: true, available: false, reason: 'not_eligible' }"
+        " : { error: 'off_off', message: 'off' } } } };")
+
+
+def care_walk(browser, base: str) -> None:
+    """The owner, 2026-11-26: the Care team's notes and suggestions on the phone paired with a server; the Today card, the notes
+    (plain text, marked read with the version shown, deleted), Settings → Care team read-only, No thanks, offline said plainly, and
+    no Care team at all with no server."""
+    tag = "care"
+    ctx = browser.new_context(viewport={"width": 375, "height": 812}, color_scheme="light")
+    ctx.add_init_script(CARE)
+    page = ctx.new_page()
+    errors: list[str] = []
+    others: list[str] = []
+    page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.on("request", lambda r: others.append(r.url) if not r.url.startswith(base) else None)
+    page.goto(f"{base}/index.html#today")
+    page.wait_for_selector("#view-today:not([hidden])", timeout=30000)
+    page.wait_for_timeout(800)
+    page.evaluate("KH.request('PUT', '/api/device/setup', { done: true }).then(() => KH.mock.local.flush())")
+    page.wait_for_timeout(300)
+    page.reload()
+    page.wait_for_selector("#today-notes:not([hidden])", timeout=30000)
+    card = page.locator("#today-notes").inner_text()
+    check(f"[{tag}] Today shows the new note from Dee", "1 new note from Dee" in card, card)
+    page.click("#today-notes-read")
+    page.wait_for_selector("#notes-list .note-card", timeout=10000)
+    body = page.locator("#notes-list .note-body").first
+    check(f"[{tag}] the note is plain text", body.inner_text() == "Bring your lab results to the visit. <b>not bold</b>"
+          and body.locator("b").count() == 0)
+    _until(page, "window.__kh.api.some((r) => r.path === '/push/v1/api/me/notes/41/read')")
+    read = [r for r in page.evaluate("window.__kh.api") if r["path"] == "/push/v1/api/me/notes/41/read"]
+    check(f"[{tag}] showing it marks it read with the version shown", read and read[0]["ifMatch"] == '"2"', json.dumps(read))
+    page.get_by_role("button", name="Delete the note from Dee").click()
+    page.get_by_role("button", name="Delete", exact=True).last.click()
+    _until(page, "document.querySelector('#notes-list').textContent.includes('No notes from your Care team.')")
+    check(f"[{tag}] Delete removes it on the server", page.evaluate("window.__kh.notes.length") == 0)
+    stored = page.evaluate("KH.mock.local.flush().then(() => JSON.stringify(KH.mock.instance._care()) + window.__kh.copies.join(''))")
+    check(f"[{tag}] no note text kept on the phone", "lab results to the visit" not in stored)
+    page.goto(f"{base}/index.html#settings")
+    page.wait_for_selector("#set-care:not([hidden]) #set-care-device-change", timeout=30000)
+    care = page.locator("#set-care").inner_text()
+    check(f"[{tag}] Settings → Care team lists who is on it", "Dee, Clinician: lab results" in care and "Ana, Care helper" in care, care[:300])
+    check(f"[{tag}] and says where to change it", "in your server's web app" in care)
+    check(f"[{tag}] read-only: no invite, role or remove", page.locator("#set-care button").all_inner_texts() == ["Notes from your Care team"],
+          json.dumps(page.locator("#set-care button").all_inner_texts()))
+    check(f"[{tag}] Settings lists Care team", page.locator("#settings-nav").get_by_role("button", name="Care team").count() == 1)
+    page.goto(f"{base}/index.html#plan")
+    page.wait_for_selector("#plan-suggestions:not([hidden]) .care-suggestion", timeout=30000)
+    plan = page.locator("#plan-suggestions").inner_text()
+    check(f"[{tag}] Plan shows Jo's suggestion", "jo suggests dinner" in plan.lower(), plan[:200])
+    page.get_by_role("button", name="No thanks").click()
+    _until(page, "window.__kh.sgs.length === 0")
+    check(f"[{tag}] No thanks goes to the server", page.evaluate("window.__kh.sgs.length") == 0)
+    page.evaluate("window.__kh.net = 'down'")
+    page.evaluate("KH.notes.openOwn('today')")
+    page.wait_for_selector("#notes-list .form-error", timeout=10000)
+    offline = page.locator("#notes-list").inner_text()
+    check(f"[{tag}] offline: the notes say the server cannot be reached", "cannot be reached right now" in offline, offline)
+    over = page.evaluate("document.documentElement.scrollWidth > window.innerWidth + 1")
+    check(f"[{tag}] no sideways scroll", not over)
+    page.evaluate("sessionStorage.setItem('khPaired', 'no')")
+    page.goto(f"{base}/index.html#settings")
+    page.reload()
+    page.wait_for_selector("#view-settings:not([hidden])", timeout=30000)
+    page.wait_for_timeout(800)
+    check(f"[{tag}] no server: no Care team in Settings", page.locator("#set-care").is_hidden()
+          and page.locator("#settings-nav").get_by_role("button", name="Care team").count() == 0)
+    check(f"[{tag}] no request to another host", not others, "; ".join(others[:3]))
+    check(f"[{tag}] no console or page error", not errors, "; ".join(errors[:3]))
+    ctx.close()
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n", 1)[0])
     ap.add_argument("--out", type=Path, default=OUT)
@@ -786,6 +895,7 @@ def main(argv: list[str] | None = None) -> int:
                 own_key_walk(browser, base)
                 phone_ai_walk(browser, base)
                 reminders_walk(browser, base)
+                care_walk(browser, base)
             finally:
                 browser.close()
     finally:

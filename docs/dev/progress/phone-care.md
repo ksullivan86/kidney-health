@@ -18,7 +18,22 @@ Owner, 2026-11-26: "Should the phone show care team notes?" "yes". Anything the 
 4. Node tests, e2e walk, docs (push.md, handbook care team page, ARCHITECTURE, CHANGELOG Unreleased).
 
 ## Done
-(none yet)
+* Server (verified: `pytest tests/test_app_gateway.py`): ALLOWED +6 routes; `sharing.care_team_summary`; about `care_team`.
+  Tests: pinned list, never-list (`/api/me/shares`, `/api/shared`, writing notes), notes read/412/428/delete, suggestions
+  accept/decline, not-yours 404 with the other person's token, about's care_team. NOT YET COMMITTED: app_gateway.py and
+  test_app_gateway.py hold phone-devices' uncommitted hunks too (wait, then commit only mine).
+* Swift allow-list + idSegments (`{food_id}`, `{note_id}`, `{suggestion_id}`), ServerAPITests.swift (commit d35ce51). The pin in
+  tests/test_ios_app.py is written but NOT YET COMMITTED (other agents' hunks in the file).
+* Phone JS (commit 1befe81): js/mock/server_care.js, care.js `mineRoute`, server_api.js `careTeam`, views: sharing.js
+  `deviceBlock`/`deviceLine`, settings.js `renderCare` device branch (committed by phone-extras in 01aa262 with its own change),
+  profile.js card only when paired, notes.js plain error in the app, suggestions.js `waiting`. base.css: #set-care no longer
+  forced hidden. index.html and sw.js script lines NOT YET COMMITTED (other agents' hunks).
+* Tests: tests/js/server_care.mjs (stand-in + --relay), tests/test_server_care_phone.py (real server relay, passes),
+  tests/test_care_team_ui.py (addedText waiting, deviceLine), tests/js/server_services.mjs (readAbout careTeam: null).
+
+## Next
+* Commit shared hunks when free: app_gateway.py, test_app_gateway.py, test_ios_app.py, index.html, sw.js.
+* e2e walk in tools/e2e/device_mode.py; openapi regen; docs (push.md, handbook care team, ARCHITECTURE, CHANGELOG).
 
 ## Python
 `PY=/tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/venv-new/bin/python`
