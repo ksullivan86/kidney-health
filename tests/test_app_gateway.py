@@ -266,6 +266,9 @@ def test_the_allow_list_is_pinned(anon_client):
         ("POST", "/api/ai/read-lab-report"), ("POST", "/api/ai/read-lab-report-text"),
         ("GET", "/api/foods/usda/search"), ("POST", "/api/foods/usda/import"), ("POST", "/api/foods/barcode"),
         ("PATCH", "/api/me/settings"), ("PATCH", "/api/me/ai"),
+        # connected devices (owner, 2026-11-26): status, Sync now, Disconnect, the Whoop days; never start or the way back
+        ("GET", "/api/devices"), ("POST", "/api/devices/{provider_id}/sync"), ("DELETE", "/api/devices/{provider_id}"),
+        ("GET", "/api/activity"), ("PUT", "/api/activity/extra"),
         # step 9: recipe pages, Instacart and the list app; never the list app's set-up (its address and key)
         ("GET", "/api/recipe-import"), ("POST", "/api/recipe-import/page"),
         ("GET", "/api/instacart"), ("POST", "/api/instacart/preview"), ("POST", "/api/instacart/send"),
@@ -302,7 +305,9 @@ def test_the_allow_list_is_pinned(anon_client):
     for method, path in (("POST", "/api/auth/reauth"), ("GET", "/api/admin/users"), ("POST", "/api/me/tokens"),
                          ("GET", "/api/me/sessions"), ("PUT", "/api/me/keys/{provider}"), ("PUT", "/api/me/ai/provider"),
                          ("POST", "/api/me/import"), ("GET", "/api/me/export.zip"), ("DELETE", "/api/me"),
-                         ("POST", "/api/me/shares"), ("POST", "/api/me/password")):
+                         ("POST", "/api/me/shares"), ("POST", "/api/me/password"), ("GET", "/api/me/shares"), ("GET", "/api/shared"),
+                         ("POST", "/api/shared/{share_id}/notes"), ("POST", "/api/shared/{share_id}/suggestions"),
+                         ("POST", "/api/devices/{provider_id}/start"), ("GET", "/api/devices/{provider_id}/callback")):
         assert never_allowed(method, path), (method, path)
     # every route that needs a recent password or an admin is in a never-allowed place
     for (method, path), route in by_op.items():

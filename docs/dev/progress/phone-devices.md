@@ -1,6 +1,6 @@
 # phone-devices: Withings and Whoop from the iPhone app
 
-Status: in progress (2026-11-26)
+Status: complete (2026-11-26)
 
 ## Plan
 1. Paired with a server: Settings → Connected devices on the phone shows the server's status, Sync now, Disconnect
@@ -39,9 +39,16 @@ Status: in progress (2026-11-26)
   calls `devices_walk`).
 * Swift cleanups: no tuple optional bindings, helper names that do not clash with locals.
 
-## Waiting to commit (other agents' hunks in the same files)
-* `app/static/index.html` (device_map.js script line), `tests/js/run_vectors.mjs` (device map group),
-  `tests/test_app_gateway.py` (pin), `tests/test_ios_app.py` (route list + frameworks). Check `git diff <file>`.
+## Shared files
+* All committed. `tests/test_app_gateway.py` went in with phone-care's two uncommitted lines in the never-allowed check (shares,
+  shared notes and suggestions); they pass and match the gateway.
+* Full `python -m pytest` not run here (the orchestrator runs it once for everyone). Targeted: test_app_gateway,
+  test_devices_gateway, test_phone_devices, test_device_map, test_ios_app, test_connected_devices_ui, test_activity_ui pass;
+  `node tests/js/run_vectors.mjs` passes. Swift compiles only in CI: DeviceLinksTests, DeviceRouteTests not run here.
+
+## Owner to do
+* Publish the handbook's Pages site (repository variable `HANDBOOK_PAGES=true`), so `https://ksullivan86.github.io/kidney-health/oauth/` exists.
+* Each person registers that address as the callback/redirect URL of their own Withings and Whoop developer apps.
 
 ## Decisions
 * Whoop days on the phone with a server: NOT a new change-feed kind (would need a migration, versions twin, read-only kind in
