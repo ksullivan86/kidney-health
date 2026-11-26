@@ -11,6 +11,10 @@
    * Whoop (note 28): its days and workouts go to Trends (Activity and recovery); while connected, its box also holds the
      active-day calorie setting (KH.activityViews.extraBlock, js/views/activity.js).
    * The demo shows sample Withings and Whoop connections (js/mock/devices.js) and never leaves the page.
+   * The iPhone app (KH.flags.DEVICE; owner, 2026-11-26): each company is connected on the paired server when it has it set up
+     (Connect opens the server's own page in a browser sheet, and Start answers no address), else on this iPhone with the person's
+     own developer app (Keys and services). Each box says which (`where`: server or phone). The server's own page can be opened at
+     "#/devices/open/<provider>": Settings opens at this section, ready to connect.
 
    Sentences with {name} are said with the provider's name.
 
@@ -19,7 +23,7 @@
   'use strict';
   const KH = window.KH;
   const { h, $, clear, request, toast, toastError, state } = KH;
-  const { MOCK } = KH.flags;
+  const { MOCK, DEVICE } = KH.flags;
 
   const A = {
     list: () => request('GET', '/api/devices', undefined, { noQueue: true }),
@@ -31,6 +35,18 @@
   const INTRO = 'Connect a Withings scale or blood pressure monitor, or a Whoop strap. This server then fetches your data every few hours: '
     + 'Withings readings go to Weight and blood pressure, marked "from Withings"; Whoop days go to Trends, under Activity and recovery.';
   const NOT_SET_UP = '{name} is not set up on this server yet.';
+  const DEVICE_INTRO = 'Connect a Withings scale or blood pressure monitor, or a Whoop strap. Withings readings go to Weight and blood '
+    + 'pressure, marked "from Withings"; Whoop days go to Trends, under Activity and recovery. When your server has the company set up, '
+    + 'it is connected there. Otherwise this iPhone connects with your own developer app.';
+  const NOT_SET_UP_PHONE = 'To connect {name} on this iPhone, add your own {name} developer app in Settings → This device → Apple Health '
+    + 'and server → Keys and services. If your server has {name} set up, it is used instead while this iPhone can reach it.';
+  const PHONE_ERRORS = {
+    auth: '{name} no longer lets this iPhone read your data. Connect again to carry on.',
+    rate_limited: '{name} asked this iPhone to slow down. Try again in an hour.',
+    unreachable: '{name} could not be reached at the last try. The app tries again when you open it.',
+    provider_error: '{name} did not answer as expected at the last try. The app tries again when you open it.',
+    scope: '{name} did not let this iPhone read what it needs. Connect again and allow it.',
+  };
   const NOT_SET_UP_ADMIN = {
     withings: 'Withings is not set up on this server yet. Register a free Withings developer app, then set WITHINGS_ENABLED, '
       + 'WITHINGS_CLIENT_ID and WITHINGS_CLIENT_SECRET_FILE (see docs/devices.md).',
@@ -112,10 +128,10 @@
     }
     if (ticket !== drawSeq) return true;
     if (!res.enabled) { clear(body); return false; }
-    const parts = [h('p', {}, INTRO)];
+    const parts = [h('p', {}, DEVICE ? DEVICE_INTRO : INTRO)];
     if (!res.can_connect) parts.push(h('p', { class: 'hint', id: 'set-devices-test' }, TEST_ACCOUNT));
     for (const provider of res.providers || []) parts.push(providerBlock(body, res, provider));
-    if (MOCK) parts.push(h('p', { class: 'hint', id: 'set-devices-demo' }, 'These are samples. The demo never contacts Withings or Whoop.'));
+    if (MOCK && !DEVICE) parts.push(h('p', { class: 'hint', id: 'set-devices-demo' }, 'These are samples. The demo never contacts Withings or Whoop.'));
     clear(body).append(...parts);
     if (focusSel) { const el = $(focusSel, body); if (el) el.focus(); }
     return true;
@@ -125,15 +141,23 @@
     const id = provider.id;
     const box = h('div', { class: 'device-provider', id: `set-devices-${id}` }, h('h3', { class: 'settings-subtitle' }, provider.name));
     if (!provider.available) {
-      box.append(h('p', { class: 'hint', id: `set-devices-${id}-off` }, isAdmin() && NOT_SET_UP_ADMIN[id] ? NOT_SET_UP_ADMIN[id] : said(NOT_SET_UP, provider.name)));
+      const off = DEVICE ? NOT_SET_UP_PHONE : isAdmin() && NOT_SET_UP_ADMIN[id] ? NOT_SET_UP_ADMIN[id] : NOT_SET_UP;
+      box.append(h('p', { class: 'hint', id: `set-devices-${id}-off` }, said(off, provider.name)));
       return box;
     }
     const c = provider.connection;
+    const onPhone = DEVICE && provider.where === 'phone';
     if (c) {
+      const where = !DEVICE ? '' : onPhone ? ' On this iPhone.' : ' Through your server.';
       box.append(h('p', { class: 'setting-status', id: `set-devices-${id}-status` },
         h('span', { class: `state-pill ${c.status === 'active' ? 'on' : 'off'}` }, c.status === 'active' ? 'Connected' : 'Connect again'), ' ',
-        statusText(provider)));
-      if (c.last_error && ERRORS[c.last_error]) box.append(h('p', { class: 'hint', id: `set-devices-${id}-error` }, said(ERRORS[c.last_error], provider.name)));
+        statusText(provider), where));
+      const errors = onPhone ? { ...ERRORS, ...PHONE_ERRORS } : ERRORS;
+      if (c.last_error && errors[c.last_error]) box.append(h('p', { class: 'hint', id: `set-devices-${id}-error` }, said(errors[c.last_error], provider.name)));
+    }
+    if (DEVICE && provider.where === 'server' && provider.phone && provider.phone.connection) {
+      box.append(h('p', { class: 'hint', id: `set-devices-${id}-paused` }, `This iPhone's own connection to ${provider.name} waits while your server's is connected. `
+        + `Its ${id === 'whoop' ? 'days' : 'readings'} reach this iPhone when it syncs with your server.`));
     }
     const actions = h('div', { class: 'settings-actions' });
     const consentHost = h('div', { class: 'device-consent-host' });
@@ -141,7 +165,7 @@
     if (canConnect) {
       const label = c ? 'Connect again' : `Connect ${provider.name}`;
       const btn = h('button', { class: 'btn primary', type: 'button', id: `set-devices-${id}-connect` }, label);
-      btn.addEventListener('click', () => showConsent(consentHost, actions, btn, provider));
+      btn.addEventListener('click', () => showConsent(body, consentHost, actions, btn, provider));
       actions.append(btn);
     }
     if (c && c.status === 'active') {
@@ -150,7 +174,8 @@
         btn.disabled = true;
         try {
           const out = await A.sync(id);
-          if (out.error) toast(ERRORS[out.error] ? said(ERRORS[out.error], provider.name) : 'The sync did not work. The server tries again later.', 'error');
+          const errors = onPhone ? { ...ERRORS, ...PHONE_ERRORS } : ERRORS;
+          if (out.error) toast(errors[out.error] ? said(errors[out.error], provider.name) : 'The sync did not work. It is tried again later.', 'error');
           else toast(syncText(out.result, provider), 'ok');
           await render(body, `#set-devices-${id}-sync`);
         } catch (err) { if (!err.handled) toastError(err); } finally { btn.disabled = false; }
@@ -168,8 +193,9 @@
   }
 
   /** What connecting means, before the person leaves for Withings. */
-  function showConsent(host, actions, trigger, provider) {
-    const go = h('button', { class: 'btn primary', type: 'button', id: `set-devices-${provider.id}-go` }, `Continue to ${provider.name}`);
+  function showConsent(body, host, actions, trigger, provider) {
+    const go = h('button', { class: 'btn primary', type: 'button', id: `set-devices-${provider.id}-go` },
+      DEVICE && provider.connect_via === 'server' ? 'Open your server' : `Continue to ${provider.name}`);
     const cancel = h('button', { class: 'btn secondary', type: 'button' }, 'Cancel');
     const close = () => { clear(host); actions.hidden = false; trigger.focus(); };
     cancel.addEventListener('click', close);
@@ -177,14 +203,28 @@
       go.disabled = true;
       try {
         const out = await A.start(provider.id);
-        window.location.assign(out.url);
+        if (out.url) { window.location.assign(out.url); return; }
+        // The iPhone app: the server's page was open in a sheet, or this iPhone connected with the person's own developer app.
+        if (out.opened === 'phone') toast(out.error ? said(PHONE_ERRORS[out.error] || ERRORS[out.error] || RESULTS.failed.text, provider.name)
+          : `${provider.name} is connected. ${syncText(out.result, provider)}`, out.error ? 'error' : 'ok');
+        await render(body, `#set-devices-${provider.id}-status`);
       } catch (err) { go.disabled = false; if (!err.handled) toastError(err); }
     });
     actions.hidden = true;
+    const viaServer = DEVICE && provider.connect_via === 'server';
+    const lines = viaServer ? [
+      `Your server's page opens here. Sign in to your server if it asks, then press Connect ${provider.name} there and say yes at ${provider.name}.`,
+      `Your server then fetches your ${whatText(provider)} every few hours, and they reach this iPhone when it syncs. Press Done to come back.`,
+    ] : DEVICE ? [
+      `You sign in at ${provider.name} and say yes there. This iPhone then fetches your ${whatText(provider)} from ${provider.name} when you open the app.`,
+      `Nothing about you is sent to ${provider.name}: this iPhone only signs in and reads, with your own developer app. It never changes a reading you typed.`,
+    ] : [
+      `You sign in at ${provider.name} and say yes there. This server then fetches your ${whatText(provider)} from ${provider.name} every few hours.`,
+      `Nothing about you is sent to ${provider.name}: the server only signs in and reads. It never changes a reading you typed.`,
+    ];
     clear(host).append(h('div', { class: 'device-consent', role: 'group', 'aria-labelledby': `set-devices-${provider.id}-consent-h` },
       h('h4', { id: `set-devices-${provider.id}-consent-h` }, 'Before you connect'),
-      h('p', {}, `You sign in at ${provider.name} and say yes there. This server then fetches your ${whatText(provider)} from ${provider.name} every few hours.`),
-      h('p', {}, `Nothing about you is sent to ${provider.name}: the server only signs in and reads. It never changes a reading you typed.`),
+      ...lines.map((line) => h('p', {}, line)),
       h('p', {}, 'You can disconnect at any time here.'),
       h('div', { class: 'settings-actions' }, cancel, go)));
     go.focus();
@@ -210,7 +250,7 @@
     actions.hidden = true;
     clear(host).append(h('div', { class: 'device-consent', role: 'group', 'aria-labelledby': `set-devices-${provider.id}-off-h` },
       h('h4', { id: `set-devices-${provider.id}-off-h` }, `Disconnect ${provider.name}?`),
-      h('p', {}, `The server stops fetching and forgets its sign-in to ${provider.name}. ${provider.id === 'whoop' ? 'Days and workouts' : 'Readings'} already here stay, unless you tick the box.`),
+      h('p', {}, `${DEVICE && provider.where === 'phone' ? 'This iPhone' : DEVICE ? 'Your server' : 'The server'} stops fetching and forgets its sign-in to ${provider.name}. ${provider.id === 'whoop' ? 'Days and workouts' : 'Readings'} already here stay, unless you tick the box.`),
       h('label', { class: 'check', for: tickId }, tick, provider.id === 'whoop' ? ' Also delete the days and workouts that came from Whoop'
         : ` Also delete the readings that came from ${provider.name} (readings you edited stay)`),
       h('div', { class: 'settings-actions' }, no, yes)));
@@ -226,7 +266,7 @@
     try { hash = location.hash || ''; } catch (e) { return false; }
     if (!hash.startsWith('#/devices/')) return false;
     const m = RESULT_RE.exec(hash);
-    pending = m && RESULTS[m[1]] ? { word: m[1], provider: m[2] } : { word: 'failed', provider: 'withings' };
+    pending = m && (RESULTS[m[1]] || m[1] === 'open') && NAMES[m[2]] ? { word: m[1], provider: m[2] } : { word: 'failed', provider: 'withings' };
     try { history.replaceState(null, '', `${location.pathname}${location.search}#settings`); } catch (e) { /* sandboxed frame */ }
     return true;
   }
@@ -238,7 +278,7 @@
     const r = RESULTS[word];
     const name = NAMES[provider] || 'Withings';
     KH.router.show('settings');
-    toast(said(r.text, name), r.ok ? 'ok' : 'error');
+    if (r) toast(said(r.text, name), r.ok ? 'ok' : 'error'); // "open" (the iPhone app sent the person here) says nothing
     const sec = $('#set-connected');
     const body = $('#set-devices-body');
     if (!sec || !body) return;
@@ -249,6 +289,12 @@
       const head = $('h2', sec);
       if (head) { head.setAttribute('tabindex', '-1'); head.focus({ preventScroll: true }); }
     };
+    if (word === 'open') { // ready to connect: the Connect button has the focus
+      reveal(await render(body));
+      const btn = $(`#set-devices-${provider}-connect`);
+      if (btn && state.view === 'settings') btn.focus();
+      return;
+    }
     if (word !== 'connected') { reveal(await render(body)); return; }
     try {
       const out = await A.sync(provider);

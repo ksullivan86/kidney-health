@@ -3,13 +3,20 @@
    The demo shows sample Whoop days for the last 45 days and a few workouts, kept in memory only (never saved by "Keep my data
    in this browser"), as if a Whoop strap had been connected. Today's figure is the day so far. The extra setting starts off,
    as on a real server; turned on, Today and "What fits now" use the same numbers as the server (js/engine/activity.js, pinned
-   by tests/data/activity_vectors.json). A Care team view never sees it: the sample people share their food log only. */
+   by tests/data/activity_vectors.json). A Care team view never sees it: the sample people share their food log only.
+
+   Device mode (the iPhone app): no samples. The phone's own Whoop connection (js/mock/devices.js) adds its days here. Paired both
+   ways with a server whose answer has Whoop days or the extra turned on, `GET /api/activity` is the server's (through its gateway),
+   kept in `_activityServer` for when it cannot be reached, and Today's extra and `PUT /api/activity/extra` use the server's. */
 (() => {
   'use strict';
   const KH = window.KH;
   const M = KH.mock;
   const { route, MockApi, fail } = M;
   const A = KH.activityRules;
+  const DEVICE = !!(KH.flags && KH.flags.DEVICE === true);
+  const isDict = (v) => v != null && typeof v === 'object' && !Array.isArray(v);
+  const UNREACHABLE = 'Your server cannot be reached right now. Try again when this iPhone is online.';
   const DAY_COLUMNS = ['date', 'kcal', 'strain', 'recovery_pct', 'resting_hr', 'hrv_ms', 'sleep_minutes', 'sleep_performance_pct', 'finished', 'source'];
   const WORKOUT_COLUMNS = ['date', 'start_time', 'end_time', 'minutes', 'sport', 'kcal', 'strain', 'source'];
   const SAMPLE_DAYS = 45;
@@ -62,10 +69,16 @@
     },
     // activity.day_extra: the day's targets with the extra on the calorie target, and what Today shows (null: nothing to add).
     // Never inside a Care team view (the sample people do not share the activity area).
+    // Device mode: the server's days and setting when it has any (see the top), else this phone's own.
+    _activitySource() {
+      const srv = this._activityServer;
+      if (DEVICE && isDict(srv) && Array.isArray(srv.days) && (srv.days.length || (isDict(srv.extra) && srv.extra.enabled))) return srv;
+      return this._activity();
+    },
     _dayExtra(date, targets) {
       const out = { ...(targets || {}) };
       if (this._inCareWorld) return [out, null];
-      const st = this._activity();
+      const st = this._activitySource();
       if (!st.extra.enabled || A.baseKcal(out.calories_kcal) == null) return [out, null];
       const day = st.days.find((d) => d.date === date && d.kcal != null);
       if (!day) return [out, null];
@@ -89,13 +102,44 @@
     },
   });
 
+  // Device mode: the server's answer for start..end, kept for later (the cached rows of that range are replaced). null when there is
+  // no server both ways; the cached copy when it cannot be reached.
+  async function serverActivity(api, start, end) {
+    const S = M.serverApi;
+    if (!S || !(await S.offers('devices'))) return null;
+    const res = await S.call('GET', `/api/activity?start=${start}&end=${end}`);
+    const srv = isDict(api._activityServer) ? api._activityServer : null;
+    if (res.offline || res.error || res.status !== 200 || !isDict(res.json) || !Array.isArray(res.json.days)) {
+      if (!srv) return null;
+      const inRange = (r) => r.date >= start && r.date <= end;
+      return { start, end, days: srv.days.filter(inRange), workouts: srv.workouts.filter(inRange), extra: { ...srv.extra } };
+    }
+    const json = res.json;
+    const keep = (rows) => (rows || []).filter((r) => isDict(r) && !(r.date >= start && r.date <= end));
+    const next = { extra: isDict(json.extra) ? { ...json.extra } : { enabled: false, share_pct: A.SHARE_DEFAULT, ceiling_kcal: null },
+      days: [...keep(srv && srv.days), ...json.days.filter(isDict)].sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0)),
+      workouts: [...keep(srv && srv.workouts), ...(Array.isArray(json.workouts) ? json.workouts.filter(isDict) : [])] };
+    api._activityServer = next;
+    return next.days.length || next.extra.enabled ? json : null;
+  }
+
   route('GET', '/api/activity', function ({ qp }) {
     this._currentUser();
     const [s, e] = this._activityRange(qp('start'), qp('end'));
-    return { ...this._activityView(s, e), extra: { ...this._activity().extra } };
+    const here = () => ({ ...this._activityView(s, e), extra: { ...this._activity().extra } });
+    if (!DEVICE) return here();
+    return serverActivity(this, s, e).then((out) => out || here());
   });
   route('PUT', '/api/activity/extra', function ({ body }) {
     const user = this._currentUser();
+    if (DEVICE && this._activitySource() === this._activityServer) { // the server's setting: changed there first
+      return M.serverApi.call('PUT', '/api/activity/extra', { body }).then((res) => {
+        if (res.offline || res.error) fail(503, UNREACHABLE);
+        if (res.status !== 200) M.serverApi.failWith(res);
+        this._activityServer.extra = { ...res.json };
+        return res.json;
+      });
+    }
     const b = body || {};
     const errors = [];
     const enabled = b.enabled === undefined ? false : b.enabled;
