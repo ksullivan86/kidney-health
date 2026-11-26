@@ -374,7 +374,7 @@ final class Devices: NSObject, ObservableObject {
     private func revokeWithings(_ app: App, account: String) async -> Bool {
         guard !account.isEmpty else { return false }
         let sign = { (values: [String]) -> String in
-            let mac = HMAC<SHA256>.authenticationCode(for: Data(DeviceLinks.withingsSigned(values).utf8), using: SymmetricKey(data: Data(app.secret.utf8)))
+            let mac = HMAC<CryptoKit.SHA256>.authenticationCode(for: Data(DeviceLinks.withingsSigned(values).utf8), using: SymmetricKey(data: Data(app.secret.utf8)))
             return mac.map { String(format: "%02x", $0) }.joined()
         }
         let stamp = String(Self.now())
