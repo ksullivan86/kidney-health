@@ -228,11 +228,11 @@ def test_the_dialysis_choices_are_offered_only_on_dialysis_and_never_hide_the_ro
         assert keys(kind, True) == list(contexts)  # every context the server knows is offered, in its order
 
 
-def test_the_profile_lines_name_the_weight_in_kilograms_and_in_pounds_for_a_person_who_uses_them():
+def test_the_profile_lines_name_the_weight_in_the_persons_unit_as_the_profile_boxes_do():
     entry = {"kg": 70.23}
     assert one("bodyUi.profileWeightHint", "latest", entry, "Oct 20", "kg") == "Latest in your log: 70.2 kg on Oct 20"
     assert one("bodyUi.profileWeightHint", "sixmonth", {"kg": 74.0}, "Apr 21", "kg") == "In your log: 74.0 kg on Apr 21"
-    assert one("bodyUi.profileWeightHint", "latest", entry, "Oct 20", "lb") == f"Latest in your log: 70.2 kg ({body.shown_weight(70.23, 'lb'):.1f} lb) on Oct 20"
+    assert one("bodyUi.profileWeightHint", "latest", entry, "Oct 20", "lb") == f"Latest in your log: {body.shown_weight(70.23, 'lb'):.1f} lb on Oct 20"
 
 
 def test_the_look_back_for_the_profile_helper_holds_every_candidate_of_the_six_month_rule():

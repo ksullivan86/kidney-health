@@ -1699,10 +1699,10 @@
   }
   // Design note 39 §8.7 point 5 (js/mock/server_account.js): this iPhone's profile and targets differed from the server's at the
   // first sync. The server's is used until the person picks; only the lines that differ are shown.
-  const PROFILE_LABEL = { name: 'Name', weight_kg: 'Weight (kg)', height_cm: 'Height', ckd_stage: 'Kidney disease stage', dialysis: 'Dialysis',
+  const PROFILE_LABEL = { name: 'Name', weight_kg: 'Weight', height_cm: 'Height', ckd_stage: 'Kidney disease stage', dialysis: 'Dialysis',
     diabetes: 'Diabetes', warn_fraction: 'Warn at', about_tolerance_pct: 'Counts as on target within (%)', dialysis_days: 'Dialysis days',
     week_start: 'Week starts on', birth_month: 'Born', sex: 'Sex', activity: 'Activity', transplant_date: 'Transplant date',
-    frail_or_sarcopenic: 'Frail', weight_6_months_ago_kg: 'Weight 6 months ago (kg)', pregnant_or_breastfeeding: 'Pregnant or breastfeeding',
+    frail_or_sarcopenic: 'Frail', weight_6_months_ago_kg: 'Weight 6 months ago', pregnant_or_breastfeeding: 'Pregnant or breastfeeding',
     hyperkalemia_history: 'High potassium before', urine_output_ml: 'Urine a day (ml)', pd_uf_ml: 'PD fluid removed (ml)',
     pd_dialysate_kcal: 'PD calories (kcal)' };
   function profileValue(v, key = null) {
@@ -1711,11 +1711,18 @@
       const item = cache.mySettings && !(cache.mySettings instanceof Error) ? cache.mySettings['user.units.height'] : null;
       return KH.bodyRules.formatHeight(v, item && item.value === 'cm' ? 'cm' : 'ft_in');
     }
+    if (key === 'weight_kg' || key === 'weight_6_months_ago_kg') return KH.bodyRules.formatWeight(v, weightUnit()); // as Profile shows it
     if (v === true) return 'Yes';
     if (v === false) return 'No';
     if (Array.isArray(v)) return v.length ? v.join(', ') : 'None';
     if (typeof v === 'object') return v.min != null || v.max != null ? `${v.min == null ? '' : String(v.min)}–${v.max == null ? '' : String(v.max)}` : 'Not set';
     return String(v);
+  }
+  // The person's weight unit (user.units.weight): what Profile last learned, else the settings this page read, else pounds.
+  function weightUnit() {
+    if (state.weightUnit === 'kg' || state.weightUnit === 'lb') return state.weightUnit;
+    const item = cache.mySettings && !(cache.mySettings instanceof Error) ? cache.mySettings['user.units.weight'] : null;
+    return item && item.value === 'kg' ? 'kg' : 'lb';
   }
   function profileLines(server, mine) {
     const out = [];
@@ -1723,6 +1730,8 @@
       let a = profileValue(server[k], k); let b = profileValue(mine[k], k);
       // Two heights that round to the same feet and inches: show the centimetres, so the difference can be seen.
       if (a === b && k === 'height_cm' && profileValue(server[k]) !== profileValue(mine[k])) { a = `${profileValue(server[k])} cm`; b = `${profileValue(mine[k])} cm`; }
+      // Two weights that round to the same 0.1 lb: show the kilograms as saved.
+      if (a === b && k.startsWith('weight_') && profileValue(server[k]) !== profileValue(mine[k])) { a = `${profileValue(server[k])} kg`; b = `${profileValue(mine[k])} kg`; }
       if (a !== b) out.push([PROFILE_LABEL[k], a, b]);
     }
     const keys = [...new Set([...Object.keys(server.targets || {}), ...Object.keys(mine.targets || {})])].sort();

@@ -63,7 +63,7 @@
     $('#pf-pdkcal-field').hidden = dialysis !== 'peritoneal';
     $('#pf-transplant-field').hidden = dialysis !== 'none';
     const onDialysis = dialysis !== 'none';
-    $('#pf-weight-label').textContent = onDialysis ? 'Dry weight (kg, after dialysis)' : 'Weight (kg)';
+    $('#pf-weight-label').textContent = weightLabel(onDialysis);
     $('#pf-weight-hint').textContent = onDialysis
       ? 'Your weight after a dialysis session, without extra fluid. Calories and protein are worked out from it.'
       : 'Calories and protein are worked out from it.';
@@ -135,24 +135,24 @@
   // ---------------------------------------------------------------------------
   let bodyHints = null; // { units, latest, sixMonth } from the log, or null (none yet, no log, no connection)
   let bodyHintsReq = 0;
-  function hintLine(box, kind, entry, input, what) {
+  function hintLine(box, kind, entry, selector, what) {
     clear(box);
     box.hidden = !entry;
     if (!entry) return;
-    const kg = KH.bodyRules.shownWeight(entry.kg, 'kg');
+    const shown = KH.bodyRules.shownWeight(entry.kg, weightUnit).toFixed(1);
     const status = h('span', { class: 'body-use-status', role: 'status' });
-    const use = h('button', { class: 'link-btn', type: 'button' }, 'Use this', h('span', { class: 'sr-only' }, ` (${kg.toFixed(1)} kg as ${what})`));
+    const use = h('button', { class: 'link-btn', type: 'button' }, 'Use this', h('span', { class: 'sr-only' }, ` (${shown} ${weightUnit} as ${what})`));
     use.addEventListener('click', () => {
-      input.value = String(kg);
+      fillWeight(selector, entry.kg); // the log's own kilograms are saved, not the rounded number in the box
       status.textContent = 'Filled in. Press Save profile to keep it.';
-      input.focus();
+      $(selector).focus();
     });
-    box.append(KH.bodyUi.profileWeightHint(kind, entry, KH.util.fmtMonthDay(entry.date), bodyHints.units), ' — ', use, status);
+    box.append(KH.bodyUi.profileWeightHint(kind, entry, KH.util.fmtMonthDay(entry.date), weightUnit), ' — ', use, status);
   }
   function showBodyHints() {
     const latest = bodyHints && $('#pf-dialysis').value === 'none' ? bodyHints.latest : null;
-    hintLine($('#pf-weight-log'), 'latest', latest, $('#pf-weight'), 'your weight');
-    hintLine($('#pf-weight-6mo-log'), 'sixmonth', bodyHints ? bodyHints.sixMonth : null, $('#pf-weight-6mo'), 'your weight 6 months ago');
+    hintLine($('#pf-weight-log'), 'latest', latest, '#pf-weight', 'your weight');
+    hintLine($('#pf-weight-6mo-log'), 'sixmonth', bodyHints ? bodyHints.sixMonth : null, '#pf-weight-6mo', 'your weight 6 months ago');
   }
   async function loadBodyHints() {
     if (!KH.body || !KH.bodyUi) return;
@@ -164,6 +164,58 @@
     showBodyHints();
   }
 
+  // ---------------------------------------------------------------------------
+  // The two weights in pounds or kilograms (user.units.weight, chosen in Settings → Weight and blood pressure). The profile stores
+  // kilograms (KH.bodyRules.weightBoxText / weightBoxKg). A weight the person has not touched keeps the saved kilograms, so showing
+  // it in pounds never changes it.
+  // ---------------------------------------------------------------------------
+  let weightUnit = state.weightUnit === 'kg' ? 'kg' : 'lb';
+  const WEIGHT_BOXES = { '#pf-weight': [20, 300], '#pf-weight-6mo': [20, 400] }; // each box's range in kilograms
+  const weightShown = {}; // box → { kg, text }: the kilograms behind the box as it was filled, and what it then held
+  const weightLabel = (onDialysis) => (onDialysis ? `Dry weight (${weightUnit}, after dialysis)` : `Weight (${weightUnit})`);
+  function fillWeight(selector, kg) {
+    const box = $(selector);
+    box.value = KH.bodyRules.weightBoxText(kg, weightUnit);
+    weightShown[selector] = { kg: kg ?? null, text: box.value };
+  }
+  function readWeightKg(selector) {
+    const shown = weightShown[selector];
+    const text = $(selector).value;
+    if (shown && text === shown.text) return shown.kg;
+    return KH.bodyRules.weightBoxKg(text, weightUnit);
+  }
+  // The labels, ranges and example in the unit.
+  function showWeightUnit() {
+    for (const [selector, [minKg, maxKg]] of Object.entries(WEIGHT_BOXES)) {
+      const range = KH.bodyRules.weightBoxRange(minKg, maxKg, weightUnit);
+      const box = $(selector);
+      box.min = String(range.min);
+      box.max = String(range.max);
+      box.step = String(range.step);
+    }
+    $('#pf-weight').placeholder = weightUnit === 'kg' ? 'e.g. 70' : 'e.g. 154';
+    $('#pf-weight-label').textContent = weightLabel($('#pf-dialysis').value !== 'none');
+    $('#pf-weight-6mo-label').textContent = `Weight 6 months ago (${weightUnit})`;
+  }
+  // Settings changed the unit, or Profile learned it: show the same weights in the other unit, typed or saved.
+  function setWeightUnit(unit) {
+    const next = unit === 'kg' ? 'kg' : 'lb';
+    state.weightUnit = next;
+    if (next === weightUnit) return;
+    const kgs = Object.keys(WEIGHT_BOXES).map((selector) => [selector, readWeightKg(selector)]);
+    weightUnit = next;
+    showWeightUnit();
+    for (const [selector, kg] of kgs) fillWeight(selector, kg);
+    showBodyHints();
+  }
+  async function loadWeightUnit() {
+    try {
+      const res = await api.mySettings();
+      const item = res && res.settings ? res.settings['user.units.weight'] : null;
+      if (item) setWeightUnit(item.value);
+    } catch (err) { /* the boxes stay in the unit last seen */ }
+  }
+
   // The v0.3 fields as the form shows them (empty string = not set).
   function readAbout() {
     const activity = $('input[name="activity"]:checked', profileForm);
@@ -173,7 +225,7 @@
       activity: activity && activity.value ? activity.value : null,
       transplant_date: $('#pf-transplant-date').value || null,
       frail_or_sarcopenic: $('#pf-frail').checked,
-      weight_6_months_ago_kg: numOrNull($('#pf-weight-6mo').value),
+      weight_6_months_ago_kg: readWeightKg('#pf-weight-6mo'),
       pregnant_or_breastfeeding: $('#pf-pregnant').checked,
       hyperkalemia_history: $('#pf-hyperk').checked,
       urine_output_ml: numOrNull($('#pf-urine').value),
@@ -188,7 +240,7 @@
     act.checked = true;
     $('#pf-transplant-date').value = p.transplant_date || '';
     $('#pf-frail').checked = !!p.frail_or_sarcopenic;
-    $('#pf-weight-6mo').value = p.weight_6_months_ago_kg ?? '';
+    fillWeight('#pf-weight-6mo', p.weight_6_months_ago_kg ?? null);
     $('#pf-pregnant').checked = !!p.pregnant_or_breastfeeding;
     $('#pf-hyperk').checked = !!p.hyperkalemia_history;
     $('#pf-urine').value = p.urine_output_ml ?? '';
@@ -201,7 +253,7 @@
     if (!p) return;
     setMaxDates();
     $('#pf-name').value = p.name || '';
-    $('#pf-weight').value = p.weight_kg ?? '';
+    fillWeight('#pf-weight', p.weight_kg ?? null);
     fillHeight(p.height_cm ?? null);
     // "Not chosen yet" (schema step 8): the stored default still applies until the person picks.
     $('#pf-stage').value = p.ckd_stage_chosen === false ? '' : (p.ckd_stage || '3b');
@@ -318,7 +370,7 @@
     const aboutPct = numOrNull($('#pf-about-tol').value);
     return {
       name: $('#pf-name').value.trim(),
-      weight_kg: numOrNull($('#pf-weight').value),
+      weight_kg: readWeightKg('#pf-weight'),
       height_cm: readHeightCm(),
       // Empty = "Not chosen yet": null keeps the stored value and leaves the choice open.
       ckd_stage: $('#pf-stage').value || null,
@@ -424,9 +476,9 @@
     // The endpoint works from the *saved* profile; check the form first so the person is told
     // what to do in plain words instead of seeing the server's 400, and is not handed numbers for
     // details the form no longer shows.
-    const weight = numOrNull($('#pf-weight').value);
+    const weight = readWeightKg('#pf-weight');
     const saved = state.profile || {};
-    if (weight == null) { toast('Enter your weight (kg) first; the suggestions are per kg of body weight', 'error'); $('#pf-weight').focus(); return; }
+    if (weight == null) { toast(`Enter your weight (${weightUnit}) first; the suggestions are worked out from it`, 'error'); $('#pf-weight').focus(); return; }
     const unchosen = ['#pf-stage', '#pf-diabetes'].find((sel) => !$(sel).value);
     if (unchosen) { toast('Choose your CKD stage and diabetes type first; the suggestions depend on both', 'error'); $(unchosen).focus(); return; }
     const changed = unsavedChanges(saved);
@@ -669,6 +721,7 @@
     $('#profile-care').hidden = ((state.authStatus || {}).auth_mode || 'local') === 'none';
     loadBodyHints();
     loadHeightUnit();
+    loadWeightUnit();
     KH.loadProfile().then(() => {
       renderProfile();
       // "Review suggested targets" in the Labs view: suggest once the saved profile is in the form.
@@ -676,5 +729,5 @@
     }).catch(toastError);
     loadLabsSummary();
   });
-  KH.views.profile = { setHeightUnit, renderProfile, fillTargets, readTargets, suggestTargetsIntoForm, targetText, sameTarget, renderTargetsReview, refusalFor };
+  KH.views.profile = { setHeightUnit, setWeightUnit, renderProfile, fillTargets, readTargets, suggestTargetsIntoForm, targetText, sameTarget, renderTargetsReview, refusalFor };
 })();

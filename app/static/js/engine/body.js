@@ -15,7 +15,8 @@
    Exposes KH.bodyRules = { KG_PER_LB, WEIGHT_CONTEXTS, BLOOD_PRESSURE_CONTEXTS, SOURCES, UNITS, LIMITS, FLAG_SYSTOLIC, FLAG_DIASTOLIC,
    HREF, LINK_TEXT, RED_FLAGS, flagOf, bpFlag, roundKg, lbToKg, shownWeight, formatWeight, compareRows, shiftDay, daysBetween,
    weightAlarmCheck, bloodPressureWeek, sixMonthChange, summarise, rowToWeight, rowToReading, CM_PER_INCH, HEIGHT_UNITS, feetInchesToCm,
-   cmToFeetInches, formatHeight }. The height helpers are for Profile's height in feet and inches (user.units.height). */
+   cmToFeetInches, formatHeight, weightBoxText, weightBoxKg, weightBoxRange }. The height helpers are for Profile's height in feet and
+   inches (user.units.height); the weight-box helpers for Profile's two weight boxes in the person's unit (user.units.weight). */
 (() => {
   'use strict';
   const root = typeof window !== 'undefined' ? window : globalThis;
@@ -86,6 +87,27 @@
   // The number shown for a stored weight in `unit`: one decimal, half up (154.25 shows 154.3).
   const shownWeight = (kg, unit) => halfUp(unit === 'kg' ? Number(kg) : Number(kg) / KG_PER_LB, 1);
   const formatWeight = (kg, unit) => `${shownWeight(kg, unit).toFixed(1)} ${unit}`;
+
+  // ---- Profile's weight boxes (user.units.weight). The profile stores kilograms; the boxes show and take the person's unit.
+  const blankBox = (v) => v == null || String(v).trim() === '';
+  // A stored weight → the text of a box: kilograms as saved, pounds to 0.1 (half up). '' when there is none.
+  function weightBoxText(kg, unit) {
+    if (blankBox(kg) || !Number.isFinite(Number(kg))) return '';
+    return String(unit === 'lb' ? shownWeight(kg, 'lb') : Number(kg));
+  }
+  // What a person typed → kilograms. Kilograms as typed; pounds converted with the exact factor and kept to 0.01 kg, as every logged
+  // weight is (lbToKg), so every weight typed to 0.1 lb shows the same again. Null when the box is empty or not a number.
+  function weightBoxKg(text, unit) {
+    if (blankBox(text)) return null;
+    const n = Number(String(text).trim());
+    if (!Number.isFinite(n)) return null;
+    return unit === 'lb' ? lbToKg(n) : n;
+  }
+  // A box's range in `unit`, both ends inside the kilogram limits: the low end rounded up, the high end down, to 0.1.
+  function weightBoxRange(minKg, maxKg, unit) {
+    if (unit !== 'lb') return { min: minKg, max: maxKg, step: 0.1 };
+    return { min: Math.ceil(halfUp(minKg / KG_PER_LB * 10, 6)) / 10, max: Math.floor(halfUp(maxKg / KG_PER_LB * 10, 6)) / 10, step: 0.1 };
+  }
 
   // ---- height (user.units.height: "ft_in" or "cm"). Stored in centimetres; only what is shown and typed changes.
   const CM_PER_INCH = 2.54; // exactly: the international inch (1959), NIST SP 811 Appendix B
@@ -240,5 +262,6 @@
 
   KH.bodyRules = { KG_PER_LB, WEIGHT_CONTEXTS, BLOOD_PRESSURE_CONTEXTS, SOURCES, UNITS, LIMITS, FLAG_SYSTOLIC, FLAG_DIASTOLIC, HREF, LINK_TEXT, RED_FLAGS,
     flagOf, bpFlag, roundKg, lbToKg, shownWeight, formatWeight, compareRows, shiftDay, daysBetween, weightAlarmCheck, bloodPressureWeek,
-    sixMonthChange, summarise, rowToWeight, rowToReading, CM_PER_INCH, HEIGHT_UNITS, feetInchesToCm, cmToFeetInches, formatHeight };
+    sixMonthChange, summarise, rowToWeight, rowToReading, CM_PER_INCH, HEIGHT_UNITS, feetInchesToCm, cmToFeetInches, formatHeight,
+    weightBoxText, weightBoxKg, weightBoxRange };
 })();
