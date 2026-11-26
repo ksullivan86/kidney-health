@@ -5843,6 +5843,15 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
   the data is kept on this iPhone, with **Apple Health and server**, which posts `settings` to the app's `phone` message handler.
 * **The safety copy**: after each save `persist.js` gets `GET /api/me/export.json` from the in-page API and posts it to the app's
   `safetyCopy` handler. Nothing else leaves the page.
+* **Voice for Ask** (owner, 2026-11-26): `js/views/ask-voice.js` in device mode never records in the page. While Ask can run it
+  asks the bridge `{kind: 'speechStatus'}` → `{ok, available, reason: not_on_device | not_allowed | not_ready | null}` and shows the
+  microphone only when `available`. A tap sends `{kind: 'dictate'}`: `Phone/Dictation.swift` shows a sheet (live words, Done, Cancel,
+  60 s at most, leaving the app cancels) and runs `SFSpeechRecognizer` with `requiresOnDeviceRecognition = true` (a recognizer whose
+  `supportsOnDeviceRecognition` is false is `not_on_device`). Answer: `{ok, text}` (at most 2,000 characters) or `{error: cancelled |
+  not_allowed | unavailable | busy | failed, message}`. The words go into the question box as the server's transcript does; only Send
+  sends. No file, no network, nothing kept. `NSMicrophoneUsageDescription` and `NSSpeechRecognitionUsageDescription` are set in the
+  project's Info.plist settings. Read answers aloud (this device's own voices) works in device mode too. `GET /api/ai/status` still
+  says `voice: false`: that is the server's transcription, which the phone never uses.
 * **Export** (owner, 2026-11-26): Settings → Your data → **Export my data (.zip)** gives the server's archive, made in the page
   (`M.exportZip` in `js/mock/export.js`, "Keep my data in this browser" above), as a `blob:` download; `WebAppView` writes it to a
   temporary file and opens the share sheet. No Swift change: the export.json download took the same way.
@@ -5991,7 +6000,7 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
     the built-in food of that name, else the one food of that name, else the one with that brand); a card that names a food the
     phone lacks becomes a question. Save on the card posts to the phone's own routes with the server's `client_id`, and step 4 sends
     the row up once. The rule-based low and emergency answers pass untouched. An older server that saved at once: the `saved`
-    cards lose Undo (`undo: null, on_server: true`) and a sync follows. Voice stays off. `GET /api/me/ai` → `phone.ask` and
+    cards lose Undo (`undo: null, on_server: true`) and a sync follows. Voice is the phone's own (below). `GET /api/me/ai` → `phone.ask` and
     `phone.photos` give why the server's AI cannot run Ask or photos now (`not_paired`, `not_both_ways`, `offline`, `device_only`,
     `not_synced`, `not_opted_in`, `server_off`); the Ask tab is always shown on the phone and words the reason (`js/views/ask.js`),
     and the Add screen says where a meal photo comes from when "Plate photo (AI)" is not offered (`js/views/ai.js`). The phone never
