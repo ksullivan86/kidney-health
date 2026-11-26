@@ -15,9 +15,12 @@
    DEVICE MODE (the iPhone app, design note 39 §7, plan step 9): none of the demo's stand-ins. Recipe pages, Instacart and the list
    app are the person's own server's, through its gateway (js/mock/server_api.js), and only with a token both ways and the service
    on there; the server reads the page through its checked transport and uses its own keys, and no key comes to the phone. With no
-   such server, or while it cannot be reached, they are off, as on a server with them off: the recipe sheet offers pasting only
-   (pasted ingredients are read here, offline too), and Plan shows no Instacart or list app button. A recipe page's lines are
-   matched again with this phone's own foods, the ones the recipe is saved with. The list app is set up in the server's web app.
+   such server, or while it cannot be reached, Instacart and the list app are off, as on a server with them off: Plan shows no
+   Instacart or list app button. A recipe page is then read on this iPhone (owner, 2026-11-26): the app fetches the page the person
+   typed (the bridge kind fetchRecipePage, ios/KidneyHealth/Services/RecipePageFetcher.swift, with the server's checks) and the page
+   reads it with the twin of the server's parser (KH.recipeImport.pageRecipe); nothing but that request leaves the phone. Pasted
+   ingredients are read here, offline too. A recipe page's lines are matched with this phone's own foods, the ones the recipe is
+   saved with. The list app is set up in the server's web app.
    The server makes its lists from its own Plan, which holds the phone's plans once they are sent; its lines name its own food ids,
    so they are shown with this phone's ids (by the food's name, so "ticked on this phone" works) and sent back with the server's. */
 (() => {
@@ -262,9 +265,62 @@
         nutrition: { '@type': 'NutritionInformation', calories: '380 kcal', sodiumContent: '210 mg' } },
     ],
   };
+  // ---- device mode: a recipe page read on this iPhone ----
+  // The server's words for each refusal (app/recipe_import/fetch.py MESSAGES; pinned by tests/data/recipe_page_vectors.json), and
+  // the phone's own for the few that differ.
+  const PAGE_MESSAGES = {
+    bad_link: 'That link cannot be read. Use a web address that starts with http:// or https://.',
+    blocked: 'This server does not open that address. It may be a private or local address.',
+    unreachable: 'The page did not answer. Check the link, or paste the ingredients instead.',
+    timeout: 'The page took too long to answer. Try again, or paste the ingredients instead.',
+    too_large: 'That page is too large to read. Paste the ingredients instead.',
+    not_html: 'That link is not a web page. Paste the ingredients instead.',
+    http_error: 'The site did not give the page. Check the link, or paste the ingredients instead.',
+    too_many_redirects: 'That link sends the app on to too many other addresses. Use the recipe page\'s own link.',
+  };
+  const PHONE_MESSAGES = { ...PAGE_MESSAGES,
+    bad_link: 'That link cannot be read on this iPhone. Use a web address that starts with https://.',
+    blocked: 'This iPhone does not open that address. It may be a private or local address.',
+    unreachable: 'The page did not answer. Check the link and that this iPhone is online, or paste the ingredients instead.',
+    rate_limited: 'You have read many recipe pages this hour. Try again later, or paste the ingredients.',
+    no_app: 'Reading recipe pages needs the latest version of the iPhone app. Paste the ingredients instead.',
+  };
+  const NO_RECIPE_TEXT = 'This page has no recipe data the app can read. Paste the ingredients instead.';
+  const NO_LINES_TEXT = 'No ingredient lines were found. Paste one ingredient on each line.';
+  // Does this iPhone app read recipe pages itself? (Its `services` answer says so; an older app does not.)
+  async function phoneReadsPages() {
+    if (!M.device) return false;
+    const services = await M.device.lookup({ kind: 'services' });
+    return !!(services && services.recipePage === true);
+  }
+  // Who reads a page now: the paired server when it offers it with pages on and answers, else this iPhone when it can.
+  async function pageReader() {
+    const S = M.serverApi;
+    if (S && (await S.offers('recipe'))) {
+      const res = await S.call('GET', '/api/recipe-import');
+      if (res.status === 200 && isDict(res.json) && res.json.web === true) return { who: 'server', info: res.json };
+    }
+    return { who: (await phoneReadsPages()) ? 'phone' : null, info: null };
+  }
+  // The page, fetched by the iPhone app and read here: never put into a document, only its JSON-LD blocks are parsed as text.
+  async function readOnPhone(api, url) {
+    const answer = await M.device.lookup({ kind: 'fetchRecipePage', url });
+    if (!answer || answer.ok !== true || typeof answer.html !== 'string') {
+      const code = answer && typeof answer.error === 'string' && Object.prototype.hasOwnProperty.call(PHONE_MESSAGES, answer.error)
+        ? answer.error : 'unreachable';
+      fail(code === 'bad_link' ? 400 : code === 'rate_limited' ? 429 : 422, PHONE_MESSAGES[code], { code });
+    }
+    const recipe = R.pageRecipe(answer.html);
+    if (!recipe) fail(422, NO_RECIPE_TEXT, { code: 'no_recipe' });
+    return { ...api._importDraft(R.recipeFromJsonld(recipe), url), read_on: 'phone' };
+  }
+
   route('GET', '/api/recipe-import', function () {
     this._currentUser();
-    if (DEVICE) return serverStatus('recipe', '/api/recipe-import', { web: false, max_lines: R.MAX_LINES, estimate: ESTIMATE_TEXT });
+    if (DEVICE) {
+      return pageReader().then(({ who, info }) => (who === 'server' ? { ...info, read_on: 'server' }
+        : { web: who === 'phone', max_lines: R.MAX_LINES, estimate: ESTIMATE_TEXT, read_on: who === 'phone' ? 'phone' : null }));
+    }
     return { web: true, max_lines: R.MAX_LINES, estimate: ESTIMATE_TEXT };
   });
   route('POST', '/api/recipe-import/page', function ({ body }) {
@@ -273,10 +329,25 @@
     c.str('url', { required: true, min: 1, max: 900, nullable: false });
     const b = c.done();
     const url = b.url.trim();
-    if (DEVICE) { // the server reads the page; this phone matches its lines with its own foods
-      return viaServer('recipe', 'POST', '/api/recipe-import/page', { url }).then((d) => this._importDraft({ name: d.name || null,
-        servings_made: d.servings_made ?? null, steps: Array.isArray(d.steps) ? d.steps : [], steps_cut: !!d.steps_cut, lines_cut: !!d.lines_cut,
-        lines: (Array.isArray(d.lines) ? d.lines : []).map((line) => String((line && line.text) || '')) }, typeof d.source_url === 'string' ? d.source_url : url));
+    if (DEVICE) { // the server reads the page, or this iPhone does; either way this phone matches its lines with its own foods
+      return (async () => {
+        const { who } = await pageReader();
+        if (who === 'server') {
+          const res = await M.serverApi.call('POST', '/api/recipe-import/page', { body: { url } });
+          if (!(res.offline || res.error)) {
+            if (res.status >= 400) M.serverApi.failWith(res);
+            const d = res.json;
+            if (!isDict(d)) fail(502, 'Your server gave an answer the app could not read.');
+            return { ...this._importDraft({ name: d.name || null, servings_made: d.servings_made ?? null, steps: Array.isArray(d.steps) ? d.steps : [],
+              steps_cut: !!d.steps_cut, lines_cut: !!d.lines_cut, lines: (Array.isArray(d.lines) ? d.lines : []).map((line) => String((line && line.text) || '')) },
+            typeof d.source_url === 'string' ? d.source_url : url), read_on: 'server' };
+          }
+          if (!(await phoneReadsPages())) fail(503, UNREACHABLE); // the server went away between the two requests
+        } else if (who !== 'phone') {
+          fail(404, 'Not Found');
+        }
+        return readOnPhone(this, url);
+      })();
     }
     let port = '';
     try { port = new URL(url).port; } catch { /* checked below */ }
@@ -297,5 +368,5 @@
       lines, lines_cut: cut }, null);
   });
 
-  M.lists = { APPS, listItem, checkBaseUrl, SAMPLE_PAGE, CHECK_TEXT, ESTIMATE_TEXT };
+  M.lists = { APPS, listItem, checkBaseUrl, SAMPLE_PAGE, CHECK_TEXT, ESTIMATE_TEXT, PAGE_MESSAGES, PHONE_MESSAGES, NO_RECIPE_TEXT, NO_LINES_TEXT };
 })();

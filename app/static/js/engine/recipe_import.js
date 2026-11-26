@@ -25,30 +25,255 @@
   // ---- Text ----
   const TAG = /<[^<>]*>/g; // twin of parse._TAG
   const SPACE = /\s+/g;
+  const PY_SPACES = /[^\S\uFEFF]+/g; // Python's \s for text read from a page (JavaScript's \s also takes U+FEFF)
   const SPACE_BEFORE_MARK = / ([.,;:!?)])/g;
   const CONTROL = /[\u0000-\u001f\u007f-\u009f]/g;
-  const ENTITIES = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', frac12: '½', frac14: '¼', frac34: '¾',
-    deg: '°', rsquo: '’', lsquo: '‘', ldquo: '“', rdquo: '”', ndash: '–', mdash: '—', hellip: '…', eacute: 'é', egrave: 'è',
-    ecirc: 'ê', agrave: 'à', aacute: 'á', ntilde: 'ñ', ccedil: 'ç', uuml: 'ü', ouml: 'ö', auml: 'ä', times: '×' };
+  // Entities (twin of Python's html.unescape): numeric references with the HTML 5 rules for invalid ones, and named ones from
+  // the HTML 4 list plus &apos; and the capital forms, with the legacy names that work without a ";" (longest first, as in HTML 5).
+  // A name outside this list stays as typed; Python knows every HTML 5 name (tests/data/recipe_page_vectors.json pins the list).
+  const ENTITY_TABLE = 'AElig:c6 AMP:26 Aacute:c1 Acirc:c2 Agrave:c0 Alpha:391 Aring:c5 Atilde:c3 Auml:c4 Beta:392 COPY:a9 Ccedil:c7 '
+    + 'Chi:3a7 Dagger:2021 Delta:394 ETH:d0 Eacute:c9 Ecirc:ca Egrave:c8 Epsilon:395 Eta:397 Euml:cb GT:3e Gamma:393 '
+    + 'Iacute:cd Icirc:ce Igrave:cc Iota:399 Iuml:cf Kappa:39a LT:3c Lambda:39b Mu:39c Ntilde:d1 Nu:39d OElig:152 '
+    + 'Oacute:d3 Ocirc:d4 Ograve:d2 Omega:3a9 Omicron:39f Oslash:d8 Otilde:d5 Ouml:d6 Phi:3a6 Pi:3a0 Prime:2033 Psi:3a8 '
+    + 'QUOT:22 REG:ae Rho:3a1 Scaron:160 Sigma:3a3 THORN:de Tau:3a4 Theta:398 Uacute:da Ucirc:db Ugrave:d9 Upsilon:3a5 '
+    + 'Uuml:dc Xi:39e Yacute:dd Yuml:178 Zeta:396 aacute:e1 acirc:e2 acute:b4 aelig:e6 agrave:e0 alefsym:2135 alpha:3b1 '
+    + 'amp:26 and:2227 ang:2220 apos:27 aring:e5 asymp:2248 atilde:e3 auml:e4 bdquo:201e beta:3b2 brvbar:a6 bull:2022 '
+    + 'cap:2229 ccedil:e7 cedil:b8 cent:a2 chi:3c7 circ:2c6 clubs:2663 cong:2245 copy:a9 crarr:21b5 cup:222a curren:a4 '
+    + 'dArr:21d3 dagger:2020 darr:2193 deg:b0 delta:3b4 diams:2666 divide:f7 eacute:e9 ecirc:ea egrave:e8 empty:2205 '
+    + 'emsp:2003 ensp:2002 epsilon:3b5 equiv:2261 eta:3b7 eth:f0 euml:eb euro:20ac exist:2203 fnof:192 forall:2200 '
+    + 'frac12:bd frac14:bc frac34:be frasl:2044 gamma:3b3 ge:2265 gt:3e hArr:21d4 harr:2194 hearts:2665 hellip:2026 '
+    + 'iacute:ed icirc:ee iexcl:a1 igrave:ec image:2111 infin:221e int:222b iota:3b9 iquest:bf isin:2208 iuml:ef '
+    + 'kappa:3ba lArr:21d0 lambda:3bb lang:27e8 laquo:ab larr:2190 lceil:2308 ldquo:201c le:2264 lfloor:230a lowast:2217 '
+    + 'loz:25ca lrm:200e lsaquo:2039 lsquo:2018 lt:3c macr:af mdash:2014 micro:b5 middot:b7 minus:2212 mu:3bc nabla:2207 '
+    + 'nbsp:a0 ndash:2013 ne:2260 ni:220b not:ac notin:2209 nsub:2284 ntilde:f1 nu:3bd oacute:f3 ocirc:f4 oelig:153 '
+    + 'ograve:f2 oline:203e omega:3c9 omicron:3bf oplus:2295 or:2228 ordf:aa ordm:ba oslash:f8 otilde:f5 otimes:2297 '
+    + 'ouml:f6 para:b6 part:2202 permil:2030 perp:22a5 phi:3c6 pi:3c0 piv:3d6 plusmn:b1 pound:a3 prime:2032 prod:220f '
+    + 'prop:221d psi:3c8 quot:22 rArr:21d2 radic:221a rang:27e9 raquo:bb rarr:2192 rceil:2309 rdquo:201d real:211c reg:ae '
+    + 'rfloor:230b rho:3c1 rlm:200f rsaquo:203a rsquo:2019 sbquo:201a scaron:161 sdot:22c5 sect:a7 shy:ad sigma:3c3 '
+    + 'sigmaf:3c2 sim:223c spades:2660 sub:2282 sube:2286 sum:2211 sup:2283 sup1:b9 sup2:b2 sup3:b3 supe:2287 szlig:df '
+    + 'tau:3c4 there4:2234 theta:3b8 thetasym:3d1 thinsp:2009 thorn:fe tilde:2dc times:d7 trade:2122 uArr:21d1 uacute:fa '
+    + 'uarr:2191 ucirc:fb ugrave:f9 uml:a8 upsih:3d2 upsilon:3c5 uuml:fc weierp:2118 xi:3be yacute:fd yen:a5 yuml:ff '
+    + 'zeta:3b6 zwj:200d zwnj:200c';
+  const LEGACY_NAMES = 'AElig AMP Aacute Acirc Agrave Aring Atilde Auml COPY Ccedil ETH Eacute Ecirc Egrave Euml GT Iacute Icirc Igrave '
+    + 'Iuml LT Ntilde Oacute Ocirc Ograve Oslash Otilde Ouml QUOT REG THORN Uacute Ucirc Ugrave Uuml Yacute aacute acirc '
+    + 'acute aelig agrave amp aring atilde auml brvbar ccedil cedil cent copy curren deg divide eacute ecirc egrave eth '
+    + 'euml frac12 frac14 frac34 gt iacute icirc iexcl igrave iquest iuml laquo lt macr micro middot nbsp not ntilde '
+    + 'oacute ocirc ograve ordf ordm oslash otilde ouml para plusmn pound quot raquo reg sect shy sup1 sup2 sup3 szlig '
+    + 'thorn times uacute ucirc ugrave uml uuml yacute yen yuml';
+  const ENTITIES = new Map(ENTITY_TABLE.split(' ').map((pair) => { const [k, v] = pair.split(':'); return [`${k};`, String.fromCodePoint(parseInt(v, 16))]; }));
+  for (const k of LEGACY_NAMES.split(' ')) ENTITIES.set(k, ENTITIES.get(`${k};`));
+  const INVALID_CHARREFS = { 0x00: '�', 0x0d: '\r', 0x80: '€', 0x81: '\x81', 0x82: '‚', 0x83: 'ƒ', 0x84: '„',
+    0x85: '…', 0x86: '†', 0x87: '‡', 0x88: 'ˆ', 0x89: '‰', 0x8a: 'Š', 0x8b: '‹', 0x8c: 'Œ',
+    0x8d: '\x8d', 0x8e: 'Ž', 0x8f: '\x8f', 0x90: '\x90', 0x91: '‘', 0x92: '’', 0x93: '“', 0x94: '”',
+    0x95: '•', 0x96: '–', 0x97: '—', 0x98: '˜', 0x99: '™', 0x9a: 'š', 0x9b: '›', 0x9c: 'œ',
+    0x9d: '\x9d', 0x9e: 'ž', 0x9f: 'Ÿ' };
+  const invalidCodepoint = (n) => (n >= 0x1 && n <= 0x8) || n === 0xb || (n >= 0xe && n <= 0x1f) || (n >= 0x7f && n <= 0x9f)
+    || (n >= 0xfdd0 && n <= 0xfdef) || (n & 0xfffe) === 0xfffe;
+  const CHARREF = /&(#[0-9]+;?|#[xX][0-9a-fA-F]+;?|[^\t\n\f <&#;]{1,32};?)/g; // html._charref
   function unescapeHtml(text) {
-    return text.replace(/&(#[0-9]+|#[xX][0-9a-fA-F]+|[A-Za-z][A-Za-z0-9]*);/g, (all, name) => {
-      if (name[0] === '#') {
-        const code = name[1] === 'x' || name[1] === 'X' ? parseInt(name.slice(2), 16) : parseInt(name.slice(1), 10);
-        return code > 0 && code <= 0x10ffff && !(code >= 0xd800 && code <= 0xdfff) ? String.fromCodePoint(code) : '�';
+    if (!text.includes('&')) return text;
+    return text.replace(CHARREF, (all, s) => {
+      if (s[0] === '#') {
+        const hex = s[1] === 'x' || s[1] === 'X';
+        const digits = s.slice(hex ? 2 : 1).replace(/;$/, '');
+        const n = hex ? parseInt(digits, 16) : parseInt(digits, 10);
+        if (Object.prototype.hasOwnProperty.call(INVALID_CHARREFS, n)) return INVALID_CHARREFS[n];
+        if ((n >= 0xd800 && n <= 0xdfff) || !(n <= 0x10ffff)) return '�';
+        if (invalidCodepoint(n)) return '';
+        return String.fromCodePoint(n);
       }
-      return Object.prototype.hasOwnProperty.call(ENTITIES, name) ? ENTITIES[name] : all;
+      if (ENTITIES.has(s)) return ENTITIES.get(s);
+      const cps = Array.from(s); // the longest name that is a whole entity, then the rest as typed
+      for (let x = cps.length - 1; x > 1; x -= 1) {
+        const head = cps.slice(0, x).join('');
+        if (ENTITIES.has(head)) return ENTITIES.get(head) + cps.slice(x).join('');
+      }
+      return `&${s}`;
     });
   }
+  // Python counts and strips by code point and has its own idea of white space (no U+FEFF; str.isspace).
+  const PY_SPACE = '\\t\\n\\v\\f\\r\\x1c-\\x20\\x85\\xa0\\u1680\\u2000-\\u200a\\u2028\\u2029\\u202f\\u205f\\u3000';
+  const PY_STRIP = new RegExp(`^[${PY_SPACE}]+|[${PY_SPACE}]+$`, 'g');
+  const pyStrip = (s) => s.replace(PY_STRIP, '');
+  const ASTRAL = /[\uD800-\uDBFF][\uDC00-\uDFFF]/;
+  const cpLen = (s) => (ASTRAL.test(s) ? Array.from(s).length : s.length);
+  const cpSlice = (s, n) => (s.length <= n || !ASTRAL.test(s) ? s.slice(0, n) : Array.from(s).slice(0, n).join(''));
   const isStr = (v) => typeof v === 'string';
   const isNum = (v) => typeof v === 'number' && Number.isFinite(v);
   function textOf(value) {
     if (!isStr(value) && !isNum(value)) return '';
-    let text = String(value).slice(0, MAX_TEXT_CHARS);
+    let text = cpSlice(String(value), MAX_TEXT_CHARS);
     text = unescapeHtml(text.replace(TAG, ' '));
     text = text.replace(CONTROL, ' ');
-    return text.replace(SPACE, ' ').replace(SPACE_BEFORE_MARK, '$1').trim();
+    return pyStrip(text.replace(PY_SPACES, ' ').replace(SPACE_BEFORE_MARK, '$1'));
   }
   const isObj = (v) => v != null && typeof v === 'object' && !Array.isArray(v);
+
+  // ---- The page (twin of parse.ld_json_blocks, which reads it with Python's html.parser) ----
+  // Used on the iPhone, which reads the page itself (design note 30 §3.3; ARCHITECTURE.md "Device mode"). A small port of
+  // html.parser's tokenizer (Python 3.13): the same tags, comments, declarations and raw-text elements, so the same
+  // <script type="application/ld+json"> blocks are found. Nothing goes into a document and nothing on the page runs: the page is
+  // only a string here, and each block is read with JSON.parse.
+  const MAX_BLOCKS = 20;
+  const MAX_BLOCK_CHARS = 1048576;
+  const CDATA_ELEMENTS = ['script', 'style', 'xmp', 'iframe', 'noembed', 'noframes'];
+  const RCDATA_ELEMENTS = ['textarea', 'title'];
+  const STARTTAGOPEN = /<[a-zA-Z]/y;
+  const ENDTAGOPEN = /<\/[a-zA-Z]/y;
+  const COMMENTCLOSE = /--!?>/g;
+  const COMMENTABRUPTCLOSE = /-?>/y;
+  const TAGFIND = /([a-zA-Z][^\t\n\r\f />]*)(?:[\t\n\r\f ]|\/(?!>))*/y;
+  const ATTRFIND = /((?<=['"\t\n\r\f /])[^\t\n\r\f />][^\t\n\r\f /=>]*)([\t\n\r\f ]*=[\t\n\r\f ]*('[^']*'|"[^"]*"|(?!['"])[^>\t\n\r\f ]*))?(?:[\t\n\r\f ]|\/(?!>))*/y;
+  const LOCATETAGEND = /[a-zA-Z][^\t\n\r\f />]*[\t\n\r\f /]*(?:(?<=['"\t\n\r\f /])[^\t\n\r\f />][^\t\n\r\f /=>]*(?:[\t\n\r\f ]*=[\t\n\r\f ]*(?:'[^']*'|"[^"]*"|(?!['"])[^>\t\n\r\f ]*))?[\t\n\r\f /]*)*>?/y;
+  const ATTR_CHARREF = /&(#[0-9]+|#[xX][0-9a-fA-F]+|[a-zA-Z][a-zA-Z0-9]*)[;=]?/g;
+  function at(re, text, i) { re.lastIndex = i; return re.exec(text); }
+  // html.parser._unescape_attrvalue: numeric references always, a name only when it is a whole entity and not followed by "=".
+  const unescapeAttr = (value) => value.replace(ATTR_CHARREF, (ref) => (ref.startsWith('&#') || (!ref.endsWith('=') && ENTITIES.has(ref.slice(1)))
+    ? unescapeHtml(ref) : ref));
+
+  class LdJsonReader {
+    constructor() {
+      this.raw = '';
+      this.cdata = null; // the raw-text element we are in (html.parser cdata_elem)
+      this.endOf = null; // its end tag: </name followed by space, "/" or ">", any case of ASCII letters
+      this.blocks = [];
+      this.buf = null;
+      this.size = 0;
+    }
+    // The handlers of parse._LdJson
+    starttag(tag, attrs) {
+      if (tag !== 'script' || this.blocks.length >= MAX_BLOCKS) return;
+      const found = attrs.find(([k]) => k === 'type');
+      const kind = found ? found[1] || '' : '';
+      if (pyStrip(kind.split(';')[0]).toLowerCase() === 'application/ld+json') { this.buf = []; this.size = 0; }
+    }
+    data(text) {
+      if (this.buf !== null && this.size <= MAX_BLOCK_CHARS) { this.buf.push(text); this.size += cpLen(text); }
+    }
+    endtag(tag) {
+      if (tag === 'script' && this.buf !== null) {
+        if (this.size <= MAX_BLOCK_CHARS) this.blocks.push(this.buf.join(''));
+        this.buf = null;
+      }
+    }
+    setCdata(tag) { this.cdata = tag; this.endOf = tag === 'plaintext' ? null : new RegExp(`</${tag}(?=[\\t\\n\\r\\f />])`, 'gi'); }
+    // HTMLParser.goahead with convert_charrefs=True (text outside raw-text elements is not needed here, so it is not unescaped)
+    goahead(end) {
+      const raw = this.raw;
+      const n = raw.length;
+      let i = 0;
+      while (i < n) {
+        let j;
+        if (!this.cdata) {
+          j = raw.indexOf('<', i);
+          if (j < 0) {
+            const from = Math.max(i, n - 34);
+            const amp = raw.lastIndexOf('&');
+            if (amp >= from && !/[\t\n\r\f ;]/.test(raw.slice(amp))) break;
+            j = n;
+          }
+        } else if (this.cdata === 'plaintext') {
+          j = n;
+        } else {
+          const m = at(this.endOf, raw, i);
+          if (!m) break;
+          j = m.index;
+        }
+        if (i < j) this.data(raw.slice(i, j));
+        i = j;
+        if (i === n) break;
+        let k;
+        if (at(STARTTAGOPEN, raw, i)) k = this.parseStarttag(i);
+        else if (raw.startsWith('</', i)) k = this.parseEndtag(i);
+        else if (raw.startsWith('<!--', i)) k = this.parseComment(i);
+        else if (raw.startsWith('<?', i)) k = this.parseUntil(i, '>', 2);
+        else if (raw.startsWith('<!', i)) k = this.parseDeclaration(i);
+        else if (i + 1 < n || end) { this.data('<'); k = i + 1; } else break;
+        if (k < 0) {
+          if (!end) break;
+          if (!at(STARTTAGOPEN, raw, i) && raw.startsWith('</', i) && i + 2 === n) this.data('</');
+          k = n; // the rest is a comment, a declaration or an unfinished tag
+        }
+        i = k;
+      }
+      if (end && i < n) { this.data(raw.slice(i, n)); i = n; }
+      this.raw = raw.slice(i);
+    }
+    parseUntil(i, close, skip) { const pos = this.raw.indexOf(close, i + skip); return pos < 0 ? -1 : pos + close.length; }
+    parseComment(i) {
+      const raw = this.raw;
+      let m = at(COMMENTABRUPTCLOSE, raw, i + 4);
+      if (!m) { m = at(COMMENTCLOSE, raw, i + 4); if (!m) return -1; }
+      return m.index + m[0].length;
+    }
+    parseDeclaration(i) {
+      const raw = this.raw;
+      if (raw.startsWith('<!--', i)) return this.parseComment(i);
+      if (raw.startsWith('<![CDATA[', i)) return this.parseUntil(i, ']]>', 9);
+      if (raw.slice(i, i + 9).toLowerCase() === '<!doctype') return this.parseUntil(i, '>', 9);
+      return this.parseUntil(i, '>', 2); // a bogus comment
+    }
+    parseStarttag(i) {
+      const raw = this.raw;
+      const whole = at(LOCATETAGEND, raw, i + 1);
+      const endpos = whole.index + whole[0].length;
+      if (raw[endpos - 1] !== '>') return -1;
+      const name = at(TAGFIND, raw, i + 1);
+      let k = name.index + name[0].length;
+      const tag = name[1].toLowerCase();
+      const attrs = [];
+      while (k < endpos) {
+        const m = at(ATTRFIND, raw, k);
+        if (!m) break;
+        let value = m[2] ? m[3] : null;
+        if (value && ((value[0] === "'" && value.endsWith("'")) || (value[0] === '"' && value.endsWith('"')))) value = value.slice(1, -1);
+        if (value) value = unescapeAttr(value);
+        attrs.push([m[1].toLowerCase(), value]);
+        k = m.index + m[0].length;
+      }
+      const rest = pyStrip(raw.slice(k, endpos));
+      if (rest !== '>' && rest !== '/>') { this.data(raw.slice(i, endpos)); return endpos; }
+      if (rest.endsWith('/>')) { this.starttag(tag, attrs); this.endtag(tag); return endpos; }
+      this.starttag(tag, attrs);
+      if (CDATA_ELEMENTS.includes(tag) || tag === 'plaintext' || RCDATA_ELEMENTS.includes(tag)) this.setCdata(tag);
+      return endpos;
+    }
+    parseEndtag(i) {
+      const raw = this.raw;
+      if (raw.indexOf('>', i + 2) < 0) return -1;
+      if (!at(ENDTAGOPEN, raw, i)) return raw[i + 2] === '>' ? i + 3 : this.parseUntil(i, '>', 2);
+      const whole = at(LOCATETAGEND, raw, i + 2);
+      const j = whole.index + whole[0].length;
+      if (raw[j - 1] !== '>') return -1;
+      this.endtag(at(TAGFIND, raw, i + 2)[1].toLowerCase());
+      this.cdata = null; this.endOf = null;
+      return j;
+    }
+  }
+  // Python's json.loads also takes NaN, Infinity and -Infinity; here they are read as null (a yield or text of them is empty).
+  function jsonLoads(text) {
+    try { return [true, JSON.parse(text)]; } catch (e) { /* below */ }
+    if (!/NaN|Infinity/.test(text)) return [false, null];
+    const fixed = text.replace(/"(?:[^"\\]|\\.)*"|-?Infinity|NaN/g, (t) => (t[0] === '"' ? t : 'null'));
+    try { return [true, JSON.parse(fixed)]; } catch (e) { return [false, null]; }
+  }
+  /** The JSON values of the page's application/ld+json scripts; a block that is not JSON is left out. */
+  function ldJsonBlocks(page) {
+    const reader = new LdJsonReader();
+    try {
+      reader.raw = String(page || '');
+      reader.goahead(false);
+      reader.goahead(true);
+    } catch (e) { /* as the server: what was read so far counts */ }
+    const out = [];
+    for (const block of reader.blocks) { const [ok, value] = jsonLoads(pyStrip(block)); if (ok) out.push(value); }
+    return out;
+  }
+  /** The first Recipe in the page's blocks (app/recipe_import/api.py from_page), or null. */
+  function pageRecipe(page) {
+    for (const block of ldJsonBlocks(page)) { const found = findRecipe(block); if (found) return found; }
+    return null;
+  }
 
   // ---- The page's Recipe ----
   function isRecipe(node) {
@@ -85,22 +310,24 @@
     return n;
   }
   function splitStep(text) {
-    if (text.length <= MAX_STEP_CHARS) return [text];
+    if (cpLen(text) <= MAX_STEP_CHARS) return [text];
+    // By code point, as Python does: a text with emoji is counted the same on both sides.
     const out = [];
-    let current = '';
-    for (let sentence of text.split(/(?<=[.!?])\s+/)) {
+    let current = [];
+    for (const part of text.split(/(?<=[.!?])[^\S\uFEFF]+/)) {
+      let sentence = Array.from(part);
       while (sentence.length > MAX_STEP_CHARS) {
         let cut = sentence.lastIndexOf(' ', MAX_STEP_CHARS);
         cut = cut > 0 ? cut : MAX_STEP_CHARS;
-        if (current) { out.push(current); current = ''; }
-        out.push(sentence.slice(0, cut).trim());
-        sentence = sentence.slice(cut).trim();
+        if (current.length) { out.push(current.join('')); current = []; }
+        out.push(pyStrip(sentence.slice(0, cut).join('')));
+        sentence = Array.from(pyStrip(sentence.slice(cut).join('')));
       }
-      if (!sentence) continue;
-      if (current && current.length + 1 + sentence.length <= MAX_STEP_CHARS) current = `${current} ${sentence}`;
-      else { if (current) out.push(current); current = sentence; }
+      if (!sentence.length) continue;
+      if (current.length && current.length + 1 + sentence.length <= MAX_STEP_CHARS) current = [...current, ' ', ...sentence];
+      else { if (current.length) out.push(current.join('')); current = sentence; }
     }
-    if (current) out.push(current);
+    if (current.length) out.push(current.join(''));
     return out.filter(Boolean);
   }
   function stepTexts(node, depth, out) {
@@ -122,7 +349,7 @@
   function ingredientLines(value) {
     const items = Array.isArray(value) ? value : isStr(value) ? [value] : [];
     const lines = [];
-    for (const item of items.slice(0, 500)) { const t = textOf(item); if (t) lines.push(t.slice(0, MAX_LINE_CHARS)); }
+    for (const item of items.slice(0, 500)) { const t = textOf(item); if (t) lines.push(cpSlice(t, MAX_LINE_CHARS)); }
     return [lines.slice(0, MAX_LINES), lines.length > MAX_LINES];
   }
   function isHeading(line) { return line.endsWith(':') && !/[0-9]/.test(line); }
@@ -131,7 +358,7 @@
     return [lines.slice(0, MAX_LINES), lines.length > MAX_LINES];
   }
   function recipeFromJsonld(recipe) {
-    const name = textOf(recipe.name).slice(0, MAX_NAME_CHARS).trim() || null;
+    const name = pyStrip(cpSlice(textOf(recipe.name), MAX_NAME_CHARS)) || null;
     const rawLines = recipe.recipeIngredient != null ? recipe.recipeIngredient : recipe.ingredients;
     const [lines, linesCut] = ingredientLines(rawLines);
     const [steps, stepsCut] = stepsOf(recipe.recipeInstructions);
@@ -371,7 +598,7 @@
     return r >= 0.01 && r <= 1000 ? r : null;
   }
 
-  KH.recipeImport = { MAX_LINES, MAX_LINE_CHARS, MAX_STEPS, MAX_STEP_CHARS, textOf, findRecipe, yieldOf, splitStep, stepsOf,
+  KH.recipeImport = { MAX_LINES, MAX_BLOCKS, MAX_BLOCK_CHARS, ldJsonBlocks, pageRecipe, MAX_LINE_CHARS, MAX_STEPS, MAX_STEP_CHARS, textOf, findRecipe, yieldOf, splitStep, stepsOf,
     ingredientLines, isHeading, linesOfText, recipeFromJsonld, normaliseLine, takeQuantity, takeUnit, parseLine, stem, searchTerms,
     servingQuantity, recipeServings };
 })();
