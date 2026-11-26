@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # profile-weight-units: Profile's two weight boxes in the person's unit (user.units.weight, kg | lb, default lb)
 
@@ -29,8 +29,14 @@ Owner, 2026-11-26: "Should the weight fields in Profile use lb, like height?" â€
 * Docs: handbook first-setup.md (Profile table), settings-and-keys.md (new Weight and blood pressure row), weight-and-blood-pressure.md,
   ARCHITECTURE "Weight units in Profile" (after "Height units"), docs/body.md, docs/targets-and-labs.md, CHANGELOG Unreleased â†’ Changed.
 
+* Fixed two older tests that read profile.js: test_body_ui.py (hint block ends at "let weightUnit ="; Use this calls fillWeight) and
+  tests/js/profile_suggestion_context.test.mjs (context has readWeightKg and weightUnit).
+* Targeted pytest (17 files touching Profile, Body, Settings, gateway, iPhone app) pass, except
+  test_settings_ui.py::test_only_the_reminders_block_talks_about_reminders, which fails on js/mock/phone_reminders.js, another
+  agent's file in progress. Full suite not run: the orchestrator runs it once for everyone (disk space).
+
 ## Next
-* Full pytest run.
+* Nothing.
 
 ## Commands
 * `node tests/js/weight_units.test.mjs`; `node tests/js/run_vectors.mjs`

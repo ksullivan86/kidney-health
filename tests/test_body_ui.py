@@ -298,12 +298,13 @@ def test_profile_offers_the_logs_weights_and_never_applies_them():
     assert INDEX.index('id="pf-weight"') < INDEX.index('id="pf-weight-log"') < INDEX.index('id="pf-weight-6mo"') < INDEX.index('id="pf-weight-6mo-log"')
     assert re.search(r'<p class="body-use" id="pf-weight-log" hidden></p>', INDEX) and re.search(r'<p class="body-use" id="pf-weight-6mo-log" hidden></p>', INDEX)
     code = strip_comments(PROFILE)
-    block = strip_comments(PROFILE[PROFILE.index("let bodyHints = null;"):PROFILE.index("// The v0.3 fields as the form shows them")])
+    block = strip_comments(PROFILE[PROFILE.index("let bodyHints = null;"):PROFILE.index("let weightUnit =")])
     # not on dialysis only for the latest weight; the six-month one has no such rule
     assert "$('#pf-dialysis').value === 'none' ? bodyHints.latest : null" in block and "bodyHints ? bodyHints.sixMonth : null" in block
     assert "syncConditionalFields" in code and "showBodyHints();" in code[code.index("function syncConditionalFields"):code.index("$('#pf-dialysis').addEventListener")]
     # "Use this" fills the box and says Save profile saves it: no request, no change of state.profile
-    assert "input.value = String(kg);" in block and "Press Save profile to keep it." in block and "'Use this'" in block
+    # it fills the box in the person's unit and keeps the log's own kilograms (fillWeight, tests/js/weight_units.test.mjs)
+    assert "fillWeight(selector, entry.kg);" in block and "Press Save profile to keep it." in block and "'Use this'" in block
     assert "api." not in block and "state.profile" not in block and "saveProfile" not in block
     assert "KH.body.profileHints()" in block and "loadBodyHints();" in code
     helper = VIEW_CODE[VIEW_CODE.index("async function profileHints"):VIEW_CODE.index("KH.body = {")]

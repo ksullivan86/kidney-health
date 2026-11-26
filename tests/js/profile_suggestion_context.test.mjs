@@ -24,6 +24,7 @@ function setup() {
   const context = vm.createContext({
     $, $$: () => fields, profileForm: {}, state,
     formBody: () => ({ ...form }), numOrNull: (v) => v === '' ? null : Number(v), refusalFor: () => null,
+    readWeightKg: (sel) => ($(sel).value === '' ? null : Number($(sel).value)), weightUnit: 'kg',
     api: { suggested: () => new Promise((resolve, reject) => calls.push({ resolve, reject })) },
     fillTargets: (targets) => { if ('potassium_mg' in targets) fields[3].value = String(targets.potassium_mg); },
     renderSuggestion: (reply) => rendered.push(reply), renderRefusal: (...args) => rendered.push(args),
