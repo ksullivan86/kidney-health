@@ -5863,6 +5863,19 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
 * **Home Screen shortcuts**: `Phone/QuickActions.swift` sets three shortcuts on the app's icon (Scan a barcode, Add food, Quick
   add). The scene delegate keeps the chosen one until the page has loaded, then calls `KH.quickAction(name)` (`js/main.js`), which
   waits for the page to start and only opens that screen. It accepts only those three names, and only in device mode.
+* **Reminders (design note 35 §7)**: Settings → Reminders works with no server, as the iPhone's own notifications. The routes of
+  `js/mock/reminders.js` keep the reminders with the log (and in the export). `js/mock/phone_reminders.js` plans the next 7 days
+  (`plan`: reminders that are on, on their days, still in the future, at most 60, soonest first; today's meal reminder is left out
+  when that meal has an eaten entry today, as `run_due` does; local dates and times; vectors `tests/data/phone_reminder_vectors.json`,
+  checked against `app/reminders.py` `is_due`) and sends it after each save of the log, after a reminder changes, and when the page
+  becomes visible. The bridge kind `reminders` (`Phone/LocalReminders.swift`): `status` and `allow` → `{ok, permission: allowed |
+  denied | not_asked, pending}` (`allow` asks iOS, only from the button); `schedule` with `items: [{id: "reminder-<id>-<date>", at:
+  "YYYY-MM-DDTHH:MM", kind, meal}]` removes every pending `reminder-` request and adds one `UNCalendarNotificationTrigger` each
+  (no time zone: the phone's own; nothing while not allowed) → `{ok, scheduled, permission}`; `test` adds one in 5 s; `openSettings`
+  opens the app's page in iOS Settings. The app writes the words (title "Food log", `BODIES`, `TEST_BODY`); the page sends no text.
+  A tap opens `PAGES[kind]` (the test: Settings) through `KH.openScreen(name)` (`js/main.js`: `add`, `plan`, `today`, `settings`,
+  device mode only, after the start). The screen says the reminders are for this iPhone only; they are not synced to a paired
+  server. The device build packs `js/views/reminders.js` (`data-device="keep"`); the web demo still leaves it out.
 * **Sending to your server (step 4, the phone side)**: the page owns the queue and the rules; the app only carries the request.
   `js/mock/server_sync.js` (device mode only) finds the rows the server has not taken, builds the `POST /push/v1/sync` body
   ("`POST /push/v1/sync`" above) and asks the `bridge` with `serverInfo` (paired? the host), `serverSyncCheck` (`GET /push/v1/sync`)

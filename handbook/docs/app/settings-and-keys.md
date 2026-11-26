@@ -32,7 +32,7 @@ can be shared by your admin or added by you ([design note 07][NOTE07]).
 | **Food data** | your own USDA key, the shared key's status and today's remaining lookups, **Send barcodes I scan to Open Food Facts** ([Barcodes and label photos](barcode-and-photo.md)) |
 | **AI ideas** | opt in, provider, where each feature runs, **Choose which AI each feature uses** (when your admin lets you: [Choosing the AI yourself](ai.md#choosing-the-ai-yourself)), your own AI provider and key, what you agreed to send, AI activity ([Optional AI](ai.md)) |
 | **Assistant access** (when your admin turns it on) | personal tokens for a chat assistant you connect: make one, copy it once, see when it was last used, revoke it ([below](#assistant-access)) |
-| **Reminders** (when your admin turns them on) | turn on notifications on this phone or computer, reminders to log a meal, plan tomorrow or log your weight, **Send a test**, the devices that get them ([below](#reminders)) |
+| **Reminders** (when your admin turns them on, and always in the iPhone app) | turn on notifications on this phone or computer, reminders to log a meal, plan tomorrow or log your weight, **Send a test**, the devices that get them ([below](#reminders)) |
 | **This device** | installed or not, "Offline ready", storage used, entries waiting to sync with **Sync now**, **Retry** and **Discard**, **Clear offline data on this device** ([Install the app](install.md)) |
 | **Admin** (admins only) | a button that opens **Server administration** (below) |
 | **About & privacy** | what is stored, who can see it, disclaimers, **Learn** (this handbook), data sources and licences ([Privacy and your data](privacy.md)) |
@@ -160,6 +160,23 @@ choose: "Time to log lunch.", "Time to plan tomorrow's meals." or "Time to log y
 - Each reminder comes at most once a day. If the server was off at that time, it does not come late.
 - The words never include food names, numbers or anything about your health. Tapping the notification opens the app.
 - Turned off notifications by mistake? Allow them again in your phone's or browser's settings for this site.
+
+### In the iPhone app {#reminders-iphone}
+
+The iPhone app has reminders too, with no server. They are the iPhone's own notifications.
+
+1. **Settings → Reminders → Turn on notifications on this iPhone**. Your iPhone asks whether to allow them. Tap **Allow**.
+2. Tap **Add a reminder**, choose what, the time and the days, then **Save reminder**.
+3. Tap **Send a test**. It comes in a few seconds.
+
+- Reminders set here are for this iPhone only. They are not sent to your server, even when the app is connected to one.
+- The time is your iPhone's time, wherever you are.
+- A meal reminder is skipped when you already logged food for that meal today. The app plans the next 7 days each time you
+  open it or save something, so open it now and then.
+- Tapping a reminder opens the right screen: Add for a meal, Plan, or Today for your weight.
+- Said **Don't Allow** by mistake? Open **Settings** on your iPhone, tap **Notifications**, then **Kidney Health**, and turn on
+  **Allow Notifications**. The app's **Open iPhone Settings** button takes you there.
+- The warning above stays true here: do not rely on reminders for low blood sugar. Use your CGM's alerts.
 
 ## Two-step sign-in
 

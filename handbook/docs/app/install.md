@@ -127,6 +127,8 @@ phone and needs no server ([design note 38][NOTE38]):
 - **Add → Scan a barcode** opens the iPhone's own scanner. Point it at a food barcode and the app looks the code up.
   Tap **Cancel** to type the digits instead.
 - Touch and hold the app's icon on the Home Screen for shortcuts: **Scan a barcode**, **Add food** and **Quick add**.
+- **Settings → Reminders** gives you a notification at a time you choose, to log a meal, plan tomorrow or log your weight
+  ([Reminders in the iPhone app](settings-and-keys.md#reminders-iphone)). They stay on the iPhone.
 - Export your data now and then and keep the file somewhere safe. **Settings → Your data → Export my data (.zip)** makes the same
   `.zip` a server gives: `export.json`, spreadsheet (CSV) files and a README. The share sheet opens so you choose where it goes.
   The file is made on the iPhone and nothing is sent.

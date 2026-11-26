@@ -13,7 +13,7 @@ one-shot UNCalendarNotificationTrigger). Design in docs/dev/research/35-reminder
 5. [x] Swift: ios/KidneyHealth/Phone/LocalReminders.swift; bridge kind `reminders` in FoodServices.swift; delegate in AppDelegate;
        taps through PageBridge.
 6. [x] Tests (node, pytest, e2e reminders_walk in tools/e2e/device_mode.py): tests/js/phone_reminders.mjs + tests/test_phone_reminders.py (pins Swift text and kinds); e2e in tools/e2e/device_mode.py.
-7. [ ] Docs: handbook reminders page, ARCHITECTURE.md Device mode bullet, CHANGELOG Unreleased.
+7. [x] Docs: handbook reminders page, ARCHITECTURE.md Device mode bullet, CHANGELOG Unreleased.
 
 ## Decisions
 * The page plans; Swift only replaces the pending requests whose id starts with `reminder-`. Swift owns the words (title
@@ -33,3 +33,6 @@ Shared files carry other agents' hunks. Stage only mine: `python3 <scratchpad>/t
   `_assets(..., device=True)`); the web demo still leaves it out.
 * e2e of only my walk: a scratch driver that imports tools/e2e/device_mode.py and runs `reminders_walk` (17 PASS).
   The e2e uses `_until` polling: wait_for_function is refused by the app's CSP.
+* Docs done: note 35 §7, docs/reminders.md "In the iPhone app", handbook settings-and-keys.md #reminders-iphone and install.md,
+  ARCHITECTURE.md Device mode bullet "Reminders", CHANGELOG Unreleased "Added", note 39 out-of-scope line.
+* Next: full pytest, ruff, node vectors; mark complete.

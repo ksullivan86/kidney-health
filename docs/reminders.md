@@ -83,6 +83,14 @@ The title is the server name you set in Server administration, or "Food log" whi
 screen is public. The words never hold food names, numbers, a condition or the person's name. The push service learns when a
 message is sent and that it came from this server.
 
+## In the iPhone app
+
+The iPhone app has reminders with no server ([design note 35 §7](dev/research/35-reminders.md)). They are the iPhone's own
+notifications: no Web Push, no push service and none of the settings above. The reminders are kept with the log on the phone and
+are in its export. Each time they change, and after each save, the page plans the next 7 days (at most 60) and the app replaces
+its pending notifications. The app writes the words, the same as above with the title "Food log". Reminders set on the phone are
+not sent to a paired server.
+
 ## Routes
 
 ```

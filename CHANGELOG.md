@@ -19,6 +19,12 @@ the API. Security fixes are released as patch versions of the newest minor versi
   gives: `export.json`, the spreadsheet (CSV) files and the README. The file is made on the device and nothing is sent. Before,
   they gave `export.json` only.
 
+### Added
+
+* Reminders in the iPhone app, with no server. Settings → Reminders uses the iPhone's own notifications: turn them on, add a
+  reminder to log a meal, plan tomorrow or log your weight, and send a test. A meal reminder is skipped when that meal is already
+  logged today. Reminders set on the iPhone stay on the iPhone. Do not rely on them for low blood sugar; use your CGM's alerts.
+
 ## 0.25.0 — 2026-11-24
 
 The iPhone app works with no server, and with your own server both ways (design notes 38 and 39).
