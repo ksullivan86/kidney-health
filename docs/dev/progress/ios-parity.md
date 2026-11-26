@@ -30,4 +30,4 @@ Ask with no server stays off (needs the server's checks).
   certificates". Each run's fresh Mac makes an Apple Development certificate via the API key; the leftovers filled the account.
 * Fixed in 54d5a6c: scripts/asc_ci_certs.py (stdlib + openssl), `this-run` in the workflow's EXIT trap, `old-runs` behind the
   workflow input remove_old_ci_certificates (default false). Tests: tests/test_asc_ci_certs.py, test_ios_app TestFlight test.
-* Build 11 needs the old ones gone: the owner ticks the box (asked 2026-11-26) or removes "Created via API" certificates by hand.
+* Build 11 needs the old ones gone. Owner, 2026-11-26: "yes go ahead" — start build 11 with remove_old_ci_certificates=true.
