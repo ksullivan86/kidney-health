@@ -47,7 +47,7 @@ from pydantic import BaseModel, Field
 from starlette.routing import compile_path
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from . import barcode, brand, instacart, meta
+from . import barcode, brand, instacart, meta, sharing
 from .ai import routes as ai_routes
 from .api_version import API_VERSION
 from .audit import audit
@@ -116,6 +116,15 @@ ALLOWED: frozenset[tuple[str, str]] = frozenset({
     ("DELETE", "/api/guidance/preferences/{food_id}"),
     ("GET", "/api/foods"),
     ("GET", "/api/foods/{food_id}"),
+    # The Care team's notes and suggestions for the person (notes 37 and 29; owner, 2026-11-26): read, mark read with the version
+    # shown, delete; add a suggestion to the plan or say no thanks. Each route finds a row only by the person's own id. Sharing
+    # itself (who sees what, links, invites) stays in the web app: /api/me/shares and /api/shared are never on the list.
+    ("GET", "/api/me/notes"),
+    ("POST", "/api/me/notes/{note_id}/read"),
+    ("DELETE", "/api/me/notes/{note_id}"),
+    ("GET", "/api/me/suggestions"),
+    ("POST", "/api/me/suggestions/{suggestion_id}/accept"),
+    ("POST", "/api/me/suggestions/{suggestion_id}/decline"),
 })
 # Routes on the list that take only some keys through the gateway: the body must be one JSON object holding at least one of these
 # keys and nothing else, or the answer is 403 and the route never runs.
@@ -378,6 +387,19 @@ class AboutFeatures(BaseModel):
     changes: bool = Field(description="As `sync.changes`.")
 
 
+class AboutCareMember(BaseModel):
+    name: str
+    role: str = Field(description="`viewer`, `care_helper`, `caregiver`, `clinician` or `custom`, as `GET /api/me/shares`.")
+    areas: list[str] = Field(default_factory=list, description="What the person shares with them (only in `team`).")
+
+
+class AboutCareTeam(BaseModel):
+    enabled: bool = Field(description="The Care team is turned on for this server (`sharing.enabled`).")
+    notes: bool = Field(description="Notes from the Care team are on (`care_notes.enabled`).")
+    team: list[AboutCareMember] = Field(description="Who is on the person's Care team: name, role, areas. No id or user name.")
+    on: list[AboutCareMember] = Field(description="Whose Care team the person is on: name and role.")
+
+
 class About(BaseModel):
     account: str = Field(description="Opaque and stable for this person on this server; names neither. A new value means a "
                                      "different account or server.")
@@ -389,6 +411,8 @@ class About(BaseModel):
     services: AboutServices
     capabilities: meta.Capabilities
     features: AboutFeatures
+    care_team: AboutCareTeam = Field(description="Read-only, for Settings → Care team on the phone (owner, 2026-11-26). Sharing "
+                                                 "is changed in the web app.")
 
 
 def account_key(request: Request, user_id: int) -> str:
@@ -415,6 +439,7 @@ def about_view(request: Request, conn: sqlite3.Connection, user: User, *, change
                      "instacart": instacart.enabled(request, conn), "list_sync": list_sync_api.enabled(request, conn)},
         "capabilities": caps,
         "features": {"usda_search": usda, "barcode": caps["barcode"], "ai": bool(view and view["available"]), "changes": changes},
+        "care_team": sharing.care_team_summary(conn, request, person),
     }
 
 

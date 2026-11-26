@@ -126,6 +126,7 @@ const SHELL_URLS = [
   '/js/mock/server_sync.js',
   '/js/mock/server_changes.js',
   '/js/mock/server_account.js',
+  '/js/mock/server_care.js',
   '/js/mock/seed.js',
   '/js/views/today.js',
   '/js/views/add.js',

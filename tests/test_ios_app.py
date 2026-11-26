@@ -318,10 +318,19 @@ def test_the_server_api_bridge_carries_only_its_allow_list():
         ("GET", "/push/v1/api/guidance/preferences"), ("PUT", "/push/v1/api/guidance/preferences/{food_id}"),
         ("DELETE", "/push/v1/api/guidance/preferences/{food_id}"),
         ("GET", "/push/v1/api/foods"), ("GET", "/push/v1/api/foods/{food_id}"),
+        # the Care team's notes and suggestions for the person (owner, 2026-11-26); never sharing itself
+        ("GET", "/push/v1/api/me/notes"), ("POST", "/push/v1/api/me/notes/{note_id}/read"), ("DELETE", "/push/v1/api/me/notes/{note_id}"),
+        ("GET", "/push/v1/api/me/suggestions"), ("POST", "/push/v1/api/me/suggestions/{suggestion_id}/accept"),
+        ("POST", "/push/v1/api/me/suggestions/{suggestion_id}/decline"),
     ]
-    # a path placeholder is only {food_id}: digits, matched segment by segment
-    assert 'if w == "{food_id}"' in core and '$0.matches(plain)' in core
-    assert set(re.findall(r"\{[a-z_]+\}", "".join(p for _, p in listed))) == {"{food_id}"}
+    # a path placeholder is a row's id: digits only, matched segment by segment
+    assert 'idSegments: Set<Substring> = ["{food_id}", "{note_id}", "{suggestion_id}"]' in core
+    assert 'if Route.idSegments.contains(w)' in core and '$0.matches(plain)' in core
+    assert set(re.findall(r"\{[a-z_]+\}", "".join(p for _, p in listed))) == {"{food_id}", "{note_id}", "{suggestion_id}"}
+    # the notes take only their page; marking one read sends the version shown (If-Match), which the bridge carries as it is
+    assert 'Route("GET", "/push/v1/api/me/notes", query: ["before", "limit"])' in core
+    for _, path in listed:
+        assert "/shares" not in path and "/shared" not in path, path  # sharing itself stays in the web app
     # sync both ways (note 39 steps 6 and 7): the feed takes only its cursor and page size
     assert 'Route("GET", "/push/v1/changes", query: ["after", "limit"])' in core
     # every route the app carries through the gateway is on the server's own gateway list (app/app_gateway.py)
