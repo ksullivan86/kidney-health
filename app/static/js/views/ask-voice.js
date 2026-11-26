@@ -13,6 +13,12 @@
      built into this device (speechSynthesis voices with localService === true only; a network voice would send the
      answer to the browser maker, so it is never used). Without such a voice the switch is hidden with a note.
 
+   * The iPhone app (device mode, owner 2026-11-26): the microphone button asks the app to listen ({ kind: 'dictate' } through
+     the bridge, ios/KidneyHealth/Phone/Dictation.swift). The app shows its own sheet and works the words out ON THE IPHONE
+     (Apple's on-device speech recognition, never a server), then answers { ok, text }. The text goes into the question box
+     the same way. The button is shown only while Ask can run and the app says it can listen on the device
+     ({ kind: 'speechStatus' } → { available, reason }); otherwise it stays hidden. Read aloud works there too.
+
    What this file never does: use the browser's speech recognition (Chrome sends that audio to Google, Safari to Apple,
    outside the owner's control: the recording goes only to the server's transcription host), load anything from another
    origin, or put text into the page as HTML (textContent / text nodes only). No inline scripts or styles (CSP). */
@@ -20,7 +26,7 @@
   'use strict';
   const KH = window.KH;
   const { $, h, s } = KH;
-  const { MOCK } = KH.flags;
+  const { MOCK, DEVICE } = KH.flags;
 
   const MAX_MS = 60000; // the server's limit; the recording stops by itself here
   const MIN_BYTES = 400; // anything smaller holds no speech
@@ -138,7 +144,7 @@
     const label = recording ? 'Stop recording' : 'Record your question';
     els.mic.setAttribute('aria-label', label);
     els.mic.title = label;
-    els.mic.disabled = sending || (!supportsRecording() && !recording);
+    els.mic.disabled = sending || (!DEVICE && !supportsRecording() && !recording); // the iPhone app listens natively
     if (!recording) els.time.textContent = '';
   }
 
@@ -147,6 +153,7 @@
   // ---------------------------------------------------------------------------
   async function sync(chatOn) {
     chatAvailable = !!chatOn;
+    if (DEVICE) { await syncPhone(); return; }
     if (MOCK || !build()) return;
     let status = null;
     try { status = await KH.ai.status(); } catch (err) { /* the switches stay as they were */ }
@@ -163,6 +170,42 @@
     refreshVoices();
     renderRead();
   }
+  // The iPhone app: the microphone follows Ask and what the app says it can do on the device.
+  const PHONE_NOT_ALLOWED = 'To speak your question, allow the microphone and speech for this app in the iPhone\'s Settings, then come back.';
+  let phoneVoice = false;
+  async function syncPhone() {
+    if (!build()) return;
+    let status = null;
+    if (chatAvailable && KH.mock && KH.mock.device) {
+      try { status = await KH.mock.device.lookup({ kind: 'speechStatus' }); } catch (err) { status = null; }
+    }
+    phoneVoice = !!(chatAvailable && status && status.ok && status.available);
+    els.mic.hidden = !phoneVoice;
+    if (state === 'idle') line(chatAvailable && status && status.reason === 'not_allowed' ? PHONE_NOT_ALLOWED : '');
+    refreshVoices();
+    renderRead();
+  }
+  async function listenOnPhone() {
+    if (state !== 'idle' || !phoneVoice) return;
+    line('');
+    state = 'listening';
+    els.mic.disabled = true;
+    let answer = null;
+    try { answer = await KH.mock.device.lookup({ kind: 'dictate' }); } catch (err) { answer = null; }
+    state = 'idle';
+    els.mic.disabled = false;
+    if (answer && answer.ok) {
+      const text = typeof answer.text === 'string' ? answer.text.trim() : '';
+      if (!text) { line('No words were heard. Try again, closer to the microphone, or type your question.', 'problem'); say('No words were heard.'); return; }
+      put(text);
+      return;
+    }
+    const error = answer && answer.error;
+    if (error === 'cancelled') { line('Nothing was kept.'); return; }
+    if (error === 'not_allowed') { line(PHONE_NOT_ALLOWED, 'problem'); return; }
+    line((answer && typeof answer.message === 'string' && answer.message) || 'The words could not be worked out. Type your question instead.', 'problem');
+  }
+
   const unsupportedText = () => (window.isSecureContext === false
     ? 'Voice input needs a secure (https) connection. Type your question instead.'
     : 'This browser cannot record audio. Type your question instead.');
@@ -182,6 +225,7 @@
   }
 
   async function onMic() {
+    if (DEVICE) { await listenOnPhone(); return; }
     if (state === 'recording') { stopRecording(); return; }
     if (state !== 'idle' || !info) return;
     if (!supportsRecording()) {
@@ -403,7 +447,7 @@
   function renderRead(settled) {
     if (!built) return;
     const waiting = !!voiceTimer && !voices.length && !settled;
-    const show = chatAvailable && !MOCK;
+    const show = chatAvailable && (!MOCK || DEVICE); // the iPhone's own voices read aloud on the phone too
     els.readBox.hidden = !show || waiting;
     if (!show || waiting) return;
     const has = voices.length > 0;
@@ -431,7 +475,7 @@
   }
 
   function speak(answer) {
-    if (MOCK || !built || !els.readInput.checked) return;
+    if ((MOCK && !DEVICE) || !built || !els.readInput.checked) return;
     const engine = synth();
     const voice = pickVoice();
     const text = spokenText(answer);

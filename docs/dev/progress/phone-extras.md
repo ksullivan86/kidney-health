@@ -12,7 +12,16 @@ Three device-mode gaps, done in the order 1, 3, 2.
    * Verified: node check 30/30; pytest test_export_vectors, test_demo_local_ui; `tools/e2e/demo_local.py --only export` 25 passed.
    * PENDING COMMIT (shared files with other agents' hunks): app/static/js/views/settings.js (button label
      'Export my data (.zip)'), app/static/index.html (#dl-export text). Commit when those files have no foreign hunks.
-2. Voice for Ask: Apple's on-device speech recognition through the bridge. — not started
+2. Voice for Ask: Apple's on-device speech recognition through the bridge. — done (commit pending for shared files)
+   * ios/KidneyHealth/Phone/Dictation.swift: SFSpeechRecognizer, requiresOnDeviceRecognition = true, native sheet (Done/Cancel,
+     60 s). Chose SFSpeechRecognizer over SpeechAnalyzer: available since iOS 13 (deployment target 17), a stable API I can write
+     without a Mac to compile on; SpeechAnalyzer (iOS 26) could replace it later behind `if #available`.
+   * Bridge kinds speechStatus / dictate in Services/FoodServices.swift. Plist sentences as INFOPLIST_KEY_* in project.pbxproj.
+   * Page: js/views/ask-voice.js syncPhone()/listenOnPhone(); ask.js calls askVoice.sync before its DEVICE branch.
+   * Tests: tests/test_phone_dictation.py, tests/test_ask_voice_ui.py; e2e tools/e2e/device_mode.py ask_walk (mic → words in box,
+     nothing sent) and no_server_ask (no mic): 159 passed.
+   * PENDING COMMIT (other agents' hunks there): tests/test_ios_app.py (AVFoundation, Speech allowed), tools/e2e/device_mode.py,
+     ARCHITECTURE.md (Voice for Ask + Export bullets in Device mode), app/static/index.html (#dl-export text).
 3. Handbook: bundle the built handbook into the iPhone app's web files, or the smallest safe version. — not started
 
 ## Notes

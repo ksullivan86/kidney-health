@@ -94,6 +94,10 @@ final class FoodServices: ObservableObject {
             return ["ok": true, "usda": usdaOn && hasUsdaKey, "off": offOn, "scan": BarcodeScanner.available]
         case "scanBarcode": // the native scanner (Phone/BarcodeScanner.swift); the page looks the code up itself
             return await BarcodeScanner.shared.scan()
+        case "speechStatus": // speaking a question for Ask (Phone/Dictation.swift): worked out on the phone only
+            return Dictation.status()
+        case "dictate":
+            return await Dictation.shared.dictate()
         case "aiStatus": // the iPhone's own AI (design note 38, step 5): on the phone only
             return OnDeviceAI.status()
         case "ai":

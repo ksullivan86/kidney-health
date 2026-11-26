@@ -335,6 +335,11 @@ If your admin has set up speech to text, a **microphone** button sits next to **
   answer to someone else.
 - The app does not use your browser's own speech recognition (some browsers send that audio to Google or Apple).
 
+In the iPhone app, the microphone works without a speech-to-text server. Tap it and a sheet listens and shows your words.
+Tap **Done** to put them in the question box, or **Cancel**. The words are worked out on the iPhone and nothing is sent. The
+first time, the iPhone asks to use the microphone and speech. The microphone shows only when Ask can run and your iPhone can do
+this for your language. **Read answers aloud** works there too.
+
 ## Talk to an assistant (optional)
 
 Some people like to ask about food in a chat, by typing or by talking. If your admin turns on **assistant

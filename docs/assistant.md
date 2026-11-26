@@ -478,6 +478,10 @@ the words you speak become text in the question box, and you press Send as alway
 * **Read answers aloud.** A switch under the box (off by default, remembered on this device only) speaks the checked answer, with
   a voice built into your device. A voice that works over the internet is never used; with no built-in voice the switch is hidden.
   Only the answer's words are spoken: not the cards, the figures or any link.
+* **In the iPhone app** (owner, 2026-11-26) the microphone needs no transcription server. It asks the app, which listens in a sheet
+  of its own and works the words out on the iPhone with Apple's on-device speech recognition (`requiresOnDeviceRecognition`). The
+  sound and the words never leave the phone and nothing is kept. The words go into the question box the same way. The button is
+  shown only while Ask can run and the iPhone can do this for its language. Read answers aloud works there too.
 
 **Not built** (see [`dev/plans/assistant-step2.md`](dev/plans/assistant-step2.md), "Next", and the [ROADMAP](ROADMAP.md)): recipe pages.
 
