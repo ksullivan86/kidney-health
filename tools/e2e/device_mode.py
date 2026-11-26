@@ -1020,6 +1020,74 @@ def recipe_walk(browser, base: str) -> None:
     ctx.close()
 
 
+# The owner, 2026-11-26: Withings on the iPhone with no server. A stand-in for the app: the person's own Withings developer app is
+# saved; Connect signs in (deviceConnect) and the fetch answers one weight and one blood pressure reading from yesterday morning.
+DEVICES_STUB = ("window.__kh = { asked: [], copies: [], phone: [] };"
+                "const t = new Date(); t.setDate(t.getDate() - 1); t.setHours(7, 15, 0, 0); const at = Math.floor(t.getTime() / 1000);"
+                "window.__kh.answer = { ok: true, now: Math.floor(Date.now() / 1000), json: JSON.stringify({ pages: [{ updatetime: at, more: false,"
+                " timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, measuregrps: ["
+                " { grpid: 11, attrib: 0, category: 1, date: at, measures: [{ type: 1, value: 7512, unit: -2 }] },"
+                " { grpid: 12, attrib: 0, category: 1, date: at + 300, measures: [{ type: 10, value: 128, unit: 0 }, { type: 9, value: 79, unit: 0 },"
+                " { type: 11, value: 64, unit: 0 }] }] }] }) };"
+                "window.webkit = { messageHandlers: { safetyCopy: { postMessage: (x) => window.__kh.copies.push(String(x)) },"
+                " phone: { postMessage: (m) => window.__kh.phone.push(String(m)) },"
+                " bridge: { postMessage: async (r) => { window.__kh.asked.push(r);"
+                " if (r.kind === 'services') return { ok: true, off: false, usda: false, scan: false };"
+                " if (r.kind === 'serverInfo') return { ok: true, paired: false };"
+                " if (r.kind === 'deviceStatus') return { ok: true, relay: 'https://example.github.io/kidney-health/oauth/',"
+                "   providers: { withings: { app: true, connected: false }, whoop: { app: false, connected: false } } };"
+                " if (r.kind === 'deviceConnect') return { ok: true };"
+                " if (r.kind === 'deviceFetch') return window.__kh.answer;"
+                " if (r.kind === 'aiStatus') return { ok: true, available: false, reason: 'not_eligible' };"
+                " return { error: 'off_off', message: 'off' }; } } } };")
+
+
+def devices_walk(browser, base: str) -> None:
+    """Settings → Connected devices on the iPhone with no server: shown in the menu; Whoop says where to add the developer app; Connect
+    Withings asks first, signs in through the app, and adds the weight and the reading marked "from Withings", on this iPhone; the
+    page never asks for a secret or a token."""
+    tag = "devices"
+    ctx = browser.new_context(viewport={"width": 375, "height": 812}, color_scheme="light")
+    ctx.add_init_script(DEVICES_STUB)
+    page = ctx.new_page()
+    errors: list[str] = []
+    others: list[str] = []
+    page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.on("request", lambda r: others.append(r.url) if not r.url.startswith(base) else None)
+    page.goto(f"{base}/index.html#today")
+    page.wait_for_selector("#view-today:not([hidden])", timeout=30000)
+    page.wait_for_timeout(800)
+    page.evaluate("KH.request('PUT', '/api/device/setup', { done: true }).then(() => KH.mock.local.flush())")
+    page.goto(f"{base}/index.html#settings")
+    page.reload()
+    page.wait_for_selector("#set-devices-withings-connect", state="visible", timeout=30000)
+    check(f"[{tag}] Settings lists Connected devices", page.locator("#settings-nav").get_by_role("button", name="Connected devices").count() == 1)
+    whoop = page.locator("#set-devices-whoop-off").inner_text()
+    check(f"[{tag}] Whoop says where to add the developer app", "Keys and services" in whoop, whoop)
+    page.click("#set-devices-withings-connect")
+    consent = page.locator("#set-devices-withings .device-consent").inner_text()
+    check(f"[{tag}] the box says this iPhone fetches with your own developer app",
+          "This iPhone then fetches" in consent and "with your own developer app" in consent, consent[:300])
+    page.click("#set-devices-withings-go")
+    page.wait_for_selector("#set-devices-withings-status", timeout=15000)
+    status = page.locator("#set-devices-withings-status").inner_text()
+    check(f"[{tag}] connected on this iPhone, one weight and one reading", "On this iPhone." in status and "1 weight and 1 blood pressure reading" in status,
+          status)
+    rows = page.evaluate("KH.request('GET', '/api/body/weights?start=' + KH.util.addDays(KH.util.todayStr(), -3) + '&end=' + KH.util.todayStr())")
+    weights = rows.get("weights", []) if isinstance(rows, dict) else []
+    check(f"[{tag}] the weight is from Withings", [(w["kg"], w["source"]) for w in weights] == [(75.12, "withings")], json.dumps(weights)[:200])
+    kinds = [r["kind"] for r in page.evaluate("window.__kh.asked")]
+    check(f"[{tag}] the app was asked to sign in and fetch", "deviceConnect" in kinds and "deviceFetch" in kinds, ",".join(kinds))
+    asked = json.dumps(page.evaluate("window.__kh.asked"))
+    check(f"[{tag}] no secret or token is asked for", "secret" not in asked and "token" not in asked, asked[:200])
+    over = page.evaluate("document.documentElement.scrollWidth > window.innerWidth + 1")
+    check(f"[{tag}] no sideways scroll", not over)
+    check(f"[{tag}] no request to another host", not others, "; ".join(others[:3]))
+    check(f"[{tag}] no console or page error", not errors, "; ".join(errors[:3]))
+    ctx.close()
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n", 1)[0])
     ap.add_argument("--out", type=Path, default=OUT)
@@ -1045,6 +1113,7 @@ def main(argv: list[str] | None = None) -> int:
                 reminders_walk(browser, base)
                 care_walk(browser, base)
                 recipe_walk(browser, base)
+                devices_walk(browser, base)
             finally:
                 browser.close()
     finally:
