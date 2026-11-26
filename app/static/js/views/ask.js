@@ -7,7 +7,8 @@
    * The iPhone app (device mode, design note 39): the tab is always there. Ask runs on the paired server's AI, through
      js/mock/ai.js, while the phone syncs both ways with that server; otherwise the screen says why and what to do
      (GET /api/me/ai → phone.ask, PHONE_TEXT below). It never shows the demo's text. On the phone the assistant always
-     asks before it saves, and Save goes through the phone's own routes (then sync sends it to the server). No voice.
+     asks before it saves, and Save goes through the phone's own routes (then sync sends it to the server). Voice
+     is worked out on the iPhone itself (js/views/ask-voice.js).
    * The conversation lives in this page only (the server stores no transcript): "New conversation", reloading
      or signing out forgets it. Each send posts the last 20 messages to POST /api/ai/chat.
    * Every answer is the server's checked answer: its text is set with textContent, never as HTML; a low or an
@@ -91,12 +92,12 @@
     } catch (err) { /* the tab stays out of the way when the status cannot be read */ }
     const whereEl = $('#ask-where');
     if (whereEl) { whereEl.textContent = available && where ? where : ''; whereEl.hidden = !(available && where); }
+    if (KH.askVoice) KH.askVoice.sync(available); // js/views/ask-voice.js: the microphone and read aloud follow the same answer
     if (DEVICE) {
       if (state.view === 'ask') { notice(available ? null : PHONE_TEXT[phoneWhy] || PHONE_TEXT.not_paired); if (available) syncControls(); }
       return available;
     }
     tab.hidden = !available;
-    if (KH.askVoice) KH.askVoice.sync(available); // js/views/ask-voice.js: the microphone and read aloud follow the same answer
     if (!available && state.view === 'ask') router.show('today');
     return available;
   }

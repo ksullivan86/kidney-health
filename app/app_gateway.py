@@ -47,7 +47,7 @@ from pydantic import BaseModel, Field
 from starlette.routing import compile_path
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from . import barcode, brand, instacart, meta
+from . import barcode, brand, instacart, meta, sharing
 from .ai import routes as ai_routes
 from .api_version import API_VERSION
 from .audit import audit
@@ -90,6 +90,14 @@ ALLOWED: frozenset[tuple[str, str]] = frozenset({
     ("GET", "/api/foods/usda/search"),
     ("POST", "/api/foods/usda/import"),
     ("POST", "/api/foods/barcode"),
+    # Connected devices (notes 27 and 28; owner, 2026-11-26: "Should Withings and Whoop be set up from the phone?" "yes"): the
+    # person's own connections, Sync now and Disconnect, and the Whoop days and the active-day setting they bring. Connecting
+    # itself (start and the way back) needs the browser's session, so the phone opens this server's own page for it: never here.
+    ("GET", "/api/devices"),
+    ("POST", "/api/devices/{provider_id}/sync"),
+    ("DELETE", "/api/devices/{provider_id}"),
+    ("GET", "/api/activity"),
+    ("PUT", "/api/activity/extra"),
     # Two settings the phone needs before it may ask the server (§6.1, §7), and only those keys (BODY_KEYS): the person's own
     # Open Food Facts consent, and their AI opt-in.
     ("PATCH", "/api/me/settings"),
@@ -116,6 +124,15 @@ ALLOWED: frozenset[tuple[str, str]] = frozenset({
     ("DELETE", "/api/guidance/preferences/{food_id}"),
     ("GET", "/api/foods"),
     ("GET", "/api/foods/{food_id}"),
+    # The Care team's notes and suggestions for the person (notes 37 and 29; owner, 2026-11-26): read, mark read with the version
+    # shown, delete; add a suggestion to the plan or say no thanks. Each route finds a row only by the person's own id. Sharing
+    # itself (who sees what, links, invites) stays in the web app: /api/me/shares and /api/shared are never on the list.
+    ("GET", "/api/me/notes"),
+    ("POST", "/api/me/notes/{note_id}/read"),
+    ("DELETE", "/api/me/notes/{note_id}"),
+    ("GET", "/api/me/suggestions"),
+    ("POST", "/api/me/suggestions/{suggestion_id}/accept"),
+    ("POST", "/api/me/suggestions/{suggestion_id}/decline"),
 })
 # Routes on the list that take only some keys through the gateway: the body must be one JSON object holding at least one of these
 # keys and nothing else, or the answer is 403 and the route never runs.
@@ -133,9 +150,13 @@ MAX_KEYS_BODY = 16384  # the meal guidance choices are one object
 NEVER_PREFIXES: tuple[str, ...] = (
     "/api/auth/", "/api/admin/", "/api/me/tokens", "/api/me/sessions", "/api/me/keys", "/api/me/ai/provider", "/api/me/ai/probe",
     "/api/me/import", "/api/me/export.zip", "/api/me/password", "/api/me/totp", "/api/me/passkeys", "/api/me/oidc",
-    "/api/me/email", "/api/me/shares", "/api/shared", "/api/devices",
+    "/api/me/email", "/api/me/shares", "/api/shared",
 )
-NEVER: frozenset[tuple[str, str]] = frozenset({("DELETE", "/api/me"), ("PATCH", "/api/me")})
+NEVER: frozenset[tuple[str, str]] = frozenset({
+    ("DELETE", "/api/me"), ("PATCH", "/api/me"),
+    # Connecting a device is tied to the browser session that started it (app/devices/api.py): the phone opens the web app for it.
+    ("POST", "/api/devices/{provider_id}/start"), ("GET", "/api/devices/{provider_id}/callback"),
+})
 
 
 def never_allowed(method: str, path: str) -> bool:
@@ -378,6 +399,19 @@ class AboutFeatures(BaseModel):
     changes: bool = Field(description="As `sync.changes`.")
 
 
+class AboutCareMember(BaseModel):
+    name: str
+    role: str = Field(description="`viewer`, `care_helper`, `caregiver`, `clinician` or `custom`, as `GET /api/me/shares`.")
+    areas: list[str] = Field(default_factory=list, description="What the person shares with them (only in `team`).")
+
+
+class AboutCareTeam(BaseModel):
+    enabled: bool = Field(description="The Care team is turned on for this server (`sharing.enabled`).")
+    notes: bool = Field(description="Notes from the Care team are on (`care_notes.enabled`).")
+    team: list[AboutCareMember] = Field(description="Who is on the person's Care team: name, role, areas. No id or user name.")
+    on: list[AboutCareMember] = Field(description="Whose Care team the person is on: name and role.")
+
+
 class About(BaseModel):
     account: str = Field(description="Opaque and stable for this person on this server; names neither. A new value means a "
                                      "different account or server.")
@@ -389,6 +423,8 @@ class About(BaseModel):
     services: AboutServices
     capabilities: meta.Capabilities
     features: AboutFeatures
+    care_team: AboutCareTeam = Field(description="Read-only, for Settings → Care team on the phone (owner, 2026-11-26). Sharing "
+                                                 "is changed in the web app.")
 
 
 def account_key(request: Request, user_id: int) -> str:
@@ -415,6 +451,7 @@ def about_view(request: Request, conn: sqlite3.Connection, user: User, *, change
                      "instacart": instacart.enabled(request, conn), "list_sync": list_sync_api.enabled(request, conn)},
         "capabilities": caps,
         "features": {"usda_search": usda, "barcode": caps["barcode"], "ai": bool(view and view["available"]), "changes": changes},
+        "care_team": sharing.care_team_summary(conn, request, person),
     }
 
 

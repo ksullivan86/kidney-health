@@ -251,6 +251,46 @@ the same host to say yes.
 * **Polling, no webhooks.** Whoop has none for cycles, and a home server may not be reachable.
 * **Disconnect** deletes the tokens here and asks Whoop to end the access (`DELETE /v2/user/access`).
 
+## The iPhone app
+
+The owner asked on 2026-11-26 for Withings and Whoop to be set up from the phone. The iPhone app shows **Settings → Connected
+devices** too, and uses each company one of two ways. The server's way comes first.
+
+**Through your server.** When the phone is paired with a token "For the iPhone app, both ways" and this server has the company set
+up, the phone reads `GET /api/devices` and runs Sync now and Disconnect through the token gateway
+([`push.md`](push.md#the-iphone-app-both-ways)). Connect opens this server's own page at `/#/devices/open/<provider>` in Safari's
+sheet inside the app. The person signs in to the server there and connects as in the web app, so the sign-in still finishes in the
+browser session that started it. Readings then reach the phone through the change feed. Whoop days reach it through
+`GET /api/activity`, kept on the phone for when the server cannot be reached.
+
+**On the phone, with no server.** The person registers their own free developer app and types its client ID and secret into the
+app's Keys and services screen. They stay in the iPhone's Keychain, on that phone only, and never reach the page. The app signs in
+with Apple's sign-in sheet, fetches the company's raw answers, and the page reads them with this server's rules
+(`js/engine/device_map.js`, the twin of `withings.py` and `whoop.py`, pinned by `tests/data/device_map_vectors.json`). It adds rows
+with the same rules as `store.py`: a ledger so a deleted reading never comes back, the same reading at the same minute from any
+source (Apple Health too) is already there, and a full day is skipped. While this server has the company connected, the phone's
+own connection waits.
+
+Callback address. Withings accepts only an https address it can match, and says no to localhost and IP addresses. Its documents say
+nothing about custom app schemes, so the app does not rely on one. Both companies send the person back to a small static page on
+the handbook's GitHub Pages site, `https://ksullivan86.github.io/kidney-health/oauth/` (`handbook/oauth/`). Its script, a separate
+file, hands `code`, `state` and `error` to the app's own scheme and keeps nothing. The app checks `state` before it uses a code, and
+a code is useless without the secret, which stays on the phone.
+
+What the person registers in each developer portal:
+
+* **Withings** (developer.withings.com): a public API integration with the callback URL
+  `https://ksullivan86.github.io/kidney-health/oauth/`. The app asks for `user.metrics` only.
+* **Whoop** (developer.whoop.com): an app with the redirect URL `https://ksullivan86.github.io/kidney-health/oauth/` and the scopes
+  `offline`, `read:cycles`, `read:recovery`, `read:sleep` and `read:workout`.
+
+For this to work, the handbook's Pages site must be published (`HANDBOOK_PAGES`, see `.github/workflows/handbook-pages.yml`). A
+fork that publishes elsewhere changes `DeviceLinks.relayURL` in `ios/KidneyHealthCore`.
+
+Whoop's guide says a client secret belongs on a server, never in a mobile app. That is about an app handed out to many people.
+Here each person uses their own developer app and secret on their own phone, so the secret only reaches the account it can
+already read.
+
 ## Privacy
 
 Withings learns that this app (by the name you gave it) reads the person's measurements, and sees the server's address. The

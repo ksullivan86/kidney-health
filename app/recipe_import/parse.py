@@ -1,7 +1,7 @@
 """Reading a recipe: schema.org ``Recipe`` data, ingredient lines, search words and amounts (design note 30 §3). Pure.
 
 * :func:`ld_json_blocks`: the ``<script type="application/ld+json">`` blocks of a page, read with the standard library's
-  ``html.parser`` (nothing on the page runs). Server only: the demo has no page to read.
+  ``html.parser`` (nothing on the page runs). Its twin ``ldJsonBlocks`` is used by the iPhone app, which reads a page itself.
 * :func:`find_recipe`: the first ``Recipe`` in those blocks (a plain object, an array, an ``@graph`` or a ``mainEntity``).
 * :func:`recipe_from_jsonld`: its name, the servings it makes, its steps (within the saved-meal limits) and its ingredient lines.
   The page's own ``nutrition`` is ignored (it rarely lists potassium or phosphorus).
@@ -10,8 +10,8 @@
 * :func:`recipe_servings`: an amount and unit → servings of one food, only where the food's serving allows it; else ``None``.
 * :func:`lines_of_text`: pasted ingredients → lines (headings such as "For the sauce:" left out).
 
-Every function but :func:`ld_json_blocks` has a JavaScript twin, ``app/static/js/engine/recipe_import.js``, pinned by
-``tests/data/recipe_import_vectors.json`` (``tests/data/gen_recipe_import_vectors.py``).
+Every function has a JavaScript twin, ``app/static/js/engine/recipe_import.js``, pinned by ``tests/data/lists_recipes_vectors.json``
+and ``tests/data/recipe_page_vectors.json`` (their ``gen_*.py``).
 """
 from __future__ import annotations
 

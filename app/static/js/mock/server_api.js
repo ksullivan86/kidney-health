@@ -18,7 +18,8 @@
    `about` is read leniently, since the server may grow it: `account`, `api_version`, `changes` (the change feed, at `sync.changes` or
    `features.changes`; js/mock/server_changes.js), and per feature whether it is on, either at the top or under `features`:
    `usda_search` (or `usda`), `barcodes` (or `barcode`), `ai` ({ enabled, routes: { <feature>: { available } } }, the routes of
-   GET /api/ai/status); and under `services` (step 9): `recipe_import`, `instacart`, `list_sync`.
+   GET /api/ai/status); and under `services` (step 9): `recipe_import`, `instacart`, `list_sync`; and `care_team` (names, roles and
+   areas of the person's Care team, for Settings → Care team, read-only).
    A feature it does not mention is tried; the server answers for itself.
    The AI's choice (server, then the iPhone's own, then none) is in js/mock/ai.js; the food lookups are in foods.js and barcode.js;
    recipe pages, Instacart and the list app in lists.js.
@@ -78,7 +79,17 @@
     return { account: typeof json.account === 'string' ? json.account.slice(0, 200) : null, version: Number(json.api_version) || null,
       sync: pick('sync'), usda: pick('usda_search', 'usda'), barcode: pick('barcodes', 'barcode'), ai: pick('ai'), aiRoutes: routes,
       recipe: service('recipe_import'), instacart: service('instacart'), listSync: service('list_sync'),
-      changes: isDict(json.sync) && typeof json.sync.changes === 'boolean' ? json.sync.changes : pick('changes') }; // the change feed (note 39 step 5)
+      changes: isDict(json.sync) && typeof json.sync.changes === 'boolean' ? json.sync.changes : pick('changes'), // the change feed (note 39 step 5)
+      careTeam: careTeamOf(json.care_team) }; // Settings → Care team, read-only (js/mock/server_care.js)
+  }
+
+  // `care_team` of `about`: who is on the person's Care team and whose they are on, names, roles and areas only. null when absent.
+  function careTeamOf(raw) {
+    if (!isDict(raw) || typeof raw.enabled !== 'boolean') return null;
+    const text = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '');
+    const people = (list, areas) => (Array.isArray(list) ? list : []).filter(isDict).slice(0, 100).map((p) => ({ name: text(p.name, 200),
+      role: text(p.role, 40), ...(areas ? { areas: (Array.isArray(p.areas) ? p.areas : []).filter((a) => typeof a === 'string').slice(0, 10) } : {}) }));
+    return { enabled: raw.enabled, notes: raw.notes === true, team: people(raw.team, true), on: people(raw.on, false) };
   }
 
   function remember(state, server = known ? known.server : null, about = null) {

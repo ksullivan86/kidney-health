@@ -1,10 +1,11 @@
 // Apple's on-device language model for some tasks of the web app (design note 38, step 5, §5.6; note 39 §6.6): describe a meal,
-// read a lab report's text, meal ideas, AI recipes, and on iOS 27 a photo of a plate or a label (OnDeviceVision.swift). Everything
+// read a lab report's text, meal ideas, AI order, AI swaps, AI day plans, AI recipes, and on iOS 27 a photo of a plate or a label
+// (OnDeviceVision.swift). Everything
 // runs on the phone: nothing is sent anywhere, so lab text and photos may use it (CLAUDE.md: lab reports go to a local model only).
 // Nothing is stored: no prompt, no reply.
 //
 // The model is only asked for the answer shapes of the server's schemas (app/ai/schemas.py ParseMealAnswer, LabReportAnswer,
-// LabelAnswer, PlateAnswer, IdeasAnswer, RecipesAnswer), with the server's own instructions, read from ai-prompts.json, which
+// LabelAnswer, PlateAnswer, IdeasAnswer, RerankAnswer, SwapAnswer, PlanAnswer, RecipesAnswer), with the server's own instructions, read from ai-prompts.json, which
 // scripts/build_preview.py --device writes from app/ai/prompts.py. The page treats the answer as untrusted: it checks the shape and
 // runs the server's judges (twins in js/engine) before the person sees anything, and the person checks every line before it is
 // saved. The model is never asked to dose; its instructions say so.
@@ -15,11 +16,12 @@ import FoundationModels
 
 enum OnDeviceAI {
     /// The tasks the page may ask for. Any other is refused.
-    static let tasks: Set<String> = ["parse_meal", "read_lab_report_text", "next_meal", "recipes", "read_label", "plate"]
+    static let tasks: Set<String> = ["parse_meal", "read_lab_report_text", "next_meal", "recipes", "read_label", "plate", "rerank", "swap",
+                                     "plan"]
     /// Tasks that take a photo (a JPEG the page made) in place of text: iOS 27 and a build with OnDeviceVision only.
     static let photoTasks: Set<String> = ["read_label", "plate"]
     /// Tasks whose instructions name the person's condition (one of ai-prompts.json "conditions", never free text).
-    static let conditionTasks: Set<String> = ["next_meal", "recipes"]
+    static let conditionTasks: Set<String> = ["next_meal", "recipes", "rerank", "swap", "plan"]
     /// Text longer than this does not fit the on-device model's context (about 4,096 tokens) with its instructions. The page
     /// answers 413 itself above the same size (js/mock/ai.js MAX_DEVICE_TEXT) and trims meal and recipe candidates to fit
     /// (DEVICE_DATA_CHARS), so this only guards the app.
@@ -100,6 +102,15 @@ enum OnDeviceAI {
                     return ["ok": true, "answer": reply.content.json]
                 case "recipes":
                     let reply = try await session.respond(to: message, generating: RecipesReply.self)
+                    return ["ok": true, "answer": reply.content.json]
+                case "rerank":
+                    let reply = try await session.respond(to: message, generating: RerankReply.self)
+                    return ["ok": true, "answer": reply.content.json]
+                case "swap":
+                    let reply = try await session.respond(to: message, generating: SwapReply.self)
+                    return ["ok": true, "answer": reply.content.json]
+                case "plan":
+                    let reply = try await session.respond(to: message, generating: PlanReply.self)
                     return ["ok": true, "answer": reply.content.json]
                 default: // a photo: read_label or plate
                     let answer = try await OnDeviceVision.answer(session, task: task, message: message, jpeg: jpeg ?? "")
@@ -447,5 +458,71 @@ struct RecipesReply {
          },
          "status": status.rawValue, "refusal": refusal.rawValue]
     }
+}
+
+// MARK: - AI order, AI swaps and AI day plans (schemas.rerank_schema, swap_schema, plan_schema). The refs ("f1", "s1") and the plan's
+// meals are per request, so the shape only says "a short text" and "a meal"; the page drops any that is not in its request (the
+// server's judges, js/engine/aimeal.js).
+
+@available(iOS 26.0, *)
+@Generable
+struct RefPick {
+    @Guide(description: "The \"ref\" of one item in the data, such as \"f1\" or \"s1\"")
+    var ref: String
+    @Guide(description: "One to three of the app's reasons that are true of it", .count(1...3))
+    var reason_codes: [ReasonCode]
+
+    var json: [String: Any] { ["ref": ref, "reason_codes": reason_codes.map(\.rawValue)] }
+}
+
+@available(iOS 26.0, *)
+@Generable
+struct RerankReply {
+    @Guide(description: "Up to twelve CANDIDATES, the best first", .maximumCount(12))
+    var order: [RefPick]
+    var status: AnswerStatus
+    var refusal: IdeasRefusal
+
+    var json: [String: Any] { ["order": order.map(\.json), "status": status.rawValue, "refusal": refusal.rawValue] }
+}
+
+@available(iOS 26.0, *)
+@Generable
+struct SwapReply {
+    @Guide(description: "Up to three of SWAPS", .maximumCount(3))
+    var pick: [RefPick]
+    var status: AnswerStatus
+    var refusal: IdeasRefusal
+
+    var json: [String: Any] { ["pick": pick.map(\.json), "status": status.rawValue, "refusal": refusal.rawValue] }
+}
+
+@available(iOS 26.0, *)
+@Generable
+enum MealSlot: String {
+    case breakfast, lunch, dinner, snack
+}
+
+@available(iOS 26.0, *)
+@Generable
+struct PlanPick {
+    var meal: MealSlot
+    @Guide(description: "The \"index\" of one option of that meal in PLAN", .range(0...4))
+    var index: Int
+    @Guide(description: "One to three of the app's reasons that are true of it", .count(1...3))
+    var reason_codes: [ReasonCode]
+
+    var json: [String: Any] { ["meal": meal.rawValue, "index": index, "reason_codes": reason_codes.map(\.rawValue)] }
+}
+
+@available(iOS 26.0, *)
+@Generable
+struct PlanReply {
+    @Guide(description: "One pick for each meal in PLAN", .maximumCount(4))
+    var picks: [PlanPick]
+    var status: AnswerStatus
+    var refusal: IdeasRefusal
+
+    var json: [String: Any] { ["picks": picks.map(\.json), "status": status.rawValue, "refusal": refusal.rawValue] }
 }
 #endif

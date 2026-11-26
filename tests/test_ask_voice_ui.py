@@ -212,7 +212,8 @@ def test_only_the_checked_answer_text_is_read_and_never_links_or_cards():
     assert "LINK_TEXT" in speak
     pattern = re.search(r"const LINK_TEXT = /(.*)/gi;", VOICE_JS)
     assert pattern and "https?:" in pattern.group(1) and "\\/learn\\/" in pattern.group(1) and "@" in pattern.group(1)
-    assert "if (MOCK || !built || !els.readInput.checked) return;" in VOICE_CODE  # off until the person switches it on, never in the demo
+    # off until the person switches it on, never in the demo (the iPhone app reads aloud with its own voices)
+    assert "if ((MOCK && !DEVICE) || !built || !els.readInput.checked) return;" in VOICE_CODE
     assert "const READ_KEY = 'kh.ask.readAloud';" in VOICE_JS and "localStorage.getItem(READ_KEY) === '1'" in VOICE_CODE
 
 
@@ -246,8 +247,22 @@ def test_the_stylesheet_uses_the_apps_tokens_and_respects_reduced_motion():
 
 
 def test_the_demo_and_the_preview_never_record_or_speak():
-    assert "const { MOCK } = KH.flags;" in VOICE_JS
-    assert "if (MOCK || !build()) return;" in VOICE_CODE  # the demo's Ask screen has no input; sync() does nothing there
+    assert "const { MOCK, DEVICE } = KH.flags;" in VOICE_JS
+    # the demo's Ask screen has no input; sync() does nothing there. The iPhone app (DEVICE) goes its own way first.
+    assert "if (DEVICE) { await syncPhone(); return; }\n    if (MOCK || !build()) return;" in VOICE_CODE
+
+
+def test_the_iphone_app_listens_on_the_phone_and_only_through_the_bridge():
+    """Device mode (owner, 2026-11-26): the app works the words out on the iPhone (ios/KidneyHealth/Phone/Dictation.swift). The
+    page asks only `speechStatus` and `dictate`, never records itself there, and puts the words into the box like the server's."""
+    phone = VOICE_CODE[VOICE_CODE.index("async function syncPhone()"):VOICE_CODE.index("const unsupportedText")]
+    assert re.findall(r"kind: '(\w+)'", phone) == ["speechStatus", "dictate"]
+    assert "getUserMedia" not in phone and "MediaRecorder" not in phone and "fetch(" not in phone
+    assert "phoneVoice = !!(chatAvailable && status && status.ok && status.available);" in phone  # hidden unless Ask runs and the app can listen
+    assert "els.mic.hidden = !phoneVoice;" in phone and "put(text);" in phone
+    assert "if (DEVICE) { await listenOnPhone(); return; }" in VOICE_CODE
+    native = (REPO / "ios" / "KidneyHealth" / "Phone" / "Dictation.swift").read_text(encoding="utf-8")
+    assert "requiresOnDeviceRecognition = true" in native and "supportsOnDeviceRecognition" in native
 
 
 # --------------------------------------------------------------------------- #

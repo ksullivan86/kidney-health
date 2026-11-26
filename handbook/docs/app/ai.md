@@ -335,6 +335,11 @@ If your admin has set up speech to text, a **microphone** button sits next to **
   answer to someone else.
 - The app does not use your browser's own speech recognition (some browsers send that audio to Google or Apple).
 
+In the iPhone app, the microphone works without a speech-to-text server. Tap it and a sheet listens and shows your words.
+Tap **Done** to put them in the question box, or **Cancel**. The words are worked out on the iPhone and nothing is sent. The
+first time, the iPhone asks to use the microphone and speech. The microphone shows only when Ask can run and your iPhone can do
+this for your language. **Read answers aloud** works there too.
+
 ## Talk to an assistant (optional)
 
 Some people like to ask about food in a chat, by typing or by talking. If your admin turns on **assistant
@@ -376,14 +381,16 @@ The iPhone app can use AI in three ways. For each feature it uses the first one 
 
 1. **Your server's AI**, when the app is paired with your server both ways and your server offers the feature.
 2. **Your own AI key** from OpenAI, OpenRouter or Nous Portal, added in **Keys and services**. No server is needed. It describes
-   a meal, gives meal ideas and AI recipes, and reads photos of a meal or a label only if you turn that on.
-3. **Apple's AI on the iPhone**, on phones with Apple Intelligence. It describes a meal, gives meal ideas and AI recipes, and
-   reads the text of a lab report PDF. On iOS 27 it also reads a photo of your plate or of a label. It is small, so its meal ideas
+   a meal, gives meal ideas, AI order, AI swaps, AI day plans and AI recipes, and reads photos of a meal or a label only if you
+   turn that on.
+3. **Apple's AI on the iPhone**, on phones with Apple Intelligence. It describes a meal, gives meal ideas, AI order, AI swaps, AI
+   day plans and AI recipes, and reads the text of a lab report PDF. On iOS 27 it also reads a photo of your plate or of a label. It is small, so its meal ideas
    and recipes choose from fewer of your foods.
 
 **Settings → AI features** lists which one each feature uses now. Lab reports, and anything with your name or date of birth,
-go only to your own server's local AI or to the iPhone's own AI, never to your own key. Ask, AI order, AI swaps and AI day plans
-need your server. AI recipes on the phone never include cooking steps written by AI. The same safety
+go only to your own server's local AI or to the iPhone's own AI, never to your own key. Ask needs your server. AI swaps and AI
+day plans never use your server's AI, even when it is paired: they work on the iPhone's own log, so they use your own key or
+Apple's AI on the iPhone. AI recipes on the phone never include cooking steps written by AI. The same safety
 rules apply on every path: the app checks every answer, and a low, an emergency or a dose question gets the app's own card
 without asking any AI. How to add your key is in [Install the app](install.md#your-own-ai-key-on-the-iphone).
 

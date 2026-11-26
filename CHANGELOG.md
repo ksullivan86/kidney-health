@@ -7,6 +7,58 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+## 0.26.0 — 2026-11-26
+
+The iPhone app does what the web app does, with or without a server.
+
+### Upgrading from 0.25 (read this first)
+
+* Back up `kidney.db` first, change the image tag to `:0.26`, and start it. There is no schema step and no new server setting.
+* Nothing new is turned on for you.
+* The new phone features need the iPhone app from TestFlight, build 11 or later.
+
+### Changed
+
+* Profile's two weight boxes now use your unit for weight, pounds by default, like the weight log. The labels say the unit. To
+  use kilograms, change **Unit for weight** in Settings → Weight and blood pressure. The profile still saves kilograms, and a
+  weight you do not touch is saved unchanged.
+* The iPhone app with no server, and the online demo with "Keep my data in this browser", now export the same `.zip` a server
+  gives: `export.json`, the spreadsheet (CSV) files and the README. The file is made on the device and nothing is sent. Before,
+  they gave `export.json` only.
+
+### Added
+
+* In the iPhone app you can speak your question to Ask. The words are worked out on the iPhone and nothing is sent. They go into
+  the question box for you to check before you press Send. The microphone shows only when Ask can run.
+* The handbook is inside the iPhone app. Learn links open it in the app with no internet; Done takes you back.
+* Reminders in the iPhone app, with no server. Settings → Reminders uses the iPhone's own notifications: turn them on, add a
+  reminder to log a meal, plan tomorrow or log your weight, and send a test. A meal reminder is skipped when that meal is already
+  logged today. Reminders set on the iPhone stay on the iPhone. Do not rely on them for low blood sugar; use your CGM's alerts.
+* Your Care team in the iPhone app, when it is paired with your server by a token both ways. Today shows new notes from your Care
+  team, the Plan tab shows their meal suggestions, and you can read, delete and answer them as in the web app. Settings → Care team
+  lists who is on it; you change it in the server's web app. Notes are read from your server each time and never kept on the
+  phone. With no server the app shows no Care team. For admins: the gateway list gains six routes (`/api/me/notes` and
+  `/api/me/suggestions`, see `docs/push.md`), and `GET /push/v1/about` gains `care_team`.
+* AI order, AI swaps and AI day plans in the iPhone app with your own AI key or Apple's AI on the phone, with no server (design
+  note 39 §6.7). They use the same foods, swaps, plan options and checks as your server, and the rules rebuild and check every
+  pick. AI order still uses your server's AI first when it is paired. AI swaps and AI day plans never go to your server's AI,
+  because they work on the iPhone's own log. A food that treated a low is never sent to any AI. For admins: in the answer of
+  `POST /api/ai/next-meal` with mode `rerank`, each `order` and `rest` row now also has the food's `name`.
+* A recipe from a web page in the iPhone app with no server. When no server reads the page, or yours cannot be reached, the
+  iPhone opens the link you typed and reads the recipe the same way a server does. It opens `https` links only, never a home or
+  local address, follows at most 3 redirects, and stops at 2 MB or 15 seconds. The page is not kept, and nothing else leaves the
+  phone. The review screen says the page was read on this iPhone.
+* Withings and Whoop in the iPhone app. Settings → Connected devices now shows on the phone. When the phone is paired with your
+  server by a token both ways and your server has the company set up, the phone shows your server's connection, with Sync now and
+  Disconnect, and Connect opens your server's own page inside the app. With no server, the phone connects with your own free
+  developer app: paste its client ID and secret in Keys and services, and register
+  `https://ksullivan86.github.io/kidney-health/oauth/` as its callback address. The secret stays in the iPhone's Keychain. The
+  phone then fetches new readings and Whoop days when you open the app, with the same rules as a server: nothing is added twice,
+  and a reading you deleted does not come back. If your server has the company connected, its connection is used. For admins: the
+  gateway list gains `GET /api/devices`, `POST /api/devices/{provider_id}/sync`, `DELETE /api/devices/{provider_id}`,
+  `GET /api/activity` and `PUT /api/activity/extra` (see `docs/push.md`). Connecting stays in the web app. The handbook's Pages
+  site gains the small `oauth/` page.
+
 ## 0.25.0 — 2026-11-24
 
 The iPhone app works with no server, and with your own server both ways (design notes 38 and 39).

@@ -277,9 +277,10 @@ leave the server.
 * **Your own AI key on the iPhone app**, if you add one in Keys and services (no server needed). The app then sends the AI company
   you chose (OpenAI, OpenRouter or Nous Portal) only what the feature needs: the words of a meal you describe, cleaned as the
   server cleans them, and, only if you turn photos on, the photo of a meal or a label, redrawn without location data. For meal
-  ideas and AI recipes it sends what your server would send its AI: the foods the app's rules chose (names and amounts), your
+  ideas, AI order, AI swaps, AI day plans and AI recipes it sends what your server would send its AI: the foods the app's rules chose (names and amounts), your
   targets, today's totals, the week's average, your kidney stage, dialysis and diabetes type, your AI preferences and the foods you
-  marked, and your age band and sex only if you agreed to share them. It never sends a lab report, your name or your date of birth.
+  marked, and your age band and sex only if you agreed to share them. A swap also sends the food being swapped and the app's
+  swaps for it; a day plan sends the plan's options (meal names, foods and amounts). It never sends a lab report, your name or your date of birth.
   A request that holds your name or birth month is not sent. Apple's AI on the iPhone gets the same for these features and, on
   iOS 27, a photo of a meal or a label; it runs on the phone and sends nothing. The key stays in the iPhone's Keychain, the server never sees it, and nothing about the request or the answer
   is kept. The company receives what is sent, under its own terms.
@@ -337,11 +338,11 @@ IndexedDB, on this device only**. **Nothing is sent anywhere**: the page makes n
 server to hold a copy. What that means for you:
 
 * it is **not backed up**: clearing site data, private browsing, or the browser deciding to free up space can delete it, so export
-  it regularly (**Settings → Your data → Export my data (export.json)**) and keep the file somewhere private, since it holds
+  it regularly (**Settings → Your data → Export my data (.zip)**) and keep the file somewhere private, since it holds
   your health data;
 * anyone who can use this browser on this device can open the demo and see it (the demo has no real sign-in);
 * **Stop keeping data here** deletes the stored copy; the demo then starts again with its sample data;
-* the file is the same `export.json` a server writes, so you can move to a real server with **Import from a file** (above);
+* the file is the same `.zip` a server writes, so you can move to a real server with **Import from a file** (above);
 * the installed app never does any of this: it keeps your data on your server only (its offline queue stores unsent entries
   on the device, see [Install on your phone](install-on-your-phone.md#offline)).
 

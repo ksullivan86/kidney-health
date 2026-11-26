@@ -26,7 +26,7 @@
   const REG = KH.settings;
 
   // Kept equal to APP_VERSION in app/main.py (tests/test_settings_ui.py).
-  const APP_VERSION = '0.25.0';
+  const APP_VERSION = '0.26.0';
 
   const A = {
     sessions: () => request('GET', '/api/me/sessions'),
@@ -545,8 +545,8 @@
     const wrap = h('div', { class: 'data-block' });
     const msg = statusMsg('set-export-msg');
     wrap.append(h('p', {}, 'Download everything you have entered: a .zip with export.json and spreadsheet (CSV) files for your log, foods, saved meals, lab results, symptoms, weights, blood pressure readings and settings. It holds no passwords, sessions or keys.'));
-    wrap.append(h('div', { class: 'settings-actions' }, action(MOCK && keptHere() ? 'Export my data (export.json)' : 'Export my data (.zip)', 'secondary', async () => {
-      if (MOCK && keptHere()) { // "Keep my data in this browser" is on (the Pages demo, js/views/demo_local.js): the file the zip would hold
+    wrap.append(h('div', { class: 'settings-actions' }, action('Export my data (.zip)', 'secondary', async () => {
+      if (MOCK && keptHere()) { // the iPhone app, or "Keep my data in this browser" (js/views/demo_local.js): the server's zip, built here
         msg.textContent = 'Preparing your export…';
         try {
           const res = await KH.demoLocal.exportFile();
@@ -1699,10 +1699,10 @@
   }
   // Design note 39 §8.7 point 5 (js/mock/server_account.js): this iPhone's profile and targets differed from the server's at the
   // first sync. The server's is used until the person picks; only the lines that differ are shown.
-  const PROFILE_LABEL = { name: 'Name', weight_kg: 'Weight (kg)', height_cm: 'Height', ckd_stage: 'Kidney disease stage', dialysis: 'Dialysis',
+  const PROFILE_LABEL = { name: 'Name', weight_kg: 'Weight', height_cm: 'Height', ckd_stage: 'Kidney disease stage', dialysis: 'Dialysis',
     diabetes: 'Diabetes', warn_fraction: 'Warn at', about_tolerance_pct: 'Counts as on target within (%)', dialysis_days: 'Dialysis days',
     week_start: 'Week starts on', birth_month: 'Born', sex: 'Sex', activity: 'Activity', transplant_date: 'Transplant date',
-    frail_or_sarcopenic: 'Frail', weight_6_months_ago_kg: 'Weight 6 months ago (kg)', pregnant_or_breastfeeding: 'Pregnant or breastfeeding',
+    frail_or_sarcopenic: 'Frail', weight_6_months_ago_kg: 'Weight 6 months ago', pregnant_or_breastfeeding: 'Pregnant or breastfeeding',
     hyperkalemia_history: 'High potassium before', urine_output_ml: 'Urine a day (ml)', pd_uf_ml: 'PD fluid removed (ml)',
     pd_dialysate_kcal: 'PD calories (kcal)' };
   function profileValue(v, key = null) {
@@ -1711,11 +1711,18 @@
       const item = cache.mySettings && !(cache.mySettings instanceof Error) ? cache.mySettings['user.units.height'] : null;
       return KH.bodyRules.formatHeight(v, item && item.value === 'cm' ? 'cm' : 'ft_in');
     }
+    if (key === 'weight_kg' || key === 'weight_6_months_ago_kg') return KH.bodyRules.formatWeight(v, weightUnit()); // as Profile shows it
     if (v === true) return 'Yes';
     if (v === false) return 'No';
     if (Array.isArray(v)) return v.length ? v.join(', ') : 'None';
     if (typeof v === 'object') return v.min != null || v.max != null ? `${v.min == null ? '' : String(v.min)}–${v.max == null ? '' : String(v.max)}` : 'Not set';
     return String(v);
+  }
+  // The person's weight unit (user.units.weight): what Profile last learned, else the settings this page read, else pounds.
+  function weightUnit() {
+    if (state.weightUnit === 'kg' || state.weightUnit === 'lb') return state.weightUnit;
+    const item = cache.mySettings && !(cache.mySettings instanceof Error) ? cache.mySettings['user.units.weight'] : null;
+    return item && item.value === 'kg' ? 'kg' : 'lb';
   }
   function profileLines(server, mine) {
     const out = [];
@@ -1723,6 +1730,8 @@
       let a = profileValue(server[k], k); let b = profileValue(mine[k], k);
       // Two heights that round to the same feet and inches: show the centimetres, so the difference can be seen.
       if (a === b && k === 'height_cm' && profileValue(server[k]) !== profileValue(mine[k])) { a = `${profileValue(server[k])} cm`; b = `${profileValue(mine[k])} cm`; }
+      // Two weights that round to the same 0.1 lb: show the kilograms as saved.
+      if (a === b && k.startsWith('weight_') && profileValue(server[k]) !== profileValue(mine[k])) { a = `${profileValue(server[k])} kg`; b = `${profileValue(mine[k])} kg`; }
       if (a !== b) out.push([PROFILE_LABEL[k], a, b]);
     }
     const keys = [...new Set([...Object.keys(server.targets || {}), ...Object.keys(mine.targets || {})])].sort();
@@ -2759,7 +2768,8 @@
         : 'This server has no copy of the handbook and no public copy is set (your admin can set HANDBOOK_PUBLIC_URL).'));
     }
     const items = [h('li', {}, h('a', { href: url }, 'Open the handbook'),
-      L.available() ? ' (served by this server, so it works without internet)' : ' (the public copy)')];
+      L.available() ? (KH.flags.DEVICE ? ' (kept in this app, so it works without internet)' : ' (served by this server, so it works without internet)')
+        : ' (the public copy)')];
     const pub = L.publicUrl();
     if (L.available() && pub) {
       items.push(h('li', {}, 'Public copy to share: ',
@@ -2776,9 +2786,21 @@
     $('#settings-who').textContent = me ? `Signed in as ${me.display_name ? `${me.display_name} (${me.username})` : me.username}${me.role === 'admin' ? ' · admin' : ''}${me.test_account ? ' · test account' : ''}` : '';
   }
   // Settings → Care team (js/views/sharing.js, design note 25): its own section, near the top. Without sign-in there is one person.
-  function renderCare() {
+  // In the iPhone app it is read-only and shown only while it is paired with a server (owner, 2026-11-26): a Care team lives there.
+  let careDraw = 0;
+  async function renderCare() {
     const sec = $('#set-care');
     if (!sec) return;
+    if (KH.flags && KH.flags.DEVICE) {
+      const ticket = ++careDraw;
+      const body = KH.sharing ? await KH.sharing.deviceBlock() : null;
+      if (ticket !== careDraw) return;
+      if (body) clear($('#set-care-section')).append(body);
+      if (sec.hidden === !body) return;
+      sec.hidden = !body;
+      renderNav();
+      return;
+    }
     sec.hidden = authMode() === 'none' || !KH.sharing;
     if (!sec.hidden) clear($('#set-care-section')).append(KH.sharing.block());
   }
@@ -2816,9 +2838,9 @@
     renderNav();
   }
   // The iPhone app with no server (design note 38; owner, 2026-11-21: Settings was "all messy"): the sections that need a server
-  // are left out there. CSS hides them (base.css, .device-mode), and the menu does not list them.
+  // are left out there. CSS hides them (base.css, .device-mode), and the menu does not list them. Care team shows only while paired.
   const DEVICE_LEFT_OUT = KH.flags && KH.flags.DEVICE
-    ? new Set(['set-care', 'set-connected', 'set-lists', 'set-assistant', 'set-reminders', 'set-admin-link', 'set-admin', 'set-admin-ai'])
+    ? new Set(['set-lists', 'set-assistant', 'set-admin-link', 'set-admin', 'set-admin-ai'])
     : new Set();
   function renderNav() {
     const nav = $('#settings-nav');
@@ -2869,7 +2891,7 @@
     if (!state.me) return;
     renderWho();
     syncAdminEntry();
-    renderCare();
+    renderCare().catch((err) => console.warn('Care team:', err));
     renderNav();
     renderAccount();
     renderPrefs();

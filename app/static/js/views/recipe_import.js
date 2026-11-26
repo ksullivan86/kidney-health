@@ -10,6 +10,8 @@
    A food marked as a low treatment stays one, as in any saved meal; nothing here warns against it.
 
    KH.recipeImportView.open({ trigger, onSaved }) (KH.recipeImport is the parser, js/engine/recipe_import.js). The demo answers any link with its sample page (js/mock/lists.js).
+   In the iPhone app (device mode) `read_on` says who reads the page: 'phone' (the iPhone app fetches it and this page reads it,
+   with no server) or 'server' (the paired server); the words on the sheet say which, and that nothing else leaves the phone.
    All text goes in with h() children (textContent), never as HTML. */
 (() => {
   'use strict';
@@ -57,6 +59,8 @@
     $('#recipe-import-back').hidden = true;
     $('#sheet-recipe-import-sub').textContent = 'From a recipe page, or from ingredients you paste.';
     const body = clear($('#recipe-import-body'));
+    const onPhone = st.info.read_on === 'phone';
+    const here = KH.flags && KH.flags.DEVICE === true ? 'this iPhone' : 'this server';
     if (st.info.web) {
       const url = h('input', { id: 'ri-url', type: 'url', inputmode: 'url', maxlength: 900, autocomplete: 'off', placeholder: 'https://…',
         'aria-describedby': 'ri-url-hint' });
@@ -64,15 +68,21 @@
       read.addEventListener('click', () => readPage(url.value.trim(), read));
       url.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); readPage(url.value.trim(), read); } });
       body.append(h('div', { class: 'field' }, h('label', { for: 'ri-url' }, 'Recipe page link'), h('div', { class: 'search-row' }, url, read),
-        h('span', { class: 'hint', id: 'ri-url-hint' }, 'This server opens the page and reads its recipe data. Nothing about you is sent. The page itself is not kept.')),
+        h('span', { class: 'hint', id: 'ri-url-hint' }, onPhone
+          ? 'This iPhone opens the page and reads its recipe data. Only the link goes to that site. Nothing else leaves the phone, and the page itself is not kept.'
+          : st.info.read_on === 'server'
+            ? 'Your server opens the page and reads its recipe data. Only the link is sent. The page itself is not kept.'
+            : 'This server opens the page and reads its recipe data. Nothing about you is sent. The page itself is not kept.')),
       h('p', { class: 'muted' }, 'Or paste the ingredients:'));
     } else {
-      body.append(h('p', { class: 'hint', id: 'ri-no-web' }, 'Reading recipe pages is off on this server. Paste the ingredients instead.'));
+      body.append(h('p', { class: 'hint', id: 'ri-no-web' }, KH.flags && KH.flags.DEVICE === true
+        ? 'This iPhone app cannot read recipe pages. Paste the ingredients instead.'
+        : 'Reading recipe pages is off on this server. Paste the ingredients instead.'));
     }
     body.append(
       h('div', { class: 'field' }, h('label', { for: 'ri-text' }, 'Ingredients'),
         h('textarea', { id: 'ri-text', rows: 6, maxlength: 20000, placeholder: '1 lb chicken breast\n2 cups cooked rice\n1 tbsp olive oil', 'aria-describedby': 'ri-text-hint' }),
-        h('span', { class: 'hint', id: 'ri-text-hint' }, 'One ingredient on each line, with its amount. Nothing leaves this server.')),
+        h('span', { class: 'hint', id: 'ri-text-hint' }, `One ingredient on each line, with its amount. Nothing leaves ${here}.`)),
       h('div', { class: 'form-grid' },
         h('div', { class: 'field' }, h('label', { for: 'ri-name' }, 'Recipe name'), h('input', { id: 'ri-name', type: 'text', maxlength: 200, placeholder: 'Optional' })),
         h('div', { class: 'field' }, h('label', { for: 'ri-makes' }, 'Makes (servings)'),
@@ -137,6 +147,7 @@
         h('div', { class: 'field' }, h('label', { for: 'ri-review-makes' }, 'Makes (servings)'),
           h('input', { id: 'ri-review-makes', type: 'number', inputmode: 'decimal', min: 0.25, max: 100, step: 0.25, value: draft.servings_made != null ? String(draft.servings_made) : '', placeholder: '1' }))),
       draft.source_url ? h('p', { class: 'hint', id: 'ri-source' }, `Link kept with the recipe: ${draft.source_url}`) : null,
+      draft.read_on === 'phone' ? h('p', { class: 'hint', id: 'ri-read-on' }, 'Read on this iPhone. Only the link went to that site, and nothing else left the phone.') : null,
       h('p', { class: 'notice', id: 'ri-notice' }, draft.notice),
       draft.lines_cut ? h('p', { class: 'hint' }, `Only the first ${draft.lines.length} ingredient lines were read.`) : null,
       h('ul', { class: 'list ri-lines', id: 'ri-lines', 'aria-label': 'Ingredients to check' }),

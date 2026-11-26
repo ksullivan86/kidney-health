@@ -24,14 +24,15 @@ can be shared by your admin or added by you ([design note 07][NOTE07]).
 |---|---|
 | **Account** | your name, user name, **Change password**, **Email for password resets** (when your admin turns email on), **Two-step sign-in**, **Passkeys**, **Signed-in devices**, **Your data** (export, import, **Phone shortcuts** for an iPhone Shortcut that sends your weight and blood pressure: [Weight and blood pressure](weight-and-blood-pressure.md#from-a-phone-shortcut); delete account), your recent sign-in activity, **Sign out** |
 | **Care team** | family, a caregiver or a dietitian on your server who can look at your log (**Viewer**), also plan your meals (**Care helper**) or also log food you ate (**Caregiver**), with a switch for each thing; invites for you; the Care teams you are on ([Care team](#sharing)); a Clinician who may also write notes for you |
-| **Connected devices** (when your admin sets it up) | **Connect Withings** so the server fetches your weight, blood pressure and pulse ([Weight and blood pressure](weight-and-blood-pressure.md#from-withings)); **Connect Whoop** for calories burned, strain, recovery, HRV, sleep and workouts ([Activity and recovery](reports-for-your-team.md#activity-and-recovery)), and **Add active-day calories to my target** ([More calories on active days](targets-and-warnings.md#active-day-calories)); **Sync now**; **Disconnect** stops pending imports and sign-ins too |
+| **Connected devices** (when your admin sets it up, and always in the iPhone app) | **Connect Withings** so the server fetches your weight, blood pressure and pulse ([Weight and blood pressure](weight-and-blood-pressure.md#from-withings)); **Connect Whoop** for calories burned, strain, recovery, HRV, sleep and workouts ([Activity and recovery](reports-for-your-team.md#activity-and-recovery)), and **Add active-day calories to my target** ([More calories on active days](targets-and-warnings.md#active-day-calories)); **Sync now**; **Disconnect** stops pending imports and sign-ins too. In the iPhone app: through your server, or with your own developer app ([Withings and Whoop in the iPhone app](weight-and-blood-pressure.md#devices-iphone)) |
 | **Shopping list app** (when your admin turns it on) | your own **Grocy**, **KitchenOwl** or **Mealie**: its address and a key you make there, **Test**, the list the food goes to, **Remove**. The key is never shown again. Plan's shopping list then has **Send** ([Send it to your own list app](planning-and-menus.md#send-it-to-your-own-list-app); [design note 30][NOTE30]) |
 | **Preferences** | theme (match device, light, dark), the day your week starts on, **Units for lab results** (US or SI: the unit offered first), **Units for height** (feet and inches, or centimetres: how Profile shows and takes your height) |
+| **Weight and blood pressure** | **Unit for weight** (pounds or kilograms: how the weight log and Profile's two weight boxes show and take a weight; the app saves kilograms either way), the weight-gain alarm and the blood pressure goal your team gave you ([Weight and blood pressure](weight-and-blood-pressure.md)) |
 | **Meal guidance** | on or off, carbohydrate tolerance, low-treatment amount, foods to leave out, your "Not for me" foods ([Meal guidance](guidance.md)) |
 | **Food data** | your own USDA key, the shared key's status and today's remaining lookups, **Send barcodes I scan to Open Food Facts** ([Barcodes and label photos](barcode-and-photo.md)) |
 | **AI ideas** | opt in, provider, where each feature runs, **Choose which AI each feature uses** (when your admin lets you: [Choosing the AI yourself](ai.md#choosing-the-ai-yourself)), your own AI provider and key, what you agreed to send, AI activity ([Optional AI](ai.md)) |
 | **Assistant access** (when your admin turns it on) | personal tokens for a chat assistant you connect: make one, copy it once, see when it was last used, revoke it ([below](#assistant-access)) |
-| **Reminders** (when your admin turns them on) | turn on notifications on this phone or computer, reminders to log a meal, plan tomorrow or log your weight, **Send a test**, the devices that get them ([below](#reminders)) |
+| **Reminders** (when your admin turns them on, and always in the iPhone app) | turn on notifications on this phone or computer, reminders to log a meal, plan tomorrow or log your weight, **Send a test**, the devices that get them ([below](#reminders)) |
 | **This device** | installed or not, "Offline ready", storage used, entries waiting to sync with **Sync now**, **Retry** and **Discard**, **Clear offline data on this device** ([Install the app](install.md)) |
 | **Admin** (admins only) | a button that opens **Server administration** (below) |
 | **About & privacy** | what is stored, who can see it, disclaimers, **Learn** (this handbook), data sources and licences ([Privacy and your data](privacy.md)) |
@@ -160,6 +161,23 @@ choose: "Time to log lunch.", "Time to plan tomorrow's meals." or "Time to log y
 - The words never include food names, numbers or anything about your health. Tapping the notification opens the app.
 - Turned off notifications by mistake? Allow them again in your phone's or browser's settings for this site.
 
+### In the iPhone app {#reminders-iphone}
+
+The iPhone app has reminders too, with no server. They are the iPhone's own notifications.
+
+1. **Settings → Reminders → Turn on notifications on this iPhone**. Your iPhone asks whether to allow them. Tap **Allow**.
+2. Tap **Add a reminder**, choose what, the time and the days, then **Save reminder**.
+3. Tap **Send a test**. It comes in a few seconds.
+
+- Reminders set here are for this iPhone only. They are not sent to your server, even when the app is connected to one.
+- The time is your iPhone's time, wherever you are.
+- A meal reminder is skipped when you already logged food for that meal today. The app plans the next 7 days each time you
+  open it or save something, so open it now and then.
+- Tapping a reminder opens the right screen: Add for a meal, Plan, or Today for your weight.
+- Said **Don't Allow** by mistake? Open **Settings** on your iPhone, tap **Notifications**, then **Kidney Health**, and turn on
+  **Allow Notifications**. The app's **Open iPhone Settings** button takes you there.
+- The warning above stays true here: do not rely on reminders for low blood sugar. Use your CGM's alerts.
+
 ## Two-step sign-in
 
 Two-step sign-in means a password alone is not enough to get into your account. After your password, the app asks
@@ -277,6 +295,12 @@ your Care team** in Settings → Care team and on Visit prep.
   insulin or doses: talk to your care team about those. For anything urgent, call your care team.
 - Only you and the writer see a note. Other people on your Care team do not, and neither does the AI.
 - While someone may write notes, your activity shows each part they looked at, once an hour.
+
+**In the iPhone app.** A Care team lives on a server, so the iPhone app shows yours only when it is paired with your server by a
+token **both ways** ([The iPhone app](install.md#with-a-token-both-ways)). Then Today shows new notes, the Plan tab shows
+suggestions, and you can read, delete and answer them as in the web app. **Settings → Care team** lists who is on your Care team
+and whose Care team you are on, but you change it in your server's web app. Notes are read from your server each time and are not
+kept on the phone. When your server cannot be reached, the app says so. Without a server there is no Care team in the app.
 
 **When you are on someone's Care team**, they are under **Care teams you are on**. **Open** shows their summary page, **Trends**
 their charts; **Leave** ends it. Their weight chart uses their dry weight, never yours. If a part cannot load, tap **Retry**.

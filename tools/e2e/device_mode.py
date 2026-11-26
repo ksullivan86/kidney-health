@@ -29,6 +29,13 @@ stands in for the iPhone app's message handlers. At 375x812 light and 1280x800 d
 * Ask on the phone (design note 39; 375x812 light), with a stand-in for the change feed and the server's chat: the Ask tab offers the
   conversation and says it always asks before saving; the question goes to the server with trust "ask"; the server's card names
   the phone's own food; Save as eaten adds the entry on the phone with the card's ID; Add offers Plate photo (AI).
+* the Care team on the phone (owner, 2026-11-26; 375x812 light), with a stand-in for the server's gateway: Today shows the new note,
+  the note is plain text and marked read with the version shown, Delete reaches the server and no note text is kept; Settings →
+  Care team lists who is on it, read-only, and says to change it in the server's web app; No thanks on Plan; offline says so; with
+  no server there is no Care team section.
+* a recipe page read on the iPhone with no server (owner, 2026-11-26; 375x812 light): the sheet says this iPhone reads the page
+  and only the link goes out; the app is asked for the link only; the review says where it was read; the page's scripts never run;
+  the recipe saves with its link.
 
 Nothing leaves the machine. Prints PASS / FAIL lines and writes ``<out>/report.json``; exit status 1 on any failure.
 """
@@ -147,6 +154,19 @@ def walk(browser, base: str, width: int, height: int, scheme: str) -> None:
     me = page.evaluate("KH.request('GET', '/api/auth/status')")
     user = me.get("user") or {}
     check(f"[{tag}] one person, not an admin", user.get("username") == "me" and user.get("role") == "user", json.dumps(user)[:120])
+    # Profile's weight in the person's unit (user.units.weight, pounds by default) answered by the phone's own settings; kept in kg.
+    put = page.evaluate("KH.request('PUT', '/api/profile', { weight_kg: 70.23 }).then(() => KH.loadProfile(true)).then((p) => p.weight_kg, (e) => String(e && (e.detail || e.message)))")
+    page.goto(f"{base}/index.html#profile")
+    page.wait_for_selector("#view-profile:not([hidden])", timeout=30000)
+    for _ in range(100):
+        if page.input_value("#pf-weight"):
+            break
+        page.wait_for_timeout(100)
+    unit = page.evaluate("KH.request('GET', '/api/me/settings')")["settings"]["user.units.weight"]
+    check(f"[{tag}] Profile shows the weight in pounds, the phone's default unit",
+          unit["value"] == "lb" and page.input_value("#pf-weight") == "154.8" and page.locator("#pf-weight-label").inner_text() == "Weight (lb)",
+          f"{put} {page.input_value('#pf-weight')!r}")
+    page.evaluate("window.__kh.copies.length = 0")  # the profile's own safety copy is not the one the entry check below reads
     page.goto(f"{base}/index.html#settings")
     page.wait_for_selector("#view-settings:not([hidden])", timeout=30000)
     page.wait_for_timeout(800)
@@ -246,6 +266,7 @@ def no_server_ask(page, base: str, tag: str) -> None:
     check(f"[{tag}] Ask says it uses the server's AI, not the demo's text",
           "Ask uses your Kidney Health server's AI." in text and "installed app" not in text and "preview" not in text, text[:200])
     check(f"[{tag}] and there is nothing to type into", page.locator("#ask-composer").is_hidden())
+    check(f"[{tag}] and no microphone", page.locator("#ask-mic").count() == 0 or page.locator("#ask-mic").is_hidden())
     page.goto(f"{base}/index.html#add")
     page.wait_for_selector("#view-add:not([hidden])", timeout=30000)
     page.wait_for_selector("#ai-photo-where", timeout=10000)
@@ -285,6 +306,8 @@ ASK = ("window.__kh = { copies: [], phone: [], api: [], chats: [] };"
        " : r.kind === 'serverSync' ? { ok: true, status: 200, json: JSON.stringify({ added: {}, already_there: {}, skipped: { food_not_found: 0, day_full: 0 } }) }"
        " : r.kind === 'serverApi' ? window.__kh.gateway(r)"
        " : r.kind === 'aiStatus' ? { ok: true, available: false, reason: 'not_eligible' }"
+       " : r.kind === 'speechStatus' ? { ok: true, available: true, reason: null }"
+       " : r.kind === 'dictate' ? (window.__kh.dictated = (window.__kh.dictated || 0) + 1, { ok: true, text: 'Can I have a banana now?' })"
        " : { error: 'off_off', message: 'off' } } } };")
 
 
@@ -318,6 +341,14 @@ def ask_walk(browser, base: str) -> None:
     check(f"[{tag}] Ask offers the conversation", page.locator("#ask-demo").is_hidden() and page.locator("#ask-input").is_visible())
     line = page.locator("#ask-trust-line").inner_text()
     check(f"[{tag}] and says it always asks before saving", "always asks before it saves" in line, line)
+    # Speaking the question (owner, 2026-11-26): the app works the words out on the iPhone; they go into the box, nothing is sent.
+    page.wait_for_selector("#ask-mic:not([hidden])", timeout=10000)
+    page.click("#ask-mic")
+    page.wait_for_function("() => document.querySelector('#ask-input').value.length > 0", timeout=10000)
+    check(f"[{tag}] the microphone asks the app to listen and puts the words in the box",
+          page.evaluate("window.__kh.dictated") == 1 and page.input_value("#ask-input") == "Can I have a banana now?", page.input_value("#ask-input"))
+    check(f"[{tag}] and nothing is sent until Send", page.evaluate("window.__kh.chats.length") == 0
+          and "Nothing has been sent to the AI." in page.inner_text("#ask-voice-line"), page.inner_text("#ask-voice-line"))
     page.fill("#ask-input", "I had a banana for breakfast")
     page.click("#ask-send")
     page.wait_for_selector("#ask-thread .ask-pending", timeout=10000)
@@ -473,6 +504,64 @@ def phone_ai_walk(browser, base: str) -> None:
     check(f"[{tag}] with the condition worded as the server does", str(last.get("condition", "")).startswith("chronic kidney disease"))
     results = page.locator("#sheet-ai .ai-results").inner_text()
     check(f"[{tag}] the idea is shown, checked by the app", "A light" in results and "Apple" in results, results[:300])
+    over = page.evaluate("document.documentElement.scrollWidth > window.innerWidth + 1")
+    check(f"[{tag}] no sideways scroll", not over)
+    check(f"[{tag}] no request to another host", not others, "; ".join(others[:3]))
+    check(f"[{tag}] no console or page error", not errors, "; ".join(errors[:3]))
+    ctx.close()
+
+
+# AI order on the iPhone's own model (the owner, 2026-11-26; phone-ai-more2): the stand-in model puts the second candidate first.
+PHONE_AI_ORDER = ("window.__kh = { copies: [], phone: [], ai: [] };"
+                  "window.webkit = { messageHandlers: { safetyCopy: { postMessage: (t) => window.__kh.copies.push(String(t)) },"
+                  " phone: { postMessage: (m) => window.__kh.phone.push(String(m)) },"
+                  " bridge: { postMessage: async (r) => r.kind === 'services' ? { ok: true, off: false, usda: false, scan: false }"
+                  " : r.kind === 'serverInfo' ? { ok: true, paired: false }"
+                  " : r.kind === 'aiStatus' ? { ok: true, available: true, reason: null, photos: false }"
+                  " : r.kind === 'ownAIStatus' ? { ok: true, set: false }"
+                  " : r.kind === 'ai' ? (window.__kh.ai.push(r), r.task === 'rerank'"
+                  "   ? { ok: true, answer: { order: [{ ref: 'f2', reason_codes: ['low_sodium'] }, { ref: 'f1', reason_codes: ['low_potassium'] }],"
+                  "     status: 'ok', refusal: 'none' } } : { error: 'ai_failed', message: 'x' })"
+                  " : { error: 'not_paired' } } } };")
+
+
+def phone_ai_order_walk(browser, base: str) -> None:
+    """No server and no own key: What fits on Add shows "AI order" with Apple's model, and the list comes back in its order."""
+    tag = "phone-ai-order"
+    ctx = browser.new_context(viewport={"width": 375, "height": 812}, color_scheme="light")
+    ctx.add_init_script(PHONE_AI_ORDER)
+    page = ctx.new_page()
+    errors: list[str] = []
+    others: list[str] = []
+    page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.on("request", lambda r: others.append(r.url) if not r.url.startswith(base) else None)
+    page.goto(f"{base}/index.html#today")
+    page.wait_for_selector("#view-today:not([hidden])", timeout=30000)
+    page.wait_for_timeout(800)
+    page.evaluate("KH.request('PUT', '/api/device/setup', { done: true })"
+                  ".then(() => KH.request('PATCH', '/api/me/ai', { opt_in: true }))"
+                  ".then(() => KH.request('GET', '/api/me/settings'))"
+                  ".then((s) => KH.request('PATCH', '/api/me/settings', { guidance: { ...((s.settings.guidance || {}).value || {}), ai_enrich: true } }))"
+                  ".then(() => { Object.assign(KH.mock.instance._profile, { targets: { potassium_mg: { max: 3000 }, phosphorus_mg: { max: 1000 },"
+                  " sodium_mg: { max: 2000 }, carbs_per_meal_g: 60 } }); return KH.mock.local.flush(); })")
+    page.wait_for_timeout(300)
+    page.goto(f"{base}/index.html#add")
+    page.reload()
+    page.wait_for_selector("#view-add:not([hidden])", timeout=30000)
+    page.wait_for_selector("#guidance-fits:not([hidden])", timeout=30000)
+    page.locator("label[for=gfm-dinner]").click()
+    toggle = page.locator(".g-ai-toggle")
+    toggle.wait_for(timeout=15000)
+    check(f"[{tag}] What fits offers AI order on this iPhone's model", "Apple" in toggle.inner_text(), toggle.inner_text())
+    toggle.click()
+    _until(page, "(document.querySelector('#guidance-fits-status') || {}).textContent.includes(\"AI's order\")", 15)
+    sent = page.evaluate("window.__kh.ai")
+    last = sent[-1] if sent else {}
+    check(f"[{tag}] AI order went to this iPhone's model with no ids", last.get("task") == "rerank" and "ids" not in last
+          and len(last.get("text", "")) <= 5000, json.dumps(last)[:200])
+    status = page.locator("#guidance-fits-status").text_content() or ""
+    check(f"[{tag}] the list is in the AI's order, the numbers the app's own", "numbers and fit checks are the app's own" in status, status)
     over = page.evaluate("document.documentElement.scrollWidth > window.innerWidth + 1")
     check(f"[{tag}] no sideways scroll", not over)
     check(f"[{tag}] no request to another host", not others, "; ".join(others[:3]))
@@ -665,6 +754,340 @@ def sync_walk(browser, base: str) -> None:
     ctx.close()
 
 
+# Reminders as the iPhone's own notifications (design note 35 §7): a stand-in for the app's notifications, which iOS first asks about.
+REMINDERS = ("window.__kh = { copies: [], phone: [], rem: [], permission: sessionStorage.getItem('khPermission') || 'not_asked' };"
+             "window.webkit = { messageHandlers: { safetyCopy: { postMessage: (t) => window.__kh.copies.push(String(t)) },"
+             " phone: { postMessage: (m) => window.__kh.phone.push(String(m)) },"
+             " bridge: { postMessage: async (r) => r.kind === 'services' ? { ok: true, off: false, usda: false, scan: false }"
+             " : r.kind === 'serverInfo' ? { ok: true, paired: false }"
+             " : r.kind === 'aiStatus' ? { ok: true, available: false, reason: 'not_eligible' }"
+             " : r.kind === 'ownAIStatus' ? { ok: true, set: false }"
+             " : r.kind === 'reminders' ? (window.__kh.rem.push(JSON.parse(JSON.stringify(r))),"
+             "   r.action === 'allow' && window.__kh.permission === 'not_asked' ? (window.__kh.permission = 'allowed') : null,"
+             "   r.action === 'schedule' ? { ok: true, scheduled: r.items.length, permission: window.__kh.permission }"
+             "   : r.action === 'test' ? { ok: true } : { ok: true, permission: window.__kh.permission, pending: 0 })"
+             " : { error: 'not_paired' } } } };")
+
+
+def _until(page, js: str, seconds: float = 10) -> bool:
+    """Polls ``js`` in the page (wait_for_function evaluates a string, which the app's CSP refuses)."""
+    for _ in range(int(seconds * 10)):
+        if page.evaluate(js):
+            return True
+        page.wait_for_timeout(100)
+    return False
+
+
+def reminders_walk(browser, base: str) -> None:
+    """Settings → Reminders in the iPhone app: the safety line, "for this iPhone only", the permission asked from the tap, a reminder
+    added and planned with only its kind and time, a test, and with notifications refused the way to iOS Settings."""
+    tag = "reminders"
+    ctx = browser.new_context(viewport={"width": 375, "height": 812}, color_scheme="light")
+    ctx.add_init_script(REMINDERS)
+    page = ctx.new_page()
+    errors: list[str] = []
+    others: list[str] = []
+    page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.on("request", lambda r: others.append(r.url) if not r.url.startswith(base) else None)
+    page.goto(f"{base}/index.html#today")
+    page.wait_for_selector("#view-today:not([hidden])", timeout=30000)
+    page.wait_for_timeout(800)
+    page.evaluate("KH.request('PUT', '/api/device/setup', { done: true }).then(() => KH.mock.local.flush())")
+    page.wait_for_timeout(300)
+    page.goto(f"{base}/index.html#settings")
+    page.reload()
+    page.wait_for_selector("#set-reminders-on", state="visible", timeout=30000)
+    check(f"[{tag}] Settings lists Reminders", page.locator("#settings-nav").get_by_role("button", name="Reminders").count() == 1)
+    text = page.locator("#set-reminders-body").inner_text()
+    check(f"[{tag}] the safety line is shown", "Do not rely on them for low blood sugar; use your CGM's alerts." in text, text[:300])
+    check(f"[{tag}] it says reminders are for this iPhone only", "Reminders set here are for this iPhone only." in text)
+    check(f"[{tag}] no list of devices and no demo line", "Devices with notifications on" not in text and "demo" not in text.lower())
+    check(f"[{tag}] iOS is not asked before the tap", not any(m["action"] == "allow" for m in page.evaluate("window.__kh.rem")))
+    page.click("#set-reminders-on")
+    page.wait_for_selector("#set-reminders-test", timeout=10000)
+    check(f"[{tag}] on after allowing", "Notifications are on for this iPhone." in page.locator("#set-reminders-device").inner_text())
+    page.click("#set-reminders-add")
+    page.select_option("#set-reminder-what", "log_meal:dinner")
+    page.fill("#set-reminder-time", "23:59")
+    page.click("#set-reminder-save")
+    page.wait_for_selector("#set-reminders-list .reminder-row", timeout=10000)
+    _until(page, "window.__kh.rem.some((m) => m.action === 'schedule' && m.items.length > 0)")
+    plan = [m for m in page.evaluate("window.__kh.rem") if m["action"] == "schedule"][-1]["items"]
+    check(f"[{tag}] the plan covers the next 7 days", 6 <= len(plan) <= 7, json.dumps(plan)[:200])
+    check(f"[{tag}] the plan holds only ids, times, kinds and meals",
+          all(sorted(x) == ["at", "id", "kind", "meal"] and x["kind"] == "log_meal" and x["meal"] == "dinner" and x["at"].endswith("T23:59")
+              for x in plan), json.dumps(plan)[:200])
+    page.click("#set-reminders-test")
+    check(f"[{tag}] the test says it comes in a few seconds",
+          _until(page, "document.querySelector('#set-reminders-device-msg').textContent.includes('few seconds')"))
+    check(f"[{tag}] a test is asked of the app", any(m["action"] == "test" for m in page.evaluate("window.__kh.rem")))
+    opened = page.evaluate("KH.openScreen('add').then((ok) => ok && !document.querySelector('#view-add').hidden)")
+    check(f"[{tag}] a tapped reminder opens Add", opened is True)
+    check(f"[{tag}] only its screens can be opened", page.evaluate("KH.openScreen('admin')") is False)
+    page.evaluate("sessionStorage.setItem('khPermission', 'denied')")
+    page.goto(f"{base}/index.html#settings")
+    page.reload()
+    page.wait_for_selector("#set-reminders-open-settings", state="visible", timeout=30000)
+    blocked = page.locator("#set-reminders-blocked").inner_text()
+    check(f"[{tag}] refused: it says how to allow it in iOS Settings", "tap Notifications, then Kidney Health" in blocked, blocked)
+    page.click("#set-reminders-open-settings")
+    check(f"[{tag}] Open iPhone Settings asks the app", _until(page, "window.__kh.rem.some((m) => m.action === 'openSettings')"))
+    over = page.evaluate("document.documentElement.scrollWidth > window.innerWidth + 1")
+    check(f"[{tag}] no sideways scroll", not over)
+    check(f"[{tag}] no request to another host", not others, "; ".join(others[:3]))
+    check(f"[{tag}] no console or page error", not errors, "; ".join(errors[:3]))
+    ctx.close()
+
+
+# The owner, 2026-11-26: notes and suggestions from the Care team on the phone. A stand-in for the paired server's gateway: about
+# names the Care team (Dee, a Clinician), one unread note from Dee and one suggestion from Jo; `window.__kh.net` "down" is a server
+# that cannot be reached, `window.__kh.paired` false an iPhone with no server.
+CARE = ("window.__kh = { copies: [], phone: [], api: [], net: 'up', paired: sessionStorage.getItem('khPaired') !== 'no' };"
+        "window.__kh.notes = [{ id: 41, from: { name: 'Dee', removed: false }, area: 'labs', date: null,"
+        " body: 'Bring your lab results to the visit. <b>not bold</b>', version: 2, created_at: new Date().toISOString(), edited_at: null, read_at: null }];"
+        "window.__kh.sgs = [{ id: 7, share_id: 1, from_name: 'Jo', date: '2026-12-01', meal: 'dinner', note: 'Rice, like last week.',"
+        " items: [{ food_id: 900, name: 'Rice, white, cooked', servings: 1, serving_desc: '1 cup', available: true }], fit: null,"
+        " created_at: 'x', expires_at: 'y', answer: 'open' }];"
+        "window.__kh.gateway = (r) => { window.__kh.api.push({ method: r.method, path: r.path, ifMatch: r.ifMatch || null });"
+        " if (window.__kh.net === 'down') return { error: 'offline' };"
+        " const reply = (json, status = 200) => ({ ok: true, status, json: json == null ? '' : JSON.stringify(json) });"
+        " const k = window.__kh; const p = r.path.split('?')[0];"
+        " if (p === '/push/v1/about') return reply({ account: 'acct-1', api_version: 1, sync: { gateway: true, changes: false },"
+        "   care_team: { enabled: true, notes: true, team: [{ name: 'Dee', role: 'clinician', areas: ['labs'] }], on: [{ name: 'Ana', role: 'care_helper' }] } });"
+        " if (p === '/push/v1/api/me/notes') return reply({ enabled: true, unread: k.notes.filter((n) => !n.read_at).length, notes: k.notes });"
+        r" let m = p.match(/^\/push\/v1\/api\/me\/notes\/(\d+)\/read$/);"
+        " if (m) { const n = k.notes.find((x) => x.id === Number(m[1])); if (r.ifMatch !== '\"' + n.version + '\"') return reply({ detail: 'changed', current: n }, 412);"
+        "   n.read_at = new Date().toISOString(); return reply(null, 204); }"
+        r" m = p.match(/^\/push\/v1\/api\/me\/notes\/(\d+)$/);"
+        " if (m && r.method === 'DELETE') { k.notes = k.notes.filter((x) => x.id !== Number(m[1])); return reply(null, 204); }"
+        " if (p === '/push/v1/api/me/suggestions') return reply({ enabled: true, suggestions: k.sgs });"
+        r" m = p.match(/^\/push\/v1\/api\/me\/suggestions\/(\d+)\/decline$/);"
+        " if (m) { k.sgs = k.sgs.filter((x) => x.id !== Number(m[1])); return reply(null, 204); }"
+        " return reply({ detail: 'Not Found' }, 404); };"
+        "window.webkit = { messageHandlers: { safetyCopy: { postMessage: (t) => window.__kh.copies.push(String(t)) },"
+        " phone: { postMessage: (m) => window.__kh.phone.push(String(m)) },"
+        " bridge: { postMessage: async (r) => r.kind === 'services' ? { ok: true, off: false, usda: false, scan: false }"
+        " : r.kind === 'serverInfo' ? (window.__kh.paired ? { ok: true, paired: true, server: 'food.example.org' } : { ok: true, paired: false })"
+        " : r.kind === 'serverSyncCheck' ? { ok: true, status: 200, json: '{\"ok\": true}' }"
+        " : r.kind === 'serverApi' ? (window.__kh.paired ? window.__kh.gateway(r) : { error: 'not_paired' })"
+        " : r.kind === 'aiStatus' ? { ok: true, available: false, reason: 'not_eligible' }"
+        " : { error: 'off_off', message: 'off' } } } };")
+
+
+def care_walk(browser, base: str) -> None:
+    """The owner, 2026-11-26: the Care team's notes and suggestions on the phone paired with a server; the Today card, the notes
+    (plain text, marked read with the version shown, deleted), Settings → Care team read-only, No thanks, offline said plainly, and
+    no Care team at all with no server."""
+    tag = "care"
+    ctx = browser.new_context(viewport={"width": 375, "height": 812}, color_scheme="light")
+    ctx.add_init_script(CARE)
+    page = ctx.new_page()
+    errors: list[str] = []
+    others: list[str] = []
+    page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.on("request", lambda r: others.append(r.url) if not r.url.startswith(base) else None)
+    page.goto(f"{base}/index.html#today")
+    page.wait_for_selector("#view-today:not([hidden])", timeout=30000)
+    page.wait_for_timeout(800)
+    page.evaluate("KH.request('PUT', '/api/device/setup', { done: true }).then(() => KH.mock.local.flush())")
+    page.wait_for_timeout(300)
+    page.reload()
+    page.wait_for_selector("#today-notes:not([hidden])", timeout=30000)
+    card = page.locator("#today-notes").inner_text()
+    check(f"[{tag}] Today shows the new note from Dee", "1 new note from Dee" in card, card)
+    page.click("#today-notes-read")
+    page.wait_for_selector("#notes-list .note-card", timeout=10000)
+    body = page.locator("#notes-list .note-body").first
+    check(f"[{tag}] the note is plain text", body.inner_text() == "Bring your lab results to the visit. <b>not bold</b>"
+          and body.locator("b").count() == 0)
+    _until(page, "window.__kh.api.some((r) => r.path === '/push/v1/api/me/notes/41/read')")
+    read = [r for r in page.evaluate("window.__kh.api") if r["path"] == "/push/v1/api/me/notes/41/read"]
+    check(f"[{tag}] showing it marks it read with the version shown", read and read[0]["ifMatch"] == '"2"', json.dumps(read))
+    page.get_by_role("button", name="Delete the note from Dee").click()
+    page.get_by_role("button", name="Delete", exact=True).last.click()
+    _until(page, "document.querySelector('#notes-list').textContent.includes('No notes from your Care team.')")
+    check(f"[{tag}] Delete removes it on the server", page.evaluate("window.__kh.notes.length") == 0)
+    stored = page.evaluate("KH.mock.local.flush().then(() => JSON.stringify(KH.mock.instance._care()) + window.__kh.copies.join(''))")
+    check(f"[{tag}] no note text kept on the phone", "lab results to the visit" not in stored)
+    page.goto(f"{base}/index.html#settings")
+    page.wait_for_selector("#set-care:not([hidden]) #set-care-device-change", timeout=30000)
+    care = page.locator("#set-care").inner_text()
+    check(f"[{tag}] Settings → Care team lists who is on it", "Dee, Clinician: lab results" in care and "Ana, Care helper" in care, care[:300])
+    check(f"[{tag}] and says where to change it", "in your server's web app" in care)
+    check(f"[{tag}] read-only: no invite, role or remove", page.locator("#set-care button").all_inner_texts() == ["Notes from your Care team"],
+          json.dumps(page.locator("#set-care button").all_inner_texts()))
+    check(f"[{tag}] Settings lists Care team", page.locator("#settings-nav").get_by_role("button", name="Care team").count() == 1)
+    page.goto(f"{base}/index.html#plan")
+    page.wait_for_selector("#plan-suggestions:not([hidden]) .care-suggestion", timeout=30000)
+    plan = page.locator("#plan-suggestions").inner_text()
+    check(f"[{tag}] Plan shows Jo's suggestion", "jo suggests dinner" in plan.lower(), plan[:200])
+    page.get_by_role("button", name="No thanks").click()
+    _until(page, "window.__kh.sgs.length === 0")
+    check(f"[{tag}] No thanks goes to the server", page.evaluate("window.__kh.sgs.length") == 0)
+    page.evaluate("window.__kh.net = 'down'")
+    page.evaluate("KH.notes.openOwn('today')")
+    page.wait_for_selector("#notes-list .form-error", timeout=10000)
+    offline = page.locator("#notes-list").inner_text()
+    check(f"[{tag}] offline: the notes say the server cannot be reached", "cannot be reached right now" in offline, offline)
+    over = page.evaluate("document.documentElement.scrollWidth > window.innerWidth + 1")
+    check(f"[{tag}] no sideways scroll", not over)
+    page.evaluate("sessionStorage.setItem('khPaired', 'no')")
+    page.goto(f"{base}/index.html#settings")
+    page.reload()
+    page.wait_for_selector("#view-settings:not([hidden])", timeout=30000)
+    page.wait_for_timeout(800)
+    check(f"[{tag}] no server: no Care team in Settings", page.locator("#set-care").is_hidden()
+          and page.locator("#settings-nav").get_by_role("button", name="Care team").count() == 0)
+    check(f"[{tag}] no request to another host", not others, "; ".join(others[:3]))
+    check(f"[{tag}] no console or page error", not errors, "; ".join(errors[:3]))
+    ctx.close()
+
+
+# A recipe page read on this iPhone with no server (owner, 2026-11-26; design note 30 §3). The stand-in app says it reads pages
+# (services.recipePage) and answers fetchRecipePage with a page whose JSON-LD holds the recipe, beside a script and an onerror that
+# must never run.
+RECIPE_PAGE = ("<!DOCTYPE html><html><head><title>Banana rice</title><script>window.pageScriptRan = true;</script>"
+               "<script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Banana rice\","
+               " \"recipeYield\": \"2\", \"recipeIngredient\": [\"1 medium banana\", \"2 cups cooked white rice\"],"
+               " \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}]}</script></head>"
+               "<body><img src=\"x\" onerror=\"window.pageScriptRan = true\"><h1>Banana rice</h1></body></html>")
+RECIPE_STUB = ("window.__kh = { copies: [], phone: [], asked: [] };"
+               f"window.__kh.page = {json.dumps(RECIPE_PAGE)};"
+               "window.webkit = { messageHandlers: { safetyCopy: { postMessage: (t) => window.__kh.copies.push(String(t)) },"
+               " phone: { postMessage: (m) => window.__kh.phone.push(String(m)) },"
+               " bridge: { postMessage: async (r) => { window.__kh.asked.push(JSON.parse(JSON.stringify(r)));"
+               " return r.kind === 'services' ? { ok: true, off: false, usda: false, scan: false, recipePage: true }"
+               " : r.kind === 'serverInfo' ? { ok: true, paired: false }"
+               " : r.kind === 'fetchRecipePage' ? { ok: true, html: window.__kh.page }"
+               " : r.kind === 'aiStatus' ? { ok: true, available: false, reason: 'not_eligible' }"
+               " : { error: 'off_off', message: 'off' }; } } } };")
+
+
+def recipe_walk(browser, base: str) -> None:
+    """Import a recipe from a web page on the iPhone with no server: the sheet says the phone reads the page and only the link goes
+    out; the app is asked for that link only; the lines are matched with the phone's foods; the review says where it was read; the
+    page's own scripts never run and nothing of it enters the document; the recipe saves."""
+    tag = "recipe page"
+    ctx = browser.new_context(viewport={"width": 375, "height": 812}, color_scheme="light")
+    ctx.add_init_script(RECIPE_STUB)
+    page = ctx.new_page()
+    errors: list[str] = []
+    others: list[str] = []
+    page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.on("request", lambda r: others.append(r.url) if not r.url.startswith(base) else None)
+    page.goto(f"{base}/index.html#plan")
+    page.wait_for_selector("#view-plan:not([hidden])", timeout=30000)
+    page.wait_for_timeout(800)
+    page.evaluate("KH.request('PUT', '/api/device/setup', { done: true }).then(() => KH.mock.local.flush())")
+    page.reload()
+    page.wait_for_selector("#view-plan:not([hidden])", timeout=30000)
+    page.evaluate("KH.recipeImportView.open({})")
+    page.wait_for_selector("#ri-url", state="visible", timeout=10000)
+    hint = page.locator("#ri-url-hint").inner_text()
+    check(f"[{tag}] the sheet says this iPhone reads the page and only the link goes out",
+          "This iPhone opens the page" in hint and "Only the link goes to that site." in hint, hint)
+    check(f"[{tag}] pasting says nothing leaves this iPhone", "Nothing leaves this iPhone." in page.locator("#ri-text-hint").inner_text())
+    page.fill("#ri-url", "https://recipes.example.com/banana-rice")
+    page.click("#ri-read-page")
+    page.wait_for_selector("#ri-lines .ri-line", timeout=15000)
+    asked = [r for r in page.evaluate("window.__kh.asked") if r["kind"] == "fetchRecipePage"]
+    check(f"[{tag}] the app is asked for the link only", asked == [{"kind": "fetchRecipePage", "url": "https://recipes.example.com/banana-rice"}],
+          json.dumps(asked))
+    check(f"[{tag}] no server is asked", not any(r["kind"] == "serverApi" for r in page.evaluate("window.__kh.asked")))
+    check(f"[{tag}] two ingredient lines", page.locator("#ri-lines .ri-line").count() == 2)
+    check(f"[{tag}] the name is the page's", page.input_value("#ri-review-name") == "Banana rice")
+    read_on = page.locator("#ri-read-on").inner_text() if page.locator("#ri-read-on").count() else ""
+    check(f"[{tag}] the review says it was read on this iPhone", "Read on this iPhone." in read_on, read_on)
+    check(f"[{tag}] the page's scripts never ran", page.evaluate("window.pageScriptRan") is None)
+    check(f"[{tag}] nothing of the page entered the document",
+          page.evaluate("document.querySelectorAll('script[type=\"application/ld+json\"], img[onerror]').length") == 0)
+    for i in range(2):
+        page.check(f"#ri-ok-{i}")
+    page.wait_for_function("!document.querySelector('#recipe-import-go').disabled", timeout=5000)
+    page.click("#recipe-import-go")
+    page.wait_for_selector("#sheet-recipe-import", state="hidden", timeout=10000)
+    meals = page.evaluate("KH.request('GET', '/api/meals')")
+    saved = [m for m in (meals if isinstance(meals, list) else meals.get("meals", meals.get("items", []))) if m.get("name") == "Banana rice"]
+    check(f"[{tag}] the recipe is saved with the page's link",
+          len(saved) == 1 and saved[0].get("source_url") == "https://recipes.example.com/banana-rice", json.dumps(saved)[:200])
+    over = page.evaluate("document.documentElement.scrollWidth > window.innerWidth + 1")
+    check(f"[{tag}] no sideways scroll", not over)
+    check(f"[{tag}] no request to another host", not others, "; ".join(others[:3]))
+    check(f"[{tag}] no console or page error", not errors, "; ".join(errors[:3]))
+    ctx.close()
+
+
+# The owner, 2026-11-26: Withings on the iPhone with no server. A stand-in for the app: the person's own Withings developer app is
+# saved; Connect signs in (deviceConnect) and the fetch answers one weight and one blood pressure reading from yesterday morning.
+DEVICES_STUB = ("window.__kh = { asked: [], copies: [], phone: [] };"
+                "const t = new Date(); t.setDate(t.getDate() - 1); t.setHours(7, 15, 0, 0); const at = Math.floor(t.getTime() / 1000);"
+                "window.__kh.answer = { ok: true, now: Math.floor(Date.now() / 1000), json: JSON.stringify({ pages: [{ updatetime: at, more: false,"
+                " timezone: Intl.DateTimeFormat().resolvedOptions().timeZone, measuregrps: ["
+                " { grpid: 11, attrib: 0, category: 1, date: at, measures: [{ type: 1, value: 7512, unit: -2 }] },"
+                " { grpid: 12, attrib: 0, category: 1, date: at + 300, measures: [{ type: 10, value: 128, unit: 0 }, { type: 9, value: 79, unit: 0 },"
+                " { type: 11, value: 64, unit: 0 }] }] }] }) };"
+                "window.webkit = { messageHandlers: { safetyCopy: { postMessage: (x) => window.__kh.copies.push(String(x)) },"
+                " phone: { postMessage: (m) => window.__kh.phone.push(String(m)) },"
+                " bridge: { postMessage: async (r) => { window.__kh.asked.push(r);"
+                " if (r.kind === 'services') return { ok: true, off: false, usda: false, scan: false };"
+                " if (r.kind === 'serverInfo') return { ok: true, paired: false };"
+                " if (r.kind === 'deviceStatus') return { ok: true, relay: 'https://example.github.io/kidney-health/oauth/',"
+                "   providers: { withings: { app: true, connected: false }, whoop: { app: false, connected: false } } };"
+                " if (r.kind === 'deviceConnect') return { ok: true };"
+                " if (r.kind === 'deviceFetch') return window.__kh.answer;"
+                " if (r.kind === 'aiStatus') return { ok: true, available: false, reason: 'not_eligible' };"
+                " return { error: 'off_off', message: 'off' }; } } } };")
+
+
+def devices_walk(browser, base: str) -> None:
+    """Settings → Connected devices on the iPhone with no server: shown in the menu; Whoop says where to add the developer app; Connect
+    Withings asks first, signs in through the app, and adds the weight and the reading marked "from Withings", on this iPhone; the
+    page never asks for a secret or a token."""
+    tag = "devices"
+    ctx = browser.new_context(viewport={"width": 375, "height": 812}, color_scheme="light")
+    ctx.add_init_script(DEVICES_STUB)
+    page = ctx.new_page()
+    errors: list[str] = []
+    others: list[str] = []
+    page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.on("request", lambda r: others.append(r.url) if not r.url.startswith(base) else None)
+    page.goto(f"{base}/index.html#today")
+    page.wait_for_selector("#view-today:not([hidden])", timeout=30000)
+    page.wait_for_timeout(800)
+    page.evaluate("KH.request('PUT', '/api/device/setup', { done: true }).then(() => KH.mock.local.flush())")
+    page.goto(f"{base}/index.html#settings")
+    page.reload()
+    page.wait_for_selector("#set-devices-withings-connect", state="visible", timeout=30000)
+    check(f"[{tag}] Settings lists Connected devices", page.locator("#settings-nav").get_by_role("button", name="Connected devices").count() == 1)
+    whoop = page.locator("#set-devices-whoop-off").inner_text()
+    check(f"[{tag}] Whoop says where to add the developer app", "Keys and services" in whoop, whoop)
+    page.click("#set-devices-withings-connect")
+    consent = page.locator("#set-devices-withings .device-consent").inner_text()
+    check(f"[{tag}] the box says this iPhone fetches with your own developer app",
+          "This iPhone then fetches" in consent and "with your own developer app" in consent, consent[:300])
+    page.click("#set-devices-withings-go")
+    page.wait_for_selector("#set-devices-withings-status", timeout=15000)
+    status = page.locator("#set-devices-withings-status").inner_text()
+    check(f"[{tag}] connected on this iPhone, one weight and one reading", "On this iPhone." in status and "1 weight and 1 blood pressure reading" in status,
+          status)
+    rows = page.evaluate("KH.request('GET', '/api/body/weights?start=' + KH.util.addDays(KH.util.todayStr(), -3) + '&end=' + KH.util.todayStr())")
+    weights = rows.get("weights", []) if isinstance(rows, dict) else []
+    check(f"[{tag}] the weight is from Withings", [(w["kg"], w["source"]) for w in weights] == [(75.12, "withings")], json.dumps(weights)[:200])
+    kinds = [r["kind"] for r in page.evaluate("window.__kh.asked")]
+    check(f"[{tag}] the app was asked to sign in and fetch", "deviceConnect" in kinds and "deviceFetch" in kinds, ",".join(kinds))
+    asked = json.dumps(page.evaluate("window.__kh.asked"))
+    check(f"[{tag}] no secret or token is asked for", "secret" not in asked and "token" not in asked, asked[:200])
+    over = page.evaluate("document.documentElement.scrollWidth > window.innerWidth + 1")
+    check(f"[{tag}] no sideways scroll", not over)
+    check(f"[{tag}] no request to another host", not others, "; ".join(others[:3]))
+    check(f"[{tag}] no console or page error", not errors, "; ".join(errors[:3]))
+    ctx.close()
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n", 1)[0])
     ap.add_argument("--out", type=Path, default=OUT)
@@ -686,6 +1109,11 @@ def main(argv: list[str] | None = None) -> int:
                 ask_walk(browser, base)
                 own_key_walk(browser, base)
                 phone_ai_walk(browser, base)
+                phone_ai_order_walk(browser, base)
+                reminders_walk(browser, base)
+                care_walk(browser, base)
+                recipe_walk(browser, base)
+                devices_walk(browser, base)
             finally:
                 browser.close()
     finally:

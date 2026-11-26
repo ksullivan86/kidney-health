@@ -900,7 +900,7 @@ Move schema evolution into `app/migrations/` with one module per step, applied i
 | iPhone app pairing (design note 15 §4.3) | `app/pairing.py`, `pair_url` in `create_my_token` (`app/auth/api_tokens.py`), `brand.PAIRING_SCHEME`, `pushPairBox` in `js/views/settings.js` with `KH.twoStep.qrSvg`, `ios/KidneyHealthCore/Sources/KidneyHealthCore/Pairing.swift`, `ios/KidneyHealth-Info.plist`, `.onOpenURL` and the pairing alert in `ios/KidneyHealth/ContentView.swift`; tests `tests/test_pairing.py`, `tests/data/pairing_vectors.json`, `PairingVectorTests.swift` |
 | Read-only sharing (design note 19) | `app/sharing.py` (`/api/me/shares`, `/api/shared`, the `shared_owner(area)` check), `app/migrations/m024_shares.py`, `app/migrations/m025_share_time_limit.py`, `sharing.enabled` (`app/settings_registry.py`, `js/engine/settings.js`), the `share.*` audit actions, `shares` and `DELETE /api/admin/users/{id}/shares` in `app/auth/admin_api.py`; screens: `js/views/sharing.js` (Settings block, the `#/share/<code>` sheet, `KH.sharing.reads`), the shared mode of `js/views/visit.js`, the People badge and End sharing in `js/views/settings.js`, the demo's answers in `js/mock/auth.js`; tests `tests/test_sharing.py`, `tests/test_migration_m024.py`, `tests/test_migration_m025.py`, `tests/test_sharing_ui.py`, `tools/e2e/sharing.py` |
 | The full Care team (design note 29) | `app/sharing.py` (switches, `PRESETS`, `role_of`, `PUT /api/me/shares/{id}/switches`, the `care_*` checks, eaten food, saved meals), `app/care_suggestions.py`, `app/migrations/m031_care_team_full.py`, `meals.apply_template`, export key `care_suggestions`; screens: the switches in `js/views/sharing.js`, `js/views/careplan.js`, `js/views/suggestions.js` (`#plan-suggestions`); demo `js/mock/care.js`; tests `tests/test_care_team_full.py`, `tests/test_migration_m031.py`, `tests/data/care_vectors.json` (`gen_care_vectors.py`), `tests/js/care_demo.mjs`, `tools/e2e/sharing.py` |
-| Notes from the Care team (design note 37) | `app/care_notes.py`, `app/sharing.py` (`may_note`, the `clinician` preset, `care_noter`, `notes_enabled`, hourly looks), `app/migrations/m036_care_notes.py`, setting `care_notes.enabled`, export key `care_notes`; screens: `js/views/notes.js` (`#notes`, the Today card, the Visit prep line, `#sheet-note`), the Clinician role and switch in `js/views/sharing.js`; demo `js/mock/care.js`; tests `tests/test_care_notes.py`, `tests/test_care_notes_ui.py`, `tests/js/notes_ui.test.mjs`, `tests/js/care_notes_demo.test.mjs`, `tests/data/care_vectors.json` (`care_notes`), `tools/e2e/clinician_notes.py` |
+| Notes from the Care team (design note 37) | `app/care_notes.py`, `app/sharing.py` (`may_note`, the `clinician` preset, `care_noter`, `notes_enabled`, hourly looks), `app/migrations/m036_care_notes.py`, setting `care_notes.enabled`, export key `care_notes`; screens: `js/views/notes.js` (`#notes`, the Today card, the Visit prep line, `#sheet-note`), the Clinician role and switch in `js/views/sharing.js`; demo `js/mock/care.js`; the iPhone app `js/mock/server_care.js` (tests `tests/js/server_care.mjs`, `tests/test_server_care_phone.py`, `care_walk` in `tools/e2e/device_mode.py`); tests `tests/test_care_notes.py`, `tests/test_care_notes_ui.py`, `tests/js/notes_ui.test.mjs`, `tests/js/care_notes_demo.test.mjs`, `tests/data/care_vectors.json` (`care_notes`), `tools/e2e/clinician_notes.py` |
 | The Care team (design note 25) | `app/sharing.py` (`role`, `POST /api/me/shares/invite`, `DELETE /api/me/shares/invites/{id}`, `PUT /api/me/shares/{id}/role`, `POST /api/shared/invites/{id}/accept\|decline`, the `care_helper` check and the Care helper routes), `app/migrations/m027_care_team.py`, `added_by` in `app/log.py` and `Entry`, the `care.*` audit actions; screens: Settings → Care team (`#set-care`, `js/views/sharing.js`), Profile → Open Care team, "Added by" in `js/views/today.js`, Planning for on the Plan tab (`js/views/careplan.js`), the demo's sample Care team in `js/mock/care.js`; tests `tests/test_care_team.py`, `tests/test_care_team_ui.py`, `tests/js/care_demo.mjs`, `tools/e2e/sharing.py` |
 | Two-step sign-in (design note 17) | `app/auth/totp.py` (RFC 6238, recovery codes, storage), `app/auth/totp_api.py` (`/api/me/totp*`), `_second_step` and the reset-link rule in `app/auth/routes.py`, `LoginBody.code` and `TotpCodeBody` in `app/auth/schemas.py`, `DELETE /api/admin/users/{id}/totp` and `two_step` in `app/auth/admin_api.py`, `remove-two-step` in `app/admin.py`, the `totp.*` audit actions, `totp_factors.secret_enc` in `crypto.ENCRYPTED_COLUMNS`, `app/migrations/m022_totp.py`; screens: `js/views/two_step.js` (Settings block, QR code from the vendored `qrcode-generator`), the code field of `#form-login` and the totp_required answers in `js/views/auth.js`, the People badge and removal in `js/views/settings.js`, the demo's answers in `js/mock/auth.js`; tests `tests/test_totp.py`, `tests/test_migration_m022.py`, `tests/test_two_step_ui.py`, `tools/e2e/two_step.py` |
 | Passkeys (design note 18) | `app/auth/webauthn.py` (the WebAuthn checks for a Relying Party, a CBOR reader and COSE keys, on `cryptography` only), `app/auth/passkeys.py` (storage, the in-memory challenges), `app/auth/passkeys_api.py` (`/api/me/passkeys*`, `/api/auth/passkey*`), `passkey_challenges` in `app/auth/context.py`, `passkeys` in `GET /api/auth/status`, `DELETE /api/admin/users/{id}/passkeys` and `passkeys` in `app/auth/admin_api.py`, `remove-passkeys` in `app/admin.py`, the `passkey.*` audit actions, `app/migrations/m023_passkeys.py`; screens: `js/views/passkeys.js` (Settings block, `KH.passkeys.signIn`), the passkey button of `#form-login` in `index.html` and `js/views/auth.js`, the People badge and removal in `js/views/settings.js`, the demo's answers in `js/mock/auth.js`; tests `tests/test_webauthn.py` (with `tests/data/webauthn_w3c_vectors.json`), `tests/webauthn_support.py`, `tests/test_passkeys.py`, `tests/test_migration_m023.py`, `tests/test_passkeys_ui.py`, `tools/e2e/passkeys.py` |
@@ -1118,7 +1118,9 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 
 **Unreleased (2026-11-12):** reminders by phone notification (note 35, schema step 35), off until `REMINDERS_ENABLED`.
 
-**Status (2026-11-24): v0.25.0 is prepared.** The iPhone app runs with no server (note 38: storage, food services, Apple
+**Status (2026-11-26): v0.26.0 is prepared.** The iPhone app does what the web app does, with or without a server: Ask
+by voice, the handbook inside the app, reminders, Care team notes, AI order, swaps and day plans, recipe import from a web
+page, Withings and Whoop, and the same export `.zip` as a server. No schema step and no new server setting. **v0.25.0**: The iPhone app runs with no server (note 38: storage, food services, Apple
 Health into the phone's log, the iPhone's own AI, native scanners, Home Screen shortcuts) and with your own server both ways
 (note 39: the both-ways token and its gateway, the change feed with schema steps 37 and 38, sync with conflict cards, profile
 and targets from the server, recipe import, Instacart and lists). **v0.24.1**: The iPhone app is called Kidney Health everywhere (bundle ID
@@ -3885,6 +3887,22 @@ when it opens; Settings → Preferences → *Units for height* saves it and call
 height, typed or saved, in the new unit. The first-sync card in Settings shows the height in the person's unit. There is no server
 twin: the server never converts a height. Tests: `tests/js/height_units.test.mjs`, `tests/test_height_units.py`.
 
+### Weight units in Profile (`user.units.weight`)
+
+Profile's two weight boxes, `#pf-weight` and `#pf-weight-6mo`, use the same setting as the weight log (`kg` or `lb`, default `lb`). The
+profile stores `weight_kg` and `weight_6_months_ago_kg` in kilograms as before; there is no API or schema change. The labels say the
+unit ("Weight (lb)", "Dry weight (lb, after dialysis)", "Weight 6 months ago (lb)"). In pounds the boxes take 44.1–661.3 and
+44.1–881.8 (the kilogram ranges 20–300 and 20–400, low end rounded up, high end down), step 0.1. `KH.bodyRules` converts:
+`weightBoxText` shows a saved weight in pounds to 0.1, half up (in kilograms as saved); `weightBoxKg` turns typed pounds into kilograms
+with 1 lb = 0.45359237 kg exactly and keeps 0.01 kg, as every logged weight is (`lbToKg`), so every weight typed to 0.1 lb shows the
+same again; `weightBoxRange` gives the range. A box the person did not touch keeps the saved kilograms (`readWeightKg` in
+`js/views/profile.js`), so showing a weight in pounds never changes it or counts as an unsaved change. **Use this** under a box keeps
+the log's own kilograms, and the log lines say the weight in the box's unit. Profile reads the unit from `GET /api/me/settings` when it
+opens; Settings → Weight and blood pressure (`js/views/body.js`) calls `KH.views.profile.setWeightUnit` when it reads or saves the unit.
+The first-sync card in Settings shows both weights in the person's unit (the kilograms when two weights round the same). The iPhone app
+with no server answers `/api/me/settings` from the same registry twin. Tests: `tests/js/weight_units.test.mjs`,
+`tests/test_profile_weight_units.py`; `tools/e2e/profile_reliability.py` walks it in Chromium.
+
 ### The handbook's words (what the app says, and where it comes from)
 
 A weight over the alarm carries `flag` in the summary's `alarm`; a reading with a top number of 180 or more **or** a bottom number of 120 or more carries `flag`
@@ -3946,7 +3964,7 @@ a person types and how it is worded, the chart scales, the table rows) and, for 
   it sat on the readings. The two series colours are the first two steps of the dataviz palette (tokens `--body-top` and `--body-bottom`, light and dark, validated for the
   colour-blind separation and 3:1 against the surface). The stats above them: the latest weight, the mean of **each kind of weight** over the last 7 days
   (`weekAverages`: morning is never averaged with after dialysis) and the server's 7-day blood pressure average with the goal verdict.
-* **Profile** (`js/views/profile.js`, `KH.body.profileHints()`: `bodySummary` and one `bodyWeights` list): under **Weight** "Latest in your log: 70.2 kg on Oct 20 — Use
+* **Profile** (`js/views/profile.js`, `KH.body.profileHints()`: `bodySummary` and one `bodyWeights` list; in the person's unit, see *Weight units in Profile*): under **Weight** "Latest in your log: 70.2 kg on Oct 20 — Use
   this" (**not shown when the form says dialysis**, where the field is the dry weight; it follows the Dialysis box live), under **Weight 6 months ago** "In your log:
   74.0 kg on Apr 21 — Use this" (the six-month rule of the section above: the weight dated closest to 182 days before the latest, within 30). **Use this fills the box and
   nothing else**; Save profile saves it, and the profile is never changed by the log.
@@ -4803,6 +4821,8 @@ never an account role: it does not touch `users.role` and grants nothing outside
   **Write a note** (`#sheet-note`, the day and area in view filled in, 1,000 characters with a counter), and Settings → Care team
   → Care teams you are on has **Notes** (what you wrote, "Read on …" or "Not read yet", Edit and Withdraw while unread).
   Settings → Care team offers the Clinician role and **Write notes for me** while notes are on.
+* **The iPhone app** (owner, 2026-11-26): paired both ways, the person's notes and suggestions are the server's, through the gateway
+  (`js/mock/server_care.js`, "Device mode"); nothing of a note is kept on the phone. Writing notes stays in the web app.
 * **Demo.** `js/mock/care.js`: Dee, a Clinician, has written you one unread note about your food two days ago; Ana's share lets
   you write notes. Every route above is answered. The limits, sentences, the text check and the day check are in
   `tests/data/care_vectors.json` (`care_notes`) and replayed by `node tests/js/run_vectors.mjs`.
@@ -4899,14 +4919,22 @@ Code `app/app_gateway.py`, `GatewayCaller` in `app/auth/deps.py`, `app:sync` in 
   (the page is read by the server's `RecipeFetcher` through the SSRF-checked transport), `GET /api/instacart`, `POST /api/instacart/preview`,
   `/api/instacart/send`, `GET /api/list-sync`, `POST /api/list-sync/preview` and `/api/list-sync/send`, each answering as for the web app
   while its switch is off. Never the list app's set-up (`PUT`/`DELETE /api/list-sync`, `POST /api/list-sync/test`) nor
-  `/api/recipe-import/text` (the phone reads pasted text itself). `NEVER_PREFIXES` and `NEVER` name what may never be added (sign-in, admin, tokens, sessions, keys and providers,
+  `/api/recipe-import/text` (the phone reads pasted text itself); since the owner's decision of 2026-11-26 also the person's notes and
+  suggestions from the Care team: `GET /api/me/notes`, `POST /api/me/notes/{note_id}/read` (with `If-Match`), `DELETE
+  /api/me/notes/{note_id}`, `GET /api/me/suggestions` and `POST /api/me/suggestions/{suggestion_id}/accept` and `/decline` (each finds a
+  row only by the owner's id; writing a note and sharing itself stay in the web app); and Connected devices (owner, 2026-11-26):
+  `GET /api/devices`, `POST /api/devices/{provider_id}/sync`, `DELETE /api/devices/{provider_id}`, `GET /api/activity` and
+  `PUT /api/activity/extra`, never `POST /api/devices/{provider_id}/start` or the way back (in `NEVER`: they are tied to the browser
+  session that started them). `NEVER_PREFIXES` and `NEVER` name what may never be added (sign-in, admin, tokens, sessions, keys and providers,
   sharing, the import, the `.zip` export, two-step sign-in, passkeys, the account itself). The test pins the list, checks every listed route
   needs `current_user` and neither `require_recent_auth` nor `require_admin`, and runs the isolation matrix through the gateway.
 * **The AI** keeps every rule because it is the same route: routing per feature, opt-in and consent per person, prefilters, guard, daily limit,
   the AI activity list, lab text and photos on the local AI only (`503 no_local_provider` without one, never a cloud fallback).
 * **`GET /push/v1/about`** (in `BEARER_PATHS`; `405` for other methods): `{account, api_version, app_version, sync: {gateway, changes},
   gateway: [{method, path}], ai: {enabled, available, routes}, services: {usda_search, barcode, barcode_off, barcode_usda, recipe_import,
-  instacart, list_sync}, capabilities, features: {usda_search, barcode, ai, changes}}`. `account` is the first 32 hex characters of the HMAC-SHA256 of the person's id under the
+  instacart, list_sync}, capabilities, features: {usda_search, barcode, ai, changes}, care_team: {enabled, notes, team: [{name, role, areas}],
+  on: [{name, role}]}}` (`care_team` from `sharing.care_team_summary`, read-only, for the phone's Settings → Care team: no id, user name,
+  link or invite; a share past its end date is left out). `account` is the first 32 hex characters of the HMAC-SHA256 of the person's id under the
   `SECRET_KEY` subkey `kidney-health/v1/app-account` (`brand.HKDF_APP_ACCOUNT_INFO`): stable per person and server, naming neither. `ai.routes`
   is `routes` of `GET /api/ai/status` (empty while the AI is off for the person); `capabilities` is `GET /api/meta`'s.
 
@@ -5163,6 +5191,22 @@ administration shows the switch group and the About rows. The demo (`js/mock/dev
 sample morning readings `withings`; Connect is refused there. Tests: `tests/test_connected_devices.py` (a fake Withings behind the
 real checked transport, `tests/devices_support.py`), `tests/test_connected_devices_ui.py`, `tests/js/devices_demo.mjs`.
 
+**The iPhone app** (owner, 2026-11-26: "Should Withings and Whoop be set up from the phone?" "yes"). Settings → Connected devices
+shows in device mode. Each company is used one of two ways, the server's first (`js/mock/devices.js` device branch; details in
+"Device mode" below):
+
+* **Through the paired server** (a token both ways, the company set up there): the status, Sync now and Disconnect go through
+  the gateway. Connect opens the server's own page `/#/devices/open/<provider>` (`openPending` with the word `open` opens Settings
+  at this section, with no toast) in Safari's sheet; the person signs in to the server there, so the callback still finds the
+  session that started it. The readings reach the phone through the change feed (`source` and `source_key` kept; pinned by
+  `tests/test_devices_gateway.py`). Whoop days are not a feed kind: the phone reads `GET /api/activity` through the gateway and
+  keeps the answer, so no migration or version twin is needed for read-only rows.
+* **On the phone** with the person's own developer app: the app (`ios/KidneyHealth/Services/Devices.swift`) signs in and fetches the
+  raw answers; the page reads them with `js/engine/device_map.js` (twin of `readings_from_groups`, `build_days`, `build_workouts`;
+  `tests/data/device_map_vectors.json`) and adds rows with the twins of `store.add_readings` and `store.add_activity`. The way back
+  is the static page `handbook/oauth/` on the handbook's Pages site (`DeviceLinks.relayURL`), because Withings takes only an
+  https callback it can match.
+
 ## Activity and recovery: Whoop and the active-day calorie extra (schema step 30; design note 28)
 
 Whoop is the second provider of Connected devices. Its days and workouts are shown on Trends; the person may let Whoop's
@@ -5265,7 +5309,7 @@ A recipe from pasted ingredients (always) or from a web page the server reads (`
 
 * **`app/recipe_import/parse.py`** (pure; JS twin `js/engine/recipe_import.js`, vectors `tests/data/lists_recipes_vectors.json`
   from `tests/data/gen_lists_recipes_vectors.py`): `ld_json_blocks` (stdlib `html.parser`, `application/ld+json` scripts only,
-  at most 20 blocks of 1 MiB; server only), `find_recipe` (an object, an array, `@graph`, `mainEntity`; `@type` a string or a
+  at most 20 blocks of 1 MiB; JS twin `ldJsonBlocks`, a port of `html.parser`, used on the iPhone), `find_recipe` (an object, an array, `@graph`, `mainEntity`; `@type` a string or a
   list, `…/Recipe` or `schema:Recipe`; depth 6), `recipe_from_jsonld` (`name` ≤ 200, `recipeYield` → the first number 0–100,
   `recipeIngredient` or `ingredients` ≤ 60 lines of 300, `recipeInstructions` as text, lists, `HowToStep`, `HowToSection` →
   ≤ 20 steps of ≤ 500, longer ones split at sentence ends; tags and entities removed; `nutrition` ignored), `parse_line`
@@ -5298,7 +5342,8 @@ Each opening owns its capability read, draft requests and save callback. Closing
 errors; an issued save still completes and refreshes its original caller, but cannot close or alter the newer sheet. Controls
 stay disabled while saving; failure restores the same checked draft. Searches are ordered per ingredient row, so independent
 rows do not discard each other's results; an abandoned search cannot report an error over another choice.
-The demo answers any link with a sample page (`js/mock/lists.js`). Tests: `tests/test_recipe_import.py`,
+The demo answers any link with a sample page (`js/mock/lists.js`); the iPhone app with no server reads the page itself ("Device
+mode", "A recipe page read on the iPhone"). Tests: `tests/test_recipe_import.py`,
 `tests/test_lists_recipes_ui.py`, `tools/e2e/lists_recipes.py`.
 
 ## Open the shopping list at Instacart (design note 33; v0.22 work)
@@ -5646,9 +5691,13 @@ server stays the full version; this mode never exists in the installed app.
 * **Export** (`js/mock/export.js`): `GET /api/me/export.json` is a demo-only route returning the document of `app/account.py export_data`: the
   same keys in the same order (`tests/test_demo_local_storage.py` compares them), `log_entries` without the derived `version`, `custom_foods`,
   `linked_foods` (`linked_at: null`), `meal_templates`, `lab_results`, `symptoms`, `weights` and `blood_pressures` in the export shapes, `food_preferences`, `builtin_foods`, the
-  person's own settings and the activity list; the AI sections are empty and nothing secret is ever in it. The page downloads it as `export.json`
-  (`KH.demoLocal.exportFile()`; Settings → Your data shows **Export my data (export.json)** while the mode is on, and says what is needed
-  otherwise). The server's zip also has CSV files and a README; the demo gives the JSON only.
+  person's own settings and the activity list; the AI sections are empty and nothing secret is ever in it. The page downloads the server's
+  archive, built in the page (`KH.demoLocal.exportFile()` → `MockApi._exportArchive()`; Settings → Your data shows **Export my data
+  (.zip)** while the mode is on, and says what is needed otherwise): `M.exportZip` writes `export.json` (`JSON.stringify(doc, null, 2)`),
+  the CSV files and `README.txt` of `app/account.py build_export` in its order, as a zip with the STORE method and a CRC-32 per file,
+  named by `account.export_filename`. The CSV text is the server's (`_csv`, `log.csv_safe`; each column knows whether Python held a
+  float, a rounded nutrient or a bool, which JSON loses), and `log.csv` takes each entry's food source and licence from the food row.
+  Parity: `tests/data/export_vectors.json` (`tests/data/gen_export_vectors.py`) replayed by `node tests/js/export_vectors.mjs`.
 * **Import** (`js/mock/import.js`): `POST /api/me/import?dry_run=&merge=&replace_profile=` is the twin of `app/data_import.py` for the existing
   "Import from a file" screen (`js/views/settings.js`, which shows it instead of "no server to import into" while the mode is on). The same
   rules: `format` `kidney-health-export` version 1; **depth limit 32**; NaN/Infinity refused; every record kind a small schema (the server's pydantic models
@@ -5815,6 +5864,30 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
   the data is kept on this iPhone, with **Apple Health and server**, which posts `settings` to the app's `phone` message handler.
 * **The safety copy**: after each save `persist.js` gets `GET /api/me/export.json` from the in-page API and posts it to the app's
   `safetyCopy` handler. Nothing else leaves the page.
+* **The handbook in the app** (owner, 2026-11-26): the iOS jobs of `ci.yml` and `testflight.yml` build the handbook
+  (`handbook/requirements.lock`, `mkdocs build --strict`, about a minute) and run `build_preview.py --device ios/WebApp --handbook
+  SITE`. `pack_handbook` copies it into `learn/` (about 12 MB): each inline script of the theme becomes
+  `learn/assets/javascripts/inline/<sha-256>.js` in the same place, every page gets a `<meta>` CSP (`HANDBOOK_CSP`: `'self'` only,
+  no inline script or style), `navigation.instant*` is removed from `__config` (it reads the sitemap), and source maps, other
+  languages' search, the sitemap, the 404 page and types the app does not serve are left out. A page with an inline style or
+  anything from the network stops the build. `device-flag.js` then says `{url: "learn/", local: true, public}` and
+  `js/mock/handbook.js` answers `available: true` with the published copy as `public_url`. In the app, `WebAppView` cancels a
+  navigation to `learn/…` and shows `WebShell/HelpPages.swift`: a sheet with its own web view (data store not kept), its own scheme
+  handler (only files under `WebShellConfig.helpFolder`; a folder address is its `index.html`; query and fragment ignored), Done
+  and Back; a tapped `https` or `tel:` link opens outside the app, every other navigation is cancelled. Built without
+  `--handbook`, Learn links go to the published copy in Safari, as before. Search works if the web view runs the theme's worker.
+* **Voice for Ask** (owner, 2026-11-26): `js/views/ask-voice.js` in device mode never records in the page. While Ask can run it
+  asks the bridge `{kind: 'speechStatus'}` → `{ok, available, reason: not_on_device | not_allowed | not_ready | null}` and shows the
+  microphone only when `available`. A tap sends `{kind: 'dictate'}`: `Phone/Dictation.swift` shows a sheet (live words, Done, Cancel,
+  60 s at most, leaving the app cancels) and runs `SFSpeechRecognizer` with `requiresOnDeviceRecognition = true` (a recognizer whose
+  `supportsOnDeviceRecognition` is false is `not_on_device`). Answer: `{ok, text}` (at most 2,000 characters) or `{error: cancelled |
+  not_allowed | unavailable | busy | failed, message}`. The words go into the question box as the server's transcript does; only Send
+  sends. No file, no network, nothing kept. `NSMicrophoneUsageDescription` and `NSSpeechRecognitionUsageDescription` are set in the
+  project's Info.plist settings. Read answers aloud (this device's own voices) works in device mode too. `GET /api/ai/status` still
+  says `voice: false`: that is the server's transcription, which the phone never uses.
+* **Export** (owner, 2026-11-26): Settings → Your data → **Export my data (.zip)** gives the server's archive, made in the page
+  (`M.exportZip` in `js/mock/export.js`, "Keep my data in this browser" above), as a `blob:` download; `WebAppView` writes it to a
+  temporary file and opens the share sheet. No Swift change: the export.json download took the same way.
 * **The iPhone side** (`ios/KidneyHealth/WebShell/`, product-neutral): `WebAppSchemeHandler` serves the packed folder at
   `kidneyhealth-app://app/` (no `..`, no hidden files, only listed types, resolved inside the folder); `WebAppView` keeps the data in
   `WKWebsiteDataStore(forIdentifier:)`, cancels every navigation but its own files, opens a tapped `https` link in Safari, accepts
@@ -5840,6 +5913,19 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
 * **Home Screen shortcuts**: `Phone/QuickActions.swift` sets three shortcuts on the app's icon (Scan a barcode, Add food, Quick
   add). The scene delegate keeps the chosen one until the page has loaded, then calls `KH.quickAction(name)` (`js/main.js`), which
   waits for the page to start and only opens that screen. It accepts only those three names, and only in device mode.
+* **Reminders (design note 35 §7)**: Settings → Reminders works with no server, as the iPhone's own notifications. The routes of
+  `js/mock/reminders.js` keep the reminders with the log (and in the export). `js/mock/phone_reminders.js` plans the next 7 days
+  (`plan`: reminders that are on, on their days, still in the future, at most 60, soonest first; today's meal reminder is left out
+  when that meal has an eaten entry today, as `run_due` does; local dates and times; vectors `tests/data/phone_reminder_vectors.json`,
+  checked against `app/reminders.py` `is_due`) and sends it after each save of the log, after a reminder changes, and when the page
+  becomes visible. The bridge kind `reminders` (`Phone/LocalReminders.swift`): `status` and `allow` → `{ok, permission: allowed |
+  denied | not_asked, pending}` (`allow` asks iOS, only from the button); `schedule` with `items: [{id: "reminder-<id>-<date>", at:
+  "YYYY-MM-DDTHH:MM", kind, meal}]` removes every pending `reminder-` request and adds one `UNCalendarNotificationTrigger` each
+  (no time zone: the phone's own; nothing while not allowed) → `{ok, scheduled, permission}`; `test` adds one in 5 s; `openSettings`
+  opens the app's page in iOS Settings. The app writes the words (title "Food log", `BODIES`, `TEST_BODY`); the page sends no text.
+  A tap opens `PAGES[kind]` (the test: Settings) through `KH.openScreen(name)` (`js/main.js`: `add`, `plan`, `today`, `settings`,
+  device mode only, after the start). The screen says the reminders are for this iPhone only; they are not synced to a paired
+  server. The device build packs `js/views/reminders.js` (`data-device="keep"`); the web demo still leaves it out.
 * **Sending to your server (step 4, the phone side)**: the page owns the queue and the rules; the app only carries the request.
   `js/mock/server_sync.js` (device mode only) finds the rows the server has not taken, builds the `POST /push/v1/sync` body
   ("`POST /push/v1/sync`" above) and asks the `bridge` with `serverInfo` (paired? the host), `serverSyncCheck` (`GET /push/v1/sync`)
@@ -5893,6 +5979,17 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
     features on with `opt_in` (Settings → AI features shows one switch). Nothing leaves the phone, so consent is given with
     `skip_preview` and there is no consent sheet; "What will be sent?" shows the request to the app. The device build also packs the
     vendored pdf.js so a lab PDF can be read on the phone.
+* **The Care team, paired both ways** (owner, 2026-11-26; `js/mock/server_care.js`). `js/mock/care.js` registers the person's own
+  notes and suggestions routes with `mineRoute`, which asks `M.serverCare.answer` first. Not paired: the phone's own answer, as
+  before (an empty start has no Care team). Paired: always the server's, through the gateway (`GET /api/me/notes` with `before` and
+  `limit` only; `POST …/read` with the page's `If-Match`; `DELETE`; `GET /api/me/suggestions`; accept, decline), never kept: no note
+  text in the saved log, the safety copy or the export, and nothing reaches `js/mock/ai.js`. No answer → `503` "Your server cannot be
+  reached right now…"; a token that only adds (or an old server) → `409` saying a token both ways is needed. Accept needs
+  `M.serverChanges.active()` (else `409`): the server makes the planned entries, a sync runs at once, and the answer names this phone's
+  rows by `client_id` (`waiting` counts those not here yet; `js/views/suggestions.js` says they come with the next sync).
+  `GET /api/device/care-team` answers `{paired, state, server, care_team}` from `about`'s `care_team` (`M.serverApi.readAbout` →
+  `careTeam`). Settings → Care team (`KH.sharing.deviceBlock`) shows it read-only while paired, with "Change … in your server's web
+  app"; with no server the section, its menu chip and Profile's Care team card are left out.
 * **The server's services, paired both ways (design note 39, steps 3 and 4)**. A token "For the iPhone app, both ways" (scope
   `app:sync`) lets the phone use the server's gateway `/push/v1/api/<path>`. The page builds each request and reads each answer;
   the app only carries it.
@@ -5936,7 +6033,7 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
     the built-in food of that name, else the one food of that name, else the one with that brand); a card that names a food the
     phone lacks becomes a question. Save on the card posts to the phone's own routes with the server's `client_id`, and step 4 sends
     the row up once. The rule-based low and emergency answers pass untouched. An older server that saved at once: the `saved`
-    cards lose Undo (`undo: null, on_server: true`) and a sync follows. Voice stays off. `GET /api/me/ai` → `phone.ask` and
+    cards lose Undo (`undo: null, on_server: true`) and a sync follows. Voice is the phone's own (below). `GET /api/me/ai` → `phone.ask` and
     `phone.photos` give why the server's AI cannot run Ask or photos now (`not_paired`, `not_both_ways`, `offline`, `device_only`,
     `not_synced`, `not_opted_in`, `server_off`); the Ask tab is always shown on the phone and words the reason (`js/views/ask.js`),
     and the Add screen says where a meal photo comes from when "Plate photo (AI)" is not offered (`js/views/ai.js`). The phone never
@@ -5963,24 +6060,37 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
     (`identityIn`): it goes to the iPhone's model or answers 503 `identity`. Lab text and lab photos never reach `viaOwnKey`.
     `GET /api/me/ai` → `phone.own_key` and `phone.where` (`server`, `own`, `iphone`); `phone.photos` adds `own_photos_off`.
   * **Not on the own key**: Ask (its tools read the log on the server), lab reports, voice.
-* **More on the phone's own AIs (design note 39 §6.6)**. Meal ideas (mode `ideas` only) and AI recipes (cooking steps off) run on
-  the own key and on the iPhone's model in the same order; on iOS 27 the iPhone's model also reads a label or plate photo, after
-  the own key.
+* **More on the phone's own AIs (design note 39 §6.6, §6.7)**. Meal ideas, AI order, AI swaps and AI day plans (the four modes of
+  `POST /api/ai/next-meal`) and AI recipes (cooking steps off) run on the own key and on the iPhone's model in the same order; on
+  iOS 27 the iPhone's model also reads a label or plate photo, after the own key.
   * **Twins** (`js/engine/aimeal.js`, `KH.aiMeal`; vectors `tests/data/ai_meal_vectors.json` from `tests/data/gen_ai_meal_vectors.py`):
     `candidates_for_ai` (ideas), `validate_ai_items`, `lower_to_fit`, `guard.judge_ideas`, `guard.fallback`,
     `recipes.recipe_candidates`, `recipes.judge_recipes`, `prompts.next_meal_context`, `recipe_context`, `person_block`,
-    `condition_text`, and the V2 checks of `IdeasAnswer` and `RecipesAnswer`.
+    `condition_text`, and the V2 checks of `IdeasAnswer` and `RecipesAnswer`; for AI order, swaps and day plans also
+    `candidates_for_ai` with modes `rerank`, `swap` (the rule swaps) and `plan` (the plan's options), `validate_ai_plan`,
+    `guard.judge_rerank`, `judge_swap`, `judge_plan`, `prompts.swap_extra`, `plan_extra` and the V2 checks of `RerankAnswer`,
+    `SwapAnswer` and `PlanAnswer`.
   * **The page** (`js/mock/ai.js` `mealIdeasHere`, `recipesHere`): the server's route checks and guidance gate, the candidates,
     trimmed lowest-ranked first until the data block fits (`DATA_CHARS`: 80,000 characters for the own key, 5,000 for the iPhone's
-    model), then the server's judge. Requests: `{kind: 'ownAI', task: 'next_meal' | 'recipes', text, condition, ids}` and
-    `{kind: 'ai', task, text, condition}`; `condition` is `prompts.condition_text` of the person block. Rerank, swap and plan answer
-    503 `not_on_phone`.
+    model), then the server's judge. Requests: `{kind: 'ownAI', task: 'next_meal' | 'recipes', text, condition, ids}`,
+    `{kind: 'ownAI', task: 'rerank' | 'swap' | 'plan', text, condition}` (no ids: the answer names refs and meals) and
+    `{kind: 'ai', task, text, condition}`; `condition` is `prompts.condition_text` of the person block. Swap and plan candidates are
+    never trimmed on the server; for the iPhone's model they may be trimmed to none (the answer picks among `swaps` or `plan`), and
+    the judge uses the whole list as the server does. A swap of a low treatment (the food, or an entry with purpose `hypo`) answers
+    the rule card `treating_a_low` and no AI is asked. **Swaps and day plans never go to the server** (`PHONE_ONLY_MODES`): the request
+    names this phone's entry or food and a plan names its saved meals by this phone's ids; with no AI on the phone they answer 503
+    `not_on_server`. AI order goes to the server first; `guard.judge_rerank` puts each food's `name` on its `order` and `rest` rows,
+    so `serverApi.localize` finds the same food here. `GET /api/ai/status` in device mode adds `swap_plan: {available, label, stays}`
+    (which of the phone's AIs runs swaps and plans; the guidance view names it and hides the buttons when there is none), and
+    `GET /api/guidance/next-meal`'s `ai` block comes from the phone's AI status (`KH.mock.aiGuidance`), so What fits shows AI order.
   * **The app**: `ai-prompts.json` holds `systems` (the meal ideas and recipe rules with `[[CONDITION]]`), `conditions` (every
     wording `condition_text` can give; anything else is refused) and per task `{template, system, image}`. `own_key` gets
     `next_meal` and `recipes` with the schema holding `"__CANDIDATE_IDS__"` where the server puts its id list
     (`scripts/gen_own_key_prompts.py`); `OwnAI.swift` puts the page's whole-number ids in the schema and in the schema line.
+    `rerank`, `swap` and `plan` use the meal ideas rules with the condition and no ids; their schemas list no refs
+    (`plan_schema(MEAL_SLOTS, AI_PLAN_OPTIONS_MAX - 1)`).
     `OnDeviceAI.swift` answers with `@Generable` shapes of the server's schemas (the ids are plain whole numbers there; the judge
-    drops any that is not a candidate). Photos: `OnDeviceVision.swift`, iOS 27 or later (the photo is a
+    drops any that is not a candidate; `RerankReply`, `SwapReply`, `PlanReply` name refs and meals). Photos: `OnDeviceVision.swift`, iOS 27 or later (the photo is a
     `FoundationModels.Attachment` in the prompt); `aiStatus` says `photos`.
   * **Ask** stays the server's: free text checked by the server's chat checks, which have no twin here.
 * **Sync both ways (design note 39, steps 6 and 7)**: `js/mock/server_changes.js` (device mode only, `M.serverChanges`) reads the
@@ -6051,13 +6161,59 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
   * **Recipe pages, Instacart and the list app** (§7, step 9), in `js/mock/lists.js`: in device mode never the demo's stand-ins.
     With `both` and the service on in `about.services` (`recipe_import`, `instacart`, `list_sync`; one not mentioned is tried), each
     goes through the gateway; otherwise, and while the server cannot be reached, it answers as a server with it off (`web: false`,
-    `enabled: false`, the other routes `404`; a failed send is `503` "Your server cannot be reached right now"). A page's draft keeps
+    `enabled: false`, the other routes `404`; a failed send is `503` "Your server cannot be reached right now"). A recipe page is
+    the exception (owner, 2026-11-26): when the server does not read it (not paired both ways, `recipe_import` off, `web` false, or
+    unreachable, also between the GET and the POST), the iPhone reads it, below. A page's draft keeps
     the server's name, steps and lines, and the lines are matched again with the phone's own food search, so the saved recipe uses
     the phone's foods. Pasted ingredients are read on the phone. The server makes the Instacart and list app lines from its own Plan;
     the page shows each with the phone's id for the food of that name (or a negative id when the phone has no such planned food), so
     "ticked on this phone" works, and maps them back to the server's ids on Send (in memory, per range). The list app's set-up routes
     are `404` on the phone. `views/instacart.js` shows the demo's sentence only when `MOCK && !DEVICE`; on the phone the server's
     `https` link opens in Safari when pressed.
+* **A recipe page read on the iPhone** (owner, 2026-11-26; design note 30 §3). `GET /api/recipe-import` adds `read_on`:
+  `'server'`, `'phone'` (the app's `services` answer has `recipePage: true`) or `null` (an older app: paste only). On the phone,
+  `POST /api/recipe-import/page` asks the bridge `{kind: 'fetchRecipePage', url}` (only the link) and gets `{ok, html}` or
+  `{error: code}`, with the server's codes plus `rate_limited`; the page answers them as the server does (`bad_link` 400,
+  `rate_limited` 429, the rest 422, in the server's words, the phone's for `bad_link`, `blocked` and `unreachable`). The page reads
+  the HTML with `KH.recipeImport.pageRecipe`, a port of `parse.ld_json_blocks` over Python's `html.parser` (nothing is put into a
+  document and nothing on the page runs), then `findRecipe` and `recipeFromJsonld`; the draft has `read_on: 'phone'` and the review
+  says "Read on this iPhone". `Services/RecipePageFetcher.swift` keeps the server's rules (`KidneyHealthCore/RecipePage.swift`):
+  the link must pass `check_page_url` and be `https`, ASCII, with no user name or `%` and a plain host; every address the host
+  resolves to (`getaddrinfo`) must be `global` by `egress.classify_address`, and the connection's own address (task metrics) is
+  checked again; redirects by hand, at most 3, each checked again; 2 MiB, 15 s in all, HTML only, the header's or `<meta>`
+  charset; an ephemeral session with no cookies, cache or stored credentials; the server's User-Agent; 20 pages an hour. Vectors:
+  `tests/data/recipe_page_vectors.json` (`gen_recipe_page_vectors.py`; the same on Python 3.12 to 3.15), replayed by
+  `run_vectors.mjs` and `RecipePageTests.swift`. Tests: `tests/js/phone_recipe_page.mjs`, `tests/test_phone_recipe_import.py`,
+  `tools/e2e/device_mode.py` `recipe_walk`.
+* **Withings and Whoop (owner, 2026-11-26)**. Settings → Connected devices shows on the phone (no longer in `DEVICE_LEFT_OUT` or
+  base.css). `js/mock/devices.js` answers `GET /api/devices` with each provider's `where` (`server`, `phone` or null),
+  `connect_via` (`server` when the server has it set up, else `phone` when the person saved a developer app), and both sides'
+  connections. The server's connection wins: while it has the company, the phone's own waits (`syncDue` skips it).
+  * **Bridge kinds** (`Services/Devices.swift`): `{kind: 'serverPage', page: 'devices', provider}` → Safari's sheet at
+    `DeviceLinks.serverPage` (the paired https address only), answered on Done; `{kind: 'deviceStatus'}` → `{ok, relay,
+    providers: {p: {app, connected}}}` (never an ID, secret or token); `{kind: 'deviceConnect', provider}` → `{ok}` or `{error:
+    no_app | busy | cancelled | state | scope | refused | offline}`; `{kind: 'deviceFetch', provider, since}` → `{ok, now, json}`
+    (Withings `{pages: [body]}`, Whoop `{cycles, recoveries, sleeps, workouts}`) or `{error: not_connected | auth | rate_limited |
+    scope | offline | provider_error}`; `{kind: 'deviceDisconnect', provider}` → `{ok, revoked}` (tokens deleted first).
+  * **The app**: the developer app (client ID and secret) and the tokens in the Keychain (`withingsApp`, `whoopApp`,
+    `withingsTokens`, `whoopTokens`, this device only), typed in Keys and services and never shown again. Sign-in with
+    `ASWebAuthenticationSession` (ephemeral) at the server's authorize addresses and scopes, `redirect_uri` the relay page, `state`
+    32 random bytes compared in constant time (`DeviceLinks.back`); the code is exchanged here. Requests to `wbsapi.withings.net`
+    and `api.prod.whoop.com` only, HTTPS, no cookies, no cache, no redirects, 15 s, 2 MiB an answer; a refresh under 5 minutes
+    left, kept at once; `auth` once refreshes and retries, a refused refresh deletes the tokens (connect again). Revoke: Whoop
+    `DELETE /developer/v2/user/access`, Withings the signed nonce (CryptoKit HMAC-SHA256). Pure parts in
+    `KidneyHealthCore/DeviceLinks.swift` (`DeviceLinksTests.swift`).
+  * **The page**: `since` is the server's (Withings the cursor, else 365 days back; Whoop the cursor minus 3 days, else 90); the
+    cursor is Withings' first `updatetime` or the app's `now`. `_addDeviceReadings` and `_addDeviceActivity` are the twins of
+    `store.py`, with the ledger in `_devicesState.phone[provider].seen` (saved with the log; Disconnect with "Also delete" drops
+    it). It syncs when the app opens or comes back (`POST /api/device/devices/sync-due`, at most every 10 minutes) and on Sync now
+    (10 minutes apart, as the server's). The phone's own rows are sent to the server by step 4 like any row (`source_key`
+    `withings:<grpid>:...` matches the server's own Withings row); Whoop days are not sent.
+  * **Whoop days with a server**: `GET /api/activity` in device mode asks the server when it is both ways and keeps the answer in
+    `_activityServer`; when that has days or the extra on, Today's extra (`_activitySource`) and `PUT /api/activity/extra` are the
+    server's; offline, the kept copy answers.
+  * Tests: `tests/js/phone_devices.mjs` (run by `tests/test_phone_devices.py`, which also pins the Swift side and the relay page),
+    `tests/test_devices_gateway.py`, `DeviceRouteTests.swift`, `DeviceLinksTests.swift`, `tools/e2e/device_mode.py` `devices_walk`.
 * **Tests**: `tests/js/server_sync.mjs` and `tests/test_server_sync_phone.py` (the queue against a stand-in app, and the page's
   body through the real route), `tests/js/server_services.mjs` and `tests/test_server_services_phone.py` (note 39 steps 3 and 4
   against a fake gateway), `tests/js/server_lists.mjs` (step 9, run by the same pytest file), `tests/js/server_changes.mjs` (steps 6

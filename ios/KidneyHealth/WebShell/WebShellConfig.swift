@@ -15,6 +15,8 @@ enum WebShellConfig {
     static let folder = "WebApp"
     /// The page the app opens.
     static let startPath = "/index.html"
+    /// The folder of help pages packed with the web app (`--handbook`), shown in a sheet of their own (HelpPages.swift), or nil.
+    static let helpFolder: String? = "learn"
     /// A fixed identifier, so the app gets the same web data store back after every restart (iOS 17). Never change it: a new one
     /// starts with no data.
     static let storeID = UUID(uuidString: "9C1E4B7A-3D52-4F6B-8A10-5E2C7D9B4F61")!
@@ -28,6 +30,7 @@ enum WebShellConfig {
     @MainActor static func pageLoaded(_ view: WKWebView) {
         PageBridge.shared.pageLoaded(view)
         QuickActions.shared.run() // a Home Screen shortcut that opened the app
+        LocalReminders.shared.run() // a reminder that was tapped
         Task { await SyncModel.shared.syncToPhone() } // Apple Health readings that came in while the app was closed
     }
 

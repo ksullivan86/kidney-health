@@ -14,7 +14,6 @@
   const flags = KH.flags || {};
   const L = KH.mock && KH.mock.local;
 
-  const FILE_NAME = 'export.json';
   const KEPT_TEXT = 'Your data is kept in this browser only: not on a server, and not backed up. Export it regularly (Settings, Your data).';
   const PERSIST_TEXT = {
     yes: 'Your browser has agreed to keep this data unless you clear the site data yourself.',
@@ -87,18 +86,19 @@
     if (!L.status().on) L.probe().then(render, () => {}); // can this browser store anything here? says so before the person ticks anything
   }
 
-  // The file the server's zip holds, built by the demo API (js/mock/export.js) and saved by the browser.
+  // The server's export .zip (export.json, the CSV files and README.txt), built by the demo API in the page (js/mock/export.js,
+  // M.exportZip) and saved by the browser. In the iPhone app the download goes to the share sheet (WebAppView).
   async function exportFile() {
-    const doc = await KH.request('GET', '/api/me/export.json');
-    const text = `${JSON.stringify(doc, null, 2)}\n`;
-    const blob = new Blob([text], { type: 'application/json' });
+    const api = KH.mock && KH.mock.instance;
+    const res = api._exportArchive();
+    const blob = new Blob([res.bytes], { type: 'application/zip' });
     const url = URL.createObjectURL(blob);
-    const a = h('a', { href: url, download: FILE_NAME, class: 'sr-only' });
+    const a = h('a', { href: url, download: res.name, class: 'sr-only' });
     document.body.append(a);
     a.click();
     a.remove();
     setTimeout(() => URL.revokeObjectURL(url), 60000);
-    return { name: FILE_NAME, bytes: blob.size };
+    return { name: res.name, bytes: blob.size };
   }
 
   function init() {

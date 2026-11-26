@@ -1,0 +1,3769 @@
+{
+ "about": "A recipe page read on the iPhone (design note 30 §3; tests/data/gen_recipe_page_vectors.py). Made from app/recipe_import/parse.py, fetch.py and app/egress.py; replayed by tests/js/run_vectors.mjs and the Swift package.",
+ "address_cases": [
+  {
+   "address": "93.184.216.34",
+   "class": "global"
+  },
+  {
+   "address": "8.8.8.8",
+   "class": "global"
+  },
+  {
+   "address": "1.1.1.1",
+   "class": "global"
+  },
+  {
+   "address": "203.0.114.1",
+   "class": "global"
+  },
+  {
+   "address": "10.0.0.1",
+   "class": "private"
+  },
+  {
+   "address": "10.255.255.255",
+   "class": "private"
+  },
+  {
+   "address": "172.16.0.1",
+   "class": "private"
+  },
+  {
+   "address": "172.31.255.255",
+   "class": "private"
+  },
+  {
+   "address": "172.32.0.1",
+   "class": "global"
+  },
+  {
+   "address": "192.168.1.20",
+   "class": "private"
+  },
+  {
+   "address": "127.0.0.1",
+   "class": "private"
+  },
+  {
+   "address": "127.255.255.254",
+   "class": "private"
+  },
+  {
+   "address": "0.0.0.0",
+   "class": "denied"
+  },
+  {
+   "address": "0.1.2.3",
+   "class": "denied"
+  },
+  {
+   "address": "169.254.1.1",
+   "class": "denied"
+  },
+  {
+   "address": "169.254.169.254",
+   "class": "denied"
+  },
+  {
+   "address": "169.254.170.2",
+   "class": "denied"
+  },
+  {
+   "address": "100.64.0.1",
+   "class": "private"
+  },
+  {
+   "address": "100.127.255.255",
+   "class": "private"
+  },
+  {
+   "address": "100.100.100.200",
+   "class": "denied"
+  },
+  {
+   "address": "100.128.0.1",
+   "class": "global"
+  },
+  {
+   "address": "192.0.0.1",
+   "class": "private"
+  },
+  {
+   "address": "192.0.0.9",
+   "class": "global"
+  },
+  {
+   "address": "192.0.2.1",
+   "class": "private"
+  },
+  {
+   "address": "198.18.0.1",
+   "class": "private"
+  },
+  {
+   "address": "198.51.100.7",
+   "class": "private"
+  },
+  {
+   "address": "203.0.113.9",
+   "class": "private"
+  },
+  {
+   "address": "224.0.0.1",
+   "class": "denied"
+  },
+  {
+   "address": "239.255.255.250",
+   "class": "denied"
+  },
+  {
+   "address": "240.0.0.1",
+   "class": "denied"
+  },
+  {
+   "address": "255.255.255.255",
+   "class": "denied"
+  },
+  {
+   "address": "2606:4700:4700::1111",
+   "class": "global"
+  },
+  {
+   "address": "2001:4860:4860::8888",
+   "class": "global"
+  },
+  {
+   "address": "::1",
+   "class": "private"
+  },
+  {
+   "address": "::",
+   "class": "denied"
+  },
+  {
+   "address": "::ffff:8.8.8.8",
+   "class": "global"
+  },
+  {
+   "address": "::ffff:192.168.1.1",
+   "class": "private"
+  },
+  {
+   "address": "::ffff:127.0.0.1",
+   "class": "private"
+  },
+  {
+   "address": "::ffff:169.254.169.254",
+   "class": "denied"
+  },
+  {
+   "address": "fe80::1",
+   "class": "denied"
+  },
+  {
+   "address": "fec0::1",
+   "class": "global"
+  },
+  {
+   "address": "fc00::1",
+   "class": "private"
+  },
+  {
+   "address": "fd12:3456::1",
+   "class": "private"
+  },
+  {
+   "address": "fd00:ec2::254",
+   "class": "denied"
+  },
+  {
+   "address": "ff02::1",
+   "class": "denied"
+  },
+  {
+   "address": "2001:db8::1",
+   "class": "private"
+  },
+  {
+   "address": "2002:c0a8:0101::1",
+   "class": "private"
+  },
+  {
+   "address": "2002:0808:0808::1",
+   "class": "global"
+  },
+  {
+   "address": "2001:0:4136:e378:8000:63bf:3fff:fdd2",
+   "class": "private"
+  },
+  {
+   "address": "2001:0:4136:e378:8000:63bf:f7f7:f7f7",
+   "class": "global"
+  },
+  {
+   "address": "64:ff9b::808:808",
+   "class": "global"
+  },
+  {
+   "address": "64:ff9b::c0a8:101",
+   "class": "private"
+  },
+  {
+   "address": "64:ff9b:1::a00:1",
+   "class": "private"
+  },
+  {
+   "address": "::8.8.8.8",
+   "class": "global"
+  },
+  {
+   "address": "::10.0.0.1",
+   "class": "private"
+  },
+  {
+   "address": "::2",
+   "class": "denied"
+  },
+  {
+   "address": "100::1",
+   "class": "denied"
+  },
+  {
+   "address": "2001:20::1",
+   "class": "global"
+  },
+  {
+   "address": "3fff::1",
+   "class": "private"
+  },
+  {
+   "address": "4000::1",
+   "class": "denied"
+  },
+  {
+   "address": "2600::1",
+   "class": "global"
+  }
+ ],
+ "charset_cases": [
+  {
+   "content_type": "text/html; charset=utf-8",
+   "head": "",
+   "names": [
+    "utf-8"
+   ]
+  },
+  {
+   "content_type": "text/html; charset=\"ISO-8859-1\"",
+   "head": "",
+   "names": [
+    "ISO-8859-1"
+   ]
+  },
+  {
+   "content_type": "text/html",
+   "head": "<meta charset=\"windows-1252\">",
+   "names": [
+    "windows-1252"
+   ]
+  },
+  {
+   "content_type": "text/html",
+   "head": "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=Shift_JIS\">",
+   "names": [
+    "Shift_JIS"
+   ]
+  },
+  {
+   "content_type": "text/html; charset=nope",
+   "head": "<meta charset=utf-8>",
+   "names": [
+    "nope",
+    "utf-8"
+   ]
+  },
+  {
+   "content_type": "",
+   "head": "",
+   "names": []
+  },
+  {
+   "content_type": "text/html;charset=UTF-8",
+   "head": "<meta charset=\"latin1\">",
+   "names": [
+    "UTF-8",
+    "latin1"
+   ]
+  },
+  {
+   "content_type": "text/html",
+   "head": "<META CHARSET='koi8-r'>",
+   "names": [
+    "koi8-r"
+   ]
+  },
+  {
+   "content_type": "text/html",
+   "head": "                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          <meta charset=\"latin1\">",
+   "names": []
+  }
+ ],
+ "constants": {
+  "allowed_ports": [
+   80,
+   443
+  ],
+  "deadline_s": 15.0,
+  "html_types": [
+   "text/html",
+   "application/xhtml+xml"
+  ],
+  "max_block_chars": 1048576,
+  "max_blocks": 20,
+  "max_page_bytes": 2097152,
+  "max_redirects": 3,
+  "messages": {
+   "bad_link": "That link cannot be read. Use a web address that starts with http:// or https://.",
+   "blocked": "This server does not open that address. It may be a private or local address.",
+   "http_error": "The site did not give the page. Check the link, or paste the ingredients instead.",
+   "not_html": "That link is not a web page. Paste the ingredients instead.",
+   "timeout": "The page took too long to answer. Try again, or paste the ingredients instead.",
+   "too_large": "That page is too large to read. Paste the ingredients instead.",
+   "too_many_redirects": "That link sends the app on to too many other addresses. Use the recipe page's own link.",
+   "unreachable": "The page did not answer. Check the link, or paste the ingredients instead."
+  },
+  "no_lines": "No ingredient lines were found. Paste one ingredient on each line.",
+  "no_recipe": "This page has no recipe data the app can read. Paste the ingredients instead.",
+  "user_agent": "kidney-health (recipe import)"
+ },
+ "entities": {
+  "AElig": "Æ",
+  "AElig;": "Æ",
+  "AMP": "&",
+  "AMP;": "&",
+  "Aacute": "Á",
+  "Aacute;": "Á",
+  "Acirc": "Â",
+  "Acirc;": "Â",
+  "Agrave": "À",
+  "Agrave;": "À",
+  "Alpha;": "Α",
+  "Aring": "Å",
+  "Aring;": "Å",
+  "Atilde": "Ã",
+  "Atilde;": "Ã",
+  "Auml": "Ä",
+  "Auml;": "Ä",
+  "Beta;": "Β",
+  "COPY": "©",
+  "COPY;": "©",
+  "Ccedil": "Ç",
+  "Ccedil;": "Ç",
+  "Chi;": "Χ",
+  "Dagger;": "‡",
+  "Delta;": "Δ",
+  "ETH": "Ð",
+  "ETH;": "Ð",
+  "Eacute": "É",
+  "Eacute;": "É",
+  "Ecirc": "Ê",
+  "Ecirc;": "Ê",
+  "Egrave": "È",
+  "Egrave;": "È",
+  "Epsilon;": "Ε",
+  "Eta;": "Η",
+  "Euml": "Ë",
+  "Euml;": "Ë",
+  "GT": ">",
+  "GT;": ">",
+  "Gamma;": "Γ",
+  "Iacute": "Í",
+  "Iacute;": "Í",
+  "Icirc": "Î",
+  "Icirc;": "Î",
+  "Igrave": "Ì",
+  "Igrave;": "Ì",
+  "Iota;": "Ι",
+  "Iuml": "Ï",
+  "Iuml;": "Ï",
+  "Kappa;": "Κ",
+  "LT": "<",
+  "LT;": "<",
+  "Lambda;": "Λ",
+  "Mu;": "Μ",
+  "Ntilde": "Ñ",
+  "Ntilde;": "Ñ",
+  "Nu;": "Ν",
+  "OElig;": "Œ",
+  "Oacute": "Ó",
+  "Oacute;": "Ó",
+  "Ocirc": "Ô",
+  "Ocirc;": "Ô",
+  "Ograve": "Ò",
+  "Ograve;": "Ò",
+  "Omega;": "Ω",
+  "Omicron;": "Ο",
+  "Oslash": "Ø",
+  "Oslash;": "Ø",
+  "Otilde": "Õ",
+  "Otilde;": "Õ",
+  "Ouml": "Ö",
+  "Ouml;": "Ö",
+  "Phi;": "Φ",
+  "Pi;": "Π",
+  "Prime;": "″",
+  "Psi;": "Ψ",
+  "QUOT": "\"",
+  "QUOT;": "\"",
+  "REG": "®",
+  "REG;": "®",
+  "Rho;": "Ρ",
+  "Scaron;": "Š",
+  "Sigma;": "Σ",
+  "THORN": "Þ",
+  "THORN;": "Þ",
+  "Tau;": "Τ",
+  "Theta;": "Θ",
+  "Uacute": "Ú",
+  "Uacute;": "Ú",
+  "Ucirc": "Û",
+  "Ucirc;": "Û",
+  "Ugrave": "Ù",
+  "Ugrave;": "Ù",
+  "Upsilon;": "Υ",
+  "Uuml": "Ü",
+  "Uuml;": "Ü",
+  "Xi;": "Ξ",
+  "Yacute": "Ý",
+  "Yacute;": "Ý",
+  "Yuml;": "Ÿ",
+  "Zeta;": "Ζ",
+  "aacute": "á",
+  "aacute;": "á",
+  "acirc": "â",
+  "acirc;": "â",
+  "acute": "´",
+  "acute;": "´",
+  "aelig": "æ",
+  "aelig;": "æ",
+  "agrave": "à",
+  "agrave;": "à",
+  "alefsym;": "ℵ",
+  "alpha;": "α",
+  "amp": "&",
+  "amp;": "&",
+  "and;": "∧",
+  "ang;": "∠",
+  "apos;": "'",
+  "aring": "å",
+  "aring;": "å",
+  "asymp;": "≈",
+  "atilde": "ã",
+  "atilde;": "ã",
+  "auml": "ä",
+  "auml;": "ä",
+  "bdquo;": "„",
+  "beta;": "β",
+  "brvbar": "¦",
+  "brvbar;": "¦",
+  "bull;": "•",
+  "cap;": "∩",
+  "ccedil": "ç",
+  "ccedil;": "ç",
+  "cedil": "¸",
+  "cedil;": "¸",
+  "cent": "¢",
+  "cent;": "¢",
+  "chi;": "χ",
+  "circ;": "ˆ",
+  "clubs;": "♣",
+  "cong;": "≅",
+  "copy": "©",
+  "copy;": "©",
+  "crarr;": "↵",
+  "cup;": "∪",
+  "curren": "¤",
+  "curren;": "¤",
+  "dArr;": "⇓",
+  "dagger;": "†",
+  "darr;": "↓",
+  "deg": "°",
+  "deg;": "°",
+  "delta;": "δ",
+  "diams;": "♦",
+  "divide": "÷",
+  "divide;": "÷",
+  "eacute": "é",
+  "eacute;": "é",
+  "ecirc": "ê",
+  "ecirc;": "ê",
+  "egrave": "è",
+  "egrave;": "è",
+  "empty;": "∅",
+  "emsp;": " ",
+  "ensp;": " ",
+  "epsilon;": "ε",
+  "equiv;": "≡",
+  "eta;": "η",
+  "eth": "ð",
+  "eth;": "ð",
+  "euml": "ë",
+  "euml;": "ë",
+  "euro;": "€",
+  "exist;": "∃",
+  "fnof;": "ƒ",
+  "forall;": "∀",
+  "frac12": "½",
+  "frac12;": "½",
+  "frac14": "¼",
+  "frac14;": "¼",
+  "frac34": "¾",
+  "frac34;": "¾",
+  "frasl;": "⁄",
+  "gamma;": "γ",
+  "ge;": "≥",
+  "gt": ">",
+  "gt;": ">",
+  "hArr;": "⇔",
+  "harr;": "↔",
+  "hearts;": "♥",
+  "hellip;": "…",
+  "iacute": "í",
+  "iacute;": "í",
+  "icirc": "î",
+  "icirc;": "î",
+  "iexcl": "¡",
+  "iexcl;": "¡",
+  "igrave": "ì",
+  "igrave;": "ì",
+  "image;": "ℑ",
+  "infin;": "∞",
+  "int;": "∫",
+  "iota;": "ι",
+  "iquest": "¿",
+  "iquest;": "¿",
+  "isin;": "∈",
+  "iuml": "ï",
+  "iuml;": "ï",
+  "kappa;": "κ",
+  "lArr;": "⇐",
+  "lambda;": "λ",
+  "lang;": "⟨",
+  "laquo": "«",
+  "laquo;": "«",
+  "larr;": "←",
+  "lceil;": "⌈",
+  "ldquo;": "“",
+  "le;": "≤",
+  "lfloor;": "⌊",
+  "lowast;": "∗",
+  "loz;": "◊",
+  "lrm;": "‎",
+  "lsaquo;": "‹",
+  "lsquo;": "‘",
+  "lt": "<",
+  "lt;": "<",
+  "macr": "¯",
+  "macr;": "¯",
+  "mdash;": "—",
+  "micro": "µ",
+  "micro;": "µ",
+  "middot": "·",
+  "middot;": "·",
+  "minus;": "−",
+  "mu;": "μ",
+  "nabla;": "∇",
+  "nbsp": " ",
+  "nbsp;": " ",
+  "ndash;": "–",
+  "ne;": "≠",
+  "ni;": "∋",
+  "not": "¬",
+  "not;": "¬",
+  "notin;": "∉",
+  "nsub;": "⊄",
+  "ntilde": "ñ",
+  "ntilde;": "ñ",
+  "nu;": "ν",
+  "oacute": "ó",
+  "oacute;": "ó",
+  "ocirc": "ô",
+  "ocirc;": "ô",
+  "oelig;": "œ",
+  "ograve": "ò",
+  "ograve;": "ò",
+  "oline;": "‾",
+  "omega;": "ω",
+  "omicron;": "ο",
+  "oplus;": "⊕",
+  "or;": "∨",
+  "ordf": "ª",
+  "ordf;": "ª",
+  "ordm": "º",
+  "ordm;": "º",
+  "oslash": "ø",
+  "oslash;": "ø",
+  "otilde": "õ",
+  "otilde;": "õ",
+  "otimes;": "⊗",
+  "ouml": "ö",
+  "ouml;": "ö",
+  "para": "¶",
+  "para;": "¶",
+  "part;": "∂",
+  "permil;": "‰",
+  "perp;": "⊥",
+  "phi;": "φ",
+  "pi;": "π",
+  "piv;": "ϖ",
+  "plusmn": "±",
+  "plusmn;": "±",
+  "pound": "£",
+  "pound;": "£",
+  "prime;": "′",
+  "prod;": "∏",
+  "prop;": "∝",
+  "psi;": "ψ",
+  "quot": "\"",
+  "quot;": "\"",
+  "rArr;": "⇒",
+  "radic;": "√",
+  "rang;": "⟩",
+  "raquo": "»",
+  "raquo;": "»",
+  "rarr;": "→",
+  "rceil;": "⌉",
+  "rdquo;": "”",
+  "real;": "ℜ",
+  "reg": "®",
+  "reg;": "®",
+  "rfloor;": "⌋",
+  "rho;": "ρ",
+  "rlm;": "‏",
+  "rsaquo;": "›",
+  "rsquo;": "’",
+  "sbquo;": "‚",
+  "scaron;": "š",
+  "sdot;": "⋅",
+  "sect": "§",
+  "sect;": "§",
+  "shy": "­",
+  "shy;": "­",
+  "sigma;": "σ",
+  "sigmaf;": "ς",
+  "sim;": "∼",
+  "spades;": "♠",
+  "sub;": "⊂",
+  "sube;": "⊆",
+  "sum;": "∑",
+  "sup1": "¹",
+  "sup1;": "¹",
+  "sup2": "²",
+  "sup2;": "²",
+  "sup3": "³",
+  "sup3;": "³",
+  "sup;": "⊃",
+  "supe;": "⊇",
+  "szlig": "ß",
+  "szlig;": "ß",
+  "tau;": "τ",
+  "there4;": "∴",
+  "theta;": "θ",
+  "thetasym;": "ϑ",
+  "thinsp;": " ",
+  "thorn": "þ",
+  "thorn;": "þ",
+  "tilde;": "˜",
+  "times": "×",
+  "times;": "×",
+  "trade;": "™",
+  "uArr;": "⇑",
+  "uacute": "ú",
+  "uacute;": "ú",
+  "uarr;": "↑",
+  "ucirc": "û",
+  "ucirc;": "û",
+  "ugrave": "ù",
+  "ugrave;": "ù",
+  "uml": "¨",
+  "uml;": "¨",
+  "upsih;": "ϒ",
+  "upsilon;": "υ",
+  "uuml": "ü",
+  "uuml;": "ü",
+  "weierp;": "℘",
+  "xi;": "ξ",
+  "yacute": "ý",
+  "yacute;": "ý",
+  "yen": "¥",
+  "yen;": "¥",
+  "yuml": "ÿ",
+  "yuml;": "ÿ",
+  "zeta;": "ζ",
+  "zwj;": "‍",
+  "zwnj;": "‌"
+ },
+ "entity_cases": [
+  {
+   "text": "x Æ y",
+   "value": "&AElig"
+  },
+  {
+   "text": "x Æ y",
+   "value": "&AElig;"
+  },
+  {
+   "text": "x & y",
+   "value": "&AMP"
+  },
+  {
+   "text": "x & y",
+   "value": "&AMP;"
+  },
+  {
+   "text": "x Á y",
+   "value": "&Aacute"
+  },
+  {
+   "text": "x Á y",
+   "value": "&Aacute;"
+  },
+  {
+   "text": "x Â y",
+   "value": "&Acirc"
+  },
+  {
+   "text": "x Â y",
+   "value": "&Acirc;"
+  },
+  {
+   "text": "x À y",
+   "value": "&Agrave"
+  },
+  {
+   "text": "x À y",
+   "value": "&Agrave;"
+  },
+  {
+   "text": "x Α y",
+   "value": "&Alpha;"
+  },
+  {
+   "text": "x Å y",
+   "value": "&Aring"
+  },
+  {
+   "text": "x Å y",
+   "value": "&Aring;"
+  },
+  {
+   "text": "x Ã y",
+   "value": "&Atilde"
+  },
+  {
+   "text": "x Ã y",
+   "value": "&Atilde;"
+  },
+  {
+   "text": "x Ä y",
+   "value": "&Auml"
+  },
+  {
+   "text": "x Ä y",
+   "value": "&Auml;"
+  },
+  {
+   "text": "x Β y",
+   "value": "&Beta;"
+  },
+  {
+   "text": "x © y",
+   "value": "&COPY"
+  },
+  {
+   "text": "x © y",
+   "value": "&COPY;"
+  },
+  {
+   "text": "x Ç y",
+   "value": "&Ccedil"
+  },
+  {
+   "text": "x Ç y",
+   "value": "&Ccedil;"
+  },
+  {
+   "text": "x Χ y",
+   "value": "&Chi;"
+  },
+  {
+   "text": "x ‡ y",
+   "value": "&Dagger;"
+  },
+  {
+   "text": "x Δ y",
+   "value": "&Delta;"
+  },
+  {
+   "text": "x Ð y",
+   "value": "&ETH"
+  },
+  {
+   "text": "x Ð y",
+   "value": "&ETH;"
+  },
+  {
+   "text": "x É y",
+   "value": "&Eacute"
+  },
+  {
+   "text": "x É y",
+   "value": "&Eacute;"
+  },
+  {
+   "text": "x Ê y",
+   "value": "&Ecirc"
+  },
+  {
+   "text": "x Ê y",
+   "value": "&Ecirc;"
+  },
+  {
+   "text": "x È y",
+   "value": "&Egrave"
+  },
+  {
+   "text": "x È y",
+   "value": "&Egrave;"
+  },
+  {
+   "text": "x Ε y",
+   "value": "&Epsilon;"
+  },
+  {
+   "text": "x Η y",
+   "value": "&Eta;"
+  },
+  {
+   "text": "x Ë y",
+   "value": "&Euml"
+  },
+  {
+   "text": "x Ë y",
+   "value": "&Euml;"
+  },
+  {
+   "text": "x > y",
+   "value": "&GT"
+  },
+  {
+   "text": "x > y",
+   "value": "&GT;"
+  },
+  {
+   "text": "x Γ y",
+   "value": "&Gamma;"
+  },
+  {
+   "text": "x Í y",
+   "value": "&Iacute"
+  },
+  {
+   "text": "x Í y",
+   "value": "&Iacute;"
+  },
+  {
+   "text": "x Î y",
+   "value": "&Icirc"
+  },
+  {
+   "text": "x Î y",
+   "value": "&Icirc;"
+  },
+  {
+   "text": "x Ì y",
+   "value": "&Igrave"
+  },
+  {
+   "text": "x Ì y",
+   "value": "&Igrave;"
+  },
+  {
+   "text": "x Ι y",
+   "value": "&Iota;"
+  },
+  {
+   "text": "x Ï y",
+   "value": "&Iuml"
+  },
+  {
+   "text": "x Ï y",
+   "value": "&Iuml;"
+  },
+  {
+   "text": "x Κ y",
+   "value": "&Kappa;"
+  },
+  {
+   "text": "x < y",
+   "value": "&LT"
+  },
+  {
+   "text": "x < y",
+   "value": "&LT;"
+  },
+  {
+   "text": "x Λ y",
+   "value": "&Lambda;"
+  },
+  {
+   "text": "x Μ y",
+   "value": "&Mu;"
+  },
+  {
+   "text": "x Ñ y",
+   "value": "&Ntilde"
+  },
+  {
+   "text": "x Ñ y",
+   "value": "&Ntilde;"
+  },
+  {
+   "text": "x Ν y",
+   "value": "&Nu;"
+  },
+  {
+   "text": "x Œ y",
+   "value": "&OElig;"
+  },
+  {
+   "text": "x Ó y",
+   "value": "&Oacute"
+  },
+  {
+   "text": "x Ó y",
+   "value": "&Oacute;"
+  },
+  {
+   "text": "x Ô y",
+   "value": "&Ocirc"
+  },
+  {
+   "text": "x Ô y",
+   "value": "&Ocirc;"
+  },
+  {
+   "text": "x Ò y",
+   "value": "&Ograve"
+  },
+  {
+   "text": "x Ò y",
+   "value": "&Ograve;"
+  },
+  {
+   "text": "x Ω y",
+   "value": "&Omega;"
+  },
+  {
+   "text": "x Ο y",
+   "value": "&Omicron;"
+  },
+  {
+   "text": "x Ø y",
+   "value": "&Oslash"
+  },
+  {
+   "text": "x Ø y",
+   "value": "&Oslash;"
+  },
+  {
+   "text": "x Õ y",
+   "value": "&Otilde"
+  },
+  {
+   "text": "x Õ y",
+   "value": "&Otilde;"
+  },
+  {
+   "text": "x Ö y",
+   "value": "&Ouml"
+  },
+  {
+   "text": "x Ö y",
+   "value": "&Ouml;"
+  },
+  {
+   "text": "x Φ y",
+   "value": "&Phi;"
+  },
+  {
+   "text": "x Π y",
+   "value": "&Pi;"
+  },
+  {
+   "text": "x ″ y",
+   "value": "&Prime;"
+  },
+  {
+   "text": "x Ψ y",
+   "value": "&Psi;"
+  },
+  {
+   "text": "x \" y",
+   "value": "&QUOT"
+  },
+  {
+   "text": "x \" y",
+   "value": "&QUOT;"
+  },
+  {
+   "text": "x ® y",
+   "value": "&REG"
+  },
+  {
+   "text": "x ® y",
+   "value": "&REG;"
+  },
+  {
+   "text": "x Ρ y",
+   "value": "&Rho;"
+  },
+  {
+   "text": "x Š y",
+   "value": "&Scaron;"
+  },
+  {
+   "text": "x Σ y",
+   "value": "&Sigma;"
+  },
+  {
+   "text": "x Þ y",
+   "value": "&THORN"
+  },
+  {
+   "text": "x Þ y",
+   "value": "&THORN;"
+  },
+  {
+   "text": "x Τ y",
+   "value": "&Tau;"
+  },
+  {
+   "text": "x Θ y",
+   "value": "&Theta;"
+  },
+  {
+   "text": "x Ú y",
+   "value": "&Uacute"
+  },
+  {
+   "text": "x Ú y",
+   "value": "&Uacute;"
+  },
+  {
+   "text": "x Û y",
+   "value": "&Ucirc"
+  },
+  {
+   "text": "x Û y",
+   "value": "&Ucirc;"
+  },
+  {
+   "text": "x Ù y",
+   "value": "&Ugrave"
+  },
+  {
+   "text": "x Ù y",
+   "value": "&Ugrave;"
+  },
+  {
+   "text": "x Υ y",
+   "value": "&Upsilon;"
+  },
+  {
+   "text": "x Ü y",
+   "value": "&Uuml"
+  },
+  {
+   "text": "x Ü y",
+   "value": "&Uuml;"
+  },
+  {
+   "text": "x Ξ y",
+   "value": "&Xi;"
+  },
+  {
+   "text": "x Ý y",
+   "value": "&Yacute"
+  },
+  {
+   "text": "x Ý y",
+   "value": "&Yacute;"
+  },
+  {
+   "text": "x Ÿ y",
+   "value": "&Yuml;"
+  },
+  {
+   "text": "x Ζ y",
+   "value": "&Zeta;"
+  },
+  {
+   "text": "x á y",
+   "value": "&aacute"
+  },
+  {
+   "text": "x á y",
+   "value": "&aacute;"
+  },
+  {
+   "text": "x â y",
+   "value": "&acirc"
+  },
+  {
+   "text": "x â y",
+   "value": "&acirc;"
+  },
+  {
+   "text": "x ´ y",
+   "value": "&acute"
+  },
+  {
+   "text": "x ´ y",
+   "value": "&acute;"
+  },
+  {
+   "text": "x æ y",
+   "value": "&aelig"
+  },
+  {
+   "text": "x æ y",
+   "value": "&aelig;"
+  },
+  {
+   "text": "x à y",
+   "value": "&agrave"
+  },
+  {
+   "text": "x à y",
+   "value": "&agrave;"
+  },
+  {
+   "text": "x ℵ y",
+   "value": "&alefsym;"
+  },
+  {
+   "text": "x α y",
+   "value": "&alpha;"
+  },
+  {
+   "text": "x & y",
+   "value": "&amp"
+  },
+  {
+   "text": "x & y",
+   "value": "&amp;"
+  },
+  {
+   "text": "x ∧ y",
+   "value": "&and;"
+  },
+  {
+   "text": "x ∠ y",
+   "value": "&ang;"
+  },
+  {
+   "text": "x ' y",
+   "value": "&apos;"
+  },
+  {
+   "text": "x å y",
+   "value": "&aring"
+  },
+  {
+   "text": "x å y",
+   "value": "&aring;"
+  },
+  {
+   "text": "x ≈ y",
+   "value": "&asymp;"
+  },
+  {
+   "text": "x ã y",
+   "value": "&atilde"
+  },
+  {
+   "text": "x ã y",
+   "value": "&atilde;"
+  },
+  {
+   "text": "x ä y",
+   "value": "&auml"
+  },
+  {
+   "text": "x ä y",
+   "value": "&auml;"
+  },
+  {
+   "text": "x „ y",
+   "value": "&bdquo;"
+  },
+  {
+   "text": "x β y",
+   "value": "&beta;"
+  },
+  {
+   "text": "x ¦ y",
+   "value": "&brvbar"
+  },
+  {
+   "text": "x ¦ y",
+   "value": "&brvbar;"
+  },
+  {
+   "text": "x • y",
+   "value": "&bull;"
+  },
+  {
+   "text": "x ∩ y",
+   "value": "&cap;"
+  },
+  {
+   "text": "x ç y",
+   "value": "&ccedil"
+  },
+  {
+   "text": "x ç y",
+   "value": "&ccedil;"
+  },
+  {
+   "text": "x ¸ y",
+   "value": "&cedil"
+  },
+  {
+   "text": "x ¸ y",
+   "value": "&cedil;"
+  },
+  {
+   "text": "x ¢ y",
+   "value": "&cent"
+  },
+  {
+   "text": "x ¢ y",
+   "value": "&cent;"
+  },
+  {
+   "text": "x χ y",
+   "value": "&chi;"
+  },
+  {
+   "text": "x ˆ y",
+   "value": "&circ;"
+  },
+  {
+   "text": "x ♣ y",
+   "value": "&clubs;"
+  },
+  {
+   "text": "x ≅ y",
+   "value": "&cong;"
+  },
+  {
+   "text": "x © y",
+   "value": "&copy"
+  },
+  {
+   "text": "x © y",
+   "value": "&copy;"
+  },
+  {
+   "text": "x ↵ y",
+   "value": "&crarr;"
+  },
+  {
+   "text": "x ∪ y",
+   "value": "&cup;"
+  },
+  {
+   "text": "x ¤ y",
+   "value": "&curren"
+  },
+  {
+   "text": "x ¤ y",
+   "value": "&curren;"
+  },
+  {
+   "text": "x ⇓ y",
+   "value": "&dArr;"
+  },
+  {
+   "text": "x † y",
+   "value": "&dagger;"
+  },
+  {
+   "text": "x ↓ y",
+   "value": "&darr;"
+  },
+  {
+   "text": "x ° y",
+   "value": "&deg"
+  },
+  {
+   "text": "x ° y",
+   "value": "&deg;"
+  },
+  {
+   "text": "x δ y",
+   "value": "&delta;"
+  },
+  {
+   "text": "x ♦ y",
+   "value": "&diams;"
+  },
+  {
+   "text": "x ÷ y",
+   "value": "&divide"
+  },
+  {
+   "text": "x ÷ y",
+   "value": "&divide;"
+  },
+  {
+   "text": "x é y",
+   "value": "&eacute"
+  },
+  {
+   "text": "x é y",
+   "value": "&eacute;"
+  },
+  {
+   "text": "x ê y",
+   "value": "&ecirc"
+  },
+  {
+   "text": "x ê y",
+   "value": "&ecirc;"
+  },
+  {
+   "text": "x è y",
+   "value": "&egrave"
+  },
+  {
+   "text": "x è y",
+   "value": "&egrave;"
+  },
+  {
+   "text": "x ∅ y",
+   "value": "&empty;"
+  },
+  {
+   "text": "x y",
+   "value": "&emsp;"
+  },
+  {
+   "text": "x y",
+   "value": "&ensp;"
+  },
+  {
+   "text": "x ε y",
+   "value": "&epsilon;"
+  },
+  {
+   "text": "x ≡ y",
+   "value": "&equiv;"
+  },
+  {
+   "text": "x η y",
+   "value": "&eta;"
+  },
+  {
+   "text": "x ð y",
+   "value": "&eth"
+  },
+  {
+   "text": "x ð y",
+   "value": "&eth;"
+  },
+  {
+   "text": "x ë y",
+   "value": "&euml"
+  },
+  {
+   "text": "x ë y",
+   "value": "&euml;"
+  },
+  {
+   "text": "x € y",
+   "value": "&euro;"
+  },
+  {
+   "text": "x ∃ y",
+   "value": "&exist;"
+  },
+  {
+   "text": "x ƒ y",
+   "value": "&fnof;"
+  },
+  {
+   "text": "x ∀ y",
+   "value": "&forall;"
+  },
+  {
+   "text": "x ½ y",
+   "value": "&frac12"
+  },
+  {
+   "text": "x ½ y",
+   "value": "&frac12;"
+  },
+  {
+   "text": "x ¼ y",
+   "value": "&frac14"
+  },
+  {
+   "text": "x ¼ y",
+   "value": "&frac14;"
+  },
+  {
+   "text": "x ¾ y",
+   "value": "&frac34"
+  },
+  {
+   "text": "x ¾ y",
+   "value": "&frac34;"
+  },
+  {
+   "text": "x ⁄ y",
+   "value": "&frasl;"
+  },
+  {
+   "text": "x γ y",
+   "value": "&gamma;"
+  },
+  {
+   "text": "x ≥ y",
+   "value": "&ge;"
+  },
+  {
+   "text": "x > y",
+   "value": "&gt"
+  },
+  {
+   "text": "x > y",
+   "value": "&gt;"
+  },
+  {
+   "text": "x ⇔ y",
+   "value": "&hArr;"
+  },
+  {
+   "text": "x ↔ y",
+   "value": "&harr;"
+  },
+  {
+   "text": "x ♥ y",
+   "value": "&hearts;"
+  },
+  {
+   "text": "x … y",
+   "value": "&hellip;"
+  },
+  {
+   "text": "x í y",
+   "value": "&iacute"
+  },
+  {
+   "text": "x í y",
+   "value": "&iacute;"
+  },
+  {
+   "text": "x î y",
+   "value": "&icirc"
+  },
+  {
+   "text": "x î y",
+   "value": "&icirc;"
+  },
+  {
+   "text": "x ¡ y",
+   "value": "&iexcl"
+  },
+  {
+   "text": "x ¡ y",
+   "value": "&iexcl;"
+  },
+  {
+   "text": "x ì y",
+   "value": "&igrave"
+  },
+  {
+   "text": "x ì y",
+   "value": "&igrave;"
+  },
+  {
+   "text": "x ℑ y",
+   "value": "&image;"
+  },
+  {
+   "text": "x ∞ y",
+   "value": "&infin;"
+  },
+  {
+   "text": "x ∫ y",
+   "value": "&int;"
+  },
+  {
+   "text": "x ι y",
+   "value": "&iota;"
+  },
+  {
+   "text": "x ¿ y",
+   "value": "&iquest"
+  },
+  {
+   "text": "x ¿ y",
+   "value": "&iquest;"
+  },
+  {
+   "text": "x ∈ y",
+   "value": "&isin;"
+  },
+  {
+   "text": "x ï y",
+   "value": "&iuml"
+  },
+  {
+   "text": "x ï y",
+   "value": "&iuml;"
+  },
+  {
+   "text": "x κ y",
+   "value": "&kappa;"
+  },
+  {
+   "text": "x ⇐ y",
+   "value": "&lArr;"
+  },
+  {
+   "text": "x λ y",
+   "value": "&lambda;"
+  },
+  {
+   "text": "x ⟨ y",
+   "value": "&lang;"
+  },
+  {
+   "text": "x « y",
+   "value": "&laquo"
+  },
+  {
+   "text": "x « y",
+   "value": "&laquo;"
+  },
+  {
+   "text": "x ← y",
+   "value": "&larr;"
+  },
+  {
+   "text": "x ⌈ y",
+   "value": "&lceil;"
+  },
+  {
+   "text": "x “ y",
+   "value": "&ldquo;"
+  },
+  {
+   "text": "x ≤ y",
+   "value": "&le;"
+  },
+  {
+   "text": "x ⌊ y",
+   "value": "&lfloor;"
+  },
+  {
+   "text": "x ∗ y",
+   "value": "&lowast;"
+  },
+  {
+   "text": "x ◊ y",
+   "value": "&loz;"
+  },
+  {
+   "text": "x ‎ y",
+   "value": "&lrm;"
+  },
+  {
+   "text": "x ‹ y",
+   "value": "&lsaquo;"
+  },
+  {
+   "text": "x ‘ y",
+   "value": "&lsquo;"
+  },
+  {
+   "text": "x < y",
+   "value": "&lt"
+  },
+  {
+   "text": "x < y",
+   "value": "&lt;"
+  },
+  {
+   "text": "x ¯ y",
+   "value": "&macr"
+  },
+  {
+   "text": "x ¯ y",
+   "value": "&macr;"
+  },
+  {
+   "text": "x — y",
+   "value": "&mdash;"
+  },
+  {
+   "text": "x µ y",
+   "value": "&micro"
+  },
+  {
+   "text": "x µ y",
+   "value": "&micro;"
+  },
+  {
+   "text": "x · y",
+   "value": "&middot"
+  },
+  {
+   "text": "x · y",
+   "value": "&middot;"
+  },
+  {
+   "text": "x − y",
+   "value": "&minus;"
+  },
+  {
+   "text": "x μ y",
+   "value": "&mu;"
+  },
+  {
+   "text": "x ∇ y",
+   "value": "&nabla;"
+  },
+  {
+   "text": "x y",
+   "value": "&nbsp"
+  },
+  {
+   "text": "x y",
+   "value": "&nbsp;"
+  },
+  {
+   "text": "x – y",
+   "value": "&ndash;"
+  },
+  {
+   "text": "x ≠ y",
+   "value": "&ne;"
+  },
+  {
+   "text": "x ∋ y",
+   "value": "&ni;"
+  },
+  {
+   "text": "x ¬ y",
+   "value": "&not"
+  },
+  {
+   "text": "x ¬ y",
+   "value": "&not;"
+  },
+  {
+   "text": "x ∉ y",
+   "value": "&notin;"
+  },
+  {
+   "text": "x ⊄ y",
+   "value": "&nsub;"
+  },
+  {
+   "text": "x ñ y",
+   "value": "&ntilde"
+  },
+  {
+   "text": "x ñ y",
+   "value": "&ntilde;"
+  },
+  {
+   "text": "x ν y",
+   "value": "&nu;"
+  },
+  {
+   "text": "x ó y",
+   "value": "&oacute"
+  },
+  {
+   "text": "x ó y",
+   "value": "&oacute;"
+  },
+  {
+   "text": "x ô y",
+   "value": "&ocirc"
+  },
+  {
+   "text": "x ô y",
+   "value": "&ocirc;"
+  },
+  {
+   "text": "x œ y",
+   "value": "&oelig;"
+  },
+  {
+   "text": "x ò y",
+   "value": "&ograve"
+  },
+  {
+   "text": "x ò y",
+   "value": "&ograve;"
+  },
+  {
+   "text": "x ‾ y",
+   "value": "&oline;"
+  },
+  {
+   "text": "x ω y",
+   "value": "&omega;"
+  },
+  {
+   "text": "x ο y",
+   "value": "&omicron;"
+  },
+  {
+   "text": "x ⊕ y",
+   "value": "&oplus;"
+  },
+  {
+   "text": "x ∨ y",
+   "value": "&or;"
+  },
+  {
+   "text": "x ª y",
+   "value": "&ordf"
+  },
+  {
+   "text": "x ª y",
+   "value": "&ordf;"
+  },
+  {
+   "text": "x º y",
+   "value": "&ordm"
+  },
+  {
+   "text": "x º y",
+   "value": "&ordm;"
+  },
+  {
+   "text": "x ø y",
+   "value": "&oslash"
+  },
+  {
+   "text": "x ø y",
+   "value": "&oslash;"
+  },
+  {
+   "text": "x õ y",
+   "value": "&otilde"
+  },
+  {
+   "text": "x õ y",
+   "value": "&otilde;"
+  },
+  {
+   "text": "x ⊗ y",
+   "value": "&otimes;"
+  },
+  {
+   "text": "x ö y",
+   "value": "&ouml"
+  },
+  {
+   "text": "x ö y",
+   "value": "&ouml;"
+  },
+  {
+   "text": "x ¶ y",
+   "value": "&para"
+  },
+  {
+   "text": "x ¶ y",
+   "value": "&para;"
+  },
+  {
+   "text": "x ∂ y",
+   "value": "&part;"
+  },
+  {
+   "text": "x ‰ y",
+   "value": "&permil;"
+  },
+  {
+   "text": "x ⊥ y",
+   "value": "&perp;"
+  },
+  {
+   "text": "x φ y",
+   "value": "&phi;"
+  },
+  {
+   "text": "x π y",
+   "value": "&pi;"
+  },
+  {
+   "text": "x ϖ y",
+   "value": "&piv;"
+  },
+  {
+   "text": "x ± y",
+   "value": "&plusmn"
+  },
+  {
+   "text": "x ± y",
+   "value": "&plusmn;"
+  },
+  {
+   "text": "x £ y",
+   "value": "&pound"
+  },
+  {
+   "text": "x £ y",
+   "value": "&pound;"
+  },
+  {
+   "text": "x ′ y",
+   "value": "&prime;"
+  },
+  {
+   "text": "x ∏ y",
+   "value": "&prod;"
+  },
+  {
+   "text": "x ∝ y",
+   "value": "&prop;"
+  },
+  {
+   "text": "x ψ y",
+   "value": "&psi;"
+  },
+  {
+   "text": "x \" y",
+   "value": "&quot"
+  },
+  {
+   "text": "x \" y",
+   "value": "&quot;"
+  },
+  {
+   "text": "x ⇒ y",
+   "value": "&rArr;"
+  },
+  {
+   "text": "x √ y",
+   "value": "&radic;"
+  },
+  {
+   "text": "x ⟩ y",
+   "value": "&rang;"
+  },
+  {
+   "text": "x » y",
+   "value": "&raquo"
+  },
+  {
+   "text": "x » y",
+   "value": "&raquo;"
+  },
+  {
+   "text": "x → y",
+   "value": "&rarr;"
+  },
+  {
+   "text": "x ⌉ y",
+   "value": "&rceil;"
+  },
+  {
+   "text": "x ” y",
+   "value": "&rdquo;"
+  },
+  {
+   "text": "x ℜ y",
+   "value": "&real;"
+  },
+  {
+   "text": "x ® y",
+   "value": "&reg"
+  },
+  {
+   "text": "x ® y",
+   "value": "&reg;"
+  },
+  {
+   "text": "x ⌋ y",
+   "value": "&rfloor;"
+  },
+  {
+   "text": "x ρ y",
+   "value": "&rho;"
+  },
+  {
+   "text": "x ‏ y",
+   "value": "&rlm;"
+  },
+  {
+   "text": "x › y",
+   "value": "&rsaquo;"
+  },
+  {
+   "text": "x ’ y",
+   "value": "&rsquo;"
+  },
+  {
+   "text": "x ‚ y",
+   "value": "&sbquo;"
+  },
+  {
+   "text": "x š y",
+   "value": "&scaron;"
+  },
+  {
+   "text": "x ⋅ y",
+   "value": "&sdot;"
+  },
+  {
+   "text": "x § y",
+   "value": "&sect"
+  },
+  {
+   "text": "x § y",
+   "value": "&sect;"
+  },
+  {
+   "text": "x ­ y",
+   "value": "&shy"
+  },
+  {
+   "text": "x ­ y",
+   "value": "&shy;"
+  },
+  {
+   "text": "x σ y",
+   "value": "&sigma;"
+  },
+  {
+   "text": "x ς y",
+   "value": "&sigmaf;"
+  },
+  {
+   "text": "x ∼ y",
+   "value": "&sim;"
+  },
+  {
+   "text": "x ♠ y",
+   "value": "&spades;"
+  },
+  {
+   "text": "x ⊂ y",
+   "value": "&sub;"
+  },
+  {
+   "text": "x ⊆ y",
+   "value": "&sube;"
+  },
+  {
+   "text": "x ∑ y",
+   "value": "&sum;"
+  },
+  {
+   "text": "x ¹ y",
+   "value": "&sup1"
+  },
+  {
+   "text": "x ¹ y",
+   "value": "&sup1;"
+  },
+  {
+   "text": "x ² y",
+   "value": "&sup2"
+  },
+  {
+   "text": "x ² y",
+   "value": "&sup2;"
+  },
+  {
+   "text": "x ³ y",
+   "value": "&sup3"
+  },
+  {
+   "text": "x ³ y",
+   "value": "&sup3;"
+  },
+  {
+   "text": "x ⊃ y",
+   "value": "&sup;"
+  },
+  {
+   "text": "x ⊇ y",
+   "value": "&supe;"
+  },
+  {
+   "text": "x ß y",
+   "value": "&szlig"
+  },
+  {
+   "text": "x ß y",
+   "value": "&szlig;"
+  },
+  {
+   "text": "x τ y",
+   "value": "&tau;"
+  },
+  {
+   "text": "x ∴ y",
+   "value": "&there4;"
+  },
+  {
+   "text": "x θ y",
+   "value": "&theta;"
+  },
+  {
+   "text": "x ϑ y",
+   "value": "&thetasym;"
+  },
+  {
+   "text": "x y",
+   "value": "&thinsp;"
+  },
+  {
+   "text": "x þ y",
+   "value": "&thorn"
+  },
+  {
+   "text": "x þ y",
+   "value": "&thorn;"
+  },
+  {
+   "text": "x ˜ y",
+   "value": "&tilde;"
+  },
+  {
+   "text": "x × y",
+   "value": "&times"
+  },
+  {
+   "text": "x × y",
+   "value": "&times;"
+  },
+  {
+   "text": "x ™ y",
+   "value": "&trade;"
+  },
+  {
+   "text": "x ⇑ y",
+   "value": "&uArr;"
+  },
+  {
+   "text": "x ú y",
+   "value": "&uacute"
+  },
+  {
+   "text": "x ú y",
+   "value": "&uacute;"
+  },
+  {
+   "text": "x ↑ y",
+   "value": "&uarr;"
+  },
+  {
+   "text": "x û y",
+   "value": "&ucirc"
+  },
+  {
+   "text": "x û y",
+   "value": "&ucirc;"
+  },
+  {
+   "text": "x ù y",
+   "value": "&ugrave"
+  },
+  {
+   "text": "x ù y",
+   "value": "&ugrave;"
+  },
+  {
+   "text": "x ¨ y",
+   "value": "&uml"
+  },
+  {
+   "text": "x ¨ y",
+   "value": "&uml;"
+  },
+  {
+   "text": "x ϒ y",
+   "value": "&upsih;"
+  },
+  {
+   "text": "x υ y",
+   "value": "&upsilon;"
+  },
+  {
+   "text": "x ü y",
+   "value": "&uuml"
+  },
+  {
+   "text": "x ü y",
+   "value": "&uuml;"
+  },
+  {
+   "text": "x ℘ y",
+   "value": "&weierp;"
+  },
+  {
+   "text": "x ξ y",
+   "value": "&xi;"
+  },
+  {
+   "text": "x ý y",
+   "value": "&yacute"
+  },
+  {
+   "text": "x ý y",
+   "value": "&yacute;"
+  },
+  {
+   "text": "x ¥ y",
+   "value": "&yen"
+  },
+  {
+   "text": "x ¥ y",
+   "value": "&yen;"
+  },
+  {
+   "text": "x ÿ y",
+   "value": "&yuml"
+  },
+  {
+   "text": "x ÿ y",
+   "value": "&yuml;"
+  },
+  {
+   "text": "x ζ y",
+   "value": "&zeta;"
+  },
+  {
+   "text": "x ‍ y",
+   "value": "&zwj;"
+  },
+  {
+   "text": "x ‌ y",
+   "value": "&zwnj;"
+  }
+ ],
+ "link_cases": [
+  {
+   "phone": "ok",
+   "server": "ok",
+   "url": "https://www.example.com/recipes/rice"
+  },
+  {
+   "phone": "ok",
+   "server": "ok",
+   "url": "https://example.com"
+  },
+  {
+   "phone": "ok",
+   "server": "ok",
+   "url": "HTTPS://Example.COM/Path?x=1#top"
+  },
+  {
+   "phone": "bad_link",
+   "server": "ok",
+   "url": "http://example.com/recipe"
+  },
+  {
+   "phone": "ok",
+   "server": "ok",
+   "url": "https://example.com:443/r"
+  },
+  {
+   "phone": "ok",
+   "server": "ok",
+   "url": "https://example.com:80/r"
+  },
+  {
+   "phone": "bad_link",
+   "server": "bad_link",
+   "url": "https://example.com:8443/r"
+  },
+  {
+   "phone": "bad_link",
+   "server": "bad_link",
+   "url": "https://example.com:0/"
+  },
+  {
+   "phone": "ok",
+   "server": "ok",
+   "url": "https://example.com:/r"
+  },
+  {
+   "phone": "bad_link",
+   "server": "bad_link",
+   "url": "https://user:pw@example.com/"
+  },
+  {
+   "phone": "bad_link",
+   "server": "bad_link",
+   "url": "https://user@example.com/"
+  },
+  {
+   "phone": "bad_link",
+   "server": "ok",
+   "url": "https://@example.com/"
+  },
+  {
+   "phone": "bad_link",
+   "server": "bad_link",
+   "url": "ftp://example.com/"
+  },
+  {
+   "phone": "bad_link",
+   "server": "bad_link",
+   "url": "javascript:alert(1)"
+  },
+  {
+   "phone": "bad_link",
+   "server": "bad_link",
+   "url": "https:example.com"
+  },
+  {
+   "phone": "bad_link",
+   "server": "bad_link",
+   "url": "https:///path"
+  },
+  {
+   "phone": "bad_link",
+   "server": "bad_link",
+   "url": "https://exa mple.com/"
+  },
+  {
+   "phone": "bad_link",
+   "server": "bad_link",
+   "url": "https://example.com/a b"
+  },
+  {
+   "phone": "bad_link",
+   "server": "bad_link",
+   "url": "https://example.com/\u0007"
+  },
+  {
+   "phone": "bad_link",
+   "server": "bad_link",
+   "url": ""
+  },
+  {
+   "phone": "bad_link",
+   "server": "bad_link",
+   "url": "example.com"
+  },
+  {
+   "phone": "bad_link",
+   "server": "ok",
+   "url": "https://bücher.example/kuchen"
+  },
+  {
+   "phone": "ok",
+   "server": "ok",
+   "url": "https://xn--bcher-kva.example/kuchen"
+  },
+  {
+   "phone": "ok",
+   "server": "ok",
+   "url": "https://[2606:4700:4700::1111]/"
+  },
+  {
+   "phone": "ok",
+   "server": "ok",
+   "url": "https://[::1]/"
+  },
+  {
+   "phone": "bad_link",
+   "server": "bad_link",
+   "url": "https://[not-an-address]/"
+  },
+  {
+   "phone": "ok",
+   "server": "ok",
+   "url": "https://192.168.1.20/recipe"
+  },
+  {
+   "phone": "bad_link",
+   "server": "ok",
+   "url": "https://exa$mple.com/"
+  },
+  {
+   "phone": "bad_link",
+   "server": "bad_link",
+   "url": "https://example.com:99999/"
+  },
+  {
+   "phone": "bad_link",
+   "server": "bad_link",
+   "url": "https://example.com:x/"
+  },
+  {
+   "phone": "bad_link",
+   "server": "bad_link",
+   "url": "https://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  {
+   "phone": "ok",
+   "server": "ok",
+   "url": "https://example.com/aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  {
+   "phone": "ok",
+   "server": "ok",
+   "url": "https://my_site.example/r"
+  },
+  {
+   "phone": "ok",
+   "server": "ok",
+   "url": "https://-x.example/"
+  },
+  {
+   "phone": "ok",
+   "server": "ok",
+   "url": "https://example.com./r"
+  },
+  {
+   "phone": "ok",
+   "server": "ok",
+   "url": "https://example.com?q=1"
+  },
+  {
+   "phone": "ok",
+   "server": "ok",
+   "url": "https://example.com#frag"
+  },
+  {
+   "phone": "bad_link",
+   "server": "ok",
+   "url": "https://[fe80::1%25en0]/"
+  },
+  {
+   "phone": "bad_link",
+   "server": "ok",
+   "url": "https://exa%41mple.com/"
+  },
+  {
+   "phone": "bad_link",
+   "server": "bad_link",
+   "url": "https://[::1]x:443/"
+  },
+  {
+   "phone": "ok",
+   "server": "ok",
+   "url": "https://[::1]:443/"
+  },
+  {
+   "phone": "bad_link",
+   "server": "bad_link",
+   "url": "https://x[::1]/"
+  },
+  {
+   "phone": "bad_link",
+   "server": "bad_link",
+   "url": "https://[1:2:3:4:5:6:7:8:9]/"
+  },
+  {
+   "phone": "ok",
+   "server": "ok",
+   "url": "https://[::ffff:1.2.3.4]/"
+  },
+  {
+   "phone": "ok",
+   "server": "ok",
+   "url": "https://1.2.3.04/"
+  },
+  {
+   "phone": "ok",
+   "server": "ok",
+   "url": "https://example.com:0443/"
+  },
+  {
+   "phone": "bad_link",
+   "server": "bad_link",
+   "url": "https://example.com:+443/"
+  },
+  {
+   "phone": "ok",
+   "server": "ok",
+   "url": "https://example.com/a%20b"
+  },
+  {
+   "phone": "bad_link",
+   "server": "bad_link",
+   "url": "https://a:b:443/"
+  }
+ ],
+ "page_cases": [
+  {
+   "blocks": [
+    {
+     "@context": "https://schema.org",
+     "@type": "Recipe",
+     "name": "Rice &amp; peas",
+     "recipeIngredient": [
+      "1 cup white rice",
+      "1 cup green peas",
+      "1 tbsp olive oil"
+     ],
+     "recipeInstructions": [
+      {
+       "@type": "HowToStep",
+       "text": "Cook the rice."
+      },
+      {
+       "@type": "HowToStep",
+       "text": "Stir in the peas and oil."
+      }
+     ],
+     "recipeYield": "4 servings"
+    }
+   ],
+   "html": "<!DOCTYPE html>\n<html lang=\"en\"><head><meta charset=\"utf-8\"><title>Rice and peas</title><script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</script></head><body><h1>Rice &amp; peas</h1></body></html>",
+   "name": "a plain recipe page",
+   "recipe": {
+    "lines": [
+     "1 cup white rice",
+     "1 cup green peas",
+     "1 tbsp olive oil"
+    ],
+    "lines_cut": false,
+    "name": "Rice & peas",
+    "servings_made": 4.0,
+    "steps": [
+     "Cook the rice.",
+     "Stir in the peas and oil."
+    ],
+    "steps_cut": false
+   }
+  },
+  {
+   "blocks": [
+    {
+     "@context": "https://schema.org",
+     "@type": "Recipe",
+     "name": "Rice &amp; peas",
+     "recipeIngredient": [
+      "1 cup white rice",
+      "1 cup green peas",
+      "1 tbsp olive oil"
+     ],
+     "recipeInstructions": [
+      {
+       "@type": "HowToStep",
+       "text": "Cook the rice."
+      },
+      {
+       "@type": "HowToStep",
+       "text": "Stir in the peas and oil."
+      }
+     ],
+     "recipeYield": "4 servings"
+    }
+   ],
+   "html": "<script type=\"Application/LD+JSON; charset=utf-8\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</script>",
+   "name": "the type in capitals with a charset",
+   "recipe": {
+    "lines": [
+     "1 cup white rice",
+     "1 cup green peas",
+     "1 tbsp olive oil"
+    ],
+    "lines_cut": false,
+    "name": "Rice & peas",
+    "servings_made": 4.0,
+    "steps": [
+     "Cook the rice.",
+     "Stir in the peas and oil."
+    ],
+    "steps_cut": false
+   }
+  },
+  {
+   "blocks": [
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    },
+    {
+     "@context": "https://schema.org",
+     "@type": "Recipe",
+     "name": "Rice &amp; peas",
+     "recipeIngredient": [
+      "1 cup white rice",
+      "1 cup green peas",
+      "1 tbsp olive oil"
+     ],
+     "recipeInstructions": [
+      {
+       "@type": "HowToStep",
+       "text": "Cook the rice."
+      },
+      {
+       "@type": "HowToStep",
+       "text": "Stir in the peas and oil."
+      }
+     ],
+     "recipeYield": "4 servings"
+    }
+   ],
+   "html": "<script type='application/ld+json'>{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script><script type=application/ld+json>{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</script>",
+   "name": "single quotes and no quotes",
+   "recipe": {
+    "lines": [
+     "1 cup white rice",
+     "1 cup green peas",
+     "1 tbsp olive oil"
+    ],
+    "lines_cut": false,
+    "name": "Rice & peas",
+    "servings_made": 4.0,
+    "steps": [
+     "Cook the rice.",
+     "Stir in the peas and oil."
+    ],
+    "steps_cut": false
+   }
+  },
+  {
+   "blocks": [
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    },
+    {
+     "@context": "https://schema.org",
+     "@graph": [
+      {
+       "@type": "WebSite",
+       "name": "A site"
+      },
+      {
+       "@type": "BreadcrumbList"
+      },
+      {
+       "@type": [
+        "Recipe",
+        "NewsArticle"
+       ],
+       "name": "Chicken &#39;n&#39; greens",
+       "recipeIngredient": [
+        "1 lb chicken breast",
+        "2 cups kale, chopped",
+        "&frac12; tsp black pepper"
+       ],
+       "recipeInstructions": [
+        {
+         "@type": "HowToSection",
+         "itemListElement": [
+          {
+           "@type": "HowToStep",
+           "text": "Brown the chicken.&nbsp;Add the kale."
+          },
+          {
+           "@type": "HowToStep",
+           "name": "Serve hot."
+          }
+         ],
+         "name": "Cook"
+        }
+       ],
+       "recipeYield": [
+        "6",
+        "6 bowls"
+       ]
+      }
+     ]
+    }
+   ],
+   "html": "<script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script><script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@graph\": [{\"@type\": \"WebSite\", \"name\": \"A site\"}, {\"@type\": \"BreadcrumbList\"}, {\"@type\": [\"Recipe\", \"NewsArticle\"], \"name\": \"Chicken &#39;n&#39; greens\", \"recipeYield\": [\"6\", \"6 bowls\"], \"recipeIngredient\": [\"1 lb chicken breast\", \"2 cups kale, chopped\", \"&frac12; tsp black pepper\"], \"recipeInstructions\": [{\"@type\": \"HowToSection\", \"name\": \"Cook\", \"itemListElement\": [{\"@type\": \"HowToStep\", \"text\": \"Brown the chicken.&nbsp;Add the kale.\"}, {\"@type\": \"HowToStep\", \"name\": \"Serve hot.\"}]}]}]}</script>",
+   "name": "a graph after another block",
+   "recipe": {
+    "lines": [
+     "1 lb chicken breast",
+     "2 cups kale, chopped",
+     "½ tsp black pepper"
+    ],
+    "lines_cut": false,
+    "name": "Chicken 'n' greens",
+    "servings_made": 6.0,
+    "steps": [
+     "Brown the chicken. Add the kale.",
+     "Serve hot."
+    ],
+    "steps_cut": false
+   }
+  },
+  {
+   "blocks": [
+    {
+     "@context": "https://schema.org",
+     "@type": "Recipe",
+     "name": "Rice &amp; peas",
+     "recipeIngredient": [
+      "1 cup white rice",
+      "1 cup green peas",
+      "1 tbsp olive oil"
+     ],
+     "recipeInstructions": [
+      {
+       "@type": "HowToStep",
+       "text": "Cook the rice."
+      },
+      {
+       "@type": "HowToStep",
+       "text": "Stir in the peas and oil."
+      }
+     ],
+     "recipeYield": "4 servings"
+    }
+   ],
+   "html": "<script type=\"application/ld+json\">{not json</script><script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</script>",
+   "name": "a block that is not JSON, then a recipe",
+   "recipe": {
+    "lines": [
+     "1 cup white rice",
+     "1 cup green peas",
+     "1 tbsp olive oil"
+    ],
+    "lines_cut": false,
+    "name": "Rice & peas",
+    "servings_made": 4.0,
+    "steps": [
+     "Cook the rice.",
+     "Stir in the peas and oil."
+    ],
+    "steps_cut": false
+   }
+  },
+  {
+   "blocks": [
+    {
+     "@context": "https://schema.org",
+     "@type": "Recipe",
+     "name": "Rice &amp; peas",
+     "recipeIngredient": [
+      "1 cup white rice",
+      "1 cup green peas",
+      "1 tbsp olive oil"
+     ],
+     "recipeInstructions": [
+      {
+       "@type": "HowToStep",
+       "text": "Cook the rice."
+      },
+      {
+       "@type": "HowToStep",
+       "text": "Stir in the peas and oil."
+      }
+     ],
+     "recipeYield": "4 servings"
+    }
+   ],
+   "html": "<script type=\"application/ld+json\"></script><script type=\"application/ld+json\"/><script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</script>",
+   "name": "an empty block and a self-closing script",
+   "recipe": {
+    "lines": [
+     "1 cup white rice",
+     "1 cup green peas",
+     "1 tbsp olive oil"
+    ],
+    "lines_cut": false,
+    "name": "Rice & peas",
+    "servings_made": 4.0,
+    "steps": [
+     "Cook the rice.",
+     "Stir in the peas and oil."
+    ],
+    "steps_cut": false
+   }
+  },
+  {
+   "blocks": [
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    }
+   ],
+   "html": "<!-- <script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</script> --><script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script>",
+   "name": "a recipe inside a comment is not read",
+   "recipe": null
+  },
+  {
+   "blocks": [
+    {
+     "@context": "https://schema.org",
+     "@type": "Recipe",
+     "name": "Rice &amp; peas",
+     "recipeIngredient": [
+      "1 cup white rice",
+      "1 cup green peas",
+      "1 tbsp olive oil"
+     ],
+     "recipeInstructions": [
+      {
+       "@type": "HowToStep",
+       "text": "Cook the rice."
+      },
+      {
+       "@type": "HowToStep",
+       "text": "Stir in the peas and oil."
+      }
+     ],
+     "recipeYield": "4 servings"
+    }
+   ],
+   "html": "<SCRIPT TYPE=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</SCRIPT >",
+   "name": "the end tag in capitals with a space",
+   "recipe": {
+    "lines": [
+     "1 cup white rice",
+     "1 cup green peas",
+     "1 tbsp olive oil"
+    ],
+    "lines_cut": false,
+    "name": "Rice & peas",
+    "servings_made": 4.0,
+    "steps": [
+     "Cook the rice.",
+     "Stir in the peas and oil."
+    ],
+    "steps_cut": false
+   }
+  },
+  {
+   "blocks": [
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    }
+   ],
+   "html": "<script>var s = '<script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}';</script><script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script>",
+   "name": "an ordinary script that mentions ld+json",
+   "recipe": null
+  },
+  {
+   "blocks": [
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    }
+   ],
+   "html": "<script type=\"application/ld+json\">{\"@type\": \"Recipe\", \"name\": \"a </script> b\"}</script><script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script>",
+   "name": "a script end inside the JSON cuts the block",
+   "recipe": null
+  },
+  {
+   "blocks": [
+    {
+     "@type": "Recipe",
+     "name": "a </scripts b",
+     "recipeIngredient": "1 egg"
+    }
+   ],
+   "html": "<script type=\"application/ld+json\">{\"@type\": \"Recipe\", \"name\": \"a </scripts b\", \"recipeIngredient\": \"1 egg\"}</script>",
+   "name": "almost an end tag stays inside",
+   "recipe": {
+    "lines": [
+     "1 egg"
+    ],
+    "lines_cut": false,
+    "name": "a </scripts b",
+    "servings_made": null,
+    "steps": [],
+    "steps_cut": false
+   }
+  },
+  {
+   "blocks": [
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    }
+   ],
+   "html": "<script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script><script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}",
+   "name": "a block with no end is not read",
+   "recipe": null
+  },
+  {
+   "blocks": [
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    }
+   ],
+   "html": "<title><script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</script></title><textarea><script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</script></textarea><style><script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</script></style><script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script>",
+   "name": "title, textarea and style hold text, not tags",
+   "recipe": null
+  },
+  {
+   "blocks": [],
+   "html": "<plaintext><script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</script>",
+   "name": "everything after plaintext is text",
+   "recipe": null
+  },
+  {
+   "blocks": [
+    {
+     "@context": "https://schema.org",
+     "@type": "Recipe",
+     "name": "Rice &amp; peas",
+     "recipeIngredient": [
+      "1 cup white rice",
+      "1 cup green peas",
+      "1 tbsp olive oil"
+     ],
+     "recipeInstructions": [
+      {
+       "@type": "HowToStep",
+       "text": "Cook the rice."
+      },
+      {
+       "@type": "HowToStep",
+       "text": "Stir in the peas and oil."
+      }
+     ],
+     "recipeYield": "4 servings"
+    }
+   ],
+   "html": "<noscript><script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</script></noscript>",
+   "name": "noscript is read as ordinary markup",
+   "recipe": {
+    "lines": [
+     "1 cup white rice",
+     "1 cup green peas",
+     "1 tbsp olive oil"
+    ],
+    "lines_cut": false,
+    "name": "Rice & peas",
+    "servings_made": 4.0,
+    "steps": [
+     "Cook the rice.",
+     "Stir in the peas and oil."
+    ],
+    "steps_cut": false
+   }
+  },
+  {
+   "blocks": [
+    {
+     "@context": "https://schema.org",
+     "@type": "Recipe",
+     "name": "Rice &amp; peas",
+     "recipeIngredient": [
+      "1 cup white rice",
+      "1 cup green peas",
+      "1 tbsp olive oil"
+     ],
+     "recipeInstructions": [
+      {
+       "@type": "HowToStep",
+       "text": "Cook the rice."
+      },
+      {
+       "@type": "HowToStep",
+       "text": "Stir in the peas and oil."
+      }
+     ],
+     "recipeYield": "4 servings"
+    }
+   ],
+   "html": "<?xml version=\"1.0\"?><!DOCTYPE html><! odd ><!-- a -- b --><!----></ ><p>a < b, 3 <4 & 5 &amp; 6</p><script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</script>",
+   "name": "an xml line, a declaration and odd comments",
+   "recipe": {
+    "lines": [
+     "1 cup white rice",
+     "1 cup green peas",
+     "1 tbsp olive oil"
+    ],
+    "lines_cut": false,
+    "name": "Rice & peas",
+    "servings_made": 4.0,
+    "steps": [
+     "Cook the rice.",
+     "Stir in the peas and oil."
+    ],
+    "steps_cut": false
+   }
+  },
+  {
+   "blocks": [
+    {
+     "@context": "https://schema.org",
+     "@type": "Recipe",
+     "name": "Rice &amp; peas",
+     "recipeIngredient": [
+      "1 cup white rice",
+      "1 cup green peas",
+      "1 tbsp olive oil"
+     ],
+     "recipeInstructions": [
+      {
+       "@type": "HowToStep",
+       "text": "Cook the rice."
+      },
+      {
+       "@type": "HowToStep",
+       "text": "Stir in the peas and oil."
+      }
+     ],
+     "recipeYield": "4 servings"
+    }
+   ],
+   "html": "<script type=\"application/ld&#43;json\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</script>",
+   "name": "a numeric reference in the type",
+   "recipe": {
+    "lines": [
+     "1 cup white rice",
+     "1 cup green peas",
+     "1 tbsp olive oil"
+    ],
+    "lines_cut": false,
+    "name": "Rice & peas",
+    "servings_made": 4.0,
+    "steps": [
+     "Cook the rice.",
+     "Stir in the peas and oil."
+    ],
+    "steps_cut": false
+   }
+  },
+  {
+   "blocks": [
+    {
+     "@context": "https://schema.org",
+     "@type": "Recipe",
+     "name": "Rice &amp; peas",
+     "recipeIngredient": [
+      "1 cup white rice",
+      "1 cup green peas",
+      "1 tbsp olive oil"
+     ],
+     "recipeInstructions": [
+      {
+       "@type": "HowToStep",
+       "text": "Cook the rice."
+      },
+      {
+       "@type": "HowToStep",
+       "text": "Stir in the peas and oil."
+      }
+     ],
+     "recipeYield": "4 servings"
+    }
+   ],
+   "html": "<script async data-x='1' type=\"application/ld+json\" type=\"text/plain\" id=x>{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</script>",
+   "name": "other attributes and a second type",
+   "recipe": {
+    "lines": [
+     "1 cup white rice",
+     "1 cup green peas",
+     "1 tbsp olive oil"
+    ],
+    "lines_cut": false,
+    "name": "Rice & peas",
+    "servings_made": 4.0,
+    "steps": [
+     "Cook the rice.",
+     "Stir in the peas and oil."
+    ],
+    "steps_cut": false
+   }
+  },
+  {
+   "blocks": [
+    {
+     "@context": "https://schema.org",
+     "@type": "Recipe",
+     "name": "Rice &amp; peas",
+     "recipeIngredient": [
+      "1 cup white rice",
+      "1 cup green peas",
+      "1 tbsp olive oil"
+     ],
+     "recipeInstructions": [
+      {
+       "@type": "HowToStep",
+       "text": "Cook the rice."
+      },
+      {
+       "@type": "HowToStep",
+       "text": "Stir in the peas and oil."
+      }
+     ],
+     "recipeYield": "4 servings"
+    }
+   ],
+   "html": "<script/type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</script>",
+   "name": "a slash before the attribute",
+   "recipe": {
+    "lines": [
+     "1 cup white rice",
+     "1 cup green peas",
+     "1 tbsp olive oil"
+    ],
+    "lines_cut": false,
+    "name": "Rice & peas",
+    "servings_made": 4.0,
+    "steps": [
+     "Cook the rice.",
+     "Stir in the peas and oil."
+    ],
+    "steps_cut": false
+   }
+  },
+  {
+   "blocks": [
+    {
+     "@context": "https://schema.org",
+     "@type": "Recipe",
+     "name": "Rice &amp; peas",
+     "recipeIngredient": [
+      "1 cup white rice",
+      "1 cup green peas",
+      "1 tbsp olive oil"
+     ],
+     "recipeInstructions": [
+      {
+       "@type": "HowToStep",
+       "text": "Cook the rice."
+      },
+      {
+       "@type": "HowToStep",
+       "text": "Stir in the peas and oil."
+      }
+     ],
+     "recipeYield": "4 servings"
+    }
+   ],
+   "html": "<script type=\"  application/ld+json  \">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</script>",
+   "name": "spaces around the type",
+   "recipe": {
+    "lines": [
+     "1 cup white rice",
+     "1 cup green peas",
+     "1 tbsp olive oil"
+    ],
+    "lines_cut": false,
+    "name": "Rice & peas",
+    "servings_made": 4.0,
+    "steps": [
+     "Cook the rice.",
+     "Stir in the peas and oil."
+    ],
+    "steps_cut": false
+   }
+  },
+  {
+   "blocks": [],
+   "html": "<script type=\"application/json\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</script><script type=\"text/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</script>",
+   "name": "the wrong type",
+   "recipe": null
+  },
+  {
+   "blocks": [
+    {
+     "@type": "Recipe",
+     "name": "Odd numbers",
+     "recipeIngredient": [
+      "1 egg"
+     ],
+     "recipeYield": null,
+     "x": [
+      null,
+      null
+     ]
+    }
+   ],
+   "html": "<script type=\"application/ld+json\">{\"@type\": \"Recipe\", \"name\": \"Odd numbers\", \"recipeYield\": NaN, \"x\": [Infinity, -Infinity], \"recipeIngredient\": [\"1 egg\"]}</script>",
+   "name": "NaN and Infinity in the JSON",
+   "recipe": {
+    "lines": [
+     "1 egg"
+    ],
+    "lines_cut": false,
+    "name": "Odd numbers",
+    "servings_made": null,
+    "steps": [],
+    "steps_cut": false
+   }
+  },
+  {
+   "blocks": [
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    }
+   ],
+   "html": "<script type=\"application/ld+json\">﻿{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</script><script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script>",
+   "name": "a byte order mark is not JSON",
+   "recipe": null
+  },
+  {
+   "blocks": [
+    {
+     "@context": "https://schema.org",
+     "@type": "Recipe",
+     "name": "Rice &amp; peas",
+     "recipeIngredient": [
+      "1 cup white rice",
+      "1 cup green peas",
+      "1 tbsp olive oil"
+     ],
+     "recipeInstructions": [
+      {
+       "@type": "HowToStep",
+       "text": "Cook the rice."
+      },
+      {
+       "@type": "HowToStep",
+       "text": "Stir in the peas and oil."
+      }
+     ],
+     "recipeYield": "4 servings"
+    }
+   ],
+   "html": "<script type=\"application/ld+json\"> \n {\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]} \t</script>",
+   "name": "white space around the JSON",
+   "recipe": {
+    "lines": [
+     "1 cup white rice",
+     "1 cup green peas",
+     "1 tbsp olive oil"
+    ],
+    "lines_cut": false,
+    "name": "Rice & peas",
+    "servings_made": 4.0,
+    "steps": [
+     "Cook the rice.",
+     "Stir in the peas and oil."
+    ],
+    "steps_cut": false
+   }
+  },
+  {
+   "blocks": [
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    },
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    },
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    },
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    },
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    },
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    },
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    },
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    },
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    },
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    },
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    },
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    },
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    },
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    },
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    },
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    },
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    },
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    },
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    },
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    }
+   ],
+   "html": "<script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script><script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script><script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script><script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script><script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script><script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script><script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script><script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script><script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script><script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script><script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script><script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script><script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script><script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script><script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script><script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script><script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script><script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script><script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script><script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script><script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</script>",
+   "name": "only the first 20 scripts count",
+   "recipe": null
+  },
+  {
+   "blocks": [
+    {
+     "@type": "Organization",
+     "name": "Not a recipe"
+    }
+   ],
+   "build": [
+    [
+     "<script type=\"application/ld+json\">{\"@type\": \"Recipe\", \"name\": \"Big\", \"x\": \"",
+     1
+    ],
+    [
+     "0123456789abcdef",
+     65536
+    ],
+    [
+     "\"}</script>",
+     1
+    ],
+    [
+     "<script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script>",
+     1
+    ]
+   ],
+   "name": "a block over 1 MiB is left out",
+   "recipe": null
+  },
+  {
+   "blocks": [
+    {
+     "name": {
+      "long_text": 1048563
+     }
+    }
+   ],
+   "build": [
+    [
+     "<script type=\"application/ld+json\">{\"name\": \"",
+     1
+    ],
+    [
+     "x",
+     1048563
+    ],
+    [
+     "\"}</script>",
+     1
+    ]
+   ],
+   "name": "a block of exactly 1 MiB is read",
+   "recipe": null
+  },
+  {
+   "blocks": [
+    {
+     "@type": "Recipe",
+     "name": "🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 Lemon chicken",
+     "recipeIngredient": [
+      "🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 2 lemons"
+     ],
+     "recipeInstructions": [
+      "Stir 🥄 pot 0 well. Stir 🥄 pot 1 well. Stir 🥄 pot 2 well. Stir 🥄 pot 3 well. Stir 🥄 pot 4 well. Stir 🥄 pot 5 well. Stir 🥄 pot 6 well. Stir 🥄 pot 7 well. Stir 🥄 pot 8 well. Stir 🥄 pot 9 well. Stir 🥄 pot 10 well. Stir 🥄 pot 11 well. Stir 🥄 pot 12 well. Stir 🥄 pot 13 well. Stir 🥄 pot 14 well. Stir 🥄 pot 15 well. Stir 🥄 pot 16 well. Stir 🥄 pot 17 well. Stir 🥄 pot 18 well. Stir 🥄 pot 19 well. Stir 🥄 pot 20 well. Stir 🥄 pot 21 well. Stir 🥄 pot 22 well. Stir 🥄 pot 23 well. Stir 🥄 pot 24 well. Stir 🥄 pot 25 well. Stir 🥄 pot 26 well. Stir 🥄 pot 27 well. Stir 🥄 pot 28 well. Stir 🥄 pot 29 well. Stir 🥄 pot 30 well. Stir 🥄 pot 31 well. Stir 🥄 pot 32 well. Stir 🥄 pot 33 well. Stir 🥄 pot 34 well. Stir 🥄 pot 35 well. Stir 🥄 pot 36 well. Stir 🥄 pot 37 well. Stir 🥄 pot 38 well. Stir 🥄 pot 39 well."
+     ]
+    }
+   ],
+   "html": "<script type=\"application/ld+json\">{\"@type\": \"Recipe\", \"name\": \"🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 Lemon chicken\", \"recipeIngredient\": [\"🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 2 lemons\"], \"recipeInstructions\": [\"Stir 🥄 pot 0 well. Stir 🥄 pot 1 well. Stir 🥄 pot 2 well. Stir 🥄 pot 3 well. Stir 🥄 pot 4 well. Stir 🥄 pot 5 well. Stir 🥄 pot 6 well. Stir 🥄 pot 7 well. Stir 🥄 pot 8 well. Stir 🥄 pot 9 well. Stir 🥄 pot 10 well. Stir 🥄 pot 11 well. Stir 🥄 pot 12 well. Stir 🥄 pot 13 well. Stir 🥄 pot 14 well. Stir 🥄 pot 15 well. Stir 🥄 pot 16 well. Stir 🥄 pot 17 well. Stir 🥄 pot 18 well. Stir 🥄 pot 19 well. Stir 🥄 pot 20 well. Stir 🥄 pot 21 well. Stir 🥄 pot 22 well. Stir 🥄 pot 23 well. Stir 🥄 pot 24 well. Stir 🥄 pot 25 well. Stir 🥄 pot 26 well. Stir 🥄 pot 27 well. Stir 🥄 pot 28 well. Stir 🥄 pot 29 well. Stir 🥄 pot 30 well. Stir 🥄 pot 31 well. Stir 🥄 pot 32 well. Stir 🥄 pot 33 well. Stir 🥄 pot 34 well. Stir 🥄 pot 35 well. Stir 🥄 pot 36 well. Stir 🥄 pot 37 well. Stir 🥄 pot 38 well. Stir 🥄 pot 39 well.\"]}</script>",
+   "name": "emoji count as one character",
+   "recipe": {
+    "lines": [
+     "🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 "
+    ],
+    "lines_cut": false,
+    "name": "🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋 🍋",
+    "servings_made": null,
+    "steps": [
+     "Stir 🥄 pot 0 well. Stir 🥄 pot 1 well. Stir 🥄 pot 2 well. Stir 🥄 pot 3 well. Stir 🥄 pot 4 well. Stir 🥄 pot 5 well. Stir 🥄 pot 6 well. Stir 🥄 pot 7 well. Stir 🥄 pot 8 well. Stir 🥄 pot 9 well. Stir 🥄 pot 10 well. Stir 🥄 pot 11 well. Stir 🥄 pot 12 well. Stir 🥄 pot 13 well. Stir 🥄 pot 14 well. Stir 🥄 pot 15 well. Stir 🥄 pot 16 well. Stir 🥄 pot 17 well. Stir 🥄 pot 18 well. Stir 🥄 pot 19 well. Stir 🥄 pot 20 well. Stir 🥄 pot 21 well. Stir 🥄 pot 22 well. Stir 🥄 pot 23 well. Stir 🥄 pot 24 well.",
+     "Stir 🥄 pot 25 well. Stir 🥄 pot 26 well. Stir 🥄 pot 27 well. Stir 🥄 pot 28 well. Stir 🥄 pot 29 well. Stir 🥄 pot 30 well. Stir 🥄 pot 31 well. Stir 🥄 pot 32 well. Stir 🥄 pot 33 well. Stir 🥄 pot 34 well. Stir 🥄 pot 35 well. Stir 🥄 pot 36 well. Stir 🥄 pot 37 well. Stir 🥄 pot 38 well. Stir 🥄 pot 39 well."
+    ],
+    "steps_cut": false
+   }
+  },
+  {
+   "blocks": [
+    {
+     "@type": "Recipe",
+     "name": "Caf&eacute; &ldquo;cr&egrave;me&rdquo; &AMP co",
+     "recipeIngredient": [
+      "1&frac12; cups milk",
+      "2 tbsp sugar &amp; spice",
+      "350&deg;F oven &#8211; 10&nbsp;min",
+      "1 &notin; x &notit;",
+      "Bake at 180 &#x2103;",
+      "&#128; &#0; &#xD800; &#x110000;"
+     ]
+    }
+   ],
+   "html": "<script type=\"application/ld+json\">{\"@type\": \"Recipe\", \"name\": \"Caf&eacute; &ldquo;cr&egrave;me&rdquo; &AMP co\", \"recipeIngredient\": [\"1&frac12; cups milk\", \"2 tbsp sugar &amp; spice\", \"350&deg;F oven &#8211; 10&nbsp;min\", \"1 &notin; x &notit;\", \"Bake at 180 &#x2103;\", \"&#128; &#0; &#xD800; &#x110000;\"]}</script>",
+   "name": "entities in the recipe text",
+   "recipe": {
+    "lines": [
+     "1½ cups milk",
+     "2 tbsp sugar & spice",
+     "350°F oven – 10 min",
+     "1 ∉ x ¬it;",
+     "Bake at 180 ℃",
+     "€ � � �"
+    ],
+    "lines_cut": false,
+    "name": "Café “crème” & co",
+    "servings_made": null,
+    "steps": [],
+    "steps_cut": false
+   }
+  },
+  {
+   "blocks": [
+    {
+     "@type": "WebPage",
+     "mainEntity": {
+      "@type": "schema:Recipe",
+      "name": "Main",
+      "recipeIngredient": "3 cups milk"
+     }
+    }
+   ],
+   "html": "<script type=\"application/ld+json\">{\"@type\": \"WebPage\", \"mainEntity\": {\"@type\": \"schema:Recipe\", \"name\": \"Main\", \"recipeIngredient\": \"3 cups milk\"}}</script>",
+   "name": "a main entity on a web page",
+   "recipe": {
+    "lines": [
+     "3 cups milk"
+    ],
+    "lines_cut": false,
+    "name": "Main",
+    "servings_made": null,
+    "steps": [],
+    "steps_cut": false
+   }
+  },
+  {
+   "blocks": [
+    {
+     "@type": "Recipe",
+     "name": "Long",
+     "recipeIngredient": [
+      "0 g flour",
+      "1 g flour",
+      "2 g flour",
+      "3 g flour",
+      "4 g flour",
+      "5 g flour",
+      "6 g flour",
+      "7 g flour",
+      "8 g flour",
+      "9 g flour",
+      "10 g flour",
+      "11 g flour",
+      "12 g flour",
+      "13 g flour",
+      "14 g flour",
+      "15 g flour",
+      "16 g flour",
+      "17 g flour",
+      "18 g flour",
+      "19 g flour",
+      "20 g flour",
+      "21 g flour",
+      "22 g flour",
+      "23 g flour",
+      "24 g flour",
+      "25 g flour",
+      "26 g flour",
+      "27 g flour",
+      "28 g flour",
+      "29 g flour",
+      "30 g flour",
+      "31 g flour",
+      "32 g flour",
+      "33 g flour",
+      "34 g flour",
+      "35 g flour",
+      "36 g flour",
+      "37 g flour",
+      "38 g flour",
+      "39 g flour",
+      "40 g flour",
+      "41 g flour",
+      "42 g flour",
+      "43 g flour",
+      "44 g flour",
+      "45 g flour",
+      "46 g flour",
+      "47 g flour",
+      "48 g flour",
+      "49 g flour",
+      "50 g flour",
+      "51 g flour",
+      "52 g flour",
+      "53 g flour",
+      "54 g flour",
+      "55 g flour",
+      "56 g flour",
+      "57 g flour",
+      "58 g flour",
+      "59 g flour",
+      "60 g flour",
+      "61 g flour",
+      "62 g flour",
+      "63 g flour",
+      "64 g flour",
+      "65 g flour",
+      "66 g flour",
+      "67 g flour",
+      "68 g flour",
+      "69 g flour"
+     ],
+     "recipeInstructions": [
+      "Step 0.",
+      "Step 1.",
+      "Step 2.",
+      "Step 3.",
+      "Step 4.",
+      "Step 5.",
+      "Step 6.",
+      "Step 7.",
+      "Step 8.",
+      "Step 9.",
+      "Step 10.",
+      "Step 11.",
+      "Step 12.",
+      "Step 13.",
+      "Step 14.",
+      "Step 15.",
+      "Step 16.",
+      "Step 17.",
+      "Step 18.",
+      "Step 19.",
+      "Step 20.",
+      "Step 21.",
+      "Step 22.",
+      "Step 23.",
+      "Step 24."
+     ]
+    }
+   ],
+   "html": "<script type=\"application/ld+json\">{\"@type\": \"Recipe\", \"name\": \"Long\", \"recipeIngredient\": [\"0 g flour\", \"1 g flour\", \"2 g flour\", \"3 g flour\", \"4 g flour\", \"5 g flour\", \"6 g flour\", \"7 g flour\", \"8 g flour\", \"9 g flour\", \"10 g flour\", \"11 g flour\", \"12 g flour\", \"13 g flour\", \"14 g flour\", \"15 g flour\", \"16 g flour\", \"17 g flour\", \"18 g flour\", \"19 g flour\", \"20 g flour\", \"21 g flour\", \"22 g flour\", \"23 g flour\", \"24 g flour\", \"25 g flour\", \"26 g flour\", \"27 g flour\", \"28 g flour\", \"29 g flour\", \"30 g flour\", \"31 g flour\", \"32 g flour\", \"33 g flour\", \"34 g flour\", \"35 g flour\", \"36 g flour\", \"37 g flour\", \"38 g flour\", \"39 g flour\", \"40 g flour\", \"41 g flour\", \"42 g flour\", \"43 g flour\", \"44 g flour\", \"45 g flour\", \"46 g flour\", \"47 g flour\", \"48 g flour\", \"49 g flour\", \"50 g flour\", \"51 g flour\", \"52 g flour\", \"53 g flour\", \"54 g flour\", \"55 g flour\", \"56 g flour\", \"57 g flour\", \"58 g flour\", \"59 g flour\", \"60 g flour\", \"61 g flour\", \"62 g flour\", \"63 g flour\", \"64 g flour\", \"65 g flour\", \"66 g flour\", \"67 g flour\", \"68 g flour\", \"69 g flour\"], \"recipeInstructions\": [\"Step 0.\", \"Step 1.\", \"Step 2.\", \"Step 3.\", \"Step 4.\", \"Step 5.\", \"Step 6.\", \"Step 7.\", \"Step 8.\", \"Step 9.\", \"Step 10.\", \"Step 11.\", \"Step 12.\", \"Step 13.\", \"Step 14.\", \"Step 15.\", \"Step 16.\", \"Step 17.\", \"Step 18.\", \"Step 19.\", \"Step 20.\", \"Step 21.\", \"Step 22.\", \"Step 23.\", \"Step 24.\"]}</script>",
+   "name": "more than 60 lines and 20 steps",
+   "recipe": {
+    "lines": [
+     "0 g flour",
+     "1 g flour",
+     "2 g flour",
+     "3 g flour",
+     "4 g flour",
+     "5 g flour",
+     "6 g flour",
+     "7 g flour",
+     "8 g flour",
+     "9 g flour",
+     "10 g flour",
+     "11 g flour",
+     "12 g flour",
+     "13 g flour",
+     "14 g flour",
+     "15 g flour",
+     "16 g flour",
+     "17 g flour",
+     "18 g flour",
+     "19 g flour",
+     "20 g flour",
+     "21 g flour",
+     "22 g flour",
+     "23 g flour",
+     "24 g flour",
+     "25 g flour",
+     "26 g flour",
+     "27 g flour",
+     "28 g flour",
+     "29 g flour",
+     "30 g flour",
+     "31 g flour",
+     "32 g flour",
+     "33 g flour",
+     "34 g flour",
+     "35 g flour",
+     "36 g flour",
+     "37 g flour",
+     "38 g flour",
+     "39 g flour",
+     "40 g flour",
+     "41 g flour",
+     "42 g flour",
+     "43 g flour",
+     "44 g flour",
+     "45 g flour",
+     "46 g flour",
+     "47 g flour",
+     "48 g flour",
+     "49 g flour",
+     "50 g flour",
+     "51 g flour",
+     "52 g flour",
+     "53 g flour",
+     "54 g flour",
+     "55 g flour",
+     "56 g flour",
+     "57 g flour",
+     "58 g flour",
+     "59 g flour"
+    ],
+    "lines_cut": true,
+    "name": "Long",
+    "servings_made": null,
+    "steps": [
+     "Step 0.",
+     "Step 1.",
+     "Step 2.",
+     "Step 3.",
+     "Step 4.",
+     "Step 5.",
+     "Step 6.",
+     "Step 7.",
+     "Step 8.",
+     "Step 9.",
+     "Step 10.",
+     "Step 11.",
+     "Step 12.",
+     "Step 13.",
+     "Step 14.",
+     "Step 15.",
+     "Step 16.",
+     "Step 17.",
+     "Step 18.",
+     "Step 19."
+    ],
+    "steps_cut": true
+   }
+  },
+  {
+   "blocks": [
+    {
+     "@context": "https://schema.org",
+     "@type": "Recipe",
+     "name": "Rice &amp; peas",
+     "recipeIngredient": [
+      "1 cup white rice",
+      "1 cup green peas",
+      "1 tbsp olive oil"
+     ],
+     "recipeInstructions": [
+      {
+       "@type": "HowToStep",
+       "text": "Cook the rice."
+      },
+      {
+       "@type": "HowToStep",
+       "text": "Stir in the peas and oil."
+      }
+     ],
+     "recipeYield": "4 servings"
+    }
+   ],
+   "html": "<script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</script><p>Salt & pepper &",
+   "name": "text at the end with an ampersand",
+   "recipe": {
+    "lines": [
+     "1 cup white rice",
+     "1 cup green peas",
+     "1 tbsp olive oil"
+    ],
+    "lines_cut": false,
+    "name": "Rice & peas",
+    "servings_made": 4.0,
+    "steps": [
+     "Cook the rice.",
+     "Stir in the peas and oil."
+    ],
+    "steps_cut": false
+   }
+  },
+  {
+   "blocks": [
+    {
+     "@context": "https://schema.org",
+     "@type": "Recipe",
+     "name": "Rice &amp; peas",
+     "recipeIngredient": [
+      "1 cup white rice",
+      "1 cup green peas",
+      "1 tbsp olive oil"
+     ],
+     "recipeInstructions": [
+      {
+       "@type": "HowToStep",
+       "text": "Cook the rice."
+      },
+      {
+       "@type": "HowToStep",
+       "text": "Stir in the peas and oil."
+      }
+     ],
+     "recipeYield": "4 servings"
+    }
+   ],
+   "html": "<script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</script>a <",
+   "name": "a stray less-than sign at the end",
+   "recipe": {
+    "lines": [
+     "1 cup white rice",
+     "1 cup green peas",
+     "1 tbsp olive oil"
+    ],
+    "lines_cut": false,
+    "name": "Rice & peas",
+    "servings_made": 4.0,
+    "steps": [
+     "Cook the rice.",
+     "Stir in the peas and oil."
+    ],
+    "steps_cut": false
+   }
+  },
+  {
+   "blocks": [
+    {
+     "@context": "https://schema.org",
+     "@type": "Recipe",
+     "name": "Rice &amp; peas",
+     "recipeIngredient": [
+      "1 cup white rice",
+      "1 cup green peas",
+      "1 tbsp olive oil"
+     ],
+     "recipeInstructions": [
+      {
+       "@type": "HowToStep",
+       "text": "Cook the rice."
+      },
+      {
+       "@type": "HowToStep",
+       "text": "Stir in the peas and oil."
+      }
+     ],
+     "recipeYield": "4 servings"
+    }
+   ],
+   "html": "<script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</script><div class=\"x",
+   "name": "an unfinished tag at the end",
+   "recipe": {
+    "lines": [
+     "1 cup white rice",
+     "1 cup green peas",
+     "1 tbsp olive oil"
+    ],
+    "lines_cut": false,
+    "name": "Rice & peas",
+    "servings_made": 4.0,
+    "steps": [
+     "Cook the rice.",
+     "Stir in the peas and oil."
+    ],
+    "steps_cut": false
+   }
+  },
+  {
+   "blocks": [
+    {
+     "@context": "https://schema.org",
+     "@type": "Recipe",
+     "name": "Rice &amp; peas",
+     "recipeIngredient": [
+      "1 cup white rice",
+      "1 cup green peas",
+      "1 tbsp olive oil"
+     ],
+     "recipeInstructions": [
+      {
+       "@type": "HowToStep",
+       "text": "Cook the rice."
+      },
+      {
+       "@type": "HowToStep",
+       "text": "Stir in the peas and oil."
+      }
+     ],
+     "recipeYield": "4 servings"
+    }
+   ],
+   "html": "<script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Rice &amp; peas\", \"recipeYield\": \"4 servings\", \"recipeIngredient\": [\"1 cup white rice\", \"1 cup green peas\", \"1 tbsp olive oil\"], \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}, {\"@type\": \"HowToStep\", \"text\": \"Stir in the peas and oil.\"}]}</script><!-- never closed <script type=\"application/ld+json\">{\"@type\": \"Organization\", \"name\": \"Not a recipe\"}</script>",
+   "name": "an unfinished comment at the end",
+   "recipe": {
+    "lines": [
+     "1 cup white rice",
+     "1 cup green peas",
+     "1 tbsp olive oil"
+    ],
+    "lines_cut": false,
+    "name": "Rice & peas",
+    "servings_made": 4.0,
+    "steps": [
+     "Cook the rice.",
+     "Stir in the peas and oil."
+    ],
+    "steps_cut": false
+   }
+  },
+  {
+   "blocks": [],
+   "html": "",
+   "name": "no page at all",
+   "recipe": null
+  },
+  {
+   "blocks": [],
+   "html": "<!DOCTYPE html>\n<html lang=\"en\"><head><meta charset=\"utf-8\"><title>Rice and peas</title></head><body><p>Just words.</p></body></html>",
+   "name": "a page with no recipe data",
+   "recipe": null
+  }
+ ]
+}

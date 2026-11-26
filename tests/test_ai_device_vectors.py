@@ -95,7 +95,8 @@ def test_ai_prompts_json_is_the_servers_prompt(tmp_path) -> None:
     assert {"ai-prompts.json", "vendor/pdfjs-dist-6.4.299/pdf.min.mjs", "vendor/pdfjs-dist-6.4.299/pdf.worker.min.mjs"} <= files
     doc = json.loads((tmp_path / "ai-prompts.json").read_text(encoding="utf-8"))
     assert set(doc) == {"system", "systems", "conditions", "tasks", "own_key"}  # own_key: test_phone_own_key.py
-    assert set(doc["tasks"]) == {"parse_meal", "read_lab_report_text", "read_label", "plate", "next_meal", "recipes"}  # note 39 §6.6
+    assert set(doc["tasks"]) == {"parse_meal", "read_lab_report_text", "read_label", "plate", "next_meal", "recipes", "rerank", "swap",
+                                 "plan"}  # note 39 §6.6
     assert doc["system"] == prompts.TASK_SYSTEM_PROMPT
     for name, task in doc["tasks"].items():
         assert set(task) == {"template", "system", "image"}
@@ -106,7 +107,8 @@ def test_ai_prompts_json_is_the_servers_prompt(tmp_path) -> None:
     assert doc["systems"]["meal"].replace("[[CONDITION]]", prompts.condition_text(person)) == prompts.system_prompt(person)
     assert doc["systems"]["recipe"].replace("[[CONDITION]]", prompts.condition_text(person)) == prompts.recipe_system_prompt(person, steps=False)
     assert all(c.startswith("chronic kidney disease") for c in doc["conditions"])
-    for name, key, system in (("next_meal", "ideas", "meal"), ("recipes", "recipes_suggest", "recipe")):
+    for name, key, system in (("next_meal", "ideas", "meal"), ("recipes", "recipes_suggest", "recipe"), ("rerank", "rerank", "meal"),
+                              ("swap", "swap", "meal"), ("plan", "plan", "meal")):
         data = {"candidates": [], "meal": "lunch"}
         payload = prompts.data_block(data)[len("<data>\n"):-len("\n</data>")]
         assert doc["tasks"][name]["system"] == system
@@ -129,5 +131,7 @@ def test_ai_prompts_json_is_the_servers_prompt(tmp_path) -> None:
 def test_the_device_ai_never_offers_more_than_its_tasks() -> None:
     mock = (ROOT / "app" / "static" / "js" / "mock" / "ai.js").read_text(encoding="utf-8")
     tasks = set(re.findall(r"ask\('([a-z_]+)'", mock)) | set(re.findall(r"onPhone\(api, '[a-z_]+', '([a-z_]+)'", mock))
-    assert tasks == {"parse_meal", "read_lab_report_text", "next_meal", "recipes"}  # and photos through photoOnDevice (note 39 §6.6)
+    assert tasks == {"parse_meal", "read_lab_report_text", "recipes"}  # and photos through photoOnDevice (note 39 §6.6)
+    # meal ideas, AI order, AI swaps and AI day plans: one call, its task named by the mode (phone-ai-more2)
+    assert "onPhone(api, 'meal_ideas', task, build, dry)" in mock and "const task = b.mode === 'ideas' ? 'next_meal' : b.mode;" in mock
     assert "localStorage" not in mock and "indexedDB" not in mock  # nothing about a prompt or reply is kept

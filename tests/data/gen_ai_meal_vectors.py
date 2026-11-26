@@ -7,7 +7,9 @@
 
 Made by the server's own code: app/guidance/ai_bridge.py (candidates_for_ai, validate_ai_items), app/ai/guard.py (judge_ideas,
 fallback), app/ai/recipes.py (recipe_candidates, judge_recipes with steps off), app/ai/prompts.py (next_meal_context,
-recipe_context, person_block, condition_text). The inputs are those of tests/data/gen_guidance_vectors.py (its foods and its
+recipe_context, person_block, condition_text); for AI order, swaps and day plans also candidates_for_ai with modes rerank, swap
+and plan, guard.judge_rerank / judge_swap / judge_plan, prompts.swap_extra / plan_extra and the V2 models RerankAnswer, SwapAnswer
+and PlanAnswer (``ai_check``: does the answer pass). The inputs are those of tests/data/gen_guidance_vectors.py (its foods and its
 context replayer), so ``input`` has the same shape as there. ``call.fn`` names the function; ``output`` is its JSON answer.
 tests/js/run_vectors.mjs replays every case on the twin; tests/test_phone_ai_more.py checks the file is current.
 """
@@ -28,7 +30,9 @@ G = importlib.util.module_from_spec(_spec)
 assert _spec.loader is not None
 _spec.loader.exec_module(G)
 
-from app.ai import guard, prompts  # noqa: E402
+from pydantic import ValidationError  # noqa: E402
+
+from app.ai import guard, prompts, schemas  # noqa: E402
 from app.ai import recipes as AR  # noqa: E402
 from app.guidance import ai_bridge  # noqa: E402
 from app.guidance.budget import open_slots  # noqa: E402
@@ -57,8 +61,17 @@ def call(inp: Mapping[str, Any], spec: Mapping[str, Any], foods: Mapping[int, An
         return prompts.condition_text(spec["person"])
     if fn == "person_block":
         return prompts.person_block(spec["profile"], spec["ai_prefs"], date.fromisoformat(spec["today"]), spec.get("tastes"))
+    if fn == "ai_check":  # the V2 answer models (app/ai/schemas.py): does the answer pass?
+        try:
+            getattr(schemas, spec["model"]).model_validate(spec["answer"])
+        except ValidationError:
+            return {"ok": False}
+        return {"ok": True}
     ctx = G.context_from(inp, foods)
     exclude = frozenset(spec.get("exclude", ()))
+    mode = spec.get("ai_mode", "ideas")  # "mode" is the recipes' own (suggest, change)
+    if mode != "ideas" or fn in ("ai_judge_rerank", "ai_judge_swap", "ai_judge_plan"):
+        return mode_call(ctx, spec, fn, mode)
     if fn == "ai_candidates":
         return ai_bridge.candidates_for_ai(ctx, spec["meal"], "ideas", exclude=exclude)
     if fn == "ai_validate":
@@ -90,6 +103,111 @@ def call(inp: Mapping[str, Any], spec: Mapping[str, Any], foods: Mapping[int, An
         return AR.judge_recipes(spec["answer"], ctx, target, bridge, mode=spec["mode"], makes=makes, steps=False, original=original,
                                 name=spec.get("name"), provider_label=LABEL, model=MODEL)
     raise ValueError(f"unknown fn {fn!r}")
+
+
+def bridge_for(ctx: Any, spec: Mapping[str, Any], mode: str) -> dict[str, Any]:
+    """candidates_for_ai for AI order, swaps and day plans (spec "swap": [food id, servings, purpose])."""
+    if mode == "swap":
+        food_id, servings, purpose = spec["swap"]
+        return ai_bridge.candidates_for_ai(ctx, spec["meal"], "swap", food=ctx.foods[food_id], servings=servings, purpose=purpose)
+    return ai_bridge.candidates_for_ai(ctx, spec["meal"], mode)
+
+
+def mode_call(ctx: Any, spec: Mapping[str, Any], fn: str, mode: str) -> Any:
+    """AI order (rerank), AI swaps and AI day plans (phone-ai-more2): candidates, the data block and the judges."""
+    mode = {"ai_judge_rerank": "rerank", "ai_judge_swap": "swap", "ai_judge_plan": "plan"}.get(fn, mode)
+    try:
+        bridge = bridge_for(ctx, spec, mode)
+    except ValueError as exc:
+        return {"error": str(exc)}
+    if fn == "ai_candidates":
+        return bridge
+    if fn == "ai_next_meal_data":
+        extra: dict[str, Any] = {}
+        if mode == "swap":
+            extra = prompts.swap_extra(bridge, ctx.foods[spec["swap"][0]], float(spec["swap"][1]))
+        elif mode == "plan":
+            extra = prompts.plan_extra(bridge)
+        return {"data": prompts.next_meal_context(bridge, ctx, mode=mode, meal=spec["meal"], meals_left=open_slots(spec["meal"], ctx.day),
+                                                  person=spec["person"], extra=extra)}
+    if fn == "ai_judge_rerank":
+        return guard.judge_rerank(spec["answer"], ctx, spec["meal"], bridge, provider_label=LABEL, model=MODEL)
+    if fn == "ai_judge_swap":
+        return guard.judge_swap(spec["answer"], ctx, spec["meal"], bridge, provider_label=LABEL, model=MODEL)
+    if fn == "ai_judge_plan":
+        return guard.judge_plan(spec["answer"], ctx, bridge, provider_label=LABEL, model=MODEL)
+    raise ValueError(f"unknown fn {fn!r} for mode {mode!r}")
+
+
+def picks(key: str, *rows: Any, status: str = "ok", refusal: str = "none") -> dict:
+    return {key: list(rows), "status": status, "refusal": refusal}
+
+
+def ref(r: str, *codes: str) -> dict:
+    return {"ref": r, "reason_codes": list(codes or ("low_potassium",))}
+
+
+def mode_cases(base: Any, real: Any, rid: Any) -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
+    potato, oj = rid("Potato, baked, with skin"), rid("Orange juice")
+    breakfast_eaten = real(day=[G.entry(1, rid("Egg, scrambled"), "breakfast")])
+    swap_potato = {"meal": "dinner", "swap": [potato, 1.0, None]}
+    return [
+        ("MCAND rerank, dinner, fixture", base(), {"fn": "ai_candidates", "meal": "dinner", "ai_mode": "rerank"}),
+        ("MCAND swap a baked potato, fixture", base(), {"fn": "ai_candidates", "meal": "dinner", "ai_mode": "swap", "swap": [2, 1.0, None]}),
+        ("MCAND swap a baked potato, real", real(), {"fn": "ai_candidates", "ai_mode": "swap", **swap_potato}),
+        ("MCAND swap orange juice for a low: never sent", base(), {"fn": "ai_candidates", "meal": "snack", "ai_mode": "swap", "swap": [11, 1.0, "hypo"]}),
+        ("MCAND swap orange juice with a meal", real(), {"fn": "ai_candidates", "meal": "dinner", "ai_mode": "swap", "swap": [oj, 1.0, None]}),
+        ("MCAND plan, real", breakfast_eaten, {"fn": "ai_candidates", "meal": "lunch", "ai_mode": "plan"}),
+        ("MCAND plan, fixture with a saved meal", base(saved_meals=[{"id": 1, "name": "Usual dinner", "meal_hint": "dinner",
+                                                                   "items": [[3, 1.0], [1, 0.625], [5, 1.0]]}]),
+         {"fn": "ai_candidates", "meal": "breakfast", "ai_mode": "plan"}),
+        ("MDATA rerank", real(), {"fn": "ai_next_meal_data", "meal": "dinner", "ai_mode": "rerank", "person": PERSON}),
+        ("MDATA swap", real(), {"fn": "ai_next_meal_data", "ai_mode": "swap", "person": PERSON, **swap_potato}),
+        ("MDATA plan", breakfast_eaten, {"fn": "ai_next_meal_data", "meal": "lunch", "ai_mode": "plan", "person": KIDNEY_ONLY}),
+        ("MJUDGE rerank: good, made up, twice, too many claims", real(), {"fn": "ai_judge_rerank", "meal": "dinner",
+            "answer": picks("order", ref("f3", "adds_protein", "you_like"), ref("zz"), ref("f3"), ref("f1", "low_sodium", "low_potassium", "fits_carb_goal"),
+                            *[ref(f"f{i}") for i in range(4, 16)])}),
+        ("MJUDGE rerank: none kept", base(), {"fn": "ai_judge_rerank", "meal": "dinner", "answer": picks("order", ref("q9"))}),
+        ("MJUDGE rerank: refused", base(), {"fn": "ai_judge_rerank", "meal": "dinner", "answer": picks("order", status="refused", refusal="outside_scope")}),
+        ("MJUDGE swap: picks and a made-up ref", real(), {"fn": "ai_judge_swap", "answer": picks("pick", ref("s2", "low_potassium", "you_like"), ref("s9x"),
+                                                                                                    ref("s1"), ref("s2"), ref("s3"), ref("s4")), **swap_potato}),
+        ("MJUDGE swap: none kept", real(), {"fn": "ai_judge_swap", "answer": picks("pick", ref("f1")), **swap_potato}),
+        ("MJUDGE swap: refused", real(), {"fn": "ai_judge_swap", "answer": picks("pick", status="refused", refusal="outside_scope"), **swap_potato}),
+        ("MJUDGE plan: picks rebuilt and checked", breakfast_eaten, {"fn": "ai_judge_plan", "meal": "lunch", "answer": picks("picks",
+            {"meal": "lunch", "index": 1, "reason_codes": ["adds_protein"]}, {"meal": "dinner", "index": 2, "reason_codes": ["low_sodium"]},
+            {"meal": "lunch", "index": 0, "reason_codes": ["low_sodium"]}, {"meal": "breakfast", "index": 0, "reason_codes": ["low_sodium"]},
+            {"meal": "dinner", "index": 99, "reason_codes": ["low_sodium"]})}),
+        ("MJUDGE plan: none kept", breakfast_eaten, {"fn": "ai_judge_plan", "meal": "lunch", "answer": picks("picks",
+            {"meal": "snack", "index": 40, "reason_codes": ["low_sodium"]})}),
+        ("MJUDGE plan: refused", base(), {"fn": "ai_judge_plan", "meal": "dinner", "answer": picks("picks", status="refused", refusal="outside_scope")}),
+        ("MCHECK rerank ok", base(), {"fn": "ai_check", "model": "RerankAnswer", "answer": picks("order", ref("f1"), ref("f2", "adds_protein", "low_sodium"))}),
+        ("MCHECK rerank: a number for a ref", base(), {"fn": "ai_check", "model": "RerankAnswer", "answer": picks("order", {"ref": 1, "reason_codes": ["low_sodium"]})}),
+        ("MCHECK rerank: a long ref", base(), {"fn": "ai_check", "model": "RerankAnswer", "answer": picks("order", ref("f123456789"))}),
+        ("MCHECK rerank: no reason", base(), {"fn": "ai_check", "model": "RerankAnswer", "answer": picks("order", {"ref": "f1", "reason_codes": []})}),
+        ("MCHECK rerank: four reasons", base(), {"fn": "ai_check", "model": "RerankAnswer", "answer": picks("order", ref("f1", "low_sodium", "low_potassium",
+                                                                                                                    "adds_protein", "you_like"))}),
+        ("MCHECK rerank: an unknown reason", base(), {"fn": "ai_check", "model": "RerankAnswer", "answer": picks("order", ref("f1", "tasty"))}),
+        ("MCHECK rerank: an extra key", base(), {"fn": "ai_check", "model": "RerankAnswer", "answer": picks("order", {**ref("f1"), "why": "x"})}),
+        ("MCHECK rerank: an extra top key", base(), {"fn": "ai_check", "model": "RerankAnswer", "answer": {**picks("order"), "note": "x"}}),
+        ("MCHECK rerank: a status not on the list", base(), {"fn": "ai_check", "model": "RerankAnswer", "answer": picks("order", status="maybe")}),
+        ("MCHECK rerank: 41 rows", base(), {"fn": "ai_check", "model": "RerankAnswer", "answer": picks("order", *[ref("f1")] * 41)}),
+        ("MCHECK swap: 15 rows", base(), {"fn": "ai_check", "model": "SwapAnswer", "answer": picks("pick", *[ref("s1")] * 15)}),
+        ("MCHECK swap: 16 rows", base(), {"fn": "ai_check", "model": "SwapAnswer", "answer": picks("pick", *[ref("s1")] * 16)}),
+        ("MCHECK swap: the wrong list", base(), {"fn": "ai_check", "model": "SwapAnswer", "answer": picks("order", ref("s1"))}),
+        ("MCHECK plan ok", base(), {"fn": "ai_check", "model": "PlanAnswer", "answer": picks("picks", {"meal": "lunch", "index": 0, "reason_codes": ["low_sodium"]})}),
+        ("MCHECK plan: a text index", base(), {"fn": "ai_check", "model": "PlanAnswer", "answer": picks("picks", {"meal": "lunch", "index": "0",
+                                                                                                                "reason_codes": ["low_sodium"]})}),
+        ("MCHECK plan: a true index", base(), {"fn": "ai_check", "model": "PlanAnswer", "answer": picks("picks", {"meal": "lunch", "index": True,
+                                                                                                                "reason_codes": ["low_sodium"]})}),
+        ("MCHECK plan: index 21", base(), {"fn": "ai_check", "model": "PlanAnswer", "answer": picks("picks", {"meal": "lunch", "index": 21,
+                                                                                                             "reason_codes": ["low_sodium"]})}),
+        ("MCHECK plan: a meal not on the list", base(), {"fn": "ai_check", "model": "PlanAnswer", "answer": picks("picks", {"meal": "brunch", "index": 0,
+                                                                                                                         "reason_codes": ["low_sodium"]})}),
+        ("MCHECK plan: five picks", base(), {"fn": "ai_check", "model": "PlanAnswer", "answer": picks("picks", *[{"meal": "lunch", "index": 0,
+                                                                                                                "reason_codes": ["low_sodium"]}] * 5)}),
+        ("MCHECK plan: refused and empty", base(), {"fn": "ai_check", "model": "PlanAnswer", "answer": picks("picks", status="refused", refusal="outside_scope")}),
+        ("MCHECK not an object", base(), {"fn": "ai_check", "model": "PlanAnswer", "answer": ["picks"]}),
+    ]
 
 
 def idea(items: list[tuple[int, int]], theme: str = "light", codes: tuple[str, ...] = ("low_potassium",), handbook: tuple = ()) -> dict:
@@ -179,6 +297,7 @@ def cases() -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
             "answer": {"recipes": [{**recipe([(1, 2), (5, 2)]), "title": "x"}, {**recipe([(1, 2)]), "ingredients": [{"food_id": 1}]}],
                        "status": "ok", "refusal": "none"}}),
     ]
+    out += mode_cases(base, real, rid)
     return out
 
 

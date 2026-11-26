@@ -39,8 +39,10 @@ Run the commands from the repository root.
 | `barcode_vectors.json` | `python3 tests/data/gen_barcode_vectors.py` |
 | `body_vectors.json` | `python3 tests/data/gen_body_vectors.py` |
 | `care_vectors.json` | `python3 tests/data/gen_care_vectors.py` |
+| `device_map_vectors.json` | `python3 tests/data/gen_device_map_vectors.py` |
 | `ccda_labs_vectors.json` | `node tests/js/gen_ccda_labs_vectors.mjs` |
 | `entry_version_vectors.json` | `python3 tests/data/gen_entry_version_vectors.py` |
+| `export_vectors.json` | `python3 tests/data/gen_export_vectors.py` |
 | `fhir_labs_vectors.json` | `node tests/js/gen_fhir_labs_vectors.mjs` |
 | `guidance_vectors.json` | `python3 tests/data/gen_guidance_vectors.py` |
 | `import_vectors.json` | `python3 tests/data/gen_import_vectors.py` |
@@ -50,7 +52,9 @@ Run the commands from the repository root.
 | `menu_link_vectors.json` | none: written by hand |
 | `meta_vectors.json` | `python3 tests/data/gen_meta_vectors.py` |
 | `personal_target_vectors.json` | none: copied from a design note |
+| `phone_reminder_vectors.json` | none: written by hand |
 | `push_vectors.json` | `python3 tests/data/gen_push_vectors.py` |
+| `recipe_page_vectors.json` | `python3 tests/data/gen_recipe_page_vectors.py` |
 | `rules_vectors.json` | `python3 tests/data/gen_rules_vectors.py` |
 | `settings_vectors.json` | `python3 tests/data/gen_settings_vectors.py` |
 | `symptoms_vectors.json` | `python3 tests/data/gen_symptoms_vectors.py` |
@@ -63,7 +67,7 @@ What to know about the commands:
   writes nothing and exits 1 when the file is out of date. That is what pytest runs.
 * `tests/js/gen_ccda_labs_vectors.mjs`, `tests/js/gen_fhir_labs_vectors.mjs` and `tests/js/gen_lab_import_vectors.mjs` have no `--check`.
   The files hold hand-written expectations, so read `git diff` after running them.
-* The generators for body, entry version, import, meta and symptoms start the app on a temporary database. They need the app's
+* The generators for body, entry version, export, import, meta and symptoms start the app on a temporary database. They need the app's
   dependencies and no network.
 * `personal_target_vectors.json` is not regenerated. Change `docs/dev/research/05-personalized-targets.md` first.
 
@@ -314,6 +318,29 @@ What a replayer must get right:
 * A date with a time and a zone becomes the day in the device's own zone, so the cases pass `tzOffsetMinutes` (minutes east of UTC) to make the answer the same on every machine. A date with no time is used as written.
 * Result rows come out newest first, with `value`, `unit`, `text` and `display`. `problems` and `summary` are sentences shown to people.
 
+## device_map_vectors.json
+
+How Withings and Whoop answers become readings, days and workouts. The iPhone app with no server reads them on the phone with
+the same rules.
+
+* Server: `app/devices/withings.py` (`readings_from_groups`) and `app/devices/whoop.py` (`build_days`, `build_workouts`).
+* Browser twin: `app/static/js/engine/device_map.js` (used in device mode by `app/static/js/mock/devices.js`).
+* Made by `tests/data/gen_device_map_vectors.py`.
+
+Top-level keys:
+
+* `withings_cases`: `{label, groups, zone, readings: [{kind, external_id, date, time, kg} | {kind, external_id, date, time, systolic,
+  diastolic, pulse}], left_out: int}`.
+* `whoop_day_cases`: `{label, cycles, recoveries, sleeps, days: [ActivityDay], left_out: int, user_id: string | null}`.
+* `about`: where the file comes from.
+* `whoop_workout_cases`: `{label, records, workouts: [Workout], left_out: int}`.
+
+What a replayer must get right:
+
+* A measure is `value × 10^unit` exactly; blood pressure and pulse round half up to whole numbers.
+* Times are on the person's clock: Withings gives a zone name (the group's, else the account's, else UTC); Whoop gives an offset.
+* kcal = kJ ÷ 4.184, half up. A Whoop day is the date 12 hours after its cycle starts. Values out of range are null.
+
 ## email_vectors.json
 
 How the server checks an email address for password resets, and the fixed sentences the demo repeats (design note 34).
@@ -390,6 +417,31 @@ What a replayer must get right:
 * A food's flags are sorted first. A saved meal's items are `[food_name, servings]` each, in order: the food's id is left out, because it
   differs between servers. A food's 12 nutrient values follow its fields, in registry order.
 * A missing `note` of a lab result, symptom, weight or reading is the empty text, and so is a missing symptom `label`.
+
+## export_vectors.json
+
+The export .zip that the iPhone app with no server (and "Keep my data in this browser") builds in the page: its CSV files and README must be the server's text for the same data.
+
+* Server: `app/account.py` `build_export`, behind `GET /api/me/export.zip`.
+* Browser twin: `M.exportZip` in `app/static/js/mock/export.js`, replayed by `node tests/js/export_vectors.mjs` (not `run_vectors.mjs`).
+* Made by `tests/data/gen_export_vectors.py`. It fills one account on a fresh server through the ordinary routes, then downloads the zip.
+
+Top-level keys:
+
+* `names`: the files in the archive, in order.
+* `doc`: the `export.json` document of that archive.
+* `food_sources`: `{food id: [source, source_license]}` for each food an entry uses. `log.csv` reads these from the food row.
+* `files`: the text of every CSV file and of `README.txt`, by name.
+* `readme_brand`: `name` and `export_format`, the words the README is written with.
+* `filename`: `{username, day, name}`, the archive's file name on that day.
+* `filename_cases`: `{username, safe}`, how a username is made safe for the file name.
+
+What a replayer must get right:
+
+* Rebuild every file from `doc` and `food_sources` and compare the text byte for byte, line ends (`\r\n`) included.
+* A cell's text depends on what the server held, which JSON loses: a float is written as Python writes it (`5.0`), a bool as `True` or `False`. The twin knows each column's kind.
+* Text that starts with `=`, `+`, `-`, `@`, a tab or a line break (or their full-width forms) gets a `'` in front, so a spreadsheet does not run it.
+* `doc.exported_at` and the Activity times change at every run. The pytest check compares only the other keys.
 
 ## fhir_labs_vectors.json
 
@@ -550,7 +602,9 @@ What a replayer must get right:
 * Digits are ASCII only (`[0-9]`), as in the server's patterns.
 * `1,5` is 1.5 but `1,000` is 1000; a range keeps its first number; "a" or "an" counts as 1 only before a unit.
 * Servings round half up to 0.01 (`floor(x * 100 + 0.5) / 100`) and are `null` outside 0.01 to 1000: never a guess, never 0.
-* Only the common named entities and numeric ones are decoded by the twin; the server decodes every HTML entity.
+* Numeric entities follow HTML 5 (`&#128;` is €, `&#0;` is U+FFFD). Named ones: the twin knows the HTML 4 names, `&apos;` and the
+  capital forms, and the legacy names that work without a ";" (`recipe_page_vectors.json` lists them); the server knows every HTML 5
+  name.
 
 ## menu_link_vectors.json
 
@@ -645,6 +699,22 @@ What a replayer must get right:
 * `server` is `https://`, a host of letters, digits, dots and hyphens, and an optional port from 1 to 65535. Nothing else.
 * `token` is `khd_` and 43 base64url characters, with nothing around it.
 
+## phone_reminder_vectors.json
+
+How the iPhone app with no server plans its own reminders for the next days (design note 35 §7). Written by hand: each case is
+checked against the server's rule for when a reminder is due.
+
+* Server: `app/reminders.py` (`is_due`).
+* Browser twin: `app/static/js/mock/phone_reminders.js` (the planner), checked by `tests/js/phone_reminders.mjs` and
+  `tests/test_phone_reminders.py`.
+
+Top-level keys:
+
+* `_about`: where the file comes from.
+* `days_ahead`: int, how many days are planned.
+* `max_pending`: int, the most notifications planned at once.
+* `cases`: `{name, now, eaten, reminders, expect}`. `now` is the phone's local time; day bit 0 is Monday.
+
 ## push_vectors.json
 
 What the phone route `POST /push/v1/body` makes of each row, for the iOS app. One row the route refuses makes the whole request a `400`,
@@ -676,6 +746,37 @@ What a replayer must get right:
 * The source is cleaned by NFC, removing control and format characters, and folding spaces. A tab is a control character, so it is removed, not turned into a space.
 * A reading from a watch is planned with `watch: true`: the route counts it and stores nothing.
 * The rows are dated far in the past or far in the future, so the "not more than one day ahead" rule holds on any day the file is replayed.
+
+## recipe_page_vectors.json
+
+A recipe page read on the iPhone with no server (design note 30 §3). The app fetches the page with the server's checks and the page
+reads its recipe with the twin of the server's parser.
+
+* Server: `app/recipe_import/parse.py` (`ld_json_blocks`, `find_recipe`, `recipe_from_jsonld`, `text_of`), `app/recipe_import/fetch.py`
+  and `app/egress.py` (`classify_address`).
+* Browser twin: `app/static/js/engine/recipe_import.js` (`ldJsonBlocks`, `pageRecipe`) and `app/static/js/mock/lists.js` (the messages).
+* Native client: `ios/KidneyHealthCore` (`RecipePage.swift`): the link rule, the addresses and the charset names.
+* Made by `tests/data/gen_recipe_page_vectors.py`. Every case gives the same answer on Python 3.12 to 3.15.
+
+Top-level keys:
+
+* `about`: where the file comes from.
+* `constants`: the fetch limits, the page block limits, the server's messages, `no_recipe`, `no_lines` and the `user_agent`.
+* `entities`: `{name: text}`, every named entity the twin decodes, with the server's value.
+* `entity_cases`: `{value: string, text: string}`, `text_of("x " + value + " y")`.
+* `page_cases`: `{name, html | build, blocks: [any], recipe: {name, servings_made, steps, steps_cut, lines, lines_cut} | null}`.
+  `build` is `[[text, times]]`, joined, for a large page. In `blocks`, a text over 1000 characters is `{long_text: its length}`.
+* `address_cases`: `{address: string, class: "global" | "private" | "denied"}`. Only `global` may be opened.
+* `link_cases`: `{url: string, server: "ok" | code, phone: "ok" | code}`. The phone opens a link only when the server would too.
+* `charset_cases`: `{content_type: string, head: string, names: [string]}`, the names the server tries, in order.
+
+What a replayer must get right:
+
+* The blocks come from Python's `html.parser`: a `<script>` is raw text up to `</script` followed by a space, `/` or `>`, in any case;
+  `title`, `textarea`, `style` and `plaintext` hold text, not tags; a comment, a declaration or an unfinished tag hides what is in it.
+* Lengths are counted in code points, not UTF-16 units, so an emoji counts once.
+* `NaN` and `Infinity` are JSON to Python; the twin reads them as `null`.
+* An IPv6 address that carries an IPv4 address (mapped, 6to4, Teredo, NAT64, IPv4-compatible) is judged by that IPv4 address.
 
 ## rules_vectors.json
 

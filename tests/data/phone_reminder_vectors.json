@@ -1,0 +1,668 @@
+{
+ "_about": "Design note 35 §7: the iPhone app plans its own reminders (js/mock/phone_reminders.js plan). tests/js/phone_reminders.mjs and tests/test_phone_reminders.py (against app/reminders.py is_due) check these. now is the phone's local time; days bit 0 is Monday.",
+ "days_ahead": 7,
+ "max_pending": 60,
+ "cases": [
+  {
+   "name": "later today and the next 6 days, on their days only",
+   "now": "2026-11-26T11:30",
+   "eaten": [],
+   "reminders": [
+    {
+     "id": 1,
+     "kind": "log_meal",
+     "meal": "lunch",
+     "time": "12:00",
+     "days": 127,
+     "enabled": true
+    },
+    {
+     "id": 2,
+     "kind": "weigh_in",
+     "meal": null,
+     "time": "07:00",
+     "days": 31,
+     "enabled": true
+    },
+    {
+     "id": 3,
+     "kind": "plan_tomorrow",
+     "meal": null,
+     "time": "20:30",
+     "days": 96,
+     "enabled": true
+    },
+    {
+     "id": 4,
+     "kind": "log_meal",
+     "meal": "dinner",
+     "time": "18:00",
+     "days": 127,
+     "enabled": false
+    }
+   ],
+   "expect": [
+    {
+     "id": "reminder-1-2026-11-26",
+     "at": "2026-11-26T12:00",
+     "kind": "log_meal",
+     "meal": "lunch"
+    },
+    {
+     "id": "reminder-2-2026-11-27",
+     "at": "2026-11-27T07:00",
+     "kind": "weigh_in",
+     "meal": null
+    },
+    {
+     "id": "reminder-1-2026-11-27",
+     "at": "2026-11-27T12:00",
+     "kind": "log_meal",
+     "meal": "lunch"
+    },
+    {
+     "id": "reminder-1-2026-11-28",
+     "at": "2026-11-28T12:00",
+     "kind": "log_meal",
+     "meal": "lunch"
+    },
+    {
+     "id": "reminder-3-2026-11-28",
+     "at": "2026-11-28T20:30",
+     "kind": "plan_tomorrow",
+     "meal": null
+    },
+    {
+     "id": "reminder-1-2026-11-29",
+     "at": "2026-11-29T12:00",
+     "kind": "log_meal",
+     "meal": "lunch"
+    },
+    {
+     "id": "reminder-3-2026-11-29",
+     "at": "2026-11-29T20:30",
+     "kind": "plan_tomorrow",
+     "meal": null
+    },
+    {
+     "id": "reminder-2-2026-11-30",
+     "at": "2026-11-30T07:00",
+     "kind": "weigh_in",
+     "meal": null
+    },
+    {
+     "id": "reminder-1-2026-11-30",
+     "at": "2026-11-30T12:00",
+     "kind": "log_meal",
+     "meal": "lunch"
+    },
+    {
+     "id": "reminder-2-2026-12-01",
+     "at": "2026-12-01T07:00",
+     "kind": "weigh_in",
+     "meal": null
+    },
+    {
+     "id": "reminder-1-2026-12-01",
+     "at": "2026-12-01T12:00",
+     "kind": "log_meal",
+     "meal": "lunch"
+    },
+    {
+     "id": "reminder-2-2026-12-02",
+     "at": "2026-12-02T07:00",
+     "kind": "weigh_in",
+     "meal": null
+    },
+    {
+     "id": "reminder-1-2026-12-02",
+     "at": "2026-12-02T12:00",
+     "kind": "log_meal",
+     "meal": "lunch"
+    }
+   ]
+  },
+  {
+   "name": "lunch already eaten today: only today's lunch is left out",
+   "now": "2026-11-26T11:30",
+   "eaten": [
+    "lunch",
+    "snack"
+   ],
+   "reminders": [
+    {
+     "id": 1,
+     "kind": "log_meal",
+     "meal": "lunch",
+     "time": "12:00",
+     "days": 9,
+     "enabled": true
+    },
+    {
+     "id": 2,
+     "kind": "log_meal",
+     "meal": "dinner",
+     "time": "18:00",
+     "days": 8,
+     "enabled": true
+    },
+    {
+     "id": 5,
+     "kind": "weigh_in",
+     "meal": null,
+     "time": "13:00",
+     "days": 8,
+     "enabled": true
+    }
+   ],
+   "expect": [
+    {
+     "id": "reminder-5-2026-11-26",
+     "at": "2026-11-26T13:00",
+     "kind": "weigh_in",
+     "meal": null
+    },
+    {
+     "id": "reminder-2-2026-11-26",
+     "at": "2026-11-26T18:00",
+     "kind": "log_meal",
+     "meal": "dinner"
+    },
+    {
+     "id": "reminder-1-2026-11-30",
+     "at": "2026-11-30T12:00",
+     "kind": "log_meal",
+     "meal": "lunch"
+    }
+   ]
+  },
+  {
+   "name": "a time that is now or past is not planned for today",
+   "now": "2026-11-30T07:00",
+   "eaten": [],
+   "reminders": [
+    {
+     "id": 1,
+     "kind": "weigh_in",
+     "meal": null,
+     "time": "07:00",
+     "days": 1,
+     "enabled": true
+    },
+    {
+     "id": 2,
+     "kind": "log_meal",
+     "meal": "breakfast",
+     "time": "06:59",
+     "days": 1,
+     "enabled": true
+    },
+    {
+     "id": 3,
+     "kind": "log_meal",
+     "meal": "breakfast",
+     "time": "07:01",
+     "days": 1,
+     "enabled": true
+    }
+   ],
+   "expect": [
+    {
+     "id": "reminder-3-2026-11-30",
+     "at": "2026-11-30T07:01",
+     "kind": "log_meal",
+     "meal": "breakfast"
+    }
+   ]
+  },
+  {
+   "name": "at most 60, soonest first",
+   "now": "2026-11-26T00:00",
+   "eaten": [],
+   "reminders": [
+    {
+     "id": 1,
+     "kind": "log_meal",
+     "meal": "breakfast",
+     "time": "08:15",
+     "days": 127,
+     "enabled": true
+    },
+    {
+     "id": 2,
+     "kind": "log_meal",
+     "meal": "lunch",
+     "time": "09:15",
+     "days": 127,
+     "enabled": true
+    },
+    {
+     "id": 3,
+     "kind": "log_meal",
+     "meal": "dinner",
+     "time": "10:15",
+     "days": 127,
+     "enabled": true
+    },
+    {
+     "id": 4,
+     "kind": "log_meal",
+     "meal": "snack",
+     "time": "11:15",
+     "days": 127,
+     "enabled": true
+    },
+    {
+     "id": 5,
+     "kind": "log_meal",
+     "meal": "breakfast",
+     "time": "12:15",
+     "days": 127,
+     "enabled": true
+    },
+    {
+     "id": 6,
+     "kind": "log_meal",
+     "meal": "lunch",
+     "time": "13:15",
+     "days": 127,
+     "enabled": true
+    },
+    {
+     "id": 7,
+     "kind": "log_meal",
+     "meal": "dinner",
+     "time": "14:15",
+     "days": 127,
+     "enabled": true
+    },
+    {
+     "id": 8,
+     "kind": "log_meal",
+     "meal": "snack",
+     "time": "15:15",
+     "days": 127,
+     "enabled": true
+    },
+    {
+     "id": 9,
+     "kind": "log_meal",
+     "meal": "breakfast",
+     "time": "16:15",
+     "days": 127,
+     "enabled": true
+    },
+    {
+     "id": 10,
+     "kind": "log_meal",
+     "meal": "lunch",
+     "time": "17:15",
+     "days": 127,
+     "enabled": true
+    }
+   ],
+   "expect": [
+    {
+     "id": "reminder-1-2026-11-26",
+     "at": "2026-11-26T08:15",
+     "kind": "log_meal",
+     "meal": "breakfast"
+    },
+    {
+     "id": "reminder-2-2026-11-26",
+     "at": "2026-11-26T09:15",
+     "kind": "log_meal",
+     "meal": "lunch"
+    },
+    {
+     "id": "reminder-3-2026-11-26",
+     "at": "2026-11-26T10:15",
+     "kind": "log_meal",
+     "meal": "dinner"
+    },
+    {
+     "id": "reminder-4-2026-11-26",
+     "at": "2026-11-26T11:15",
+     "kind": "log_meal",
+     "meal": "snack"
+    },
+    {
+     "id": "reminder-5-2026-11-26",
+     "at": "2026-11-26T12:15",
+     "kind": "log_meal",
+     "meal": "breakfast"
+    },
+    {
+     "id": "reminder-6-2026-11-26",
+     "at": "2026-11-26T13:15",
+     "kind": "log_meal",
+     "meal": "lunch"
+    },
+    {
+     "id": "reminder-7-2026-11-26",
+     "at": "2026-11-26T14:15",
+     "kind": "log_meal",
+     "meal": "dinner"
+    },
+    {
+     "id": "reminder-8-2026-11-26",
+     "at": "2026-11-26T15:15",
+     "kind": "log_meal",
+     "meal": "snack"
+    },
+    {
+     "id": "reminder-9-2026-11-26",
+     "at": "2026-11-26T16:15",
+     "kind": "log_meal",
+     "meal": "breakfast"
+    },
+    {
+     "id": "reminder-10-2026-11-26",
+     "at": "2026-11-26T17:15",
+     "kind": "log_meal",
+     "meal": "lunch"
+    },
+    {
+     "id": "reminder-1-2026-11-27",
+     "at": "2026-11-27T08:15",
+     "kind": "log_meal",
+     "meal": "breakfast"
+    },
+    {
+     "id": "reminder-2-2026-11-27",
+     "at": "2026-11-27T09:15",
+     "kind": "log_meal",
+     "meal": "lunch"
+    },
+    {
+     "id": "reminder-3-2026-11-27",
+     "at": "2026-11-27T10:15",
+     "kind": "log_meal",
+     "meal": "dinner"
+    },
+    {
+     "id": "reminder-4-2026-11-27",
+     "at": "2026-11-27T11:15",
+     "kind": "log_meal",
+     "meal": "snack"
+    },
+    {
+     "id": "reminder-5-2026-11-27",
+     "at": "2026-11-27T12:15",
+     "kind": "log_meal",
+     "meal": "breakfast"
+    },
+    {
+     "id": "reminder-6-2026-11-27",
+     "at": "2026-11-27T13:15",
+     "kind": "log_meal",
+     "meal": "lunch"
+    },
+    {
+     "id": "reminder-7-2026-11-27",
+     "at": "2026-11-27T14:15",
+     "kind": "log_meal",
+     "meal": "dinner"
+    },
+    {
+     "id": "reminder-8-2026-11-27",
+     "at": "2026-11-27T15:15",
+     "kind": "log_meal",
+     "meal": "snack"
+    },
+    {
+     "id": "reminder-9-2026-11-27",
+     "at": "2026-11-27T16:15",
+     "kind": "log_meal",
+     "meal": "breakfast"
+    },
+    {
+     "id": "reminder-10-2026-11-27",
+     "at": "2026-11-27T17:15",
+     "kind": "log_meal",
+     "meal": "lunch"
+    },
+    {
+     "id": "reminder-1-2026-11-28",
+     "at": "2026-11-28T08:15",
+     "kind": "log_meal",
+     "meal": "breakfast"
+    },
+    {
+     "id": "reminder-2-2026-11-28",
+     "at": "2026-11-28T09:15",
+     "kind": "log_meal",
+     "meal": "lunch"
+    },
+    {
+     "id": "reminder-3-2026-11-28",
+     "at": "2026-11-28T10:15",
+     "kind": "log_meal",
+     "meal": "dinner"
+    },
+    {
+     "id": "reminder-4-2026-11-28",
+     "at": "2026-11-28T11:15",
+     "kind": "log_meal",
+     "meal": "snack"
+    },
+    {
+     "id": "reminder-5-2026-11-28",
+     "at": "2026-11-28T12:15",
+     "kind": "log_meal",
+     "meal": "breakfast"
+    },
+    {
+     "id": "reminder-6-2026-11-28",
+     "at": "2026-11-28T13:15",
+     "kind": "log_meal",
+     "meal": "lunch"
+    },
+    {
+     "id": "reminder-7-2026-11-28",
+     "at": "2026-11-28T14:15",
+     "kind": "log_meal",
+     "meal": "dinner"
+    },
+    {
+     "id": "reminder-8-2026-11-28",
+     "at": "2026-11-28T15:15",
+     "kind": "log_meal",
+     "meal": "snack"
+    },
+    {
+     "id": "reminder-9-2026-11-28",
+     "at": "2026-11-28T16:15",
+     "kind": "log_meal",
+     "meal": "breakfast"
+    },
+    {
+     "id": "reminder-10-2026-11-28",
+     "at": "2026-11-28T17:15",
+     "kind": "log_meal",
+     "meal": "lunch"
+    },
+    {
+     "id": "reminder-1-2026-11-29",
+     "at": "2026-11-29T08:15",
+     "kind": "log_meal",
+     "meal": "breakfast"
+    },
+    {
+     "id": "reminder-2-2026-11-29",
+     "at": "2026-11-29T09:15",
+     "kind": "log_meal",
+     "meal": "lunch"
+    },
+    {
+     "id": "reminder-3-2026-11-29",
+     "at": "2026-11-29T10:15",
+     "kind": "log_meal",
+     "meal": "dinner"
+    },
+    {
+     "id": "reminder-4-2026-11-29",
+     "at": "2026-11-29T11:15",
+     "kind": "log_meal",
+     "meal": "snack"
+    },
+    {
+     "id": "reminder-5-2026-11-29",
+     "at": "2026-11-29T12:15",
+     "kind": "log_meal",
+     "meal": "breakfast"
+    },
+    {
+     "id": "reminder-6-2026-11-29",
+     "at": "2026-11-29T13:15",
+     "kind": "log_meal",
+     "meal": "lunch"
+    },
+    {
+     "id": "reminder-7-2026-11-29",
+     "at": "2026-11-29T14:15",
+     "kind": "log_meal",
+     "meal": "dinner"
+    },
+    {
+     "id": "reminder-8-2026-11-29",
+     "at": "2026-11-29T15:15",
+     "kind": "log_meal",
+     "meal": "snack"
+    },
+    {
+     "id": "reminder-9-2026-11-29",
+     "at": "2026-11-29T16:15",
+     "kind": "log_meal",
+     "meal": "breakfast"
+    },
+    {
+     "id": "reminder-10-2026-11-29",
+     "at": "2026-11-29T17:15",
+     "kind": "log_meal",
+     "meal": "lunch"
+    },
+    {
+     "id": "reminder-1-2026-11-30",
+     "at": "2026-11-30T08:15",
+     "kind": "log_meal",
+     "meal": "breakfast"
+    },
+    {
+     "id": "reminder-2-2026-11-30",
+     "at": "2026-11-30T09:15",
+     "kind": "log_meal",
+     "meal": "lunch"
+    },
+    {
+     "id": "reminder-3-2026-11-30",
+     "at": "2026-11-30T10:15",
+     "kind": "log_meal",
+     "meal": "dinner"
+    },
+    {
+     "id": "reminder-4-2026-11-30",
+     "at": "2026-11-30T11:15",
+     "kind": "log_meal",
+     "meal": "snack"
+    },
+    {
+     "id": "reminder-5-2026-11-30",
+     "at": "2026-11-30T12:15",
+     "kind": "log_meal",
+     "meal": "breakfast"
+    },
+    {
+     "id": "reminder-6-2026-11-30",
+     "at": "2026-11-30T13:15",
+     "kind": "log_meal",
+     "meal": "lunch"
+    },
+    {
+     "id": "reminder-7-2026-11-30",
+     "at": "2026-11-30T14:15",
+     "kind": "log_meal",
+     "meal": "dinner"
+    },
+    {
+     "id": "reminder-8-2026-11-30",
+     "at": "2026-11-30T15:15",
+     "kind": "log_meal",
+     "meal": "snack"
+    },
+    {
+     "id": "reminder-9-2026-11-30",
+     "at": "2026-11-30T16:15",
+     "kind": "log_meal",
+     "meal": "breakfast"
+    },
+    {
+     "id": "reminder-10-2026-11-30",
+     "at": "2026-11-30T17:15",
+     "kind": "log_meal",
+     "meal": "lunch"
+    },
+    {
+     "id": "reminder-1-2026-12-01",
+     "at": "2026-12-01T08:15",
+     "kind": "log_meal",
+     "meal": "breakfast"
+    },
+    {
+     "id": "reminder-2-2026-12-01",
+     "at": "2026-12-01T09:15",
+     "kind": "log_meal",
+     "meal": "lunch"
+    },
+    {
+     "id": "reminder-3-2026-12-01",
+     "at": "2026-12-01T10:15",
+     "kind": "log_meal",
+     "meal": "dinner"
+    },
+    {
+     "id": "reminder-4-2026-12-01",
+     "at": "2026-12-01T11:15",
+     "kind": "log_meal",
+     "meal": "snack"
+    },
+    {
+     "id": "reminder-5-2026-12-01",
+     "at": "2026-12-01T12:15",
+     "kind": "log_meal",
+     "meal": "breakfast"
+    },
+    {
+     "id": "reminder-6-2026-12-01",
+     "at": "2026-12-01T13:15",
+     "kind": "log_meal",
+     "meal": "lunch"
+    },
+    {
+     "id": "reminder-7-2026-12-01",
+     "at": "2026-12-01T14:15",
+     "kind": "log_meal",
+     "meal": "dinner"
+    },
+    {
+     "id": "reminder-8-2026-12-01",
+     "at": "2026-12-01T15:15",
+     "kind": "log_meal",
+     "meal": "snack"
+    },
+    {
+     "id": "reminder-9-2026-12-01",
+     "at": "2026-12-01T16:15",
+     "kind": "log_meal",
+     "meal": "breakfast"
+    },
+    {
+     "id": "reminder-10-2026-12-01",
+     "at": "2026-12-01T17:15",
+     "kind": "log_meal",
+     "meal": "lunch"
+    }
+   ]
+  }
+ ]
+}

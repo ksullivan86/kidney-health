@@ -62,7 +62,7 @@ def test_no_code_names_another_health_type(word):
 
 def test_no_third_party_packages_and_only_apple_frameworks():
     assert "XCRemoteSwiftPackageReference" not in PROJECT
-    allowed = {"Foundation", "FoundationModels", "HealthKit", "ImageIO", "LocalAuthentication", "Security", "SwiftUI", "UIKit", "Vision", "VisionKit", "WebKit", "XCTest",
+    allowed = {"AuthenticationServices", "AVFoundation", "CryptoKit", "Foundation", "FoundationModels", "HealthKit", "ImageIO", "LocalAuthentication", "SafariServices", "Security", "Speech", "SwiftUI", "UIKit", "UserNotifications", "Vision", "VisionKit", "WebKit", "XCTest",
                "PackageDescription", "KidneyHealthCore", "KidneyHealth"}
     for name, text in SWIFT.items():
         for module in re.findall(r"^(?:@testable )?import (\w+)", text, re.M):
@@ -132,7 +132,9 @@ def test_the_project_signs_for_the_owners_team_and_has_an_icon():
 def test_testflight_runs_by_hand_from_main_with_the_key_only_where_it_is_used():
     text = TESTFLIGHT.read_text(encoding="utf-8")
     code = "\n".join(ln for ln in text.splitlines() if not ln.lstrip().startswith("#"))
-    assert re.search(r"^on:\n  workflow_dispatch:\n\n", code, re.M)  # never on a push or a pull request
+    on = code[code.index("\non:\n"):code.index("\npermissions:")]
+    assert re.search(r"^on:\n  workflow_dispatch:\n", on.lstrip("\n"))  # never on a push or a pull request
+    assert "push" not in on and "pull_request" not in on and "schedule" not in on
     assert "if: github.ref == 'refs/heads/main'" in code and "environment: release" in code
     assert f'TEAM_ID: "{TEAM_ID}"' in code
     # the key is read by the two steps that need it and nowhere else
@@ -140,8 +142,13 @@ def test_testflight_runs_by_hand_from_main_with_the_key_only_where_it_is_used():
     job_env = code[code.index("    env:\n"):code.index("    steps:\n")]
     assert "secrets." not in job_env
     # the key file is private to the job and removed however the job ends
-    assert "umask 077" in code and """trap 'rm -f "$key"' EXIT""" in code
-    assert code.index("trap 'rm -f") < code.index('> "$key"')
+    assert "umask 077" in code and "trap cleanup EXIT" in code
+    cleanup = code[code.index("cleanup() {"):code.index("trap cleanup EXIT")]
+    assert 'rm -f "$key"' in cleanup and "python -I -S scripts/asc_ci_certs.py this-run" in cleanup  # no site packages near the key
+    assert code.index("trap cleanup EXIT") < code.index('> "$key"')
+    # removing the leftovers of earlier runs only when the person starting the run asks for it
+    assert "remove_old_ci_certificates:" in code and "default: false" in code
+    assert 'if [ "$REMOVE_OLD" = "true" ]; then python -I -S scripts/asc_ci_certs.py old-runs; fi' in code
     assert "-allowProvisioningUpdates" in code and "app-store-connect" in code and 'CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER"' in code
 
 
@@ -186,7 +193,7 @@ def test_the_web_shell_serves_only_its_packed_files_and_opens_nothing_else():
     # only the packed page may message the app; every other navigation is cancelled, and a tapped https link goes to Safari
     assert "message.frameInfo.securityOrigin.protocol == WebShellConfig.scheme" in view
     assert 'url.scheme == "https", action.navigationType == .linkActivated' in view and "UIApplication.shared.open(url)" in view
-    assert view.count("decisionHandler(.cancel)") == 2 and "decisionHandler(.download)" in view
+    assert view.count("decisionHandler(.cancel)") == 3 and "decisionHandler(.download)" in view  # 3: a help page goes to its sheet
     assert "WKWebsiteDataStore(forIdentifier: WebShellConfig.storeID)" in view
     assert ".completeFileProtectionUntilFirstUserAuthentication" in view and ".atomic" in view
     # the shell is product-neutral: names live in WebShellConfig (a second app changes only that file)
@@ -275,7 +282,8 @@ def test_the_iphones_own_ai_does_narrow_tasks_and_keeps_nothing():
     27) plate and label photos only. Nothing leaves the phone and nothing
     is stored; the instructions are the server's own (ai-prompts.json, built from app/ai/prompts.py), never written twice."""
     ai = APP["KidneyHealth/Services/OnDeviceAI.swift"]
-    assert 'static let tasks: Set<String> = ["parse_meal", "read_lab_report_text", "next_meal", "recipes", "read_label", "plate"]' in ai
+    assert ('static let tasks: Set<String> = ["parse_meal", "read_lab_report_text", "next_meal", "recipes", "read_label", "plate", "rerank", "swap",\n'
+            '                                     "plan"]') in ai
     for word in ("URLSession", "UserDefaults", "FileManager.default.create", ".write(to:", "Keychain"):
         assert word not in ai, word  # no network, and no prompt or reply is kept
     assert "ai-prompts.json" in ai and "TASK_SYSTEM_PROMPT" not in ai.replace("TASK_SYSTEM_PROMPT, verbatim", "")
@@ -294,6 +302,10 @@ def test_the_server_api_bridge_carries_only_its_allow_list():
     assert listed == [
         ("GET", "/push/v1/about"),
         ("GET", "/push/v1/api/foods/usda/search"), ("POST", "/push/v1/api/foods/usda/import"), ("POST", "/push/v1/api/foods/barcode"),
+        # connected devices on the server (owner, 2026-11-26): each company by name; never start or the way back
+        ("GET", "/push/v1/api/devices"), ("POST", "/push/v1/api/devices/withings/sync"), ("POST", "/push/v1/api/devices/whoop/sync"),
+        ("DELETE", "/push/v1/api/devices/withings"), ("DELETE", "/push/v1/api/devices/whoop"),
+        ("GET", "/push/v1/api/activity"), ("PUT", "/push/v1/api/activity/extra"),
         ("PATCH", "/push/v1/api/me/settings"),
         ("GET", "/push/v1/api/ai/status"), ("PATCH", "/push/v1/api/me/ai"), ("POST", "/push/v1/api/ai/consent"),
         ("POST", "/push/v1/api/ai/next-meal"), ("POST", "/push/v1/api/ai/parse-meal"), ("POST", "/push/v1/api/ai/recipes"),
@@ -310,10 +322,19 @@ def test_the_server_api_bridge_carries_only_its_allow_list():
         ("GET", "/push/v1/api/guidance/preferences"), ("PUT", "/push/v1/api/guidance/preferences/{food_id}"),
         ("DELETE", "/push/v1/api/guidance/preferences/{food_id}"),
         ("GET", "/push/v1/api/foods"), ("GET", "/push/v1/api/foods/{food_id}"),
+        # the Care team's notes and suggestions for the person (owner, 2026-11-26); never sharing itself
+        ("GET", "/push/v1/api/me/notes"), ("POST", "/push/v1/api/me/notes/{note_id}/read"), ("DELETE", "/push/v1/api/me/notes/{note_id}"),
+        ("GET", "/push/v1/api/me/suggestions"), ("POST", "/push/v1/api/me/suggestions/{suggestion_id}/accept"),
+        ("POST", "/push/v1/api/me/suggestions/{suggestion_id}/decline"),
     ]
-    # a path placeholder is only {food_id}: digits, matched segment by segment
-    assert 'if w == "{food_id}"' in core and '$0.matches(plain)' in core
-    assert set(re.findall(r"\{[a-z_]+\}", "".join(p for _, p in listed))) == {"{food_id}"}
+    # a path placeholder is a row's id: digits only, matched segment by segment
+    assert 'idSegments: Set<Substring> = ["{food_id}", "{note_id}", "{suggestion_id}"]' in core
+    assert 'if Route.idSegments.contains(w)' in core and '$0.matches(plain)' in core
+    assert set(re.findall(r"\{[a-z_]+\}", "".join(p for _, p in listed))) == {"{food_id}", "{note_id}", "{suggestion_id}"}
+    # the notes take only their page; marking one read sends the version shown (If-Match), which the bridge carries as it is
+    assert 'Route("GET", "/push/v1/api/me/notes", query: ["before", "limit"])' in core
+    for _, path in listed:
+        assert "/shares" not in path and "/shared" not in path, path  # sharing itself stays in the web app
     # sync both ways (note 39 steps 6 and 7): the feed takes only its cursor and page size
     assert 'Route("GET", "/push/v1/changes", query: ["after", "limit"])' in core
     # every route the app carries through the gateway is on the server's own gateway list (app/app_gateway.py)
@@ -321,7 +342,9 @@ def test_the_server_api_bridge_carries_only_its_allow_list():
 
     for method, path in listed[1:]:
         if path.startswith("/push/v1/api/"):
-            assert (method, "/api" + path.removeprefix("/push/v1/api")) in ALLOWED, (method, path)
+            api = "/api" + path.removeprefix("/push/v1/api")
+            api = re.sub(r"^/api/devices/(withings|whoop)", "/api/devices/{provider_id}", api)  # the app names each company
+            assert (method, api) in ALLOWED, (method, path)
     for _, path in listed:
         for word in ("/admin", "/auth", "/tokens", "/sessions", "/provider", "/me/import", "/export", "/keys", "delete", "transcribe"):
             assert word not in path, path

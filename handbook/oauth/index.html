@@ -1,0 +1,25 @@
+<!doctype html>
+<!-- The way back from Withings or Whoop to the Kidney Health iPhone app (handbook/oauth/; Services/Devices.swift).
+     The company sends the browser here with ?code=&state= (or ?error=). relay.js hands those three to the app's own scheme,
+     kidneyhealth-devices://callback, where Apple's sign-in sheet in the app is waiting. This page stores nothing, sends nothing
+     anywhere else and loads nothing from another site. The code is useless without the client secret, which stays on the iPhone. -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'">
+<meta name="referrer" content="no-referrer">
+<meta name="robots" content="noindex">
+<title>Back to Kidney Health</title>
+<link rel="stylesheet" href="relay.css">
+</head>
+<body>
+<main>
+<h1>Back to Kidney Health</h1>
+<p>You are going back to the Kidney Health app on your iPhone.</p>
+<p><a id="back" href="./">Open the app</a> if nothing happens.</p>
+<p>This page keeps nothing. If you did not start connecting a device in the app, close it.</p>
+</main>
+<script src="relay.js"></script>
+</body>
+</html>

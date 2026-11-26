@@ -126,8 +126,14 @@ phone and needs no server ([design note 38][NOTE38]):
   need your data back, open the app's **Settings → Your data → Import from a file** and choose that copy.
 - **Add → Scan a barcode** opens the iPhone's own scanner. Point it at a food barcode and the app looks the code up.
   Tap **Cancel** to type the digits instead.
+- **Learn** links and **Settings → About → Open the handbook** open this handbook inside the app, with no internet. Tap **Done**
+  to go back to where you were. A link to a source opens in Safari.
 - Touch and hold the app's icon on the Home Screen for shortcuts: **Scan a barcode**, **Add food** and **Quick add**.
-- Export your data now and then and keep the file somewhere safe. **Settings → Your data → Export** opens the share sheet.
+- **Settings → Reminders** gives you a notification at a time you choose, to log a meal, plan tomorrow or log your weight
+  ([Reminders in the iPhone app](settings-and-keys.md#reminders-iphone)). They stay on the iPhone.
+- Export your data now and then and keep the file somewhere safe. **Settings → Your data → Export my data (.zip)** makes the same
+  `.zip` a server gives: `export.json`, spreadsheet (CSV) files and a README. The share sheet opens so you choose where it goes.
+  The file is made on the iPhone and nothing is sent.
 - **Settings → This device → Apple Health and server** holds the phone's own settings:
   - **Apple Health**: allow weight and blood pressure, and new readings are added to the log on the phone when the app is open.
     Readings from a watch are not added.
@@ -173,6 +179,11 @@ phone and needs no server ([design note 38][NOTE38]):
 - **Food look-ups** go through your server while it can be reached, with the key your server uses for you. A food it finds is
   saved on the phone at once, so it works offline. When your server cannot be reached, the phone uses its own keys from Keys and
   services, if you added them, and otherwise the food list it already has. No key ever moves between the phone and the server.
+- **Your Care team.** Notes from your Care team show on Today, and their meal suggestions on the Plan tab, as in the web app.
+  You can read, delete and answer them. **Add to my plan** adds the foods on your server, and a sync brings them to the
+  phone at once. Notes are read from your server each time and are not kept on the phone; when it cannot be reached, the app says so.
+  **Settings → Care team** shows who is on it. You change it in your server's web app
+  ([Care team](settings-and-keys.md#sharing)).
 - **AI features** use your server's AI when your server can be reached and offers the feature, with the choices and consent you
   made there. Otherwise they use your own AI key if you added one, then the iPhone's own AI where it has one, and otherwise the
   app works without AI, as before.
@@ -189,17 +200,21 @@ phone and needs no server ([design note 38][NOTE38]):
   if you turned on photos for it, then the iPhone's own AI on iOS 27. Your server decides which of its AIs may see photos. When
   no AI can read a photo, the Add screen says so under the AI buttons. You tick each food, then choose **Eaten** or **Planned**:
   Planned puts the foods in the plan for the day you are looking at.
-- **A recipe from a web page**, **Open in Instacart** and **Send to** your own list app work on the phone when your server has
-  them turned on. Your server reads the page and sends the list, with its own keys, so they need a connection. The recipe's
-  ingredients are matched with the foods on your phone. The shopping list comes from the plan on your server, so plans you made
-  on the phone show there once they are sent. You set up your list app in the web app, not on the phone. Pasting ingredients
-  works offline. Without a token both ways, these buttons do not appear.
-- On an iPhone with Apple Intelligence, **Describe a meal**, **AI meal ideas**, **AI recipes** and reading the text of a lab
-  report PDF can use Apple's AI on the phone. On iOS 27 it can also read a photo of your plate or of a label. Turn it on in
+- **A recipe from a web page** works on the phone with or without a server. If your server reads recipe pages, it does. If not,
+  or if it cannot be reached, the iPhone opens the page itself. It goes only to the link you typed, which must start with
+  `https://`, and it does not open home or local network addresses. It reads the page's recipe data. The page is not shown or
+  kept, and nothing else leaves the phone. Either way, the ingredients are matched with the foods on your phone.
+- **Open in Instacart** and **Send to** your own list app work on the phone when your server has them turned on. Your server
+  sends the list with its own keys, so they need a connection. The shopping list comes from the plan on your server, so plans you
+  made on the phone show there once they are sent. You set up your list app in the web app, not on the phone. Without a token
+  both ways, these buttons do not appear. Pasting ingredients for a recipe works offline.
+- On an iPhone with Apple Intelligence, **Describe a meal**, **AI meal ideas**, **AI order**, **Ask AI to pick** (swaps),
+  **Let AI choose** (day plans), **AI recipes** and reading the text of a lab report PDF can use Apple's AI on the phone. On iOS 27 it can also read a photo of your plate or of a label. Turn it on in
   **Settings → AI features**. Nothing you write, read or photograph leaves the iPhone, and the questions and answers are not kept.
   Apple's AI on the phone is small, so its meal ideas and recipes choose from fewer of your foods. The app checks every answer the
   same way your server would, and you check each line before anything is saved. The AI never gives insulin or medicine doses.
-  AI order, AI swaps and AI day plans need your server. On other iPhones these buttons do not appear, and everything else works.
+  On other iPhones these buttons appear only with your server's AI or your own key, and everything else works. AI swaps and AI
+  day plans never go to your server's AI: they need your own key or Apple's AI on the phone.
 
 ### Your own AI key on the iPhone
 
@@ -214,9 +229,10 @@ You can use AI features with a key of your own from an AI company, with no serve
 
 What it does:
 
-- **Describe a meal**, **AI meal ideas** and **AI recipes** use your own key. If you have a server, your server's AI is used
-  first, and your own key only when your server cannot be reached or does not offer it. Meal ideas and recipes send the foods the
-  app's rules chose, your targets and today's totals, as your server would. They never send your name or date of birth.
+- **Describe a meal**, **AI meal ideas**, **AI order**, **AI swaps**, **AI day plans** and **AI recipes** use your own key. If you
+  have a server, your server's AI is used first, and your own key only when your server cannot be reached or does not offer it.
+  AI swaps and AI day plans skip your server's AI: they work on the iPhone's own log. These features send the foods the app's
+  rules chose, your targets and today's totals, as your server would. They never send your name or date of birth.
 - **Photos of a meal or a label** go to your own key only if you turn on **Also send meal and label photos to this AI**. It is off
   at first.
 - **Lab reports, and anything with your name or date of birth, are never sent to it.** If you type your name in a meal

@@ -12,7 +12,7 @@ walks it the way a person does, at 375x812 light and 1280x800 dark, each part in
   real server is the way for real use; the button stays off until "I understand" is ticked; turning it on (an empty log of one's own)
   stores a copy and asks the browser to keep it (a stubbed ``navigator.storage.persist`` answers, and the sheet shows the answer);
   an entry is added, the page reloaded: the entry is still there and the mode still on;
-* ``export``: Settings → Your data downloads ``export.json`` in the server's shape; ``stop``: "Stop keeping data here" asks in the page
+* ``export``: Settings → Your data downloads the server's export .zip, built in the page, with ``export.json`` in the server's shape; ``stop``: "Stop keeping data here" asks in the page
   (no browser dialog), Cancel keeps the copy, Delete removes the database and the sample demo is back; then the file is imported into
   an empty log through Settings → Import from a file (what it would add is shown first; nothing before Import), a refused file is
   refused in the server's words, and importing the same file again adds nothing;
@@ -30,12 +30,14 @@ import argparse
 import functools
 import http.server
 import json
+import re
 import subprocess
 import sys
 import tempfile
 import threading
 import time
 import traceback
+import zipfile
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -271,12 +273,19 @@ def export_stop_import(browser: Any, base: str, out: Path) -> None:
     copy_with(page, 4)
     # Settings -> Your data -> export
     open_settings(page)
-    check("[export] the button is the export.json one", "export.json" in page.inner_text("#set-export"), page.inner_text("#set-export"))
+    check("[export] the button is the .zip one", ".zip" in page.inner_text("#set-export"), page.inner_text("#set-export"))
     with page.expect_download() as dl:
         page.click("#set-export")
     download = dl.value
-    check("[export] the download is named export.json", download.suggested_filename == "export.json", download.suggested_filename)
-    path = Path(download.path())
+    check("[export] the download is named like the server's", re.fullmatch(r"kidney-health-[\w.-]+-\d{4}-\d{2}-\d{2}\.zip", download.suggested_filename) is not None,
+          download.suggested_filename)
+    with zipfile.ZipFile(download.path()) as archive:
+        names = archive.namelist()
+        check("[export] the zip holds the server's files, in its order", names == ["export.json", "log.csv", "foods.csv", "meals.csv", "labs.csv", "symptoms.csv",
+              "weights.csv", "blood_pressure.csv", "activity.csv", "workouts.csv", "README.txt"], str(names))
+        check("[export] log.csv has the entry", ENTRY in archive.read("log.csv").decode("utf-8"))
+        path = out / "export-from-zip.json"
+        path.write_bytes(archive.read("export.json"))
     doc = json.loads(path.read_text(encoding="utf-8"))
     check("[export] it has the server's keys in the server's order", [k for k in doc if k not in SPREAD_KEYS] == EXPORT_KEYS
           and all(k in doc for k in SPREAD_KEYS), str(list(doc)))
@@ -286,7 +295,7 @@ def export_stop_import(browser: Any, base: str, out: Path) -> None:
     check("[export] no password, session or key in it", not any(word in json.dumps(doc).lower() for word in ("api_key", "password_hash", "session_id", "\"token\"")))
     keep_file = out / "export.json"
     keep_file.write_bytes(path.read_bytes())
-    check("[export] the page says it saved the file", "Saved export.json" in page.inner_text("#set-export-msg"), page.inner_text("#set-export-msg"))
+    check("[export] the page says it saved the file", f"Saved {download.suggested_filename}" in page.inner_text("#set-export-msg"), page.inner_text("#set-export-msg"))
     # stop keeping data
     page.click("#preview-banner-keep")
     page.wait_for_selector("#sheet-demo-local[open]")

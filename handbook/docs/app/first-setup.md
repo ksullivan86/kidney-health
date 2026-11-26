@@ -52,7 +52,7 @@ Open **Profile** and enter:
 
 | Field | What to enter | Tip |
 |---|---|---|
-| Weight (kg) | Your weight today. On dialysis, your **dry (target) weight** after a session | pounds ÷ 2.2 = kg: 154 lb = 70 kg |
+| Weight | Your weight today, in pounds. On dialysis, your **dry (target) weight** after a session | to type kilograms instead, change **Unit for weight** in Settings → Weight and blood pressure. The app saves the weight in kilograms either way |
 | Height | Your height in feet and inches | to type centimetres instead, choose **Units for height** in Settings → Preferences. The app saves the height in centimetres either way |
 | CKD stage | 1, 2, 3a, 3b, 4 or 5, from your nephrologist | after a transplant, the stage of the new kidney. A new account shows **Not chosen yet**; until you pick, the app uses stage 3b |
 | Dialysis | None, Hemodialysis or Peritoneal | |

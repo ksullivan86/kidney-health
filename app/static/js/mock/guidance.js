@@ -314,7 +314,10 @@
     for (const food of result.foods) withNulls(food, ['explain']);
     result.ai = { available: false, provider_label: null };
     result.targets = this._guidanceTargets(ctx);
-    return withNulls(result, ['explain']);
+    const out = withNulls(result, ['explain']);
+    // The iPhone app (device mode): the phone's AI for AI order and AI ideas, as the server's status_provider (js/mock/ai.js).
+    if (KH.flags && KH.flags.DEVICE === true && typeof KH.mock.aiGuidance === 'function') return KH.mock.aiGuidance(this).then((ai) => ({ ...out, ai }));
+    return out;
   });
 
   route('GET', '/api/guidance/swaps', function ({ qp }) {

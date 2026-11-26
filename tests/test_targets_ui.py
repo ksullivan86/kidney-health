@@ -96,7 +96,7 @@ def test_conditional_treatment_fields_start_hidden_and_are_driven_by_dialysis() 
                  "$('#pf-uf-field').hidden = dialysis !== 'peritoneal';", "$('#pf-pdkcal-field').hidden = dialysis !== 'peritoneal';",
                  "$('#pf-transplant-field').hidden = dialysis !== 'none';"):
         assert rule in view, rule
-    assert "Dry weight (kg, after dialysis)" in view  # note 05 §4.2: weight relabelled on dialysis
+    assert "`Dry weight (${weightUnit}, after dialysis)`" in view  # note 05 §4.2: weight relabelled on dialysis, in the person's unit
 
 
 def test_targets_editor_has_ranges_and_the_fiber_goal() -> None:

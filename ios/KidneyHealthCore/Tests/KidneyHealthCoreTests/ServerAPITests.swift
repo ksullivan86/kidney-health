@@ -68,6 +68,21 @@ final class ServerAPITests: XCTestCase {
         ] {
             XCTAssertNil(ServerAPI.route(method: method, path: path), "\(method) \(path)")
         }
+        // the Care team's notes and suggestions for the person: ids are digits; never sharing itself, never writing a note
+        XCTAssertEqual(ServerAPI.route(method: "GET", path: "/push/v1/api/me/notes?before=12&limit=50")?.query.map(\.name), ["before", "limit"])
+        XCTAssertNotNil(ServerAPI.route(method: "POST", path: "/push/v1/api/me/notes/12/read"))
+        XCTAssertNotNil(ServerAPI.route(method: "DELETE", path: "/push/v1/api/me/notes/12"))
+        XCTAssertNotNil(ServerAPI.route(method: "GET", path: "/push/v1/api/me/suggestions"))
+        XCTAssertNotNil(ServerAPI.route(method: "POST", path: "/push/v1/api/me/suggestions/3/accept"))
+        XCTAssertNotNil(ServerAPI.route(method: "POST", path: "/push/v1/api/me/suggestions/3/decline"))
+        for (method, path) in [
+            ("GET", "/push/v1/api/me/notes?q=x"), ("POST", "/push/v1/api/me/notes/x/read"), ("PUT", "/push/v1/api/me/notes/12"),
+            ("POST", "/push/v1/api/me/notes"), ("DELETE", "/push/v1/api/me/notes/12/read"), ("GET", "/push/v1/api/me/shares"),
+            ("GET", "/push/v1/api/shared"), ("POST", "/push/v1/api/shared/1/notes"), ("POST", "/push/v1/api/me/suggestions/3"),
+            ("POST", "/push/v1/api/me/suggestions/-3/accept"), ("GET", "/push/v1/api/me/suggestions/3/accept"),
+        ] {
+            XCTAssertNil(ServerAPI.route(method: method, path: path), "\(method) \(path)")
+        }
         XCTAssertEqual(ServerAPI.routes.filter(\.photo).map(\.path),
                        ["/push/v1/api/ai/read-lab-report", "/push/v1/api/vision/label", "/push/v1/api/vision/plate"])
         // a settings route takes only its own keys

@@ -203,9 +203,7 @@ async function withTargets(opts) {
     'saved_meals', 'targets', 'today', 'week_avg']), 'the server\'s data block');
   ok(() => assert.equal(data.person.age_band, null), 'no age without consent');
   ok(() => assert.ok(!req.text.toLowerCase().includes('robin')), 'never the name');
-  for (const mode of ['rerank', 'swap', 'plan']) {
-    await fails(api.request('POST', '/api/ai/next-meal', { meal: 'dinner', mode, food_id: 1, servings: 1 }), 503, (e) => e.extra.reason === 'not_on_phone');
-  }
+  // AI order, swaps and day plans run here too now: tests/js/phone_ai_more2.mjs.
   const recipe = await api.request('POST', '/api/ai/recipes', { mode: 'suggest', dish: 'stew', makes: 4, meal: 'dinner' });
   const rreq = sent('ai').at(-1);
   ok(() => assert.equal(rreq.task, 'recipes'));

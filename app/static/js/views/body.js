@@ -402,6 +402,7 @@
     if (!unitItem || !alarmItem || !goalItem) { clear(body).append(h('p', { class: 'form-error' }, 'This server does not offer these settings.')); return; }
     const unit = unitItem.value === 'kg' ? 'kg' : 'lb';
     S.units = unit;
+    if (KH.views.profile) KH.views.profile.setWeightUnit(unit); // Profile's two weight boxes follow the same unit
     const hd = !!(state.profile && state.profile.dialysis === 'hemodialysis');
     const sourceOf = (item) => h('span', { class: `setting-source src-${item.source}` }, KH.settings.SOURCE_LABEL[item.source] || item.source || '');
     clear(body);
@@ -421,6 +422,7 @@
         await api.updateMySettings({ 'user.units.weight': unitSel.value });
         unitNote = unitSel.value === 'kg' ? 'Weights are now shown and typed in kilograms.' : 'Weights are now shown and typed in pounds.';
         S.units = unitSel.value;
+        if (KH.views.profile) KH.views.profile.setWeightUnit(unitSel.value);
         state.trends = null;
         state.dayLoadedFor = null;
         await renderSettings(); // the alarm's box is in the unit too

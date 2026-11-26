@@ -92,3 +92,28 @@ route but `GET` is 404.
 * **What the push service learns.** The time of each message and that this server sent it. The body is encrypted end to end;
   it is generic anyway.
 * **Annoyance.** At most 10 reminders, each at most once a day, and 5 test sends an hour.
+
+## 7. In the iPhone app (added 2026-11-26)
+
+Owner, 2026-11-26: what the web app does with a server should work in the iPhone app without one when it makes sense. Reminders
+do. In the iPhone app they are the iPhone's own notifications. No Web Push, no server and no push service are involved.
+
+* **Where they are kept.** In the log on the phone, like the rest of the data (`js/mock/reminders.js`). They are in the export.
+  The same routes, limits and texts as §5 answer; the device routes are not used.
+* **Planning.** The page plans the next 7 days as single notifications, at most 60 (iOS keeps 64 pending; a few stay free).
+  Each is a reminder that is on, on one of its days, at its time, still in the future. A meal reminder for today is left out when
+  that meal already has eaten food logged today, as the server does.
+* **When.** After a reminder is added, changed or removed, after each save of the log, when the app starts and when it comes back
+  to the front. The page sends the whole plan; the app replaces every pending reminder with it.
+* **Time.** The phone's own time zone, at the moment each one goes off. A reminder's saved `time_zone` is not used on the phone.
+* **The bridge.** `{kind: "reminders", action}` to the app's `bridge` handler:
+  `status` and `allow` answer `{ok, permission: allowed | denied | not_asked, pending}`; `allow` asks iOS only from the person's
+  tap. `schedule` takes `items: [{id, at: "YYYY-MM-DDTHH:MM", kind, meal}]`. `test` sends one in 5 seconds. `openSettings` opens
+  the app's page in iOS Settings.
+* **The words.** The app writes them, not the page: title "Food log", the bodies of §4, and the test's sentence. The page sends
+  only the kind and the meal, so no other text can reach the lock screen. No health words, no food names.
+* **A tap** opens the screen of §4 (`add`, `plan`, `today`; the test opens Settings) once the page has started.
+* **Not allowed.** If the person said no, Settings says how to allow it: Settings, Notifications, Kidney Health, Allow
+  Notifications. Nothing is planned until they do.
+* **With a server (note 39).** Reminders set on the phone stay on the phone. They are not synced. The screen says so.
+* **Safety.** The line of §1 stays on the screen. There is no reminder about lows, insulin, medicines or glucose.

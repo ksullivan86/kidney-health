@@ -454,6 +454,6 @@ input[type="number"] { font-variant-numeric: tabular-nums; }
 .rating.dashed { color: var(--text-3); }
 
 /* The iPhone app with no server (design note 38; js/main.js sets .device-mode): the parts that need a server are left out. */
-.device-mode #set-care, .device-mode #set-connected, .device-mode #set-lists, .device-mode #set-assistant,
-.device-mode #set-reminders, .device-mode #set-admin-link, .device-mode #set-admin, .device-mode #set-admin-ai,
+.device-mode #set-lists, .device-mode #set-assistant,
+.device-mode #set-admin-link, .device-mode #set-admin, .device-mode #set-admin-ai,
 .device-mode #set-push, .device-mode #set-body-import, .device-mode #install-panel, .device-mode #admin-open { display: none !important; }

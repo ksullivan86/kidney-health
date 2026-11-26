@@ -4,6 +4,8 @@
      a switch for each thing they may see and do, saved at once, and Remove), what waits
      for an answer (user name invites and links nobody has used, Cancel), Add someone (by user name, or a link shown once with
      Copy link), and the Care teams you are on (Open, Trends, Plan meals for a Care helper, Leave).
+   * KH.sharing.deviceBlock(): the same section in the iPhone app, read-only, while it is paired with a server (who is on your
+     Care team, whose you are on, and where to change it). With no server the section is left out.
    * A link #/share/<code> is taken out of the address bar into memory when the page opens (so a sign-in screen does not lose
      it and it does not stay in the history), and once someone is signed in the share sheet asks "Accept?" before anything is
      saved. Nothing about the link is stored in the browser.
@@ -689,6 +691,49 @@
     });
   }
 
+  // ---------------------------------------------------------------------------
+  // The iPhone app (device mode): Settings → Care team, read-only, while paired with a server (owner, 2026-11-26)
+  // ---------------------------------------------------------------------------
+  const DEVICE_CHANGE = "Change who is on your Care team, and what they may see and do, in your server's web app.";
+  /** One line of the read-only list: "Dee, Clinician: food log and lab results". */
+  function deviceLine(p, withAreas) {
+    const role = ROLE_LABEL[p.role] || ROLE_LABEL.custom;
+    const areas = withAreas ? areasText(p.areas) : '';
+    return `${p.name || 'Someone'}, ${role}${areas ? `: ${areas}` : ''}`;
+  }
+  /** The section's body in the iPhone app, or null to leave the section out (no server, or nothing it can say). The answer of
+      GET /api/device/care-team (js/mock/server_care.js) comes from the server's GET /push/v1/about. */
+  async function deviceBlock() {
+    let got;
+    try { got = await request('GET', '/api/device/care-team'); } catch (err) { return null; }
+    if (!got || !got.paired) return null; // a Care team lives on a server: with none, the section is left out
+    const body = h('div', { id: 'set-sharing', class: 'sharing', role: 'region', 'aria-labelledby': 'set-care-h' });
+    const team = got.care_team;
+    if (got.state === 'add_only' || got.state === 'old_server') {
+      body.append(h('p', { class: 'hint' }, 'Your Care team shows here with a token "For the iPhone app, both ways". Make one in your server\'s web app, under Settings → Phone shortcuts.'));
+      return body;
+    }
+    if (!team) {
+      body.append(h('p', { class: 'hint' }, 'Your server cannot be reached right now. Your Care team shows here when it can.'));
+      return body;
+    }
+    if (!team.enabled) { body.append(h('p', { class: 'hint', id: 'set-sharing-off' }, OFF)); return body; }
+    if (team.notes && KH.notes) {
+      const read = h('button', { class: 'btn secondary', type: 'button', id: 'set-care-notes' }, 'Notes from your Care team');
+      read.addEventListener('click', () => KH.notes.openOwn('settings'));
+      body.append(h('div', { class: 'settings-actions' }, read));
+    }
+    body.append(h('h4', { class: 'settings-minor', id: 'set-care-team-h' }, 'Your Care team'));
+    if (!team.team.length) body.append(h('p', { class: 'muted small', id: 'set-sharing-none' }, 'Nobody yet.'));
+    else body.append(h('ul', { class: 'list', id: 'set-sharing-list', 'aria-labelledby': 'set-care-team-h' }, team.team.map((p) => h('li', {}, deviceLine(p, true)))));
+    if (team.on.length) {
+      body.append(h('h4', { class: 'settings-minor', id: 'set-shared-h' }, 'Care teams you are on'),
+        h('ul', { class: 'list', id: 'set-shared-list', 'aria-labelledby': 'set-shared-h' }, team.on.map((p) => h('li', {}, deviceLine(p, false)))));
+    }
+    body.append(h('p', { class: 'hint', id: 'set-care-device-change' }, DEVICE_CHANGE));
+    return body;
+  }
+
   // A link followed while the app is already open: take it, and ask once someone is signed in.
   window.addEventListener('hashchange', () => {
     if (!takeLink()) return;
@@ -699,5 +744,5 @@
 
   KH.sharing = { block, reads, renderDay, openShared, openPending, takeLink, areasText, lastLooked, lastsText, sharingLine, personLine, whoText,
     questionText, entryLine, roleText, roleOf, doText, needsFood, changesText, people: A.people, AREAS, AREA_LABEL, ROLES, ROLE_LABEL, SWITCHES,
-    FOOD_SWITCHES, PRESETS, CLINICIAN_NOTE };
+    FOOD_SWITCHES, PRESETS, CLINICIAN_NOTE, deviceBlock, deviceLine };
 })();

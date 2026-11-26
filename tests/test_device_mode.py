@@ -84,9 +84,11 @@ def test_the_first_start_setup_and_the_tidy_settings_are_device_only():
     main = (static / "js" / "main.js").read_text(encoding="utf-8")
     assert "if (DEVICE && KH.welcome) KH.welcome.maybeShow()" in main and "classList.add('device-mode')" in main
     css = (static / "css" / "base.css").read_text(encoding="utf-8")
-    hidden = css[css.index(".device-mode #set-care"):]
-    for section in ("#set-care", "#set-connected", "#set-lists", "#set-assistant", "#set-reminders", "#set-push", "#install-panel"):
+    hidden = css[css.index("/* The iPhone app with no server"):]
+    for section in ("#set-lists", "#set-assistant", "#set-push", "#install-panel"):
         assert f".device-mode {section}" in hidden, section
+    assert ".device-mode #set-reminders" not in css  # the iPhone's own notifications (design note 35 §7)
+    assert ".device-mode #set-connected" not in css  # Withings and Whoop from the phone (owner, 2026-11-26)
     settings = (static / "js" / "views" / "settings.js").read_text(encoding="utf-8")
     assert "if (sec.hidden || DEVICE_LEFT_OUT.has(sec.id)) continue;" in settings
     assert "id: 'set-start-empty'" in settings and "id: 'set-start-sample'" in settings and "id: 'set-run-setup'" in settings

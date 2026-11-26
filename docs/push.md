@@ -277,10 +277,22 @@ phone, the person makes a new token and pairs again.
    | `GET /api/recipe-import`, `POST /api/recipe-import/page` | a recipe from a web page: the server reads the page through its checked connection, as for the web app |
    | `GET /api/instacart`, `POST /api/instacart/preview`, `/api/instacart/send` | the Plan's shopping list at Instacart, with the server's key |
    | `GET /api/list-sync`, `POST /api/list-sync/preview`, `/api/list-sync/send` | sending the shopping list to the person's own list app |
+   | `GET /api/devices`, `POST /api/devices/{provider_id}/sync`, `DELETE /api/devices/{provider_id}` | Withings and Whoop on the server: the person's status, Sync now and Disconnect. Connecting is not on the list (below) |
+   | `GET /api/activity`, `PUT /api/activity/extra` | the Whoop days for Trends, and the active-day calorie setting |
+   | `GET /api/me/notes`, `POST /api/me/notes/{note_id}/read`, `DELETE /api/me/notes/{note_id}` | notes from the person's Care team: read them, mark one read with the version shown (`If-Match`), delete one |
+   | `GET /api/me/suggestions`, `POST /api/me/suggestions/{suggestion_id}/accept`, `/decline` | meal suggestions from the Care team: add one to the plan, or say no thanks |
 
    Each service works only while it is on for this server (`RECIPE_IMPORT_ENABLED`, `INSTACART_ENABLED` with its key,
    `LIST_SYNC_ENABLED`); otherwise its route answers as it does for the web app. The list app is set up only in the web app: its
    address and key are never sent from the phone, and its key never goes to it.
+
+   The notes and suggestions find a row only by the token owner's id, so another person's note is `404`. Writing a note, and
+   sharing itself (who is on the Care team and what they may see and do), stay in the web app.
+
+   Connecting Withings or Whoop (`POST /api/devices/{provider_id}/start` and the way back) is tied to the browser session that
+   started it, so it is never on the list. The iPhone app opens the server's own page at `/#/devices/open/<provider>` in Safari's
+   sheet instead. The person signs in to the server there and connects as in the web app; the app hands that page no token. The
+   readings the server then fetches reach the phone through the change feed, marked "from Withings".
 
    **Never on it:** anything that needs the password again, admin routes, sign-in, tokens, sessions, keys and AI providers, sharing,
    the import, the `.zip` export, and deleting or changing the account. A test pins the list.
@@ -304,14 +316,16 @@ What this server offers this person, so the phone can choose without trying each
 
 ```json
 {"account": "5f1d0c1e9a8b7c6d5e4f3a2b1c0d9e8f",
- "api_version": 1, "app_version": "0.25.0",
+ "api_version": 1, "app_version": "0.26.0",
  "sync": {"gateway": true, "changes": true},
  "gateway": [{"method": "GET", "path": "/api/ai/status"}, …],
  "ai": {"enabled": true, "available": true, "routes": {"meal_ideas": {…}, "labs": {…}, …}},
  "services": {"usda_search": true, "barcode": true, "barcode_off": false, "barcode_usda": true,
               "recipe_import": false, "instacart": false, "list_sync": false},
  "capabilities": {…},
- "features": {"usda_search": true, "barcode": true, "ai": true, "changes": true}}
+ "features": {"usda_search": true, "barcode": true, "ai": true, "changes": true},
+ "care_team": {"enabled": true, "notes": true, "team": [{"name": "Dee", "role": "clinician", "areas": ["labs"]}],
+               "on": [{"name": "Ana", "role": "care_helper"}]}}
 ```
 
 * `account` is the same for every token of this person on this server, and different for anyone else. It is a keyed hash of the
@@ -320,6 +334,8 @@ What this server offers this person, so the phone can choose without trying each
 * `ai.routes` is `routes` of `GET /api/ai/status`; `capabilities` is that of `GET /api/meta`.
 * `features` repeats the four answers the phone needs first: `services.usda_search`, `services.barcode`, `ai.available` and
   `sync.changes`.
+* `care_team` is for Settings → Care team on the phone, which only shows it: whether the Care team and its notes are on, who is on
+  the person's Care team (name, role, what they see) and whose Care team the person is on. No ids, user names, links or invites.
 * `200` means the token works both ways. A token that only adds gets `401`, and a server older than this gets `404`.
 * An AI route answers `404` while the AI is off for the person, as on the web. The phone then uses its own AI.
 
@@ -409,6 +425,10 @@ and only these three paths besides the gateway's.
   to the server's route through the gateway and is kept only when the server took it. Offline the phone says "This needs a
   connection to your server." The first time, if the phone's own profile and targets differ, one card shows both: **Keep your
   server's** or **Keep this iPhone's**. The phone's own settings stay on the phone: the theme, the camera, its keys and the lock.
+* **Notes and suggestions from the Care team** are read from the server each time they are shown (`app/static/js/mock/server_care.js`)
+  and never kept on the phone: not in its saved data, its safety copy or its export. While the server cannot be reached the phone
+  says so. **Add to my plan** makes the planned entries on the server, and a sync brings them to the phone at once, so it needs sync
+  both ways to be on.
 * **"N to review"**: the sync badge in the header counts what waits for the person, and Today marks such an entry "needs review".
 
 ## Pairing the iPhone app by QR code

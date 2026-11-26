@@ -15,6 +15,12 @@ enum Keychain {
         case usdaKey
         /// The person's own AI key (design note 39 §6.5). Written once, never shown again, never sent to the page.
         case ownAIKey
+        /// The person's own Withings and Whoop developer apps (client ID and secret), and the tokens their sign-in gave (Services/
+        /// Devices.swift). Never shown again, never sent to the page.
+        case withingsApp
+        case whoopApp
+        case withingsTokens
+        case whoopTokens
     }
 
     struct Failure: Error, Equatable {

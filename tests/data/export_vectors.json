@@ -1,0 +1,819 @@
+{
+ "names": [
+  "export.json",
+  "log.csv",
+  "foods.csv",
+  "meals.csv",
+  "labs.csv",
+  "symptoms.csv",
+  "weights.csv",
+  "blood_pressure.csv",
+  "activity.csv",
+  "workouts.csv",
+  "README.txt"
+ ],
+ "doc": {
+  "format": "kidney-health-export",
+  "version": 1,
+  "exported_at": "2026-11-26T06:09:09.712991Z",
+  "app_version": "0.26.0",
+  "user": {
+   "username": "admin",
+   "display_name": "",
+   "created_at": "2026-11-26T06:09:09.197985Z",
+   "email": null,
+   "email_confirmed_at": null
+  },
+  "profile": {
+   "id": 1,
+   "name": "",
+   "weight_kg": null,
+   "height_cm": null,
+   "ckd_stage": "3b",
+   "dialysis": "none",
+   "diabetes": "type1",
+   "warn_fraction": 0.8,
+   "about_tolerance_pct": 0,
+   "dialysis_days": [],
+   "week_start": "monday",
+   "targets": {},
+   "birth_month": null,
+   "sex": "unspecified",
+   "activity": null,
+   "transplant_date": null,
+   "frail_or_sarcopenic": false,
+   "pregnant_or_breastfeeding": false,
+   "hyperkalemia_history": false,
+   "weight_6_months_ago_kg": null,
+   "urine_output_ml": null,
+   "pd_uf_ml": null,
+   "pd_dialysate_kcal": null,
+   "ckd_stage_chosen": false,
+   "diabetes_chosen": false,
+   "updated_at": "2026-11-26T06:09:09.713026Z"
+  },
+  "settings": {},
+  "log_entries": [
+   {
+    "id": 1,
+    "date": "2026-10-05",
+    "meal": "breakfast",
+    "food_id": 22,
+    "food_name": "Banana, raw",
+    "servings": 1.5,
+    "grams": null,
+    "note": "+cmd|' /C calc'!A0",
+    "status": "eaten",
+    "nutrients": {
+     "calories_kcal": 157.5,
+     "protein_g": 2.0,
+     "fat_g": 0.6,
+     "sat_fat_g": 0.2,
+     "carbs_g": 40.5,
+     "fiber_g": 4.7,
+     "sugar_g": 21.6,
+     "sodium_mg": 2,
+     "potassium_mg": 633,
+     "phosphorus_mg": 39,
+     "calcium_mg": 9,
+     "fluid_ml": 0
+    },
+    "warnings": [
+     {
+      "nutrient": "potassium_mg",
+      "level": "high",
+      "value": 633,
+      "flag": null,
+      "message": "High potassium: 633 mg in this entry"
+     },
+     {
+      "nutrient": "carbs_g",
+      "level": "high",
+      "value": 40.5,
+      "flag": null,
+      "message": "High carbohydrate: 40.5 g in this entry (3 carb choices)"
+     }
+    ],
+    "kidney_rating": "red",
+    "purpose": null,
+    "client_id": "1869d086-f442-4be8-ac61-c80e27e59fc4",
+    "created_at": "2026-10-07T09:00:00Z",
+    "updated_at": "2026-10-07T09:00:00Z"
+   },
+   {
+    "id": 2,
+    "date": "2026-10-05",
+    "meal": "lunch",
+    "food_id": 396,
+    "food_name": "Mum's \"special\" stew, with rice",
+    "servings": 0.5,
+    "grams": 150.0,
+    "note": "half, \"warm\"",
+    "status": "eaten",
+    "nutrients": {
+     "calories_kcal": null,
+     "protein_g": 6.2,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": 10.0,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": 351,
+     "potassium_mg": 205,
+     "phosphorus_mg": 60,
+     "calcium_mg": null,
+     "fluid_ml": 0
+    },
+    "warnings": [
+     {
+      "nutrient": "potassium_mg",
+      "level": "high",
+      "value": 205,
+      "flag": null,
+      "message": "High potassium: 205 mg in this entry"
+     },
+     {
+      "nutrient": "sodium_mg",
+      "level": "medium",
+      "value": 351,
+      "flag": null,
+      "message": "Moderate sodium: 351 mg in this entry"
+     }
+    ],
+    "kidney_rating": "red",
+    "purpose": null,
+    "client_id": "2373d460-eeba-48af-90c4-4264e3cae7ee",
+    "created_at": "2026-10-07T09:00:00Z",
+    "updated_at": "2026-10-07T09:00:00Z"
+   },
+   {
+    "id": 3,
+    "date": "2026-10-06",
+    "meal": "snack",
+    "food_id": 393,
+    "food_name": "Glucose tablet (4 g carb)",
+    "servings": 4.0,
+    "grams": null,
+    "note": null,
+    "status": "eaten",
+    "nutrients": {
+     "calories_kcal": 64.0,
+     "protein_g": 0.0,
+     "fat_g": 0.0,
+     "sat_fat_g": 0.0,
+     "carbs_g": 16.0,
+     "fiber_g": 0.0,
+     "sugar_g": 16.0,
+     "sodium_mg": 0,
+     "potassium_mg": 0,
+     "phosphorus_mg": 0,
+     "calcium_mg": 0,
+     "fluid_ml": 0
+    },
+    "warnings": [],
+    "kidney_rating": "green",
+    "purpose": "hypo",
+    "client_id": "24a62d5a-2a8f-4333-93c7-759e16a4a929",
+    "created_at": "2026-10-07T09:00:00Z",
+    "updated_at": "2026-10-07T09:00:00Z"
+   },
+   {
+    "id": 4,
+    "date": "2026-10-07",
+    "meal": "dinner",
+    "food_id": 397,
+    "food_name": "-Crème brûlée tea ＝",
+    "servings": 1.0,
+    "grams": null,
+    "note": "@later\nmaybe",
+    "status": "planned",
+    "nutrients": {
+     "calories_kcal": null,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": null,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": null,
+     "potassium_mg": 50,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": 240
+    },
+    "warnings": [],
+    "kidney_rating": "green",
+    "purpose": null,
+    "client_id": "194e5732-ea7f-423b-be0f-6eb3467d0170",
+    "created_at": "2026-10-07T09:00:00Z",
+    "updated_at": "2026-10-07T09:00:00Z"
+   }
+  ],
+  "custom_foods": [
+   {
+    "id": 396,
+    "name": "Mum's \"special\" stew, with rice",
+    "brand": "=HYPERLINK(\"http://evil\")",
+    "category": "Mixed dishes",
+    "source": "custom",
+    "fdc_id": null,
+    "serving_desc": "1 bowl, about 300 g",
+    "serving_g": 300.0,
+    "nutrients": {
+     "calories_kcal": null,
+     "protein_g": 12.3,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": 20.0,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": 701,
+     "potassium_mg": 410,
+     "phosphorus_mg": 120,
+     "calcium_mg": null,
+     "fluid_ml": 0
+    },
+    "flags": [],
+    "kidney_notes": "Soak the potatoes first.\nThen boil them.",
+    "hidden": false,
+    "warnings": [
+     {
+      "nutrient": "potassium_mg",
+      "level": "high",
+      "value": 410,
+      "flag": null,
+      "message": "High potassium: 410 mg per serving"
+     },
+     {
+      "nutrient": "sodium_mg",
+      "level": "high",
+      "value": 701,
+      "flag": null,
+      "message": "High sodium: 701 mg per serving"
+     },
+     {
+      "nutrient": "phosphorus_mg",
+      "level": "medium",
+      "value": 120,
+      "flag": null,
+      "message": "Moderate phosphorus: 120 mg per serving"
+     },
+     {
+      "nutrient": "carbs_g",
+      "level": "medium",
+      "value": 20.0,
+      "flag": null,
+      "message": "1 carb choice: 20 g carbohydrate per serving"
+     }
+    ],
+    "kidney_rating": "red",
+    "gtin": null,
+    "source_url": null,
+    "source_license": null,
+    "quality": [],
+    "additives": [],
+    "ingredients_text": null,
+    "client_id": "82362ea8-47ac-403f-af4a-1e9157131f3b"
+   },
+   {
+    "id": 397,
+    "name": "-Crème brûlée tea ＝",
+    "brand": null,
+    "category": null,
+    "source": "custom",
+    "fdc_id": null,
+    "serving_desc": "1 cup",
+    "serving_g": 240.5,
+    "nutrients": {
+     "calories_kcal": null,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": null,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": null,
+     "potassium_mg": 50,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": 240
+    },
+    "flags": [
+     "counts_as_fluid"
+    ],
+    "kidney_notes": null,
+    "hidden": false,
+    "warnings": [],
+    "kidney_rating": "green",
+    "gtin": null,
+    "source_url": null,
+    "source_license": null,
+    "quality": [],
+    "additives": [],
+    "ingredients_text": null,
+    "client_id": "b91ad5a8-32f1-4993-b1fd-3fa99df4ec12"
+   },
+   {
+    "id": 398,
+    "name": "Old crackers",
+    "brand": null,
+    "category": null,
+    "source": "custom",
+    "fdc_id": null,
+    "serving_desc": "4",
+    "serving_g": 20.0,
+    "nutrients": {
+     "calories_kcal": null,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": null,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": 180,
+     "potassium_mg": null,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": 0
+    },
+    "flags": [],
+    "kidney_notes": null,
+    "hidden": true,
+    "warnings": [
+     {
+      "nutrient": "sodium_mg",
+      "level": "medium",
+      "value": 180,
+      "flag": null,
+      "message": "Moderate sodium: 180 mg per serving"
+     }
+    ],
+    "kidney_rating": "yellow",
+    "gtin": null,
+    "source_url": null,
+    "source_license": null,
+    "quality": [],
+    "additives": [],
+    "ingredients_text": null,
+    "client_id": "e1a07867-055f-495c-bd0f-f5ecd84f66e2"
+   }
+  ],
+  "linked_foods": [],
+  "meal_templates": [
+   {
+    "id": 1,
+    "client_id": "e61fe112-8141-4d70-b453-38b54d3e70a5",
+    "name": "@SUM(1+1) lunch",
+    "note": "for work, packed",
+    "meal_hint": null,
+    "items": [
+     {
+      "food_id": 22,
+      "food_name": "Banana, raw",
+      "servings": 2.0,
+      "serving_desc": "1 medium (118 g)",
+      "nutrients": {
+       "calories_kcal": 210.0,
+       "protein_g": 2.6,
+       "fat_g": 0.8,
+       "sat_fat_g": 0.2,
+       "carbs_g": 54.0,
+       "fiber_g": 6.2,
+       "sugar_g": 28.8,
+       "sodium_mg": 2,
+       "potassium_mg": 844,
+       "phosphorus_mg": 52,
+       "calcium_mg": 12,
+       "fluid_ml": 0
+      },
+      "kidney_rating": "red",
+      "hidden": false
+     },
+     {
+      "food_id": 396,
+      "food_name": "Mum's \"special\" stew, with rice",
+      "servings": 0.333,
+      "serving_desc": "1 bowl, about 300 g",
+      "nutrients": {
+       "calories_kcal": null,
+       "protein_g": 4.1,
+       "fat_g": null,
+       "sat_fat_g": null,
+       "carbs_g": 6.7,
+       "fiber_g": null,
+       "sugar_g": null,
+       "sodium_mg": 233,
+       "potassium_mg": 137,
+       "phosphorus_mg": 40,
+       "calcium_mg": null,
+       "fluid_ml": 0
+      },
+      "kidney_rating": "yellow",
+      "hidden": false
+     },
+     {
+      "food_id": 398,
+      "food_name": "Old crackers",
+      "servings": 1.0,
+      "serving_desc": "4",
+      "nutrients": {
+       "calories_kcal": null,
+       "protein_g": null,
+       "fat_g": null,
+       "sat_fat_g": null,
+       "carbs_g": null,
+       "fiber_g": null,
+       "sugar_g": null,
+       "sodium_mg": 180,
+       "potassium_mg": null,
+       "phosphorus_mg": null,
+       "calcium_mg": null,
+       "fluid_ml": 0
+      },
+      "kidney_rating": "yellow",
+      "hidden": true
+     }
+    ],
+    "totals": {
+     "calories_kcal": 210.0,
+     "protein_g": 6.7,
+     "fat_g": 0.8,
+     "sat_fat_g": 0.2,
+     "carbs_g": 60.7,
+     "fiber_g": 6.2,
+     "sugar_g": 28.8,
+     "sodium_mg": 415,
+     "potassium_mg": 981,
+     "phosphorus_mg": 92,
+     "calcium_mg": 12,
+     "fluid_ml": 0
+    },
+    "kidney_rating": "red",
+    "servings_made": null,
+    "steps": null,
+    "source_url": null,
+    "per_serving": {
+     "calories_kcal": 210.0,
+     "protein_g": 6.7,
+     "fat_g": 0.8,
+     "sat_fat_g": 0.2,
+     "carbs_g": 60.7,
+     "fiber_g": 6.2,
+     "sugar_g": 28.8,
+     "sodium_mg": 415,
+     "potassium_mg": 981,
+     "phosphorus_mg": 92,
+     "calcium_mg": 12,
+     "fluid_ml": 0
+    },
+    "unknown": {
+     "calories_kcal": 2,
+     "fat_g": 2,
+     "sat_fat_g": 2,
+     "fiber_g": 2,
+     "sugar_g": 2,
+     "calcium_mg": 2,
+     "protein_g": 1,
+     "carbs_g": 1,
+     "potassium_mg": 1,
+     "phosphorus_mg": 1
+    },
+    "created_at": "2026-10-07T09:00:00Z",
+    "updated_at": "2026-10-07T09:00:00Z"
+   },
+   {
+    "id": 2,
+    "client_id": "d1c92020-8fb8-4f63-b736-af27b64c2105",
+    "name": "Just tea",
+    "note": null,
+    "meal_hint": null,
+    "items": [
+     {
+      "food_id": 397,
+      "food_name": "-Crème brûlée tea ＝",
+      "servings": 1.0,
+      "serving_desc": "1 cup",
+      "nutrients": {
+       "calories_kcal": null,
+       "protein_g": null,
+       "fat_g": null,
+       "sat_fat_g": null,
+       "carbs_g": null,
+       "fiber_g": null,
+       "sugar_g": null,
+       "sodium_mg": null,
+       "potassium_mg": 50,
+       "phosphorus_mg": null,
+       "calcium_mg": null,
+       "fluid_ml": 240
+      },
+      "kidney_rating": "green",
+      "hidden": false
+     }
+    ],
+    "totals": {
+     "calories_kcal": 0.0,
+     "protein_g": 0.0,
+     "fat_g": 0.0,
+     "sat_fat_g": 0.0,
+     "carbs_g": 0.0,
+     "fiber_g": 0.0,
+     "sugar_g": 0.0,
+     "sodium_mg": 0,
+     "potassium_mg": 50,
+     "phosphorus_mg": 0,
+     "calcium_mg": 0,
+     "fluid_ml": 240
+    },
+    "kidney_rating": "green",
+    "servings_made": null,
+    "steps": null,
+    "source_url": null,
+    "per_serving": {
+     "calories_kcal": null,
+     "protein_g": null,
+     "fat_g": null,
+     "sat_fat_g": null,
+     "carbs_g": null,
+     "fiber_g": null,
+     "sugar_g": null,
+     "sodium_mg": null,
+     "potassium_mg": 50,
+     "phosphorus_mg": null,
+     "calcium_mg": null,
+     "fluid_ml": 240
+    },
+    "unknown": {
+     "calories_kcal": 1,
+     "protein_g": 1,
+     "fat_g": 1,
+     "sat_fat_g": 1,
+     "carbs_g": 1,
+     "fiber_g": 1,
+     "sugar_g": 1,
+     "sodium_mg": 1,
+     "phosphorus_mg": 1,
+     "calcium_mg": 1
+    },
+    "created_at": "2026-10-07T09:00:00Z",
+    "updated_at": "2026-10-07T09:00:00Z"
+   }
+  ],
+  "lab_results": [
+   {
+    "id": 1,
+    "analyte": "potassium",
+    "value": 5.0,
+    "unit": "mmol/L",
+    "entered_value": 5.0,
+    "entered_unit": "mmol/L",
+    "taken_on": "2026-10-05",
+    "note": "",
+    "created_at": "2026-10-07T09:00:00Z",
+    "client_id": "2b29eed8-9d1a-41ee-a87e-1a8cda710ec0"
+   },
+   {
+    "id": 2,
+    "analyte": "creatinine",
+    "value": 1.244343891402715,
+    "unit": "mg/dL",
+    "entered_value": 110.0,
+    "entered_unit": "µmol/L",
+    "taken_on": "2026-10-06",
+    "note": "=fasting, early",
+    "created_at": "2026-10-07T09:00:00Z",
+    "client_id": "520f3466-59a1-4311-ab09-ebf1ea84b8a8"
+   },
+   {
+    "id": 3,
+    "analyte": "phosphate",
+    "value": 4.65,
+    "unit": "mg/dL",
+    "entered_value": 4.65,
+    "entered_unit": "mg/dL",
+    "taken_on": "2026-10-07",
+    "note": "",
+    "created_at": "2026-10-07T09:00:00Z",
+    "client_id": "83a68858-0fb4-49db-8dbe-bdf4de54991d"
+   }
+  ],
+  "symptoms": [
+   {
+    "id": 1,
+    "date": "2026-10-05",
+    "symptom": "tiredness",
+    "label": "",
+    "severity": 1,
+    "note": "after dialysis",
+    "created_at": "2026-10-07T09:00:00Z",
+    "client_id": "b1bf1adc-0255-4e3b-abc2-dc1119ff065f"
+   },
+   {
+    "id": 2,
+    "date": "2026-10-06",
+    "symptom": "other",
+    "label": "Dry mouth, \"bad\"",
+    "severity": 2,
+    "note": "line one\nline two",
+    "created_at": "2026-10-07T09:00:00Z",
+    "client_id": "8d256ba1-b600-4ce9-aa26-5a01eb0bd466"
+   }
+  ],
+  "weights": [
+   {
+    "id": 1,
+    "date": "2026-10-05",
+    "time": "07:30",
+    "kg": 70.25,
+    "context": "morning",
+    "note": "-before breakfast",
+    "source": "manual",
+    "source_key": null,
+    "created_at": "2026-10-07T09:00:00Z",
+    "updated_at": "2026-10-07T09:00:00Z",
+    "client_id": "62763c29-baf2-4212-b14d-be8c95b6aeb4"
+   },
+   {
+    "id": 2,
+    "date": "2026-10-06",
+    "time": null,
+    "kg": 72.0,
+    "context": "other",
+    "note": "",
+    "source": "manual",
+    "source_key": null,
+    "created_at": "2026-10-07T09:00:00Z",
+    "updated_at": "2026-10-07T09:00:00Z",
+    "client_id": "ddc0a4ac-a580-4780-94f6-f632a5c159f9"
+   }
+  ],
+  "blood_pressures": [
+   {
+    "id": 1,
+    "date": "2026-10-05",
+    "time": "07:35",
+    "systolic": 128,
+    "diastolic": 78,
+    "pulse": 66,
+    "context": "morning",
+    "note": "",
+    "source": "manual",
+    "source_key": null,
+    "created_at": "2026-10-07T09:00:00Z",
+    "updated_at": "2026-10-07T09:00:00Z",
+    "client_id": "a37b7861-6738-407c-9bbe-c0eedc323944"
+   },
+   {
+    "id": 2,
+    "date": "2026-10-06",
+    "time": null,
+    "systolic": 141,
+    "diastolic": 90,
+    "pulse": null,
+    "context": "other",
+    "note": "after the stairs, tired",
+    "source": "manual",
+    "source_key": null,
+    "created_at": "2026-10-07T09:00:00Z",
+    "updated_at": "2026-10-07T09:00:00Z",
+    "client_id": "122e9cc0-969c-4c69-9fb2-06e98486ef43"
+   }
+  ],
+  "ai_audit": [],
+  "activity": [
+   {
+    "id": 2,
+    "at": "2026-11-26T06:09:09.479175Z",
+    "actor_user_id": 1,
+    "ip_prefix": null,
+    "action": "login.succeeded",
+    "target_type": "user",
+    "target_id": "1",
+    "details": {}
+   }
+  ],
+  "food_preferences": [],
+  "ai_usage": [],
+  "ai_consents": [],
+  "ai_provider": null,
+  "builtin_foods": [
+   {
+    "id": 22,
+    "name": "Banana, raw",
+    "fdc_id": 173944
+   },
+   {
+    "id": 393,
+    "name": "Glucose tablet (4 g carb)",
+    "fdc_id": -10
+   }
+  ],
+  "activity_days": [
+   {
+    "date": "2026-10-05",
+    "kcal": 2210,
+    "strain": 12.5,
+    "recovery_pct": 64,
+    "resting_hr": 58,
+    "hrv_ms": 41.0,
+    "sleep_minutes": 431,
+    "sleep_performance_pct": 88,
+    "finished": true,
+    "source": "whoop"
+   },
+   {
+    "date": "2026-10-06",
+    "kcal": null,
+    "strain": 3.0,
+    "recovery_pct": null,
+    "resting_hr": null,
+    "hrv_ms": null,
+    "sleep_minutes": null,
+    "sleep_performance_pct": null,
+    "finished": false,
+    "source": "whoop"
+   }
+  ],
+  "activity_workouts": [
+   {
+    "date": "2026-10-05",
+    "start_time": "17:05",
+    "end_time": "17:50",
+    "minutes": 45,
+    "sport": "Walking, brisk",
+    "kcal": 210,
+    "strain": 6.25,
+    "source": "whoop"
+   }
+  ],
+  "activity_extra": {
+   "enabled": false,
+   "share_pct": 100,
+   "ceiling_kcal": null
+  },
+  "care_suggestions": [],
+  "reminders": [],
+  "care_notes": []
+ },
+ "food_sources": {
+  "22": [
+   "builtin",
+   null
+  ],
+  "393": [
+   "builtin",
+   null
+  ],
+  "396": [
+   "custom",
+   null
+  ],
+  "397": [
+   "custom",
+   null
+  ]
+ },
+ "files": {
+  "log.csv": "id,date,meal,status,food_id,food_name,servings,grams,note,calories_kcal,protein_g,fat_g,sat_fat_g,carbs_g,fiber_g,sugar_g,sodium_mg,potassium_mg,phosphorus_mg,calcium_mg,fluid_ml,created_at,updated_at,purpose,source,source_license\r\n1,2026-10-05,breakfast,eaten,22,\"Banana, raw\",1.5,,'+cmd|' /C calc'!A0,157.5,2.0,0.6,0.2,40.5,4.7,21.6,2,633,39,9,0,2026-10-07T09:00:00Z,2026-10-07T09:00:00Z,,builtin,\r\n2,2026-10-05,lunch,eaten,396,\"Mum's \"\"special\"\" stew, with rice\",0.5,150.0,\"half, \"\"warm\"\"\",,6.2,,,10.0,,,351,205,60,,0,2026-10-07T09:00:00Z,2026-10-07T09:00:00Z,,custom,\r\n3,2026-10-06,snack,eaten,393,Glucose tablet (4 g carb),4.0,,,64.0,0.0,0.0,0.0,16.0,0.0,16.0,0,0,0,0,0,2026-10-07T09:00:00Z,2026-10-07T09:00:00Z,hypo,builtin,\r\n4,2026-10-07,dinner,planned,397,'-Crème brûlée tea ＝,1.0,,\"'@later\nmaybe\",,,,,,,,,50,,,240,2026-10-07T09:00:00Z,2026-10-07T09:00:00Z,,custom,\r\n",
+  "foods.csv": "id,name,brand,category,source,fdc_id,serving_desc,serving_g,gtin,source_license,source_url,calories_kcal,protein_g,fat_g,sat_fat_g,carbs_g,fiber_g,sugar_g,sodium_mg,potassium_mg,phosphorus_mg,calcium_mg,fluid_ml,flags,kidney_notes\r\n396,\"Mum's \"\"special\"\" stew, with rice\",\"'=HYPERLINK(\"\"http://evil\"\")\",Mixed dishes,custom,,\"1 bowl, about 300 g\",300.0,,,,,12.3,,,20.0,,,701,410,120,,0,,\"Soak the potatoes first.\nThen boil them.\"\r\n397,'-Crème brûlée tea ＝,,,custom,,1 cup,240.5,,,,,,,,,,,,50,,,240,counts_as_fluid,\r\n398,Old crackers,,,custom,,4,20.0,,,,,,,,,,,180,,,,0,,\r\n",
+  "meals.csv": "meal_id,meal_name,note,food_id,food_name,servings\r\n1,'@SUM(1+1) lunch,\"for work, packed\",22,\"Banana, raw\",2.0\r\n1,'@SUM(1+1) lunch,\"for work, packed\",396,\"Mum's \"\"special\"\" stew, with rice\",0.333\r\n1,'@SUM(1+1) lunch,\"for work, packed\",398,Old crackers,1.0\r\n2,Just tea,,397,'-Crème brûlée tea ＝,1.0\r\n",
+  "labs.csv": "id,analyte,value,unit,entered_value,entered_unit,taken_on,note,created_at\r\n1,potassium,5.0,mmol/L,5.0,mmol/L,2026-10-05,,2026-10-07T09:00:00Z\r\n2,creatinine,1.244343891402715,mg/dL,110.0,µmol/L,2026-10-06,\"'=fasting, early\",2026-10-07T09:00:00Z\r\n3,phosphate,4.65,mg/dL,4.65,mg/dL,2026-10-07,,2026-10-07T09:00:00Z\r\n",
+  "symptoms.csv": "id,date,symptom,label,severity,note,created_at\r\n1,2026-10-05,tiredness,,1,after dialysis,2026-10-07T09:00:00Z\r\n2,2026-10-06,other,\"Dry mouth, \"\"bad\"\"\",2,\"line one\nline two\",2026-10-07T09:00:00Z\r\n",
+  "weights.csv": "id,date,time,kg,context,note,source,source_key,created_at,updated_at\r\n1,2026-10-05,07:30,70.25,morning,'-before breakfast,manual,,2026-10-07T09:00:00Z,2026-10-07T09:00:00Z\r\n2,2026-10-06,,72.0,other,,manual,,2026-10-07T09:00:00Z,2026-10-07T09:00:00Z\r\n",
+  "blood_pressure.csv": "id,date,time,systolic,diastolic,pulse,context,note,source,source_key,created_at,updated_at\r\n1,2026-10-05,07:35,128,78,66,morning,,manual,,2026-10-07T09:00:00Z,2026-10-07T09:00:00Z\r\n2,2026-10-06,,141,90,,other,\"after the stairs, tired\",manual,,2026-10-07T09:00:00Z,2026-10-07T09:00:00Z\r\n",
+  "activity.csv": "date,kcal,strain,recovery_pct,resting_hr,hrv_ms,sleep_minutes,sleep_performance_pct,finished,source\r\n2026-10-05,2210,12.5,64,58,41.0,431,88,True,whoop\r\n2026-10-06,,3.0,,,,,,False,whoop\r\n",
+  "workouts.csv": "date,start_time,end_time,minutes,sport,kcal,strain,source\r\n2026-10-05,17:05,17:50,45,\"Walking, brisk\",210,6.25,whoop\r\n",
+  "README.txt": "Kidney Health export\n====================\n\nThis archive holds everything this server stores about your account, in two forms:\n\n* export.json  - every record, in a documented JSON format (\"kidney-health-export\", version 1). To move\n                 to another server, unzip it, then use Settings > Account > Your data > \"Import from a\n                 file\" on the new server and choose export.json.\n* log.csv      - your food log (eaten and planned entries) with the nutrient snapshot of each entry.\n* foods.csv    - foods you created, and shared foods you imported or scanned.\n* meals.csv    - your saved meals, one line per food.\n* labs.csv     - your lab results (empty if you have none).\n* symptoms.csv - the symptoms you recorded, with date and severity (1 mild, 2 moderate, 3 severe; empty if none).\n* weights.csv  - the weights you recorded, in kilograms, with the date, time and when they were taken (empty if none).\n* blood_pressure.csv - the blood pressure readings you recorded: top number (systolic) and bottom number (diastolic) in mmHg,\n                 pulse, date, time and when they were taken (empty if none).\n* activity.csv - your days from Whoop: calories burned, strain, recovery, resting heart rate, HRV, sleep (empty if none).\n* workouts.csv - your workouts from Whoop: date, start, end, sport, calories burned, strain (empty if none).\n\nexport.json also holds your food preferences (the foods you marked More like this, Less often or Not for me,\nand the foods where you switched off what the app learned from your log; the food groups you chose are in\n\"settings\"), your AI activity (what the app sent to an AI provider for you and what came back, for as long as\nthe server keeps it; never photos), your daily AI call counts and the AI providers you agreed to send data to.\n\nWhat is NOT in it: your password, your sign-in sessions, your assistant access tokens, your phone shortcut tokens and any\nAPI keys you stored (not even part of them). The person who runs the server keeps backups of the\nwhole database; deleting your account does not reach those backups until they expire.\n\nWhere a food's data came from is in the \"source\" and \"source_license\" columns. Rows marked ODbL-1.0\ncontain information from Open Food Facts (https://world.openfoodfacts.org), which is made available\nunder the Open Database License (https://opendatacommons.org/licenses/odbl/1-0/). Rows marked CC0-1.0\ncome from USDA FoodData Central (public domain).\n\nThe numbers are what the app recorded. They are not medical advice; talk to your kidney team or\ndietitian about your targets.\n"
+ },
+ "readme_brand": {
+  "name": "Kidney Health",
+  "export_format": "kidney-health-export"
+ },
+ "filename": {
+  "username": "me",
+  "day": "2026-11-26",
+  "name": "kidney-health-me-2026-11-26.zip"
+ },
+ "filename_cases": [
+  {
+   "username": "me",
+   "safe": "me"
+  },
+  {
+   "username": "sam.o'neil",
+   "safe": "sam.o-neil"
+  },
+  {
+   "username": "Zoë Smith",
+   "safe": "Zoë-Smith"
+  },
+  {
+   "username": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+   "safe": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  },
+  {
+   "username": "",
+   "safe": "account"
+  }
+ ]
+}

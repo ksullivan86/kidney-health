@@ -210,7 +210,7 @@ and the other import counts it as a duplicate.
 
 **Profile** (`js/views/profile.js`) has four cards:
 
-* **About you**: name, birth month (a month picker), height, weight (labelled *Dry weight (kg, after
+* **About you**: name, birth month (a month picker), height, weight in pounds or kilograms (labelled *Dry weight (lb, after
   dialysis)* on dialysis), weight 6 months ago, *Sex used in medical formulas* with the help text above,
   *Activity on a usual day* (five radio choices: not chosen, then the four NASEM 2023 Table 7-1 levels
   described in plain words) and three yes/no boxes (frailty or low muscle mass, pregnant or

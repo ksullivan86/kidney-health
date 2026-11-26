@@ -266,6 +266,9 @@ def test_the_allow_list_is_pinned(anon_client):
         ("POST", "/api/ai/read-lab-report"), ("POST", "/api/ai/read-lab-report-text"),
         ("GET", "/api/foods/usda/search"), ("POST", "/api/foods/usda/import"), ("POST", "/api/foods/barcode"),
         ("PATCH", "/api/me/settings"), ("PATCH", "/api/me/ai"),
+        # connected devices (owner, 2026-11-26): status, Sync now, Disconnect, the Whoop days; never start or the way back
+        ("GET", "/api/devices"), ("POST", "/api/devices/{provider_id}/sync"), ("DELETE", "/api/devices/{provider_id}"),
+        ("GET", "/api/activity"), ("PUT", "/api/activity/extra"),
         # step 9: recipe pages, Instacart and the list app; never the list app's set-up (its address and key)
         ("GET", "/api/recipe-import"), ("POST", "/api/recipe-import/page"),
         ("GET", "/api/instacart"), ("POST", "/api/instacart/preview"), ("POST", "/api/instacart/send"),
@@ -274,6 +277,10 @@ def test_the_allow_list_is_pinned(anon_client):
         ("GET", "/api/profile"), ("PUT", "/api/profile"), ("GET", "/api/me/settings"),
         ("GET", "/api/guidance/preferences"), ("PUT", "/api/guidance/preferences/{food_id}"), ("DELETE", "/api/guidance/preferences/{food_id}"),
         ("GET", "/api/foods"), ("GET", "/api/foods/{food_id}"),
+        # the Care team's notes and suggestions for the person (owner, 2026-11-26); never sharing itself
+        ("GET", "/api/me/notes"), ("POST", "/api/me/notes/{note_id}/read"), ("DELETE", "/api/me/notes/{note_id}"),
+        ("GET", "/api/me/suggestions"), ("POST", "/api/me/suggestions/{suggestion_id}/accept"),
+        ("POST", "/api/me/suggestions/{suggestion_id}/decline"),
     }
     # never a food's edit or delete, a saved meal's (those go through the change feed), the suggested targets or the AI's trust
     for method, path in (("PUT", "/api/foods/{food_id}"), ("DELETE", "/api/foods/{food_id}"), ("POST", "/api/foods"), ("PUT", "/api/meals/{meal_id}"),
@@ -298,7 +305,9 @@ def test_the_allow_list_is_pinned(anon_client):
     for method, path in (("POST", "/api/auth/reauth"), ("GET", "/api/admin/users"), ("POST", "/api/me/tokens"),
                          ("GET", "/api/me/sessions"), ("PUT", "/api/me/keys/{provider}"), ("PUT", "/api/me/ai/provider"),
                          ("POST", "/api/me/import"), ("GET", "/api/me/export.zip"), ("DELETE", "/api/me"),
-                         ("POST", "/api/me/shares"), ("POST", "/api/me/password")):
+                         ("POST", "/api/me/shares"), ("POST", "/api/me/password"), ("GET", "/api/me/shares"), ("GET", "/api/shared"),
+                         ("POST", "/api/shared/{share_id}/notes"), ("POST", "/api/shared/{share_id}/suggestions"),
+                         ("POST", "/api/devices/{provider_id}/start"), ("GET", "/api/devices/{provider_id}/callback")):
         assert never_allowed(method, path), (method, path)
     # every route that needs a recent password or an admin is in a never-allowed place
     for (method, path), route in by_op.items():
@@ -409,7 +418,9 @@ def test_about_answers_what_this_server_offers_this_person(admin, token):
     r = call(admin.app, token, "GET", ABOUT)
     assert r.status_code == 200 and r.headers["cache-control"] == "no-store"
     about = r.json()
-    assert set(about) == {"account", "api_version", "app_version", "sync", "gateway", "ai", "services", "capabilities", "features"}
+    assert set(about) == {"account", "api_version", "app_version", "sync", "gateway", "ai", "services", "capabilities", "features",
+                          "care_team"}
+    assert about["care_team"] == {"enabled": False, "notes": False, "team": [], "on": []}  # the Care team is off by default
     assert about["features"] == {"usda_search": about["services"]["usda_search"], "barcode": about["services"]["barcode"], "ai": False,
                                  "changes": True}
     assert re.fullmatch(r"[0-9a-f]{32}", about["account"])
@@ -749,3 +760,105 @@ def test_walk_finds_the_same_routes_as_the_coverage_walk(anon_client):
     ours = {(m.lower(), p) for m, p, _ in app_gateway.walk_routes(anon_client.app.routes)}
     theirs = {(m, p) for m, p, _ in _walk(anon_client.app.routes)}
     assert ours == theirs
+
+
+# --------------------------------------------------------------------------- #
+# The Care team's notes and suggestions for the person (notes 37 and 29; owner, 2026-11-26)
+# --------------------------------------------------------------------------- #
+
+
+@pytest.fixture
+def care(secure_admin: TestClient) -> tuple[TestClient, TestClient, str, str, int]:
+    """(ana: the admin, sam: her Clinician who may also suggest, ana's token both ways, sam's token, the share's id), with the Care
+    team and its notes on."""
+    from test_care_notes import clinician, notes_switch
+    from test_sharing import switch
+
+    ana = secure_admin
+    sam = add_user(ana)
+    switch(ana)
+    notes_switch(ana)
+    sid = clinician(ana, sam, areas=["food", "labs"])
+    r = ana.put(f"/api/me/shares/{sid}/switches", json={"may_suggest": True})
+    assert r.status_code == 200, r.text
+    return ana, sam, make_sync(ana)["token"], make_sync(sam)["token"], sid
+
+
+def test_the_phone_reads_marks_read_and_deletes_the_persons_own_notes(care):
+    from test_care_notes import write
+
+    ana, sam, token, sams_token, sid = care
+    first = write(sam, sid, body="Your potassium was lower this week.")
+    second = write(sam, sid, body="Bring your lab results to the visit.", area="labs")
+    got = call(ana.app, token, "GET", f"{GATEWAY}/me/notes")
+    assert got.status_code == 200 and got.headers["cache-control"] == "no-store", got.text
+    body = got.json()
+    assert body["enabled"] is True and body["unread"] == 2 and [n["id"] for n in body["notes"]] == [second["id"], first["id"]]
+    assert body["notes"][0]["from"] == {"name": "sam", "removed": False} and body["notes"][0]["body"] == second["body"]
+    assert call(ana.app, token, "GET", f"{GATEWAY}/me/notes", params={"before": second["id"], "limit": 1}).json()["notes"][0]["id"] == first["id"]
+    # mark read: the version shown is needed (428), a changed note is 412 with the note as it is now, the right one is 204
+    assert call(ana.app, token, "POST", f"{GATEWAY}/me/notes/{first['id']}/read").status_code == 428
+    edited = sam.put(f"/api/shared/{sid}/notes/{first['id']}", json={"body": "Your potassium was lower all week."},
+                     headers={"If-Match": '"1"'}).json()
+    r = call(ana.app, token, "POST", f"{GATEWAY}/me/notes/{first['id']}/read", headers={"If-Match": '"1"'})
+    assert r.status_code == 412 and r.json()["current"]["body"] == edited["body"], r.text
+    r = call(ana.app, token, "POST", f"{GATEWAY}/me/notes/{first['id']}/read", headers={"If-Match": f'"{edited["version"]}"'})
+    assert r.status_code == 204, r.text
+    assert call(ana.app, token, "GET", f"{GATEWAY}/me/notes").json()["unread"] == 1
+    assert sam.get(f"/api/shared/{sid}/notes").json()["notes"][1]["read_at"] is not None
+    # not yours is 404: sam's own token reaches none of ana's notes, through the gateway or not
+    for method, path in (("POST", f"/me/notes/{second['id']}/read"), ("DELETE", f"/me/notes/{second['id']}")):
+        r = call(ana.app, sams_token, method, f"{GATEWAY}{path}", headers={"If-Match": '"1"'})
+        assert r.status_code == 404 and r.json()["detail"] == "That note is not here any more.", (method, path, r.text)
+    assert call(ana.app, sams_token, "GET", f"{GATEWAY}/me/notes").json()["notes"] == []
+    # delete: gone for both, with the person's own activity row (never the text)
+    assert call(ana.app, token, "DELETE", f"{GATEWAY}/me/notes/{second['id']}").status_code == 204
+    assert [n["id"] for n in ana.get("/api/me/notes").json()["notes"]] == [first["id"]]
+    assert [n["id"] for n in sam.get(f"/api/shared/{sid}/notes").json()["notes"]] == [first["id"]]
+    # writing a note, or anything of sharing itself, is never open to the phone
+    for method, path in (("POST", f"/shared/{sid}/notes"), ("GET", f"/shared/{sid}/notes"), ("GET", "/me/shares"), ("GET", "/shared"),
+                         ("PUT", f"/me/shares/{sid}/switches"), ("PUT", f"/me/notes/{first['id']}")):
+        r = call(ana.app, token, method, f"{GATEWAY}{path}", json={"body": "x"})
+        assert r.status_code == 404 and r.json()["detail"] == NOT_ON_LIST, (method, path)
+    # notes off on the server: the list says so, the rest is 404, as for the web app
+    from test_care_notes import notes_switch
+
+    notes_switch(ana, False)
+    assert call(ana.app, token, "GET", f"{GATEWAY}/me/notes").json() == {"enabled": False, "unread": 0, "notes": []}
+    assert call(ana.app, token, "DELETE", f"{GATEWAY}/me/notes/{first['id']}").status_code == 404
+
+
+def test_the_phone_adds_a_suggestion_to_the_persons_own_plan_or_says_no_thanks(care):
+    from test_care_team_full import suggestion
+
+    ana, sam, token, sams_token, sid = care
+    one = sam.post(f"/api/shared/{sid}/suggestions", json=suggestion(ana, note="Try this")).json()
+    two = sam.post(f"/api/shared/{sid}/suggestions", json=suggestion(ana, query="banana")).json()
+    got = call(ana.app, token, "GET", f"{GATEWAY}/me/suggestions").json()
+    assert got["enabled"] is True and [s["id"] for s in got["suggestions"]] == [one["id"], two["id"]]
+    assert got["suggestions"][0]["from_name"] == "sam" and got["suggestions"][0]["fit"]["totals"]
+    # not yours is 404 for sam's own token
+    for verb in ("accept", "decline"):
+        r = call(ana.app, sams_token, "POST", f"{GATEWAY}/me/suggestions/{one['id']}/{verb}")
+        assert r.status_code == 404, r.text
+    r = call(ana.app, token, "POST", f"{GATEWAY}/me/suggestions/{one['id']}/accept")
+    assert r.status_code == 200 and r.json()["skipped"] == 0, r.text
+    entry = r.json()["entries"][0]
+    assert [e["id"] for e in ana.get("/api/log", params={"date": entry["date"]}).json()["entries"]] == [entry["id"]]
+    assert entry["status"] == "planned" and entry["added_by"] is None  # the person's own entry
+    assert call(ana.app, token, "POST", f"{GATEWAY}/me/suggestions/{two['id']}/decline").status_code == 204
+    assert call(ana.app, token, "POST", f"{GATEWAY}/me/suggestions/{two['id']}/accept").status_code == 404  # answered once
+    assert call(ana.app, token, "GET", f"{GATEWAY}/me/suggestions").json()["suggestions"] == []
+    assert [s["answer"] for s in sam.get(f"/api/shared/{sid}/suggestions").json()["suggestions"]] == ["declined", "accepted"]
+
+
+def test_about_names_the_care_team_read_only(care):
+    ana, sam, token, sams_token, sid = care
+    team = call(ana.app, token, "GET", ABOUT).json()["care_team"]
+    assert team == {"enabled": True, "notes": True, "team": [{"name": "sam", "role": "custom", "areas": ["food", "labs"]}], "on": []}
+    assert call(ana.app, sams_token, "GET", ABOUT).json()["care_team"]["on"] == [{"name": "admin", "role": "custom", "areas": []}]
+    assert "sam" not in json.dumps(call(ana.app, token, "GET", ABOUT).json()["care_team"]["on"])
+    assert str(sid) not in json.dumps(team)  # no ids, links or invites
+    assert ana.delete(f"/api/me/shares/{sid}").status_code == 204
+    assert call(ana.app, token, "GET", ABOUT).json()["care_team"]["team"] == []
+    assert call(ana.app, sams_token, "GET", ABOUT).json()["care_team"]["on"] == []

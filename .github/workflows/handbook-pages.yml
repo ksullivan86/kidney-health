@@ -13,10 +13,10 @@
 # The build is the GitHub Pages flavour (handbook/mkdocs.pages.yml): same pages and checks as the copy
 # inside the app, site_url from actions/configure-pages, and no "Back to the food log" link. Pages
 # cannot send response headers, so this copy has no CSP header; it is static and takes no input.
-# Beside it, in demo/, the app's demo (0.25.0; scripts/build_preview.py --pages): the app in preview
+# Beside it, in demo/, the app's demo (0.26.0; scripts/build_preview.py --pages): the app in preview
 # mode with sample data, run entirely in the browser. What a visitor logs stays in the page and is gone
 # on reload; it requests nothing beyond its own files and carries the app's Content-Security-Policy as
-# a <meta> element.
+# a <meta> element. In oauth/, a small static page that hands a Withings or Whoop sign-in back to the iPhone app (handbook/oauth/).
 # Deployment uses the job's OIDC token (no write access to any branch).
 name: Handbook (GitHub Pages)
 
@@ -79,6 +79,10 @@ jobs:
           rm -rf "$RUNNER_TEMP/site/assets/javascripts/lunr"
           # The app's demo beside the handbook ("Try the app (demo)" links to it; standard library only).
           python ../scripts/build_preview.py --pages "$RUNNER_TEMP/site/demo"
+          # The way back from Withings or Whoop to the iPhone app's own developer-app sign-in (handbook/oauth/; static, no
+          # inline script, keeps nothing): the callback address registered in each developer portal is <site>/oauth/.
+          mkdir -p "$RUNNER_TEMP/site/oauth"
+          cp oauth/index.html oauth/relay.js oauth/relay.css "$RUNNER_TEMP/site/oauth/"
           # Internal links under the Pages base path (for example /kidney-health/).
           base_path="$(python -c 'import sys, urllib.parse; print(urllib.parse.urlsplit(sys.argv[1]).path or "/")' "$HANDBOOK_SITE_URL")"
           python tools/check_links.py "$RUNNER_TEMP/site" --base "$base_path"

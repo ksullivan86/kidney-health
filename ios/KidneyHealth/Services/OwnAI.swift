@@ -8,9 +8,9 @@
 // * The key is written once to the Keychain (this device only) and never shown again, never sent to the page, never logged.
 // * The page names a task and hands its data; the app builds the request from the server's own prompts and schemas
 //   (ai-prompts.json "own_key", written by scripts/build_preview.py --device from app/ai). Only these tasks exist: describe a
-//   meal, meal ideas and AI recipes (note 39 §6.6), and, only while the person's photo switch is on, a label photo and a plate
-//   photo. There is no lab report task: lab reports, and anything showing the person's name or date of birth, go only to a local
-//   model.
+//   meal, meal ideas, AI order, AI swaps, AI day plans and AI recipes (note 39 §6.6), and, only while the person's photo switch is
+//   on, a label photo and a plate photo. There is no lab report task: lab reports, and anything showing the person's name or date
+//   of birth, go only to a local model.
 // * No cookies, no cache, no redirects, a size limit each way. Nothing about a prompt or a reply is kept.
 // * The model is never asked to dose. The page checks every answer with the server's checks before the person sees it.
 import Foundation
@@ -77,10 +77,13 @@ final class OwnAI: ObservableObject {
     static let shared = OwnAI()
 
     /// The tasks the page may ask for. Never a lab report task.
-    static let tasks: Set<String> = ["parse_meal", "read_label", "plate", "next_meal", "recipes"]
+    static let tasks: Set<String> = ["parse_meal", "read_label", "plate", "next_meal", "recipes", "rerank", "swap", "plan"]
     static let photoTasks: Set<String> = ["read_label", "plate"]
     /// Meal ideas and recipes: the page names the person's condition (one of ai-prompts.json "conditions") and its candidate ids.
     static let candidateTasks: Set<String> = ["next_meal", "recipes"]
+    /// AI order, AI swaps and AI day plans: the meal ideas rules with the person's condition too, but no ids (their answers name
+    /// the page's refs and meals, and the page keeps only those it sent).
+    static let conditionTasks: Set<String> = ["next_meal", "recipes", "rerank", "swap", "plan"]
     static let candidateIds = "\"__CANDIDATE_IDS__\""
     /// The page's data: about 400 characters to describe a meal (300 typed, cleaned and escaped as JSON); meal ideas and recipes
     /// send their candidates, trimmed by the page to fit the provider's prompt (as the server's features._fits).
@@ -205,6 +208,8 @@ final class OwnAI: ObservableObject {
         let ids = Self.wholeNumbers(request["ids"])
         if Self.candidateTasks.contains(task) {
             guard condition != nil, let ids, !ids.isEmpty, ids.count <= Self.maxIds else { return Self.problem("bad_request") }
+        } else if Self.conditionTasks.contains(task) {
+            guard condition != nil, request["ids"] == nil else { return Self.problem("bad_request") }
         } else {
             guard request["condition"] == nil, request["ids"] == nil else { return Self.problem("bad_request") }
         }
@@ -255,6 +260,11 @@ final class OwnAI: ObservableObject {
             system = rules
             schema = marked
             message = message.replacingOccurrences(of: candidateIds, with: "[" + ids.map(String.init).joined(separator: ",") + "]")
+        } else if conditionTasks.contains(task) {
+            // The meal ideas rules with the person's condition; no ids.
+            guard entry["ids"] as? Bool == false, ids == nil, let condition,
+                  let rules = prompts.system(task: task, condition: condition) else { return nil }
+            system = rules
         } else if condition != nil || ids != nil {
             return nil
         }

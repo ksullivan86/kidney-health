@@ -292,12 +292,10 @@
     }));
   }
 
-  // ---- Profile: the log's weight beside the Profile field. Profile weighs in kilograms; a person who uses pounds also sees them.
+  // ---- Profile: the log's weight beside the Profile field, in the person's unit (user.units.weight), as Profile's boxes show it.
   // kind 'latest' (not on dialysis) / 'sixmonth'. `entry` is a weight row, `dateText` its date written out. → the sentence before "Use this".
   function profileWeightHint(kind, entry, dateText, unit) {
-    const kg = R.shownWeight(entry.kg, 'kg').toFixed(1);
-    const lb = unit === 'lb' ? ` (${R.shownWeight(entry.kg, 'lb').toFixed(1)} lb)` : '';
-    return `${kind === 'latest' ? 'Latest in your log' : 'In your log'}: ${kg} kg${lb} on ${dateText}`;
+    return `${kind === 'latest' ? 'Latest in your log' : 'In your log'}: ${R.formatWeight(entry.kg, unit === 'kg' ? 'kg' : 'lb')} on ${dateText}`;
   }
 
   KH.bodyUi = {
