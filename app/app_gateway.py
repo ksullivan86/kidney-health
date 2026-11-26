@@ -90,6 +90,14 @@ ALLOWED: frozenset[tuple[str, str]] = frozenset({
     ("GET", "/api/foods/usda/search"),
     ("POST", "/api/foods/usda/import"),
     ("POST", "/api/foods/barcode"),
+    # Connected devices (notes 27 and 28; owner, 2026-11-26: "Should Withings and Whoop be set up from the phone?" "yes"): the
+    # person's own connections, Sync now and Disconnect, and the Whoop days and the active-day setting they bring. Connecting
+    # itself (start and the way back) needs the browser's session, so the phone opens this server's own page for it: never here.
+    ("GET", "/api/devices"),
+    ("POST", "/api/devices/{provider_id}/sync"),
+    ("DELETE", "/api/devices/{provider_id}"),
+    ("GET", "/api/activity"),
+    ("PUT", "/api/activity/extra"),
     # Two settings the phone needs before it may ask the server (§6.1, §7), and only those keys (BODY_KEYS): the person's own
     # Open Food Facts consent, and their AI opt-in.
     ("PATCH", "/api/me/settings"),
@@ -142,9 +150,13 @@ MAX_KEYS_BODY = 16384  # the meal guidance choices are one object
 NEVER_PREFIXES: tuple[str, ...] = (
     "/api/auth/", "/api/admin/", "/api/me/tokens", "/api/me/sessions", "/api/me/keys", "/api/me/ai/provider", "/api/me/ai/probe",
     "/api/me/import", "/api/me/export.zip", "/api/me/password", "/api/me/totp", "/api/me/passkeys", "/api/me/oidc",
-    "/api/me/email", "/api/me/shares", "/api/shared", "/api/devices",
+    "/api/me/email", "/api/me/shares", "/api/shared",
 )
-NEVER: frozenset[tuple[str, str]] = frozenset({("DELETE", "/api/me"), ("PATCH", "/api/me")})
+NEVER: frozenset[tuple[str, str]] = frozenset({
+    ("DELETE", "/api/me"), ("PATCH", "/api/me"),
+    # Connecting a device is tied to the browser session that started it (app/devices/api.py): the phone opens the web app for it.
+    ("POST", "/api/devices/{provider_id}/start"), ("GET", "/api/devices/{provider_id}/callback"),
+})
 
 
 def never_allowed(method: str, path: str) -> bool:

@@ -70,6 +70,7 @@ const SHELL_URLS = [
   '/js/engine/visitprep.js',
   '/js/engine/body_ui.js',
   '/js/engine/activity.js',
+  '/js/engine/device_map.js',
   '/js/engine/recipe_import.js',
   '/js/engine/targets.js',
   '/js/engine/settings.js',
