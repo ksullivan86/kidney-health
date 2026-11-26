@@ -10,7 +10,8 @@
    * app/ai/prompts.py: candidate_block, meal_budget, targets_block, totals, week_average, person_block, condition_text,
      repeat_ok_block, next_meal_context, recipe_context;
    * app/ai/schemas.py: the V2 checks of IdeasAnswer and RecipesAnswer.
-   Rerank, swap and plan stay the server's.
+   * app/ai/guard.py judge_rerank, judge_swap, judge_plan with ai_bridge.validate_ai_plan, and prompts.swap_extra, plan_extra
+     (AI order, AI swaps and AI day plans; phone-ai-more2, 2026-11-26), with the V2 checks of RerankAnswer, SwapAnswer and PlanAnswer.
    Needs the guidance engine (js/engine/guidance/*.js), textclean.js and aiguard.js.
 
    KH.aiMeal = { candidatesForAi, maxQuarters, lowerToFit, validateAiItems, judgeIdeas, fallback, recipeCandidates, judgeRecipes,
@@ -30,6 +31,7 @@
   // Constants (the server's; tests/test_phone_ai_more.py compares them)
   // ---------------------------------------------------------------------------
   const THEMES = ['light', 'hearty', 'familiar', 'new_idea'];
+  const MODES = ['rerank', 'ideas', 'swap', 'plan'];
   const REASON_CODES = ['low_potassium', 'low_phosphorus', 'low_sodium', 'fits_carb_goal', 'adds_protein', 'adds_missing_group',
     'you_eat_often', 'you_like'];
   const AI_HANDBOOK_SLUGS = ['potassium', 'potassium-leaching', 'phosphorus', 'phosphate-additives', 'sodium', 'fluid', 'protein',
@@ -115,8 +117,9 @@
   }
   function levelsOf(room) { return Object.fromEntries(Object.entries(room.nutrients).map(([k, v]) => [k, v.level])); }
 
-  // candidates_for_ai(ctx, meal, "ideas", exclude=…)
-  function candidatesForAi(ctx, meal, exclude = new Set()) {
+  // candidates_for_ai(ctx, meal, mode, food=, servings=, purpose=, exclude=…). `swap` = { food, servings, purpose } for mode "swap".
+  function candidatesForAi(ctx, meal, exclude = new Set(), mode = 'ideas', swap = null) {
+    if (!MODES.includes(mode)) throw new Error(`mode must be one of ${MODES.join(', ')}`);
     const counter = S.newCounter();
     const totals = B.dayTotals(ctx.day);
     const room = B.mealRoom(ctx, meal, null, totals);
@@ -148,8 +151,25 @@
     });
     const meals = F.fittingSavedMeals(ctx, meal, room, today, counter, R.AI_MEALS_MAX).map(F.publicOption);
     meals.forEach((m, i) => { m.ref = `m${i + 1}`; m.name = M.safeName(m.name); });
-    return { rules_version: R.RULES_VERSION, rules_hash: R.RULES_HASH, date: ctx.date, meal, mode: 'ideas', room: F.roomJson(room),
+    const result = { rules_version: R.RULES_VERSION, rules_hash: R.RULES_HASH, date: ctx.date, meal, mode, room: F.roomJson(room),
       levels: levelsOf(room), foods, meals, handbook: Object.keys(T.TOPIC_PAGES).sort() };
+    if (mode === 'swap') {
+      if (!swap || swap.food == null || swap.servings == null) throw new Error('swap mode needs the food and its servings');
+      const found = GE.swaps.findSwaps(ctx, meal, swap.food, swap.servings, swap.purpose == null ? null : swap.purpose, R.SWAP_AI_MAX);
+      if (found.mode === 'hypo') throw new Error('low treatments are never sent to AI (note 04 G7)');
+      result.swaps = found.swaps.map((s, i) => ({ ref: `s${i + 1}`, food_id: s.food_id, name: s.name, servings: s.servings,
+        renal_rating: s.renal_rating, text: s.text }));
+      result.triggers = found.triggers;
+    }
+    if (mode === 'plan') {
+      const plan = GE.planner.planDay(ctx, null, { withOptions: true });
+      result.plan = {};
+      for (const [slot, opts] of Object.entries(plan.options || {})) {
+        result.plan[slot] = opts.map((o, i) => ({ index: i, source: o.source, name: o.name, score: o.score,
+          items: o.items.map((it) => ({ food_id: it.food_id, name: M.safeName(it.name), servings: it.servings })), totals: o.totals }));
+      }
+    }
+    return result;
   }
 
   function maxQuarters(f, room) {
@@ -427,6 +447,91 @@
   function fallback(bridge, limit = 8) {
     return { note: M.AI_FALLBACK, meals: [...(bridge.meals || [])],
       foods: (bridge.foods || []).slice(0, limit).map((f) => ({ food_id: f.food_id, name: f.name, portion: f.portion, renal_rating: f.renal_rating, fit_text: f.fit_text })) };
+  }
+
+  // guard._ref_picks: the refs the AI named that are in `allowed` (a Map ref → row), in its order, at most `limit`.
+  function refPicks(raw, allowed, limit) {
+    const picks = [];
+    const dropped = [];
+    const seen = new Set();
+    (Array.isArray(raw) ? raw : []).forEach((entry, index) => {
+      const ref = isDict(entry) ? entry.ref : undefined;
+      if (typeof ref !== 'string' || !allowed.has(ref)) { dropped.push({ index, reason: 'not_a_candidate' }); return; }
+      if (seen.has(ref)) { dropped.push({ index, reason: 'duplicate' }); return; }
+      if (picks.length >= limit) { dropped.push({ index, reason: 'too_many' }); return; }
+      seen.add(ref);
+      picks.push([ref, (Array.isArray(entry.reason_codes) ? entry.reason_codes : []).filter((c) => typeof c === 'string')]);
+    });
+    return [picks, dropped];
+  }
+  // guard.judge_rerank: the AI's order for the refs it names, then the rule order; numbers and texts are the rules' own.
+  function judgeRerank(answer, ctx, meal, bridge, providerLabel, model) {
+    if (answer.status === 'refused') return { status: 'refused', message: REFUSED_TEXT, order: [], dropped: [], claims_corrected: 0 };
+    const foods = new Map((bridge.foods || []).map((f) => [f.ref, f]));
+    const [picks, dropped] = refPicks(answer.order, foods, 12);
+    const room = B.mealRoom(ctx, meal, null, B.dayTotals(ctx.day));
+    const often = oftenIds(bridge), liked = likedIds(bridge);
+    const order = [];
+    let correctedTotal = 0;
+    picks.forEach(([ref, claimed], i) => {
+      const f = foods.get(ref);
+      const vec = [[ctx.foods.get(Number(f.food_id)), Number(f.portion)]];
+      const [codes, corrected] = checkClaims(claimed, vec, room, often, liked);
+      correctedTotal += corrected;
+      order.push({ ref, food_id: Number(f.food_id), name: f.name, ai_rank: i + 1, reason_codes: codes, why: sentence(codes, meal, vec) });
+    });
+    const picked = new Set(picks.map(([ref]) => ref));
+    const rest = [...foods].filter(([ref]) => !picked.has(ref)).map(([ref, f]) => ({ ref, food_id: Number(f.food_id), name: f.name }));
+    if (!order.length) return { status: 'dropped_all', message: M.AI_FALLBACK, order: [], rest, dropped, claims_corrected: 0 };
+    return { status: 'ok', ...label(providerLabel, model), order, rest, dropped, claims_corrected: correctedTotal };
+  }
+  // guard.judge_swap: the AI picks among the rule swaps, which already passed every rule.
+  function judgeSwap(answer, ctx, meal, bridge, providerLabel, model) {
+    if (answer.status === 'refused') return { status: 'refused', message: REFUSED_TEXT, pick: [], dropped: [], claims_corrected: 0 };
+    const swaps = new Map((bridge.swaps || []).map((s) => [s.ref, s]));
+    const [picks, dropped] = refPicks(answer.pick, swaps, 3);
+    const room = B.mealRoom(ctx, meal, null, B.dayTotals(ctx.day));
+    const often = oftenIds(bridge), liked = likedIds(bridge);
+    const shown = [];
+    let correctedTotal = 0;
+    for (const [ref, claimed] of picks) {
+      const s = swaps.get(ref);
+      const vec = [[ctx.foods.get(Number(s.food_id)), Number(s.servings)]];
+      const [codes, corrected] = checkClaims(claimed, vec, room, often, liked);
+      correctedTotal += corrected;
+      shown.push({ ...label(providerLabel, model), ref, food_id: Number(s.food_id), name: s.name, servings: s.servings,
+        renal_rating: s.renal_rating == null ? null : s.renal_rating, text: s.text == null ? null : s.text, reason_codes: codes,
+        why: sentence(codes, meal, vec) });
+    }
+    if (!shown.length) return { status: 'dropped_all', message: M.AI_FALLBACK, pick: [], dropped, claims_corrected: 0 };
+    return { status: 'ok', pick: shown, dropped, claims_corrected: correctedTotal };
+  }
+  // ai_bridge.validate_ai_plan: the plan rebuilt with the AI's picks; the whole-day check, repair and protein top-up run again.
+  function validateAiPlan(ctx, picks) {
+    const clean = {};
+    for (const [slot, i] of Object.entries(picks)) {
+      if (R.SLOT_ORDER.includes(slot) && isInt(i) && i >= 0 && i < R.AI_PLAN_OPTIONS_MAX) clean[slot] = i;
+    }
+    return GE.planner.planDay(ctx, null, { forced: clean });
+  }
+  // guard.judge_plan: one option index per meal of the plan.
+  function judgePlan(answer, ctx, bridge, providerLabel, model) {
+    if (answer.status === 'refused') return { status: 'refused', message: REFUSED_TEXT, plan: null, dropped: [], claims_corrected: 0 };
+    const plan = bridge.plan || {};
+    const picks = {};
+    const dropped = [];
+    (Array.isArray(answer.picks) ? answer.picks : []).forEach((entry, index) => {
+      const slot = isDict(entry) ? entry.meal : undefined;
+      const option = isDict(entry) ? entry.index : undefined;
+      if (typeof slot !== 'string' || !Object.prototype.hasOwnProperty.call(plan, slot) || !isInt(option) || option < 0 || option >= plan[slot].length) {
+        dropped.push({ index, reason: 'not_a_candidate' });
+        return;
+      }
+      if (slot in picks) { dropped.push({ index, reason: 'duplicate' }); return; }
+      picks[slot] = option;
+    });
+    if (!Object.keys(picks).length) return { status: 'dropped_all', message: M.AI_FALLBACK, plan: null, dropped, claims_corrected: 0 };
+    return { status: 'ok', ...label(providerLabel, model), ai_picks: picks, plan: validateAiPlan(ctx, picks), dropped, claims_corrected: 0 };
   }
 
   // ---------------------------------------------------------------------------
@@ -759,14 +864,36 @@
       today: { eaten: totals(ctx.day, 'eaten'), planned: totals(ctx.day, 'planned'), status: { ...(bridge.levels || {}) } },
       week_avg: weekAverage(ctx.day, ctx.history, ctx.date) };
   }
-  // prompts.next_meal_context(bridge, ctx, mode="ideas", meal, meals_left, person)
-  function nextMealContext(bridge, ctx, meal, mealsLeft, person) {
+  // prompts.next_meal_context(bridge, ctx, mode, meal, meals_left, person, extra): `extra` is swapExtra or planExtra for those modes
+  function nextMealContext(bridge, ctx, meal, mealsLeft, person, extra = null) {
     const candidates = bridge.foods.filter((item) => ctx.foods.has(Number(item.food_id))).map((item) => candidateBlock(item, ctx.foods.get(Number(item.food_id))));
     const saved = (bridge.meals || []).map((m) => ({ ref: m.ref, name: clean(m.name),
       items: (m.items || []).map((it) => ({ id: Number(it.food_id), quarters: pyRound(Number(it.servings) * 4) })) }));
     return { ...commonData(bridge, ctx, meal, mealsLeft, person, candidates), saved_meals: saved,
       handbook_pages: AI_HANDBOOK_SLUGS.filter((s) => s in T.TOPIC_PAGES).map((s) => ({ slug: s, title: T.TOPIC_PAGES[s].title })),
-      repeat_ok: repeatOkBlock(ctx, candidates, saved, (bridge.meals || []).map((m) => (m.template_id == null ? null : m.template_id))) };
+      repeat_ok: repeatOkBlock(ctx, candidates, saved, (bridge.meals || []).map((m) => (m.template_id == null ? null : m.template_id))),
+      ...(extra || {}) };
+  }
+  // prompts.swap_extra(bridge, food, servings)
+  function swapExtra(bridge, food, servings) {
+    const core = F.foodCore(food, Number(servings));
+    const reasons = [...new Set((bridge.triggers || []).map((t) => t.nutrient).filter(Boolean))].sort();
+    return {
+      planned_item: { name: clean(food.name), quarters: pyRound(Number(servings) * 4),
+        per_portion: Object.fromEntries(TOTAL_KEYS.map((k) => [k, core.nutrients[k] === undefined ? null : core.nutrients[k]])) },
+      swap_reason: reasons,
+      swaps: (bridge.swaps || []).map((s) => ({ ref: s.ref, name: clean(s.name), quarters: pyRound(Number(s.servings) * 4),
+        rating: s.renal_rating == null ? null : s.renal_rating })),
+    };
+  }
+  // prompts.plan_extra(bridge)
+  function planExtra(bridge) {
+    const plan = {};
+    for (const [slot, options] of Object.entries(bridge.plan || {})) {
+      plan[slot] = options.map((o) => ({ index: o.index, name: clean(o.name),
+        items: (o.items || []).map((it) => ({ name: clean(it.name), quarters: pyRound(Number(it.servings) * 4) })) }));
+    }
+    return { plan };
   }
   // prompts.recipe_context(bridge, ctx, meal, meals_left, person, request, recipe)
   function recipeContext(bridge, ctx, meal, mealsLeft, person, request, recipe = null) {
@@ -789,11 +916,28 @@
   }
   const checkIdeas = (raw) => checkHead(raw, 'ideas');
   const checkRecipes = (raw) => checkHead(raw, 'recipes');
+  // RerankAnswer, SwapAnswer (RefPick: ref, a string of at most 8 characters, and one to three reason codes) and PlanAnswer
+  // (PlanPick: a meal, a whole-number index 0 to 20, one to three reason codes), each with no other keys.
+  const codesOk = (v) => Array.isArray(v) && v.length >= 1 && v.length <= 3 && v.every((c) => REASON_CODES.includes(c));
+  const keysAre = (o, keys) => Object.keys(o).sort().join(',') === [...keys].sort().join(',');
+  const refPickOk = (e) => isDict(e) && keysAre(e, ['ref', 'reason_codes']) && typeof e.ref === 'string' && [...e.ref].length <= 8 && codesOk(e.reason_codes);
+  const planPickOk = (e) => isDict(e) && keysAre(e, ['meal', 'index', 'reason_codes']) && ['breakfast', 'lunch', 'dinner', 'snack'].includes(e.meal)
+    && isInt(e.index) && e.index >= 0 && e.index <= 20 && codesOk(e.reason_codes);
+  function checkPicks(raw, listKey, max, entryOk) {
+    if (!isDict(raw) || !keysAre(raw, [listKey, 'refusal', 'status'])) return { ok: false };
+    if (!['ok', 'refused'].includes(raw.status) || !['none', 'outside_scope', 'no_fit'].includes(raw.refusal)) return { ok: false };
+    if (!Array.isArray(raw[listKey]) || raw[listKey].length > max || !raw[listKey].every(entryOk)) return { ok: false };
+    return { ok: true, answer: raw };
+  }
+  const checkRerank = (raw) => checkPicks(raw, 'order', 40, refPickOk);
+  const checkSwap = (raw) => checkPicks(raw, 'pick', 15, refPickOk);
+  const checkPlan = (raw) => checkPicks(raw, 'picks', 4, planPickOk);
 
   KH.aiMeal = {
     THEMES, REASON_CODES, AI_HANDBOOK_SLUGS, RECIPE_PORTIONS, AI_RECIPE_FOODS_MAX, AI_RECIPE_INGREDIENTS_MIN, NEVER_ADD, DISH_WORD,
     candidatesForAi, maxQuarters, lowerToFit, validateAiItems, trueReasons, trueTheme, sentence, checkClaims, handbookRefs, judgeIdeas,
     afterRoom, fallback, recipeIneligible, recipeCandidates, recipeChangeBlock, quartersOf, titleFor, differences, judgeRecipes, targetsBlock, totals,
     weekAverage, mealBudget, candidateBlock, conditionText, personBlock, nextMealContext, recipeContext, checkIdeas, checkRecipes,
+    MODES, judgeRerank, judgeSwap, judgePlan, validateAiPlan, swapExtra, planExtra, checkRerank, checkSwap, checkPlan,
   };
 })(typeof window !== 'undefined' ? window : globalThis);

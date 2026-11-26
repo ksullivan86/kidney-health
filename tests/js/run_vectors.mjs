@@ -425,8 +425,28 @@ function aiMealVectors() {
     const fn = spec.fn;
     if (fn === 'condition_text') return A.conditionText(spec.person);
     if (fn === 'person_block') return A.personBlock(spec.profile, spec.ai_prefs, spec.today, spec.tastes || {});
+    if (fn === 'ai_check') {
+      const check = { RerankAnswer: A.checkRerank, SwapAnswer: A.checkSwap, PlanAnswer: A.checkPlan }[spec.model];
+      return { ok: check(spec.answer).ok };
+    }
     const ctx = contextFrom(inp);
     const exclude = new Set(spec.exclude || []);
+    const judges = { ai_judge_rerank: 'rerank', ai_judge_swap: 'swap', ai_judge_plan: 'plan' };
+    const mode = judges[fn] || spec.ai_mode || 'ideas';
+    if (mode !== 'ideas') { // AI order, AI swaps and AI day plans
+      const sw = spec.swap ? { food: ctx.foods.get(spec.swap[0]), servings: spec.swap[1], purpose: spec.swap[2] } : null;
+      let bridge;
+      try { bridge = A.candidatesForAi(ctx, spec.meal, new Set(), mode, sw); } catch (e) { return { error: e.message }; }
+      if (fn === 'ai_candidates') return bridge;
+      if (fn === 'ai_next_meal_data') {
+        const extra = mode === 'swap' ? A.swapExtra(bridge, sw.food, Number(sw.servings)) : mode === 'plan' ? A.planExtra(bridge) : null;
+        return { data: A.nextMealContext(bridge, ctx, spec.meal, GE.budget.openSlots(spec.meal, ctx.day), spec.person, extra) };
+      }
+      if (fn === 'ai_judge_rerank') return A.judgeRerank(spec.answer, ctx, spec.meal, bridge, doc.label, doc.model);
+      if (fn === 'ai_judge_swap') return A.judgeSwap(spec.answer, ctx, spec.meal, bridge, doc.label, doc.model);
+      if (fn === 'ai_judge_plan') return A.judgePlan(spec.answer, ctx, bridge, doc.label, doc.model);
+      throw new Error(`unknown fn ${fn} for mode ${mode}`);
+    }
     if (fn === 'ai_candidates') return A.candidatesForAi(ctx, spec.meal, exclude);
     if (fn === 'ai_validate') return A.validateAiItems(ctx, spec.meal, spec.ideas, spec.candidate_ids == null ? null : spec.candidate_ids);
     if (fn === 'ai_judge_ideas') return A.judgeIdeas(spec.answer, ctx, spec.meal, A.candidatesForAi(ctx, spec.meal, exclude), doc.label, doc.model);
