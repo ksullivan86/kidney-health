@@ -2,7 +2,8 @@
 // The page builds each request and reads each answer; the app only carries it, and only when it is on this list. The list
 // matches what note 39 lets the phone use so far: `GET /push/v1/about`, the server's food lookups (§7), its AI (§6.4), its
 // recipe pages, Instacart and list app (§7, step 9), and sync both ways (§8): the change feed, the phone's edits and deletes,
-// matching the phone's row IDs, and the profile, targets, account settings and food preferences (step 8).
+// matching the phone's row IDs, the profile, targets, account settings and food preferences (step 8), and the Care team's notes
+// and suggestions for the person.
 // Never on it: anything that needs the password, keys and providers, tokens, sessions, admin routes, import and export, and setting
 // up the list app (its address and key are typed in the server's web app).
 import Foundation
@@ -21,15 +22,18 @@ public enum ServerAPI {
             self.method = method; self.path = path; self.query = query; self.photo = photo; self.bodyKeys = bodyKeys
         }
 
-        /// True when `plain` (a path with no query) is this route's path. A segment `{food_id}` stands for one food's id here: 1 to 18
-        /// digits and nothing else.
+        /// The path segments that stand for one row's id: 1 to 18 digits and nothing else.
+        public static let idSegments: Set<Substring> = ["{food_id}", "{note_id}", "{suggestion_id}"]
+
+        /// True when `plain` (a path with no query) is this route's path. A segment of `idSegments` (`{food_id}`, `{note_id}`,
+        /// `{suggestion_id}`) stands for one row's id: 1 to 18 digits and nothing else.
         public func matches(_ plain: String) -> Bool {
             guard path.contains("{") else { return path == plain }
             let want = path.split(separator: "/", omittingEmptySubsequences: false)
             let got = plain.split(separator: "/", omittingEmptySubsequences: false)
             guard want.count == got.count else { return false }
             for (w, g) in zip(want, got) {
-                if w == "{food_id}" {
+                if Route.idSegments.contains(w) {
                     guard (1...18).contains(g.count), g.allSatisfy({ ("0"..."9").contains($0) }) else { return false }
                 } else if w != g {
                     return false
@@ -54,6 +58,16 @@ public enum ServerAPI {
         Route("GET", "/push/v1/api/foods/usda/search", query: ["q"]),
         Route("POST", "/push/v1/api/foods/usda/import"),
         Route("POST", "/push/v1/api/foods/barcode"),
+        // Connected devices on the server (owner, 2026-11-26): the person's status, Sync now and Disconnect for each company by
+        // name, and the Whoop days and the active-day setting. Connecting is done on the server's own page, in a browser sheet the
+        // app opens (Phone/DeviceLinks.swift): never through here.
+        Route("GET", "/push/v1/api/devices"),
+        Route("POST", "/push/v1/api/devices/withings/sync"),
+        Route("POST", "/push/v1/api/devices/whoop/sync"),
+        Route("DELETE", "/push/v1/api/devices/withings", query: ["delete_readings"]),
+        Route("DELETE", "/push/v1/api/devices/whoop", query: ["delete_readings"]),
+        Route("GET", "/push/v1/api/activity", query: ["start", "end"]),
+        Route("PUT", "/push/v1/api/activity/extra"),
         // The person's answer to the server's Open Food Facts question (the consent its barcode lookups ask for), and the account
         // settings the server owns (step 8). Never this iPhone's own: its theme, its camera, the AI's trust.
         Route("PATCH", "/push/v1/api/me/settings",
@@ -97,6 +111,14 @@ public enum ServerAPI {
         Route("DELETE", "/push/v1/api/guidance/preferences/{food_id}"),
         Route("GET", "/push/v1/api/foods", query: ["q", "source", "limit"]),
         Route("GET", "/push/v1/api/foods/{food_id}"),
+        // The Care team's notes and suggestions for the person (notes 37 and 29; owner, 2026-11-26): read the notes, mark one read
+        // with the version shown (If-Match), delete one; add a suggestion to the plan or say no thanks. Never sharing itself.
+        Route("GET", "/push/v1/api/me/notes", query: ["before", "limit"]),
+        Route("POST", "/push/v1/api/me/notes/{note_id}/read"),
+        Route("DELETE", "/push/v1/api/me/notes/{note_id}"),
+        Route("GET", "/push/v1/api/me/suggestions"),
+        Route("POST", "/push/v1/api/me/suggestions/{suggestion_id}/accept"),
+        Route("POST", "/push/v1/api/me/suggestions/{suggestion_id}/decline"),
     ]
 
     /// The longest path the page may send, query included.

@@ -707,6 +707,24 @@ def list_shared_with_me(request: Request, user: CurrentUser, conn: sqlite3.Conne
             "invites": [invite_for_me_item(r) for r in invites if _same_kind(r, user)], "notes": notes_enabled(conn, request)}
 
 
+def care_team_summary(conn: sqlite3.Connection, request: Request, user: User) -> dict[str, Any]:
+    """What the iPhone app shows read-only in Settings → Care team (``GET /push/v1/about``, ``care_team``): whether the Care team
+    and its notes are on, who is on the person's Care team (name, role, areas) and whose Care team they are on (name, role). No id,
+    user name, link, invite or switch beyond the role: those are changed in the web app. Reads only (a share past its end date is
+    left out here; ``expire`` ends it on the next web request)."""
+    if not enabled(conn, request):
+        return {"enabled": False, "notes": False, "team": [], "on": []}
+    now = clock.now_iso()
+    live = " AND s.accepted_at IS NOT NULL AND s.ended_at IS NULL AND (s.ends_at IS NULL OR s.ends_at > ?) ORDER BY s.accepted_at, s.id"
+    team = [r for r in conn.execute(_PEOPLE + " WHERE s.owner_user_id = ? AND g.status = 'active'" + live, (user.id, now)).fetchall()
+            if _same_kind(r)]
+    on = [r for r in conn.execute(_PEOPLE + " WHERE s.grantee_user_id = ? AND o.status = 'active'" + live, (user.id, now)).fetchall()
+          if _same_kind(r, user)]
+    return {"enabled": True, "notes": notes_enabled(conn, request),
+            "team": [{"name": _name(r, "grantee"), "role": _role(r), "areas": _areas(r["areas"])} for r in team],
+            "on": [{"name": _name(r, "owner"), "role": _role(r)} for r in on]}
+
+
 def _open_invite(conn: sqlite3.Connection, invite_id: int, user: User) -> sqlite3.Row:
     row = conn.execute(_INVITES + " WHERE i.id = ? AND i.invitee_user_id = ? AND i.answer IS NULL AND i.expires_at > ?",
                        (invite_id, user.id, clock.now_iso())).fetchone()
