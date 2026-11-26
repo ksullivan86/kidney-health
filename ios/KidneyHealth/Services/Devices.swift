@@ -88,11 +88,11 @@ final class Devices: NSObject, ObservableObject {
         apps.remove(company)
     }
 
-    private func app(_ company: DeviceCompany) -> App? {
+    private func developerApp(_ company: DeviceCompany) -> App? {
         Keychain.read(Self.appItem(company)).flatMap { try? JSONDecoder().decode(App.self, from: $0) }
     }
 
-    private func tokens(_ company: DeviceCompany) -> DeviceLinks.Tokens? {
+    private func savedTokens(_ company: DeviceCompany) -> DeviceLinks.Tokens? {
         Keychain.read(Self.tokenItem(company)).flatMap { try? JSONDecoder().decode(DeviceLinks.Tokens.self, from: $0) }
     }
 
@@ -160,7 +160,7 @@ final class Devices: NSObject, ObservableObject {
     // MARK: - Connecting on this iPhone
 
     private func connect(_ company: DeviceCompany) async -> [String: Any] {
-        guard let app = app(company) else { return ["error": "no_app"] }
+        guard let app = developerApp(company) else { return ["error": "no_app"] }
         guard signIn == nil else { return ["error": "busy"] }
         var bytes = [UInt8](repeating: 0, count: 32)
         guard SecRandomCopyBytes(kSecRandomDefault, bytes.count, &bytes) == errSecSuccess else { return ["error": "refused"] }
@@ -191,7 +191,8 @@ final class Devices: NSObject, ObservableObject {
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.httpBody = DeviceLinks.codeForm(company, clientID: app.id, secret: app.secret, code: code)
-        guard let (status, data) = await send(request, company) else { return ["error": "offline"] }
+        guard let reply = await send(request, company) else { return ["error": "offline"] }
+        let (status, data) = reply
         switch DeviceLinks.tokens(company, httpStatus: status, body: data, refreshing: false, now: Self.now()) {
         case .success(let tokens):
             return keep(tokens, company) ? ["ok": true] : ["error": "refused"]
@@ -222,13 +223,14 @@ final class Devices: NSObject, ObservableObject {
 
     /// A working access token: refreshed first when under 5 minutes are left, or when `force`. The new pair is kept at once.
     private func access(_ company: DeviceCompany, force: Bool = false) async throws -> String {
-        guard let app = app(company), var current = tokens(company) else { throw Failure.notConnected }
+        guard let app = developerApp(company), var current = savedTokens(company) else { throw Failure.notConnected }
         if !force && current.expiresAt - Self.now() > 300 { return current.access }
         var request = URLRequest(url: company.tokenURL)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.httpBody = DeviceLinks.refreshForm(company, clientID: app.id, secret: app.secret, refresh: current.refresh)
-        guard let (status, data) = await send(request, company) else { throw Failure.offline }
+        guard let reply = await send(request, company) else { throw Failure.offline }
+        let (status, data) = reply
         switch DeviceLinks.tokens(company, httpStatus: status, body: data, refreshing: true, now: Self.now()) {
         case .success(let fresh):
             current = DeviceLinks.Tokens(access: fresh.access, refresh: fresh.refresh, expiresAt: fresh.expiresAt,
@@ -278,7 +280,8 @@ final class Devices: NSObject, ObservableObject {
             request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
             request.httpBody = DeviceLinks.withingsMeasureForm(since: since, offset: offset)
-            guard let (http, data) = await send(request, .withings) else { throw Failure.offline }
+            guard let reply = await send(request, .withings) else { throw Failure.offline }
+            let (http, data) = reply
             if http == 429 { throw Failure.rateLimited }
             if http == 401 { throw Failure.auth }
             guard http == 200, let doc = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any],
@@ -305,7 +308,8 @@ final class Devices: NSObject, ObservableObject {
                 guard let url = DeviceLinks.whoopPage(path, start: start, nextToken: next) else { throw Failure.providerError }
                 var request = URLRequest(url: url)
                 request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-                guard let (http, data) = await send(request, .whoop) else { throw Failure.offline }
+                guard let reply = await send(request, .whoop) else { throw Failure.offline }
+                let (http, data) = reply
                 switch http {
                 case 401: throw Failure.auth
                 case 429: throw Failure.rateLimited
@@ -328,11 +332,11 @@ final class Devices: NSObject, ObservableObject {
 
     /// The tokens are deleted here whatever the company answers; then it is asked to end the access (best effort).
     private func disconnect(_ company: DeviceCompany) async -> [String: Any] {
-        guard tokens(company) != nil else { return ["ok": true, "revoked": false] }
+        guard savedTokens(company) != nil else { return ["ok": true, "revoked": false] }
         let token = try? await access(company)
-        let current = tokens(company)
+        let current = savedTokens(company)
         forget(company)
-        guard let app = app(company), let current else { return ["ok": true, "revoked": false] }
+        guard let app = developerApp(company), let current else { return ["ok": true, "revoked": false] }
         let revoked = company == .withings ? await revokeWithings(app, account: current.account) : await revokeWhoop(token)
         return ["ok": true, "revoked": revoked]
     }
@@ -344,7 +348,8 @@ final class Devices: NSObject, ObservableObject {
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
         request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-        guard let (status, _) = await send(request, .whoop) else { return false }
+        guard let reply = await send(request, .whoop) else { return false }
+        let (status, _) = reply
         return status == 200 || status == 204
     }
 
@@ -360,7 +365,7 @@ final class Devices: NSObject, ObservableObject {
         nonceRequest.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         nonceRequest.httpBody = DeviceLinks.form([("action", "getnonce"), ("client_id", app.id), ("timestamp", stamp),
                                                   ("signature", sign(["getnonce", app.id, stamp]))])
-        guard let (_, data) = await send(nonceRequest, .withings),
+        guard let data = await send(nonceRequest, .withings)?.1,
               let doc = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any], doc["status"] as? Int == 0,
               let nonce = (doc["body"] as? [String: Any])?["nonce"] as? String, !nonce.isEmpty else { return false }
         var request = URLRequest(url: DeviceCompany.withings.tokenURL)
@@ -368,7 +373,7 @@ final class Devices: NSObject, ObservableObject {
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
         request.httpBody = DeviceLinks.form([("action", "revoke"), ("client_id", app.id), ("nonce", nonce), ("userid", account),
                                              ("signature", sign(["revoke", app.id, nonce]))])
-        guard let (_, answer) = await send(request, .withings),
+        guard let answer = await send(request, .withings)?.1,
               let done = (try? JSONSerialization.jsonObject(with: answer)) as? [String: Any] else { return false }
         return done["status"] as? Int == 0
     }
