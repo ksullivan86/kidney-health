@@ -31,6 +31,7 @@ pressure**. Nothing is saved until you press **Save**. Each entry has **Edit** a
 - **A weight** asks when it was taken: morning, before dialysis, after dialysis or other. The two dialysis
   choices show only when your Profile says you are on dialysis. You type it in pounds or in kilograms, as
   you chose in **Settings → Weight and blood pressure**, and the sheet shows the other unit under the box.
+  Profile's two weight boxes use the same unit.
 - **A blood pressure reading** has the **top number (systolic)** first and the **bottom number (diastolic)**
   second. The pulse is optional. It also asks when you measured: morning, evening or other, and before or
   after dialysis if you are on dialysis.

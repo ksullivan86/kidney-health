@@ -9,6 +9,12 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ### Changed
 
+* Profile's two weight boxes now use your unit for weight, pounds by default, like the weight log. The labels say the unit. To
+  use kilograms, change **Unit for weight** in Settings → Weight and blood pressure. The profile still saves kilograms, and a
+  weight you do not touch is saved unchanged.
+
+### Changed
+
 * The iPhone app with no server, and the online demo with "Keep my data in this browser", now export the same `.zip` a server
   gives: `export.json`, the spreadsheet (CSV) files and the README. The file is made on the device and nothing is sent. Before,
   they gave `export.json` only.

@@ -3885,6 +3885,22 @@ when it opens; Settings → Preferences → *Units for height* saves it and call
 height, typed or saved, in the new unit. The first-sync card in Settings shows the height in the person's unit. There is no server
 twin: the server never converts a height. Tests: `tests/js/height_units.test.mjs`, `tests/test_height_units.py`.
 
+### Weight units in Profile (`user.units.weight`)
+
+Profile's two weight boxes, `#pf-weight` and `#pf-weight-6mo`, use the same setting as the weight log (`kg` or `lb`, default `lb`). The
+profile stores `weight_kg` and `weight_6_months_ago_kg` in kilograms as before; there is no API or schema change. The labels say the
+unit ("Weight (lb)", "Dry weight (lb, after dialysis)", "Weight 6 months ago (lb)"). In pounds the boxes take 44.1–661.3 and
+44.1–881.8 (the kilogram ranges 20–300 and 20–400, low end rounded up, high end down), step 0.1. `KH.bodyRules` converts:
+`weightBoxText` shows a saved weight in pounds to 0.1, half up (in kilograms as saved); `weightBoxKg` turns typed pounds into kilograms
+with 1 lb = 0.45359237 kg exactly and keeps 0.01 kg, as every logged weight is (`lbToKg`), so every weight typed to 0.1 lb shows the
+same again; `weightBoxRange` gives the range. A box the person did not touch keeps the saved kilograms (`readWeightKg` in
+`js/views/profile.js`), so showing a weight in pounds never changes it or counts as an unsaved change. **Use this** under a box keeps
+the log's own kilograms, and the log lines say the weight in the box's unit. Profile reads the unit from `GET /api/me/settings` when it
+opens; Settings → Weight and blood pressure (`js/views/body.js`) calls `KH.views.profile.setWeightUnit` when it reads or saves the unit.
+The first-sync card in Settings shows both weights in the person's unit (the kilograms when two weights round the same). The iPhone app
+with no server answers `/api/me/settings` from the same registry twin. Tests: `tests/js/weight_units.test.mjs`,
+`tests/test_profile_weight_units.py`; `tools/e2e/profile_reliability.py` walks it in Chromium.
+
 ### The handbook's words (what the app says, and where it comes from)
 
 A weight over the alarm carries `flag` in the summary's `alarm`; a reading with a top number of 180 or more **or** a bottom number of 120 or more carries `flag`
@@ -3946,7 +3962,7 @@ a person types and how it is worded, the chart scales, the table rows) and, for 
   it sat on the readings. The two series colours are the first two steps of the dataviz palette (tokens `--body-top` and `--body-bottom`, light and dark, validated for the
   colour-blind separation and 3:1 against the surface). The stats above them: the latest weight, the mean of **each kind of weight** over the last 7 days
   (`weekAverages`: morning is never averaged with after dialysis) and the server's 7-day blood pressure average with the goal verdict.
-* **Profile** (`js/views/profile.js`, `KH.body.profileHints()`: `bodySummary` and one `bodyWeights` list): under **Weight** "Latest in your log: 70.2 kg on Oct 20 — Use
+* **Profile** (`js/views/profile.js`, `KH.body.profileHints()`: `bodySummary` and one `bodyWeights` list; in the person's unit, see *Weight units in Profile*): under **Weight** "Latest in your log: 70.2 kg on Oct 20 — Use
   this" (**not shown when the form says dialysis**, where the field is the dry weight; it follows the Dialysis box live), under **Weight 6 months ago** "In your log:
   74.0 kg on Apr 21 — Use this" (the six-month rule of the section above: the weight dated closest to 182 days before the latest, within 30). **Use this fills the box and
   nothing else**; Save profile saves it, and the profile is never changed by the log.

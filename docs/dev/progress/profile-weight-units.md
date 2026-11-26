@@ -22,5 +22,17 @@ Owner, 2026-11-26: "Should the weight fields in Profile use lb, like height?" â€
 * Tests: tests/js/weight_units.test.mjs (8 pass), tests/test_profile_weight_units.py; test_targets_ui.py label check updated.
   run_vectors exit 0. ruff clean.
 
+* e2e: journey.py fills 150 lb, regress.py 154.3 lb (= 69.99 kg), sandbox.py waits for 154.3, body.py compares in the unit
+  (same_weight). profile_reliability.py weight_walk: 22/22 pass. body.py: 414 pass. device_mode.py: my new check passes in both
+  passes; the run stops later in the reminders walk another agent (phone-reminders) has in progress in the working tree, not mine.
+  device_mode.py was committed with only my hunk (git apply --cached), since that file holds another agent's uncommitted work.
+* Docs: handbook first-setup.md (Profile table), settings-and-keys.md (new Weight and blood pressure row), weight-and-blood-pressure.md,
+  ARCHITECTURE "Weight units in Profile" (after "Height units"), docs/body.md, docs/targets-and-labs.md, CHANGELOG Unreleased â†’ Changed.
+
 ## Next
-* e2e scripts (journey.py, regress.py, profile_reliability.py, sandbox.py, body.py) expect kg in #pf-weight; Chromium walk; docs; full pytest.
+* Full pytest run.
+
+## Commands
+* `node tests/js/weight_units.test.mjs`; `node tests/js/run_vectors.mjs`
+* `$VENV/bin/python -m pytest -q tests/test_profile_weight_units.py tests/test_body_ui_numbers.py tests/test_targets_ui.py tests/test_height_units.py`
+* `cd tools/e2e && python profile_reliability.py --port 8191` (and body.py, device_mode.py)
