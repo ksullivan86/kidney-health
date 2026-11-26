@@ -302,6 +302,10 @@ def test_the_server_api_bridge_carries_only_its_allow_list():
     assert listed == [
         ("GET", "/push/v1/about"),
         ("GET", "/push/v1/api/foods/usda/search"), ("POST", "/push/v1/api/foods/usda/import"), ("POST", "/push/v1/api/foods/barcode"),
+        # connected devices on the server (owner, 2026-11-26): each company by name; never start or the way back
+        ("GET", "/push/v1/api/devices"), ("POST", "/push/v1/api/devices/withings/sync"), ("POST", "/push/v1/api/devices/whoop/sync"),
+        ("DELETE", "/push/v1/api/devices/withings"), ("DELETE", "/push/v1/api/devices/whoop"),
+        ("GET", "/push/v1/api/activity"), ("PUT", "/push/v1/api/activity/extra"),
         ("PATCH", "/push/v1/api/me/settings"),
         ("GET", "/push/v1/api/ai/status"), ("PATCH", "/push/v1/api/me/ai"), ("POST", "/push/v1/api/ai/consent"),
         ("POST", "/push/v1/api/ai/next-meal"), ("POST", "/push/v1/api/ai/parse-meal"), ("POST", "/push/v1/api/ai/recipes"),
@@ -338,7 +342,9 @@ def test_the_server_api_bridge_carries_only_its_allow_list():
 
     for method, path in listed[1:]:
         if path.startswith("/push/v1/api/"):
-            assert (method, "/api" + path.removeprefix("/push/v1/api")) in ALLOWED, (method, path)
+            api = "/api" + path.removeprefix("/push/v1/api")
+            api = re.sub(r"^/api/devices/(withings|whoop)", "/api/devices/{provider_id}", api)  # the app names each company
+            assert (method, api) in ALLOWED, (method, path)
     for _, path in listed:
         for word in ("/admin", "/auth", "/tokens", "/sessions", "/provider", "/me/import", "/export", "/keys", "delete", "transcribe"):
             assert word not in path, path
