@@ -31,3 +31,10 @@ Ask with no server stays off (needs the server's checks).
 * Fixed in 54d5a6c: scripts/asc_ci_certs.py (stdlib + openssl), `this-run` in the workflow's EXIT trap, `old-runs` behind the
   workflow input remove_old_ci_certificates (default false). Tests: tests/test_asc_ci_certs.py, test_ios_app TestFlight test.
 * Build 11 needs the old ones gone. Owner, 2026-11-26: "yes go ahead" — start build 11 with remove_old_ci_certificates=true.
+
+## For the audit (from the helpers' reports)
+* phone-extras: export vectors run by tests/test_export_vectors.py (subprocess), not run_vectors.mjs. Swift (Dictation.swift,
+  HelpPages.swift) uncompiled until CI. Handbook packed by build_preview.py --handbook in CI/TestFlight.
+* phone-ai-more2: app/ai/guard.py adds food `name` to order/rest rows (server change: check the name is the person's own/
+  shared food and nothing else leaks). OnDeviceAI guides `.count(1...3)`, `.range(0...4)` may not compile (fallback
+  `.maximumCount(3)`). OwnAI.maxText 60,000 vs the page's 80,000 for own key (pre-existing mismatch).
