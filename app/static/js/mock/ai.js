@@ -57,8 +57,12 @@
    (js/engine/aimeal.js, pinned by tests/data/ai_meal_vectors.json) and cooking steps off. The page names the person's condition in
    the server's own words and, for the own key, the candidate ids; the iPhone's model gets fewer candidates (DATA_CHARS) because its
    window is small. On iOS 27 the iPhone's model also reads a label or plate photo (photoOnDevice; aiStatus.photos), after the own
-   key. AI order, swaps and day plans stay the server's, and so does Ask: it reads the log with the server's tools and the server
-   checks every answer, which no twin here does.
+   key. Ask stays the server's: it reads the log with the server's tools and the server checks every answer, which no twin here does.
+   AI ORDER, AI SWAPS AND AI DAY PLANS (the owner, 2026-11-26; phone-ai-more2). The modes rerank, swap and plan of POST
+   /api/ai/next-meal run like meal ideas, with the server's candidates, rule swaps, plan options, data block and judges (twins in
+   js/engine/aimeal.js). AI order goes to the server first; its rows carry the food's name, so the phone finds the same food in its
+   own list. Swaps and day plans never go to the server (PHONE_ONLY_MODES): they name this phone's entries, foods and saved meals,
+   whose ids differ there. A low treatment is never sent to any AI: the rule card answers, as on the server.
    Outside device mode nothing here changes. */
 (() => {
   'use strict';
@@ -413,8 +417,8 @@
   }
 
   // GET /api/ai/status in device mode: the server's view for the features it runs, the iPhone's for the rest.
-  async function mergedStatus(api) {
-    const [ss, dev] = await Promise.all([serverStatus(api, { fresh: true }), deviceStatus(api)]);
+  async function mergedStatus(api, { fresh = true } = {}) {
+    const [ss, dev] = await Promise.all([serverStatus(api, { fresh }), deviceStatus(api)]);
     const runs = (f) => serverRuns(ss, f);
     if (!ss || !Object.keys(ROUTES).some(runs)) {
       if (!dev) fail(404, 'Not Found'); // no AI anywhere: as a server with AI off
@@ -443,6 +447,19 @@
     };
   }
 
+  // GET /api/guidance/next-meal's `ai` block in device mode (app/ai/routes.py status_provider): whether What fits offers AI order
+  // and AI ideas, and whose AI runs them. It never fails: What fits answers without AI. The server's status is the one seen lately.
+  async function guidanceAi(api) {
+    const none = { available: false, provider_label: null };
+    if (!device()) return none;
+    try {
+      const st = await mergedStatus(api, { fresh: false });
+      const r = st.routes && st.routes.meal_ideas;
+      if (!st.features || !st.features.next_meal || !isDict(r)) return none;
+      return { available: true, provider_label: (isDict(r.runs_on) && r.runs_on.label) || null };
+    } catch (e) { return none; }
+  }
+  KH.mock.aiGuidance = guidanceAi;
   route('GET', '/api/ai/status', function () {
     if (!device()) fail(404, 'Not Found');
     return mergedStatus(this);
@@ -485,7 +502,9 @@
     route('POST', path, function ({ body, qp }) {
       if (!device()) fail(404, 'Not Found');
       const b = featureRoute === 'meal_ideas' ? nextMealBody(body) : recipesBody(body);
-      return viaServer(this, featureRoute, 'POST', `${path}${query(qp)}`, { body: forServer(body) }).then((got) => {
+      const sent = featureRoute === 'meal_ideas' && PHONE_ONLY_MODES.includes(b.mode) ? Promise.resolve({ skip: 'phone_only' })
+        : viaServer(this, featureRoute, 'POST', `${path}${query(qp)}`, { body: forServer(body) });
+      return sent.then((got) => {
         if (got.value !== undefined) return got.value;
         return (featureRoute === 'meal_ideas' ? mealIdeasHere : recipesHere)(this, b, qp('dry_run') === 'true', got.skip);
       });
@@ -558,7 +577,11 @@
   // 5,000 characters: with the fixed parts that leaves room for about eight candidates. Fewer candidates, the same checks.
   const DATA_CHARS = { own: 80000, iphone: 5000 };
   const CONTEXT_TOO_SMALL = 'The AI provider\'s prompt budget (AI_CONTEXT_TOKENS) is too small for this request.';
-  const ONLY_IDEAS_HERE = 'On this iPhone the AI gives meal ideas only. AI order, AI swaps and AI day plans need your server\'s AI.';
+  // AI swaps and AI day plans run on this iPhone's own list: the request names this phone's entries and foods, and a day plan names
+  // its saved meals by their ids here. The server's ids differ, so these two never go to the server (phone-ai-more2).
+  const PHONE_ONLY_MODES = ['swap', 'plan'];
+  const PHONE_ONLY = 'On this iPhone, AI swaps and AI day plans use your own AI key or Apple\'s on-device AI, not your server\'s AI, '
+    + 'because they work on this iPhone\'s own log. Add your own key in Keys and services, or turn on Apple Intelligence.';
   // The phone's AIs for a feature route, in order: the own key, then the iPhone's model. [] when neither can run it.
   async function phoneAis(api, featureRoute) {
     const [own, st] = await Promise.all([ownStatus(api), aiStatus()]);
@@ -623,43 +646,85 @@
   const phoneAnswer = (feature, mode, got, verdict, notes) => ({ ...verdict, repaired: false, retried: false, trimmed: got.req.trimmed, feature, mode,
     provider: got.provider, prompt_version: J().PROMPT_VERSION, audit_id: null, cached: false, notes });
 
-  // app/ai/routes.py _prepare_next_meal and features.prepare_next_meal, mode "ideas" only.
+  // app/ai/routes.py _prepare_next_meal and features.prepare_next_meal: meal ideas, AI order (rerank), AI swaps and AI day plans.
   async function mealIdeasHere(api, b, dry, serverSkip) {
     const A = KH.aiMeal;
-    if (!(await phoneAis(api, 'meal_ideas')).length) noPhoneAi(serverSkip);
-    if (b.mode !== 'ideas') fail(503, ONLY_IDEAS_HERE, { reason: 'not_on_phone' });
+    const GE = KH.guidanceEngine;
+    if (!(await phoneAis(api, 'meal_ideas')).length) {
+      if (serverSkip === 'phone_only') fail(503, PHONE_ONLY, { reason: 'not_on_server' });
+      noPhoneAi(serverSkip);
+    }
     const day = b.date ? b.date : KH.util.todayStr();
-    const off = api._guidanceGate();
+    const off = api._guidanceGate(b.mode === 'plan' ? 'plan' : null);
     if (off) return off;
-    const ctx = guidanceCtx(api, day);
-    if (!api._guidanceHasTargets(ctx.profile)) return api._guidanceUnavailable('no_targets', KH.guidanceEngine.M.NO_TARGETS);
+    let ctx = guidanceCtx(api, day);
+    if (!api._guidanceHasTargets(ctx.profile)) return api._guidanceUnavailable('no_targets', GE.M.NO_TARGETS);
+    let meal = b.meal;
+    let swap = null;
+    if (b.exclude_food_ids.length && b.mode !== 'ideas') fail(400, 'exclude_food_ids is only for mode ideas');
+    if (b.mode === 'swap') {
+      if ((b.entry_id == null) === (b.food_id == null)) fail(400, 'swap mode needs either entry_id or food_id (with servings)');
+      let food, servings, purpose;
+      if (b.entry_id != null) {
+        const row = api._entry(b.entry_id);
+        if (!row || !ctx.foods.has(Number(row.food_id))) fail(404, `log entry ${b.entry_id} not found`);
+        if (row.date !== day) ctx = guidanceCtx(api, row.date);
+        [food, servings, purpose, meal] = [ctx.foods.get(Number(row.food_id)), Number(row.servings), row.purpose, row.meal];
+        ctx = GE.R.withDay(ctx, ctx.day.filter((e) => e.id !== Number(row.id)));
+      } else {
+        if (!ctx.foods.has(b.food_id)) fail(404, `food ${b.food_id} not found`);
+        [food, servings, purpose] = [ctx.foods.get(b.food_id), Number(b.servings == null ? 1.0 : b.servings), null];
+      }
+      // A low treatment is never sent to any AI (note 04 G7): the rule card, as on the server.
+      if (purpose === 'hypo' || food.hypo) {
+        return { status: 'treating_a_low', cards: [GE.M.treatingALowCard(ctx.prefs.hypo_dose_g)], ai_called: false,
+          message: 'Low treatments are never sent to AI.' };
+      }
+      swap = { food, servings, purpose };
+    }
     const person = personHere(api);
     const condition = A.conditionText(person);
-    const full = A.candidatesForAi(ctx, b.meal, new Set(b.exclude_food_ids));
-    const mealsLeft = KH.guidanceEngine.budget.openSlots(b.meal, ctx.day);
+    let full;
+    try { full = A.candidatesForAi(ctx, meal, new Set(b.exclude_food_ids), b.mode, swap); } catch (e) {
+      if (/low treatments/.test(String(e && e.message))) return { status: 'treating_a_low', cards: [GE.M.treatingALowCard(ctx.prefs.hypo_dose_g)], ai_called: false };
+      throw e;
+    }
+    const mealsLeft = GE.budget.openSlots(meal, ctx.day);
+    const extra = b.mode === 'swap' ? A.swapExtra(full, swap.food, swap.servings) : b.mode === 'plan' ? A.planExtra(full) : null;
+    // The server trims the candidates of ideas and AI order to fit (lowest ranked first) and never those of swaps and plans, whose
+    // answer is a pick among SWAPS or PLAN. The iPhone's small model may still need fewer candidates there: down to none.
+    const least = b.mode === 'swap' || b.mode === 'plan' ? 0 : 1;
     let bridge = full;
     const build = (limit) => {
       bridge = full;
       for (let trimmed = 0; ; trimmed += 1) {
-        const text = J().dataPayload(A.nextMealContext(bridge, ctx, b.meal, mealsLeft, person));
+        const text = J().dataPayload(A.nextMealContext(bridge, ctx, meal, mealsLeft, person, extra));
         if (text.length <= limit) {
-          const ids = [...new Set([...bridge.foods.map((f) => f.food_id), ...bridge.meals.flatMap((m) => m.items.map((it) => it.food_id))])].sort((x, y) => x - y);
+          const ids = b.mode !== 'ideas' ? undefined
+            : [...new Set([...bridge.foods.map((f) => f.food_id), ...bridge.meals.flatMap((m) => m.items.map((it) => it.food_id))])].sort((x, y) => x - y);
           return { text, ids, condition, trimmed };
         }
-        if (bridge.foods.length <= 1) return null;
+        if (bridge.foods.length <= least) return null;
         bridge = { ...bridge, foods: bridge.foods.slice(0, -1) }; // lowest ranked first (rule order)
       }
     };
-    const got = await onPhone(api, 'meal_ideas', 'next_meal', build, dry);
-    if (got.dry) return got.dry;
+    const task = b.mode === 'ideas' ? 'next_meal' : b.mode;
+    const got = await onPhone(api, 'meal_ideas', task, build, dry);
+    if (got.dry) return { ...got.dry, feature: 'next_meal', mode: b.mode };
+    const judged = b.mode === 'swap' || b.mode === 'plan' ? full : bridge; // what the server judges with
     let verdict = got.verdict;
     if (!verdict) {
-      const checked = A.checkIdeas(got.raw);
-      verdict = checked.ok ? A.judgeIdeas(checked.answer, ctx, b.meal, bridge, got.provider.label, got.provider.model)
-        : { status: 'error', reason: 'schema', message: ERROR_TEXT.schema };
+      const check = { ideas: A.checkIdeas, rerank: A.checkRerank, swap: A.checkSwap, plan: A.checkPlan }[b.mode];
+      const checked = check(got.raw);
+      const { label, model } = got.provider;
+      verdict = !checked.ok ? { status: 'error', reason: 'schema', message: ERROR_TEXT.schema }
+        : b.mode === 'ideas' ? A.judgeIdeas(checked.answer, ctx, meal, judged, label, model)
+          : b.mode === 'rerank' ? A.judgeRerank(checked.answer, ctx, meal, judged, label, model)
+            : b.mode === 'swap' ? A.judgeSwap(checked.answer, ctx, meal, judged, label, model)
+              : A.judgePlan(checked.answer, ctx, judged, label, model);
     }
-    if (['dropped_all', 'no_fit', 'error'].includes(verdict.status)) verdict = { ...verdict, fallback: A.fallback(bridge) };
-    return phoneAnswer('next_meal', 'ideas', got, verdict, [KH.guidanceEngine.M.DISCLAIMER]);
+    if (['dropped_all', 'no_fit', 'error'].includes(verdict.status)) verdict = { ...verdict, fallback: A.fallback(judged) };
+    return phoneAnswer('next_meal', b.mode, got, verdict, [GE.M.DISCLAIMER]);
   }
 
   // app/ai/routes.py _prepare_recipes and recipes.prepare_recipes, with cooking steps off.
