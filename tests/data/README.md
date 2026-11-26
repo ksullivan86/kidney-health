@@ -52,6 +52,7 @@ Run the commands from the repository root.
 | `menu_link_vectors.json` | none: written by hand |
 | `meta_vectors.json` | `python3 tests/data/gen_meta_vectors.py` |
 | `personal_target_vectors.json` | none: copied from a design note |
+| `phone_reminder_vectors.json` | none: written by hand |
 | `push_vectors.json` | `python3 tests/data/gen_push_vectors.py` |
 | `recipe_page_vectors.json` | `python3 tests/data/gen_recipe_page_vectors.py` |
 | `rules_vectors.json` | `python3 tests/data/gen_rules_vectors.py` |
@@ -331,6 +332,7 @@ Top-level keys:
 * `withings_cases`: `{label, groups, zone, readings: [{kind, external_id, date, time, kg} | {kind, external_id, date, time, systolic,
   diastolic, pulse}], left_out: int}`.
 * `whoop_day_cases`: `{label, cycles, recoveries, sleeps, days: [ActivityDay], left_out: int, user_id: string | null}`.
+* `about`: where the file comes from.
 * `whoop_workout_cases`: `{label, records, workouts: [Workout], left_out: int}`.
 
 What a replayer must get right:
@@ -696,6 +698,22 @@ What a replayer must get right:
 * Each field comes once, in any order, and there is no other field. `+` is a space and `%XX` escapes are read before the checks.
 * `server` is `https://`, a host of letters, digits, dots and hyphens, and an optional port from 1 to 65535. Nothing else.
 * `token` is `khd_` and 43 base64url characters, with nothing around it.
+
+## phone_reminder_vectors.json
+
+How the iPhone app with no server plans its own reminders for the next days (design note 35 §7). Written by hand: each case is
+checked against the server's rule for when a reminder is due.
+
+* Server: `app/reminders.py` (`is_due`).
+* Browser twin: `app/static/js/mock/phone_reminders.js` (the planner), checked by `tests/js/phone_reminders.mjs` and
+  `tests/test_phone_reminders.py`.
+
+Top-level keys:
+
+* `_about`: where the file comes from.
+* `days_ahead`: int, how many days are planned.
+* `max_pending`: int, the most notifications planned at once.
+* `cases`: `{name, now, eaten, reminders, expect}`. `now` is the phone's local time; day bit 0 is Monday.
 
 ## push_vectors.json
 

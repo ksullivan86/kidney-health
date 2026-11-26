@@ -32,7 +32,9 @@ def test_the_view_draws_with_elements_and_calls_only_its_routes():
     assert "innerHTML" not in CODE and "insertAdjacentHTML" not in CODE and "import(" not in CODE
     assert not re.search(r"localStorage|sessionStorage|indexedDB|document\.cookie", CODE), "nothing about a link is kept in the browser"
     routes = set(re.findall(r"'(/api/[^'`$]+)", CODE))
-    assert routes == {"/api/me/shares", "/api/me/shares/invite", "/api/shared", "/api/shared/info", "/api/shared/accept"}
+    # /api/device/care-team: the iPhone app's read-only Care team, from the paired server (js/mock/server_care.js)
+    assert routes == {"/api/me/shares", "/api/me/shares/invite", "/api/shared", "/api/shared/info", "/api/shared/accept",
+                      "/api/device/care-team"}
     templated = set(re.findall(r"`(/api/[^`]+)`", CODE))
     assert templated == {"/api/me/shares/${id}", "/api/me/shares/invites/${id}", "/api/me/shares/${id}/role",
                          "/api/me/shares/${id}/switches", "/api/shared/${id}",

@@ -338,7 +338,7 @@ def test_the_ui_promises_no_unbuilt_feature() -> None:
 def test_only_the_reminders_block_talks_about_reminders() -> None:
     """Reminders (design note 35) live in Settings → Reminders only. This device once said "Offline use, camera scanning and
     reminders need HTTPS" before they existed; no other view may promise them."""
-    allowed = {STATIC / "index.html", STATIC / "js" / "views" / "reminders.js", STATIC / "js" / "mock" / "reminders.js",
+    allowed = {STATIC / "index.html", STATIC / "js" / "views" / "reminders.js", STATIC / "js" / "mock" / "reminders.js", STATIC / "js" / "mock" / "phone_reminders.js",
                STATIC / "js" / "views" / "settings.js", STATIC / "js" / "mock" / "auth.js", STATIC / "js" / "mock" / "export.js",
                STATIC / "js" / "mock" / "import.js"}
     for path in [STATIC / "index.html", *(STATIC / "js").rglob("*.js")]:
