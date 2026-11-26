@@ -277,6 +277,8 @@ phone, the person makes a new token and pairs again.
    | `GET /api/recipe-import`, `POST /api/recipe-import/page` | a recipe from a web page: the server reads the page through its checked connection, as for the web app |
    | `GET /api/instacart`, `POST /api/instacart/preview`, `/api/instacart/send` | the Plan's shopping list at Instacart, with the server's key |
    | `GET /api/list-sync`, `POST /api/list-sync/preview`, `/api/list-sync/send` | sending the shopping list to the person's own list app |
+   | `GET /api/devices`, `POST /api/devices/{provider_id}/sync`, `DELETE /api/devices/{provider_id}` | Withings and Whoop on the server: the person's status, Sync now and Disconnect. Connecting is not on the list (below) |
+   | `GET /api/activity`, `PUT /api/activity/extra` | the Whoop days for Trends, and the active-day calorie setting |
    | `GET /api/me/notes`, `POST /api/me/notes/{note_id}/read`, `DELETE /api/me/notes/{note_id}` | notes from the person's Care team: read them, mark one read with the version shown (`If-Match`), delete one |
    | `GET /api/me/suggestions`, `POST /api/me/suggestions/{suggestion_id}/accept`, `/decline` | meal suggestions from the Care team: add one to the plan, or say no thanks |
 
@@ -286,6 +288,11 @@ phone, the person makes a new token and pairs again.
 
    The notes and suggestions find a row only by the token owner's id, so another person's note is `404`. Writing a note, and
    sharing itself (who is on the Care team and what they may see and do), stay in the web app.
+
+   Connecting Withings or Whoop (`POST /api/devices/{provider_id}/start` and the way back) is tied to the browser session that
+   started it, so it is never on the list. The iPhone app opens the server's own page at `/#/devices/open/<provider>` in Safari's
+   sheet instead. The person signs in to the server there and connects as in the web app; the app hands that page no token. The
+   readings the server then fetches reach the phone through the change feed, marked "from Withings".
 
    **Never on it:** anything that needs the password again, admin routes, sign-in, tokens, sessions, keys and AI providers, sharing,
    the import, the `.zip` export, and deleting or changing the account. A test pins the list.

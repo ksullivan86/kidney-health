@@ -20,6 +20,7 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 * In the iPhone app you can speak your question to Ask. The words are worked out on the iPhone and nothing is sent. They go into
   the question box for you to check before you press Send. The microphone shows only when Ask can run.
+* The handbook is inside the iPhone app. Learn links open it in the app with no internet; Done takes you back.
 * Reminders in the iPhone app, with no server. Settings → Reminders uses the iPhone's own notifications: turn them on, add a
   reminder to log a meal, plan tomorrow or log your weight, and send a test. A meal reminder is skipped when that meal is already
   logged today. Reminders set on the iPhone stay on the iPhone. Do not rely on them for low blood sugar; use your CGM's alerts.
@@ -37,6 +38,16 @@ the API. Security fixes are released as patch versions of the newest minor versi
   iPhone opens the link you typed and reads the recipe the same way a server does. It opens `https` links only, never a home or
   local address, follows at most 3 redirects, and stops at 2 MB or 15 seconds. The page is not kept, and nothing else leaves the
   phone. The review screen says the page was read on this iPhone.
+* Withings and Whoop in the iPhone app. Settings → Connected devices now shows on the phone. When the phone is paired with your
+  server by a token both ways and your server has the company set up, the phone shows your server's connection, with Sync now and
+  Disconnect, and Connect opens your server's own page inside the app. With no server, the phone connects with your own free
+  developer app: paste its client ID and secret in Keys and services, and register
+  `https://ksullivan86.github.io/kidney-health/oauth/` as its callback address. The secret stays in the iPhone's Keychain. The
+  phone then fetches new readings and Whoop days when you open the app, with the same rules as a server: nothing is added twice,
+  and a reading you deleted does not come back. If your server has the company connected, its connection is used. For admins: the
+  gateway list gains `GET /api/devices`, `POST /api/devices/{provider_id}/sync`, `DELETE /api/devices/{provider_id}`,
+  `GET /api/activity` and `PUT /api/activity/extra` (see `docs/push.md`). Connecting stays in the web app. The handbook's Pages
+  site gains the small `oauth/` page.
 
 ## 0.25.0 — 2026-11-24
 

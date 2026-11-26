@@ -4920,7 +4920,10 @@ Code `app/app_gateway.py`, `GatewayCaller` in `app/auth/deps.py`, `app:sync` in 
   `/api/recipe-import/text` (the phone reads pasted text itself); since the owner's decision of 2026-11-26 also the person's notes and
   suggestions from the Care team: `GET /api/me/notes`, `POST /api/me/notes/{note_id}/read` (with `If-Match`), `DELETE
   /api/me/notes/{note_id}`, `GET /api/me/suggestions` and `POST /api/me/suggestions/{suggestion_id}/accept` and `/decline` (each finds a
-  row only by the owner's id; writing a note and sharing itself stay in the web app). `NEVER_PREFIXES` and `NEVER` name what may never be added (sign-in, admin, tokens, sessions, keys and providers,
+  row only by the owner's id; writing a note and sharing itself stay in the web app); and Connected devices (owner, 2026-11-26):
+  `GET /api/devices`, `POST /api/devices/{provider_id}/sync`, `DELETE /api/devices/{provider_id}`, `GET /api/activity` and
+  `PUT /api/activity/extra`, never `POST /api/devices/{provider_id}/start` or the way back (in `NEVER`: they are tied to the browser
+  session that started them). `NEVER_PREFIXES` and `NEVER` name what may never be added (sign-in, admin, tokens, sessions, keys and providers,
   sharing, the import, the `.zip` export, two-step sign-in, passkeys, the account itself). The test pins the list, checks every listed route
   needs `current_user` and neither `require_recent_auth` nor `require_admin`, and runs the isolation matrix through the gateway.
 * **The AI** keeps every rule because it is the same route: routing per feature, opt-in and consent per person, prefilters, guard, daily limit,
@@ -5185,6 +5188,22 @@ called from `js/main.js`), which syncs at once after `connected`. `KH.bodyUi.ori
 administration shows the switch group and the About rows. The demo (`js/mock/devices.js`) has a sample connection and marks the
 sample morning readings `withings`; Connect is refused there. Tests: `tests/test_connected_devices.py` (a fake Withings behind the
 real checked transport, `tests/devices_support.py`), `tests/test_connected_devices_ui.py`, `tests/js/devices_demo.mjs`.
+
+**The iPhone app** (owner, 2026-11-26: "Should Withings and Whoop be set up from the phone?" "yes"). Settings → Connected devices
+shows in device mode. Each company is used one of two ways, the server's first (`js/mock/devices.js` device branch; details in
+"Device mode" below):
+
+* **Through the paired server** (a token both ways, the company set up there): the status, Sync now and Disconnect go through
+  the gateway. Connect opens the server's own page `/#/devices/open/<provider>` (`openPending` with the word `open` opens Settings
+  at this section, with no toast) in Safari's sheet; the person signs in to the server there, so the callback still finds the
+  session that started it. The readings reach the phone through the change feed (`source` and `source_key` kept; pinned by
+  `tests/test_devices_gateway.py`). Whoop days are not a feed kind: the phone reads `GET /api/activity` through the gateway and
+  keeps the answer, so no migration or version twin is needed for read-only rows.
+* **On the phone** with the person's own developer app: the app (`ios/KidneyHealth/Services/Devices.swift`) signs in and fetches the
+  raw answers; the page reads them with `js/engine/device_map.js` (twin of `readings_from_groups`, `build_days`, `build_workouts`;
+  `tests/data/device_map_vectors.json`) and adds rows with the twins of `store.add_readings` and `store.add_activity`. The way back
+  is the static page `handbook/oauth/` on the handbook's Pages site (`DeviceLinks.relayURL`), because Withings takes only an
+  https callback it can match.
 
 ## Activity and recovery: Whoop and the active-day calorie extra (schema step 30; design note 28)
 
@@ -5843,6 +5862,18 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
   the data is kept on this iPhone, with **Apple Health and server**, which posts `settings` to the app's `phone` message handler.
 * **The safety copy**: after each save `persist.js` gets `GET /api/me/export.json` from the in-page API and posts it to the app's
   `safetyCopy` handler. Nothing else leaves the page.
+* **The handbook in the app** (owner, 2026-11-26): the iOS jobs of `ci.yml` and `testflight.yml` build the handbook
+  (`handbook/requirements.lock`, `mkdocs build --strict`, about a minute) and run `build_preview.py --device ios/WebApp --handbook
+  SITE`. `pack_handbook` copies it into `learn/` (about 12 MB): each inline script of the theme becomes
+  `learn/assets/javascripts/inline/<sha-256>.js` in the same place, every page gets a `<meta>` CSP (`HANDBOOK_CSP`: `'self'` only,
+  no inline script or style), `navigation.instant*` is removed from `__config` (it reads the sitemap), and source maps, other
+  languages' search, the sitemap, the 404 page and types the app does not serve are left out. A page with an inline style or
+  anything from the network stops the build. `device-flag.js` then says `{url: "learn/", local: true, public}` and
+  `js/mock/handbook.js` answers `available: true` with the published copy as `public_url`. In the app, `WebAppView` cancels a
+  navigation to `learn/…` and shows `WebShell/HelpPages.swift`: a sheet with its own web view (data store not kept), its own scheme
+  handler (only files under `WebShellConfig.helpFolder`; a folder address is its `index.html`; query and fragment ignored), Done
+  and Back; a tapped `https` or `tel:` link opens outside the app, every other navigation is cancelled. Built without
+  `--handbook`, Learn links go to the published copy in Safari, as before. Search works if the web view runs the theme's worker.
 * **Voice for Ask** (owner, 2026-11-26): `js/views/ask-voice.js` in device mode never records in the page. While Ask can run it
   asks the bridge `{kind: 'speechStatus'}` → `{ok, available, reason: not_on_device | not_allowed | not_ready | null}` and shows the
   microphone only when `available`. A tap sends `{kind: 'dictate'}`: `Phone/Dictation.swift` shows a sheet (live words, Done, Cancel,
@@ -6152,6 +6183,35 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
   `tests/data/recipe_page_vectors.json` (`gen_recipe_page_vectors.py`; the same on Python 3.12 to 3.15), replayed by
   `run_vectors.mjs` and `RecipePageTests.swift`. Tests: `tests/js/phone_recipe_page.mjs`, `tests/test_phone_recipe_import.py`,
   `tools/e2e/device_mode.py` `recipe_walk`.
+* **Withings and Whoop (owner, 2026-11-26)**. Settings → Connected devices shows on the phone (no longer in `DEVICE_LEFT_OUT` or
+  base.css). `js/mock/devices.js` answers `GET /api/devices` with each provider's `where` (`server`, `phone` or null),
+  `connect_via` (`server` when the server has it set up, else `phone` when the person saved a developer app), and both sides'
+  connections. The server's connection wins: while it has the company, the phone's own waits (`syncDue` skips it).
+  * **Bridge kinds** (`Services/Devices.swift`): `{kind: 'serverPage', page: 'devices', provider}` → Safari's sheet at
+    `DeviceLinks.serverPage` (the paired https address only), answered on Done; `{kind: 'deviceStatus'}` → `{ok, relay,
+    providers: {p: {app, connected}}}` (never an ID, secret or token); `{kind: 'deviceConnect', provider}` → `{ok}` or `{error:
+    no_app | busy | cancelled | state | scope | refused | offline}`; `{kind: 'deviceFetch', provider, since}` → `{ok, now, json}`
+    (Withings `{pages: [body]}`, Whoop `{cycles, recoveries, sleeps, workouts}`) or `{error: not_connected | auth | rate_limited |
+    scope | offline | provider_error}`; `{kind: 'deviceDisconnect', provider}` → `{ok, revoked}` (tokens deleted first).
+  * **The app**: the developer app (client ID and secret) and the tokens in the Keychain (`withingsApp`, `whoopApp`,
+    `withingsTokens`, `whoopTokens`, this device only), typed in Keys and services and never shown again. Sign-in with
+    `ASWebAuthenticationSession` (ephemeral) at the server's authorize addresses and scopes, `redirect_uri` the relay page, `state`
+    32 random bytes compared in constant time (`DeviceLinks.back`); the code is exchanged here. Requests to `wbsapi.withings.net`
+    and `api.prod.whoop.com` only, HTTPS, no cookies, no cache, no redirects, 15 s, 2 MiB an answer; a refresh under 5 minutes
+    left, kept at once; `auth` once refreshes and retries, a refused refresh deletes the tokens (connect again). Revoke: Whoop
+    `DELETE /developer/v2/user/access`, Withings the signed nonce (CryptoKit HMAC-SHA256). Pure parts in
+    `KidneyHealthCore/DeviceLinks.swift` (`DeviceLinksTests.swift`).
+  * **The page**: `since` is the server's (Withings the cursor, else 365 days back; Whoop the cursor minus 3 days, else 90); the
+    cursor is Withings' first `updatetime` or the app's `now`. `_addDeviceReadings` and `_addDeviceActivity` are the twins of
+    `store.py`, with the ledger in `_devicesState.phone[provider].seen` (saved with the log; Disconnect with "Also delete" drops
+    it). It syncs when the app opens or comes back (`POST /api/device/devices/sync-due`, at most every 10 minutes) and on Sync now
+    (10 minutes apart, as the server's). The phone's own rows are sent to the server by step 4 like any row (`source_key`
+    `withings:<grpid>:...` matches the server's own Withings row); Whoop days are not sent.
+  * **Whoop days with a server**: `GET /api/activity` in device mode asks the server when it is both ways and keeps the answer in
+    `_activityServer`; when that has days or the extra on, Today's extra (`_activitySource`) and `PUT /api/activity/extra` are the
+    server's; offline, the kept copy answers.
+  * Tests: `tests/js/phone_devices.mjs` (run by `tests/test_phone_devices.py`, which also pins the Swift side and the relay page),
+    `tests/test_devices_gateway.py`, `DeviceRouteTests.swift`, `DeviceLinksTests.swift`.
 * **Tests**: `tests/js/server_sync.mjs` and `tests/test_server_sync_phone.py` (the queue against a stand-in app, and the page's
   body through the real route), `tests/js/server_services.mjs` and `tests/test_server_services_phone.py` (note 39 steps 3 and 4
   against a fake gateway), `tests/js/server_lists.mjs` (step 9, run by the same pytest file), `tests/js/server_changes.mjs` (steps 6

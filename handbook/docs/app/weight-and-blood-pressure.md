@@ -306,6 +306,42 @@ After that the server fetches new readings every few hours. **Sync now** fetches
 
 Test accounts cannot connect a device. The demo shows a sample Withings connection and does not contact Withings.
 
+### Withings and Whoop in the iPhone app {#devices-iphone}
+
+The iPhone app has **Settings → Connected devices** too. It works one of two ways for each company.
+
+**With your server.** When the app is paired with your server by a token **both ways**
+([The iPhone app](install.md#with-a-token-both-ways)) and your server has the company set up:
+
+1. Press **Connect Withings** (or **Connect Whoop**), then **Open your server**. Your server's own page opens inside the app.
+2. Sign in to your server if it asks. Press **Connect Withings** there and say yes at Withings.
+3. Press **Done** to come back. Your server fetches your readings, and they reach the iPhone when it syncs with your server.
+
+**Sync now** and **Disconnect** on the iPhone work on your server's connection. Whoop days show on Trends, and the active-day
+setting is your server's.
+
+**With no server.** The iPhone connects with your own free developer app from the company. Your data goes from the company
+straight to your iPhone.
+
+1. Make a developer app at developer.withings.com (or developer.whoop.com). As its callback address, also called the redirect
+   address, enter `https://ksullivan86.github.io/kidney-health/oauth/`. That page only sends the sign-in back to the app. It keeps
+   nothing.
+2. In the app, open **Settings → This device → Apple Health and server → Keys and services**. Under **Your own Withings app**,
+   paste the client ID and the client secret, and press **Save the app**. They stay on this iPhone, in its Keychain. The secret
+   is never shown again.
+3. Open **Settings → Connected devices**, press **Connect Withings**, then **Continue to Withings**. Sign in at Withings and say
+   yes.
+
+The iPhone then fetches new readings when you open the app, at most every 10 minutes, and when you press **Sync now**. The rules
+above hold here too: nothing is added twice, a reading you deleted does not come back, and a reading you typed is never changed.
+If Apple Health already has the same reading at the same minute, it is not added again. Whoop days go to Trends.
+
+- If your server has the company connected, the iPhone's own connection waits. Your server's readings reach the iPhone by sync.
+- Nothing about you is sent to the company. The app only signs in and reads.
+- Whoop asks developers to keep the secret on a server. Here it is your own developer app and your own secret, kept on your own
+  iPhone, so only you can use it.
+- **Remove the app** in Keys and services ends the sign-in too. Readings already in your log stay.
+
 ## What the app does not do
 
 - It does not say what causes a number, whether a number is good or bad for you, or what medicine to take,
