@@ -18,6 +18,7 @@ from __future__ import annotations
 import dataclasses
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any, Iterator
 
@@ -409,7 +410,9 @@ def test_the_activity_row_keeps_neither_the_text_nor_the_answer(lab):
     assert r.status_code == 200 and r.json()["page"] == 1
     audit = db(lab.client, "SELECT * FROM ai_audit")[0]
     assert audit["feature"] == "read_lab_report_text" and audit["response_text"] is None
-    everything = json.dumps({k: audit[k] for k in audit.keys()}, default=str)
+    # The row's own times and the text's hash are left out: a time such as "…:55.43" or a hash can hold "5.4" by chance.
+    kept = {k: audit[k] for k in audit.keys() if not k.endswith("_at")}
+    everything = re.sub(r"[0-9a-f]{64}", "<sha256>", json.dumps(kept, default=str))
     for needle in ("Potassium", "Harbor Valley", "5.4", "mmol", "2026-10-07"):
         assert needle not in everything, needle
     request = json.loads(audit["request_json"])
