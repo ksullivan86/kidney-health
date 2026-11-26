@@ -1,0 +1,4 @@
+body { margin: 0; padding: 24px 16px; font: 17px/1.5 -apple-system, system-ui, sans-serif; color: #1c1c1e; background: #fff; }
+main { max-width: 32rem; margin: 0 auto; }
+a { color: #0a5bd3; }
+@media (prefers-color-scheme: dark) { body { color: #f2f2f7; background: #000; } a { color: #64a8ff; } }

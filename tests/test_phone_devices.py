@@ -102,3 +102,28 @@ def test_the_servers_page_opens_in_safaris_sheet_on_the_paired_server_only() -> 
     assert 'Keychain.read(.token) != nil' in app
     core = _code("KidneyHealthCore/Sources/KidneyHealthCore/DeviceLinks.swift")
     assert 'parts.fragment = "/devices/open/\\(company.rawValue)"' in core and "Settings.appURL(address)" in core
+
+
+def test_the_relay_page_only_hands_the_sign_in_back_to_the_app() -> None:
+    import re
+
+    folder = ROOT / "handbook" / "oauth"
+    page = (folder / "index.html").read_text(encoding="utf-8")
+    assert re.findall(r"<script[^>]*>", page) == ['<script src="relay.js">']  # no inline script
+    assert "<style" not in page and " style=" not in page and re.search(r"<[^>]+\son\w+=", page) is None  # no inline style or handler
+    assert "default-src 'none'; script-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'" in page
+    assert '<meta name="referrer" content="no-referrer">' in page and "http" not in re.sub(r"<!--.*?-->", "", page, flags=re.S).replace(
+        "http-equiv", "")
+    js = (folder / "relay.js").read_text(encoding="utf-8")
+    assert "for (const name of ['code', 'state', 'error'])" in js
+    assert "`kidneyhealth-devices://callback?${out.toString()}`" in js and "history.replaceState" in js
+    for word in ("fetch(", "XMLHttpRequest", "sendBeacon", "localStorage", "sessionStorage", "indexedDB", "document.cookie", "console."):
+        assert word not in js, word
+    workflow = (ROOT / ".github" / "workflows" / "handbook-pages.yml").read_text(encoding="utf-8")
+    assert 'cp oauth/index.html oauth/relay.js oauth/relay.css "$RUNNER_TEMP/site/oauth/"' in workflow
+    # the app's relay address is that page on the handbook's site
+    from urllib.parse import urlsplit
+
+    core = (ROOT / "ios" / "KidneyHealthCore" / "Sources" / "KidneyHealthCore" / "DeviceLinks.swift").read_text(encoding="utf-8")
+    relay = re.search(r'relayURL = "([^"]+)"', core).group(1)
+    assert urlsplit(relay).scheme == "https" and urlsplit(relay).path.endswith("/oauth/")
