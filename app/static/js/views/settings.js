@@ -545,8 +545,8 @@
     const wrap = h('div', { class: 'data-block' });
     const msg = statusMsg('set-export-msg');
     wrap.append(h('p', {}, 'Download everything you have entered: a .zip with export.json and spreadsheet (CSV) files for your log, foods, saved meals, lab results, symptoms, weights, blood pressure readings and settings. It holds no passwords, sessions or keys.'));
-    wrap.append(h('div', { class: 'settings-actions' }, action(MOCK && keptHere() ? 'Export my data (export.json)' : 'Export my data (.zip)', 'secondary', async () => {
-      if (MOCK && keptHere()) { // "Keep my data in this browser" is on (the Pages demo, js/views/demo_local.js): the file the zip would hold
+    wrap.append(h('div', { class: 'settings-actions' }, action('Export my data (.zip)', 'secondary', async () => {
+      if (MOCK && keptHere()) { // the iPhone app, or "Keep my data in this browser" (js/views/demo_local.js): the server's zip, built here
         msg.textContent = 'Preparing your export…';
         try {
           const res = await KH.demoLocal.exportFile();
@@ -2785,9 +2785,21 @@
     $('#settings-who').textContent = me ? `Signed in as ${me.display_name ? `${me.display_name} (${me.username})` : me.username}${me.role === 'admin' ? ' · admin' : ''}${me.test_account ? ' · test account' : ''}` : '';
   }
   // Settings → Care team (js/views/sharing.js, design note 25): its own section, near the top. Without sign-in there is one person.
-  function renderCare() {
+  // In the iPhone app it is read-only and shown only while it is paired with a server (owner, 2026-11-26): a Care team lives there.
+  let careDraw = 0;
+  async function renderCare() {
     const sec = $('#set-care');
     if (!sec) return;
+    if (KH.flags && KH.flags.DEVICE) {
+      const ticket = ++careDraw;
+      const body = KH.sharing ? await KH.sharing.deviceBlock() : null;
+      if (ticket !== careDraw) return;
+      if (body) clear($('#set-care-section')).append(body);
+      if (sec.hidden === !body) return;
+      sec.hidden = !body;
+      renderNav();
+      return;
+    }
     sec.hidden = authMode() === 'none' || !KH.sharing;
     if (!sec.hidden) clear($('#set-care-section')).append(KH.sharing.block());
   }
@@ -2825,9 +2837,9 @@
     renderNav();
   }
   // The iPhone app with no server (design note 38; owner, 2026-11-21: Settings was "all messy"): the sections that need a server
-  // are left out there. CSS hides them (base.css, .device-mode), and the menu does not list them.
+  // are left out there. CSS hides them (base.css, .device-mode), and the menu does not list them. Care team shows only while paired.
   const DEVICE_LEFT_OUT = KH.flags && KH.flags.DEVICE
-    ? new Set(['set-care', 'set-connected', 'set-lists', 'set-assistant', 'set-admin-link', 'set-admin', 'set-admin-ai'])
+    ? new Set(['set-connected', 'set-lists', 'set-assistant', 'set-admin-link', 'set-admin', 'set-admin-ai'])
     : new Set();
   function renderNav() {
     const nav = $('#settings-nav');
@@ -2878,7 +2890,7 @@
     if (!state.me) return;
     renderWho();
     syncAdminEntry();
-    renderCare();
+    renderCare().catch((err) => console.warn('Care team:', err));
     renderNav();
     renderAccount();
     renderPrefs();
