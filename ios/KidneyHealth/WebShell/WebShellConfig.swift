@@ -15,6 +15,8 @@ enum WebShellConfig {
     static let folder = "WebApp"
     /// The page the app opens.
     static let startPath = "/index.html"
+    /// The folder of help pages packed with the web app (`--handbook`), shown in a sheet of their own (HelpPages.swift), or nil.
+    static let helpFolder: String? = "learn"
     /// A fixed identifier, so the app gets the same web data store back after every restart (iOS 17). Never change it: a new one
     /// starts with no data.
     static let storeID = UUID(uuidString: "9C1E4B7A-3D52-4F6B-8A10-5E2C7D9B4F61")!

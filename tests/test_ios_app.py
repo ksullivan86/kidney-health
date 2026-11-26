@@ -193,7 +193,7 @@ def test_the_web_shell_serves_only_its_packed_files_and_opens_nothing_else():
     # only the packed page may message the app; every other navigation is cancelled, and a tapped https link goes to Safari
     assert "message.frameInfo.securityOrigin.protocol == WebShellConfig.scheme" in view
     assert 'url.scheme == "https", action.navigationType == .linkActivated' in view and "UIApplication.shared.open(url)" in view
-    assert view.count("decisionHandler(.cancel)") == 2 and "decisionHandler(.download)" in view
+    assert view.count("decisionHandler(.cancel)") == 3 and "decisionHandler(.download)" in view  # 3: a help page goes to its sheet
     assert "WKWebsiteDataStore(forIdentifier: WebShellConfig.storeID)" in view
     assert ".completeFileProtectionUntilFirstUserAuthentication" in view and ".atomic" in view
     # the shell is product-neutral: names live in WebShellConfig (a second app changes only that file)

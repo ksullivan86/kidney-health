@@ -11,7 +11,9 @@ and it can send new weights and blood pressure readings from Apple Health to you
 * The web files are packed by `python3 scripts/build_preview.py --device ios/WebApp`, which CI and the TestFlight workflow run
   before Xcode. `ios/WebApp/` is not committed. Run that command once before building in Xcode.
 * The page is served from the app under its own scheme, `kidneyhealth-app://app/`. It loads only those files and never reaches the
-  network. A link to the handbook opens in Safari.
+  network. CI and TestFlight also build the handbook and pack it with `--handbook SITE` (into `learn/`). A Learn link then opens
+  the packed page in a sheet of its own (`WebShell/HelpPages.swift`), with no network. Built without `--handbook`, a Learn link
+  opens the published handbook in Safari.
 * The page runs in **device mode**: it starts empty, keeps its data on the phone from the first start, and has one person who is not
   an admin. The data lives in a web data store with a fixed identifier, so it comes back after every restart.
 * After each change the page sends its export to the app, which writes it to Documents as `Kidney Health safety copy.json`. The

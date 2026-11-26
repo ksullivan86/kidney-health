@@ -5,6 +5,7 @@
 // * Its data is kept in a web data store with a fixed identifier, so the same store comes back after every restart.
 // * After each save the page sends the export; it is written to the Documents folder as the safety copy (the Files app shows it).
 // * A file the page downloads (Export) is offered with the share sheet, so the person chooses where it goes.
+// * A link to the packed help pages (the handbook) opens them in a sheet of their own (HelpPages.swift).
 // * "Phone settings" in the page asks the app to show its own settings (Apple Health and the server).
 import SwiftUI
 import UIKit
@@ -73,6 +74,11 @@ struct WebAppView: UIViewRepresentable {
             guard let url = action.request.url else { decisionHandler(.cancel); return }
             if action.shouldPerformDownload { // a link with the download attribute: the page's Export
                 decisionHandler(.download)
+                return
+            }
+            if HelpPages.relativePath(for: url) != nil { // a help page: shown in its own sheet, so the app keeps its place
+                if HelpPages.packed { HelpPages.present(url) }
+                decisionHandler(.cancel)
                 return
             }
             if WebAppFiles.relativePath(for: url) != nil || url.scheme == "about" {

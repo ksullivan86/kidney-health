@@ -126,6 +126,8 @@ phone and needs no server ([design note 38][NOTE38]):
   need your data back, open the app's **Settings → Your data → Import from a file** and choose that copy.
 - **Add → Scan a barcode** opens the iPhone's own scanner. Point it at a food barcode and the app looks the code up.
   Tap **Cancel** to type the digits instead.
+- **Learn** links and **Settings → About → Open the handbook** open this handbook inside the app, with no internet. Tap **Done**
+  to go back to where you were. A link to a source opens in Safari.
 - Touch and hold the app's icon on the Home Screen for shortcuts: **Scan a barcode**, **Add food** and **Quick add**.
 - **Settings → Reminders** gives you a notification at a time you choose, to log a meal, plan tomorrow or log your weight
   ([Reminders in the iPhone app](settings-and-keys.md#reminders-iphone)). They stay on the iPhone.

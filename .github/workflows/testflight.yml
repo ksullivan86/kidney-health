@@ -56,8 +56,16 @@ jobs:
       - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
         with:
           python-version: "3.14"
-      - name: Pack the web app into the iPhone app (design note 38; scripts/build_preview.py --device)
-        run: python scripts/build_preview.py --device ios/WebApp
+      - name: Build the handbook for the iPhone app (hash-locked toolchain, as in handbook-pages.yml)
+        working-directory: handbook
+        env:
+          NO_MKDOCS_2_WARNING: "true"
+        run: |
+          set -euo pipefail
+          python -m pip install --disable-pip-version-check --no-deps --require-hashes --only-binary=:all: -r requirements.lock
+          mkdocs build --strict -d "$RUNNER_TEMP/handbook"
+      - name: Pack the web app and the handbook into the iPhone app (design note 38; scripts/build_preview.py --device)
+        run: python scripts/build_preview.py --device ios/WebApp --handbook "$RUNNER_TEMP/handbook"
       - name: Check the three secrets are set
         env:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}

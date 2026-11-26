@@ -8,6 +8,7 @@ Usage
     python3 scripts/build_preview.py --out page.html  # anywhere else
     python3 scripts/build_preview.py --pages DIR      # the GitHub Pages demo: a static site in DIR (v0.3.1)
     python3 scripts/build_preview.py --device DIR     # the app packed inside the iPhone app (design note 38)
+    python3 scripts/build_preview.py --device DIR --handbook SITE   # ... with the built handbook inside it (owner, 2026-11-26)
 
 ``--device`` writes the same static site for the iPhone app's web view, in **device mode**: no sample person, no demo
 banner, and the data kept on the phone from the first start (``window.KDL_DEVICE``, js/mock/persist.js). The iPhone app
@@ -15,6 +16,11 @@ serves the folder under its own scheme with the same Content-Security-Policy; Le
 which the app opens in Safari. It also writes ``ai-prompts.json``, the prompts the iPhone app gives Apple's on-device model, made
 from ``app/ai/prompts.py`` so no prompt is written twice (:func:`ai_prompts`), and packs the vendored pdf.js so a lab report PDF can be
 read on the phone.
+
+``--handbook SITE`` (with ``--device``) packs a handbook built with ``mkdocs build`` (``handbook/mkdocs.yml``) into ``DIR/learn/`` so
+Learn links open it in the app with no network (:func:`pack_handbook`). The iPhone app shows it in a sheet of its own. The theme's
+inline scripts become files, every page gets a strict Content-Security-Policy, and what the app does not need is left out. Without
+``--handbook`` Learn links go to the published handbook in Safari, as before.
 
 ``--pages`` writes the same app as a small static site instead of one fragment (``index.html``, the
 stylesheets and scripts as files under their own paths, ``preview-flag.js``), because a public web page
@@ -214,14 +220,16 @@ DEVICE_FLAG = "device-flag.js"
 DEVICE_HANDBOOK = "https://ksullivan86.github.io/kidney-health/"
 
 
-def device_flag_js() -> str:
-    """``device-flag.js``: device mode (design note 38), and where Learn links go (the published handbook, in Safari)."""
+def device_flag_js(*, local_handbook: bool = False) -> str:
+    """``device-flag.js``: device mode (design note 38), and where Learn links go: the handbook packed in the app
+    (``learn/``, :func:`pack_handbook`), or else the published handbook, in Safari."""
     sys.path.insert(0, str(ROOT))
     try:
         from app.guidance.topics import APP_LINKS
     finally:
         sys.path.pop(0)
-    handbook = json.dumps({"url": DEVICE_HANDBOOK, "links": APP_LINKS}, ensure_ascii=False, sort_keys=True)
+    where = {"url": f"{HANDBOOK_DIR}/", "local": True, "public": DEVICE_HANDBOOK} if local_handbook else {"url": DEVICE_HANDBOOK}
+    handbook = json.dumps({**where, "links": APP_LINKS}, ensure_ascii=False, sort_keys=True)
     return (
         "/* Written by scripts/build_preview.py --device: the app inside the iPhone app runs against the in-page API\n"
         "   (js/mock/*) with no server, starts empty and keeps its data on the phone (design note 38). */\n"
@@ -308,10 +316,98 @@ def own_key_prompts() -> dict:
     return json.loads(OWN_KEY_PROMPTS.read_text(encoding="utf-8"))
 
 
-def build_device(out_dir: Path, static_dir: Path = STATIC, foods_json: Path = FOODS_JSON) -> list[Path]:
+# The handbook inside the iPhone app (owner, 2026-11-26): `pack_handbook` copies a built site into DIR/learn/.
+HANDBOOK_DIR = "learn"
+# The policy of every packed handbook page: its own files only, no inline script or style, nothing from the network.
+HANDBOOK_CSP = ("default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; "
+                "worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'")
+# What the app serves (ios/KidneyHealth/WebShell/WebAppFiles.swift mimeTypes); anything else in the site is left out.
+HANDBOOK_TYPES = {".html", ".js", ".css", ".json", ".svg", ".png", ".jpg", ".jpeg", ".webp", ".ico", ".woff2", ".txt"}
+# Left out: source maps, search for other languages (the handbook searches in English), the sitemap (only instant loading reads it,
+# and that is turned off here) and the 404 page (the app never asks a server for a page).
+HANDBOOK_SKIP = re.compile(r"(^|/)(assets/javascripts/lunr/|404\.html$|sitemap\.xml)|\.map$")
+_INLINE_SCRIPT_RE = re.compile(r"<script\b([^>]*)>(.*?)</script\s*>", re.S | re.I)
+_CONFIG_RE = re.compile(r'(<script id="__config" type="application/json">)(.*?)(</script>)', re.S)
+_CANONICAL_RE = re.compile(r'<link rel="canonical" href="[^"]*">\s*')
+_CHARSET_RE = re.compile(r'<meta charset="utf-8">', re.I)
+_REMOTE_RE = re.compile(r'''<(?:script|img|iframe|audio|video|source|embed|object)\b[^>]*\ssrc=["']?(?:https?:)?//|<link\b(?![^>]*rel="canonical")[^>]*href=["']?(?:https?:)?//''', re.I)
+
+
+def _pack_page(html: str, page: str, inline_dir: str, scripts: dict[str, str]) -> str:
+    """One handbook page for the app: each inline script as a file under ``inline_dir`` (same order, same content), no
+    instant loading, no canonical link to the build host, and a ``<meta>`` Content-Security-Policy."""
+    import hashlib
+    import posixpath
+
+    def config(m: re.Match) -> str:
+        data = json.loads(m.group(2))
+        data["features"] = [f for f in data.get("features", []) if not f.startswith("navigation.instant")]
+        return m.group(1) + json.dumps(data, ensure_ascii=False) + m.group(3)
+
+    html = _CONFIG_RE.sub(config, html)
+
+    def script(m: re.Match) -> str:
+        attrs = _attrs(f"<script{m.group(1)}>")
+        if "src" in attrs or attrs.get("type", "text/javascript") not in ("text/javascript", "module", ""):
+            return m.group(0)  # a file already, or data (application/json), which a browser never runs
+        body = m.group(2)
+        name = hashlib.sha256(body.encode("utf-8")).hexdigest()[:16] + ".js"
+        scripts[name] = body
+        rel = posixpath.relpath(f"{inline_dir}/{name}", posixpath.dirname(page) or ".")
+        kind = ' type="module"' if attrs.get("type") == "module" else ""
+        return f'<script src="{rel}"{kind}></script>'
+
+    html = _INLINE_SCRIPT_RE.sub(script, html)
+    html = _CANONICAL_RE.sub("", html)
+    if not _CHARSET_RE.search(html):
+        raise SystemExit(f"handbook page {page}: no <meta charset>")
+    html = _CHARSET_RE.sub(f'<meta charset="utf-8">\n<meta http-equiv="Content-Security-Policy" content="{HANDBOOK_CSP}">', html, count=1)
+    if re.search(r"\sstyle\s*=|<style\b", html, re.I):
+        raise SystemExit(f"handbook page {page}: an inline style, which the app's policy forbids")
+    if _REMOTE_RE.search(html):
+        raise SystemExit(f"handbook page {page}: loads something from the network")
+    return html
+
+
+def pack_handbook(site: Path, out_dir: Path) -> list[Path]:
+    """Copy the handbook built in ``site`` (``mkdocs build``, handbook/mkdocs.yml) into ``out_dir/learn/`` for the iPhone app.
+
+    Every HTML page goes through :func:`_pack_page`; the theme's inline scripts (the same few on every page) are written once
+    each to ``learn/assets/javascripts/inline/<sha-256>.js``. Only the types the app serves are copied, without source maps,
+    other languages' search, the sitemap and the 404 page. Refuses a page with an inline style or anything from the network."""
+    if not (site / "index.html").is_file():
+        raise SystemExit(f"{site}: not a built handbook (no index.html); build it with mkdocs first")
+    root = out_dir / HANDBOOK_DIR
+    inline_dir = "assets/javascripts/inline"
+    scripts: dict[str, str] = {}
+    written: list[Path] = []
+    for path in sorted(p for p in site.rglob("*") if p.is_file()):
+        rel = path.relative_to(site).as_posix()
+        if HANDBOOK_SKIP.search(rel) or path.suffix.lower() not in HANDBOOK_TYPES or any(part.startswith(".") for part in rel.split("/")):
+            continue
+        target = root / rel
+        target.parent.mkdir(parents=True, exist_ok=True)
+        if path.suffix.lower() == ".html":
+            target.write_text(_pack_page(path.read_text(encoding="utf-8"), rel, inline_dir, scripts), encoding="utf-8")
+        else:
+            target.write_bytes(path.read_bytes())
+        written.append(target)
+    for name, body in sorted(scripts.items()):
+        target = root / inline_dir / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(body, encoding="utf-8")
+        written.append(target)
+    return written
+
+
+def build_device(out_dir: Path, static_dir: Path = STATIC, foods_json: Path = FOODS_JSON, *, handbook: Path | None = None) -> list[Path]:
     """The static site of :func:`build_pages` in device mode, for the iPhone app (design note 38, steps 1 and 5), with
-    ``ai-prompts.json`` and the vendored pdf.js (the page loads it from ``/vendor/...``, the root of the app's own scheme)."""
+    ``ai-prompts.json`` and the vendored pdf.js (the page loads it from ``/vendor/...``, the root of the app's own scheme), and
+    the built handbook in ``learn/`` when ``handbook`` names one (:func:`pack_handbook`)."""
     written = build_pages(out_dir, static_dir, foods_json, device=True)
+    if handbook is not None:
+        written += pack_handbook(handbook, out_dir)
+        (out_dir / DEVICE_FLAG).write_text(device_flag_js(local_handbook=True), encoding="utf-8")
     for name in PDFJS_FILES:
         target = out_dir / PDFJS / name
         target.parent.mkdir(parents=True, exist_ok=True)
@@ -408,9 +504,13 @@ def main(argv: list[str] | None = None) -> int:
                         help="write the GitHub Pages demo (a static site) into DIR instead of one fragment")
     parser.add_argument("--device", type=Path, default=None, metavar="DIR",
                         help="write the iPhone app's copy (device mode, design note 38) into DIR")
+    parser.add_argument("--handbook", type=Path, default=None, metavar="SITE",
+                        help="with --device: pack the handbook built in SITE (mkdocs build) into DIR/learn/")
     args = parser.parse_args(argv)
+    if args.handbook is not None and args.device is None:
+        parser.error("--handbook needs --device")
     if args.device is not None:
-        files = build_device(args.device)
+        files = build_device(args.device, handbook=args.handbook)
         total = sum(f.stat().st_size for f in files)
         print(f"wrote the iPhone app's copy to {args.device} ({len(files)} files, {total:,} bytes)")
         return 0

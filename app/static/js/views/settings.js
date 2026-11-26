@@ -2768,7 +2768,8 @@
         : 'This server has no copy of the handbook and no public copy is set (your admin can set HANDBOOK_PUBLIC_URL).'));
     }
     const items = [h('li', {}, h('a', { href: url }, 'Open the handbook'),
-      L.available() ? ' (served by this server, so it works without internet)' : ' (the public copy)')];
+      L.available() ? (KH.flags.DEVICE ? ' (kept in this app, so it works without internet)' : ' (served by this server, so it works without internet)')
+        : ' (the public copy)')];
     const pub = L.publicUrl();
     if (L.available() && pub) {
       items.push(h('li', {}, 'Public copy to share: ',
