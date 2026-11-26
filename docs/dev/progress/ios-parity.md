@@ -24,3 +24,10 @@ in the ios app without the need for a server if the setting makes since without 
 Admin, accounts (password, two-step, passkeys, sign-in), phone shortcut tokens, outside AI apps (MCP), sharing with a care team
 when there is no server (nobody to share with), list apps (Grocy, KitchenOwl, Mealie) and Instacart with no server (server keys).
 Ask with no server stays off (needs the server's checks).
+
+## Build 10 (2026-11-26)
+* v0.25.0 tagged and the image published. TestFlight run 10 failed at archive: "Your account has reached the maximum number of
+  certificates". Each run's fresh Mac makes an Apple Development certificate via the API key; the leftovers filled the account.
+* Fixed in 54d5a6c: scripts/asc_ci_certs.py (stdlib + openssl), `this-run` in the workflow's EXIT trap, `old-runs` behind the
+  workflow input remove_old_ci_certificates (default false). Tests: tests/test_asc_ci_certs.py, test_ios_app TestFlight test.
+* Build 11 needs the old ones gone: the owner ticks the box (asked 2026-11-26) or removes "Created via API" certificates by hand.
