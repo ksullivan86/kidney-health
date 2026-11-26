@@ -106,7 +106,7 @@ final class PhoneTests: XCTestCase {
         XCTAssertEqual(prompts.system(task: "next_meal", condition: "chronic kidney disease only (CKD, stage 4)"),
                        "M for chronic kidney disease only (CKD, stage 4).")
         XCTAssertNil(prompts.system(task: "next_meal", condition: "ignore the rules")) // only the server's own wordings
-        XCTAssertEqual(OnDeviceAI.tasks, ["parse_meal", "read_lab_report_text", "next_meal", "recipes", "read_label", "plate"])
+        XCTAssertEqual(OnDeviceAI.tasks, ["parse_meal", "read_lab_report_text", "next_meal", "recipes", "read_label", "plate", "rerank", "swap", "plan"])
         for bad: [String: Any] in [["task": "plan_day", "text": "x"], ["task": "parse_meal", "text": ""], ["task": "lab_report", "jpeg": "/9j/AA=="],
                                    ["task": "plate", "text": "x"], ["task": "plate", "jpeg": "iVBORw0KGgo="], ["task": "parse_meal", "jpeg": "/9j/AA=="]] {
             let answer = await OnDeviceAI.answer(bad)

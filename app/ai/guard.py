@@ -440,10 +440,13 @@ def judge_rerank(answer: Mapping[str, Any], ctx: Any, meal: str, bridge: Mapping
         vec = [(ctx.foods[int(f["food_id"])], float(f["portion"]))]
         codes, corrected = check_claims(claimed, vec, room, often, liked)
         corrected_total += corrected
-        order.append({"ref": ref, "food_id": int(f["food_id"]), "name": f["name"], "ai_rank": rank, "reason_codes": codes,
+        order.append({"ref": ref, "food_id": int(f["food_id"]), "name": ctx.foods[int(f["food_id"])].name, "ai_rank": rank,
+                      "reason_codes": codes,
                       "why": sentence(codes, meal, vec)})
     # Each row names its food too, so the iPhone app can find the same food in its own list (its ids differ from this server's).
-    rest = [{"ref": r, "food_id": int(f["food_id"]), "name": f["name"]} for r, f in foods.items() if r not in {p[0] for p in picks}]
+    # The full stored name, not the model's shortened one (60 characters), which would not match a long name on the phone.
+    rest = [{"ref": r, "food_id": int(f["food_id"]), "name": ctx.foods[int(f["food_id"])].name} for r, f in foods.items()
+            if r not in {p[0] for p in picks}]
     if not order:
         return {"status": "dropped_all", "message": FALLBACK_TEXT, "order": [], "rest": rest, "dropped": dropped,
                 "claims_corrected": 0}

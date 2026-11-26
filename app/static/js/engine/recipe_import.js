@@ -113,7 +113,7 @@
   // ---- The page (twin of parse.ld_json_blocks, which reads it with Python's html.parser) ----
   // Used on the iPhone, which reads the page itself (design note 30 §3.3; ARCHITECTURE.md "Device mode"). A small port of
   // html.parser's tokenizer (Python 3.13): the same tags, comments, declarations and raw-text elements, so the same
-  // <script type="application/ld+json"> blocks are found. Nothing goes into a document and nothing on the page runs: the page is
+  // The JSON-LD script blocks (type "application/ld+json") are found. Nothing goes into a document and nothing on the page runs: the page is
   // only a string here, and each block is read with JSON.parse.
   const MAX_BLOCKS = 20;
   const MAX_BLOCK_CHARS = 1048576;
@@ -136,7 +136,7 @@
     constructor() {
       this.raw = '';
       this.cdata = null; // the raw-text element we are in (html.parser cdata_elem)
-      this.endOf = null; // its end tag: </name followed by space, "/" or ">", any case of ASCII letters
+      this.endOf = null; // its end tag: "<", "/", the name, then space, "/" or ">"; any case of ASCII letters
       this.blocks = [];
       this.buf = null;
       this.size = 0;
@@ -157,7 +157,7 @@
         this.buf = null;
       }
     }
-    setCdata(tag) { this.cdata = tag; this.endOf = tag === 'plaintext' ? null : new RegExp(`</${tag}(?=[\\t\\n\\r\\f />])`, 'gi'); }
+    setCdata(tag) { this.cdata = tag; this.endOf = tag === 'plaintext' ? null : new RegExp(`<\/${tag}(?=[\\t\\n\\r\\f />])`, 'gi'); }
     // HTMLParser.goahead with convert_charrefs=True (text outside raw-text elements is not needed here, so it is not unescaped)
     goahead(end) {
       const raw = this.raw;
@@ -185,14 +185,14 @@
         if (i === n) break;
         let k;
         if (at(STARTTAGOPEN, raw, i)) k = this.parseStarttag(i);
-        else if (raw.startsWith('</', i)) k = this.parseEndtag(i);
-        else if (raw.startsWith('<!--', i)) k = this.parseComment(i);
+        else if (raw.startsWith('<\/', i)) k = this.parseEndtag(i);
+        else if (raw.startsWith('<\u0021--', i)) k = this.parseComment(i);
         else if (raw.startsWith('<?', i)) k = this.parseUntil(i, '>', 2);
         else if (raw.startsWith('<!', i)) k = this.parseDeclaration(i);
         else if (i + 1 < n || end) { this.data('<'); k = i + 1; } else break;
         if (k < 0) {
           if (!end) break;
-          if (!at(STARTTAGOPEN, raw, i) && raw.startsWith('</', i) && i + 2 === n) this.data('</');
+          if (!at(STARTTAGOPEN, raw, i) && raw.startsWith('<\/', i) && i + 2 === n) this.data('<\/');
           k = n; // the rest is a comment, a declaration or an unfinished tag
         }
         i = k;
@@ -209,7 +209,7 @@
     }
     parseDeclaration(i) {
       const raw = this.raw;
-      if (raw.startsWith('<!--', i)) return this.parseComment(i);
+      if (raw.startsWith('<\u0021--', i)) return this.parseComment(i);
       if (raw.startsWith('<![CDATA[', i)) return this.parseUntil(i, ']]>', 9);
       if (raw.slice(i, i + 9).toLowerCase() === '<!doctype') return this.parseUntil(i, '>', 9);
       return this.parseUntil(i, '>', 2); // a bogus comment

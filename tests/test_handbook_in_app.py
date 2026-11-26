@@ -159,5 +159,5 @@ def test_the_ios_builds_pack_the_handbook():
     for workflow in ("ci.yml", "testflight.yml"):
         text = (ROOT / ".github" / "workflows" / workflow).read_text(encoding="utf-8")
         build = text.index('mkdocs build --strict -d "$RUNNER_TEMP/handbook"')
-        assert "--require-hashes --only-binary=:all: -r requirements.lock" in text[:build], workflow
+        assert '--require-hashes --only-binary=:all: -r "$RUNNER_TEMP/handbook.lock"' in text[:build], workflow  # the lock minus watchdog
         assert build < text.index('python scripts/build_preview.py --device ios/WebApp --handbook "$RUNNER_TEMP/handbook"'), workflow

@@ -145,6 +145,8 @@ final class Devices: NSObject, ObservableObject {
         let page = SFSafariViewController(url: url)
         page.dismissButtonStyle = .done
         page.delegate = self
+        page.modalPresentationStyle = .pageSheet
+        page.presentationController?.delegate = self // a swipe down closes it too, without safariViewControllerDidFinish
         await withCheckedContinuation { (next: CheckedContinuation<Void, Never>) in
             pageClosed = next
             top.present(page, animated: true)
@@ -281,7 +283,9 @@ final class Devices: NSObject, ObservableObject {
     }
 
     private func fetchAll(_ company: DeviceCompany, token: String, since: Int) async throws -> [String: Any] {
-        company == .withings ? try await withingsPages(token, since: since) : try await whoopCollections(token, since: since)
+        // An if, not a ternary: Swift refuses `try` and `await` to the right of an operator.
+        if company == .withings { return try await withingsPages(token, since: since) }
+        return try await whoopCollections(token, since: since)
     }
 
     private func withingsPages(_ token: String, since: Int) async throws -> [String: Any] {
@@ -350,7 +354,8 @@ final class Devices: NSObject, ObservableObject {
         let current = savedTokens(company)
         forget(company)
         guard let app = developerApp(company), let current else { return ["ok": true, "revoked": false] }
-        let revoked = company == .withings ? await revokeWithings(app, account: current.account) : await revokeWhoop(token)
+        let revoked: Bool
+        if company == .withings { revoked = await revokeWithings(app, account: current.account) } else { revoked = await revokeWhoop(token) }
         return ["ok": true, "revoked": revoked]
     }
 
@@ -403,6 +408,13 @@ extension Devices: ASWebAuthenticationPresentationContextProviding {
 extension Devices: SFSafariViewControllerDelegate {
     /// Done in the server's page: the page reads the status again.
     nonisolated func safariViewControllerDidFinish(_ controller: SFSafariViewController) {
+        Task { @MainActor in self.closed() }
+    }
+}
+
+extension Devices: UIAdaptivePresentationControllerDelegate {
+    /// The server's page swiped away. closed() answers once, whichever of the two comes first.
+    nonisolated func presentationControllerDidDismiss(_ presentationController: UIPresentationController) {
         Task { @MainActor in self.closed() }
     }
 }

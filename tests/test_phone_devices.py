@@ -109,8 +109,8 @@ def test_the_relay_page_only_hands_the_sign_in_back_to_the_app() -> None:
 
     folder = ROOT / "handbook" / "oauth"
     page = (folder / "index.html").read_text(encoding="utf-8")
-    assert re.findall(r"<script[^>]*>", page) == ['<script src="relay.js">']  # no inline script
-    assert "<style" not in page and " style=" not in page and re.search(r"<[^>]+\son\w+=", page) is None  # no inline style or handler
+    assert re.findall(r"<script\b[^>]*>", page, flags=re.I) == ['<script src="relay.js">']  # no inline script
+    assert "<style" not in page.lower() and " style=" not in page.lower() and re.search(r"<[^>]+\son\w+=", page, flags=re.I) is None  # no inline style or handler
     assert "default-src 'none'; script-src 'self'; style-src 'self'; base-uri 'none'; form-action 'none'" in page
     assert '<meta name="referrer" content="no-referrer">' in page and "http" not in re.sub(r"<!--.*?-->", "", page, flags=re.S).replace(
         "http-equiv", "")

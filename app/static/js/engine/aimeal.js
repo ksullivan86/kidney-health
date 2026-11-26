@@ -478,10 +478,12 @@
       const vec = [[ctx.foods.get(Number(f.food_id)), Number(f.portion)]];
       const [codes, corrected] = checkClaims(claimed, vec, room, often, liked);
       correctedTotal += corrected;
-      order.push({ ref, food_id: Number(f.food_id), name: f.name, ai_rank: i + 1, reason_codes: codes, why: sentence(codes, meal, vec) });
+      order.push({ ref, food_id: Number(f.food_id), name: ctx.foods.get(Number(f.food_id)).name, ai_rank: i + 1, reason_codes: codes, why: sentence(codes, meal, vec) });
     });
     const picked = new Set(picks.map(([ref]) => ref));
-    const rest = [...foods].filter(([ref]) => !picked.has(ref)).map(([ref, f]) => ({ ref, food_id: Number(f.food_id), name: f.name }));
+    // The full stored name, not the model's shortened one (as guard.judge_rerank).
+    const rest = [...foods].filter(([ref]) => !picked.has(ref))
+      .map(([ref, f]) => ({ ref, food_id: Number(f.food_id), name: ctx.foods.get(Number(f.food_id)).name }));
     if (!order.length) return { status: 'dropped_all', message: M.AI_FALLBACK, order: [], rest, dropped, claims_corrected: 0 };
     return { status: 'ok', ...label(providerLabel, model), order, rest, dropped, claims_corrected: correctedTotal };
   }

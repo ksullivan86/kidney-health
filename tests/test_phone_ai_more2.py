@@ -130,3 +130,15 @@ def test_the_servers_ai_order_rows_name_their_food() -> None:
     assert rows and all(isinstance(r["name"], str) and r["name"] for r in rows)
     assert guard.judge_rerank({"status": "refused", "refusal": "outside_scope", "order": []}, None, "lunch", {}, provider_label="x",
                               model="y")["status"] == "refused"
+
+
+def test_ai_order_rows_carry_the_full_stored_name() -> None:
+    """Audit, 2026-11-26: the bridge's names are cut to 60 characters for the model, so a long name would not match on the phone
+    and its food would lose its rank. The rows carry the stored name, on the server and in the JS twin alike."""
+    import inspect
+
+    src = inspect.getsource(guard.judge_rerank)
+    assert src.count("ctx.foods[int(f[\"food_id\"])].name") == 2 and '"name": f["name"]' not in src
+    twin = (ROOT / "app" / "static" / "js" / "engine" / "aimeal.js").read_text(encoding="utf-8")
+    body = twin[twin.index("function judgeRerank("):twin.index("return { status: 'ok', ...label(providerLabel, model), order, rest")]
+    assert body.count("ctx.foods.get(Number(f.food_id)).name") == 2 and "name: f.name" not in body

@@ -326,8 +326,8 @@ HANDBOOK_TYPES = {".html", ".js", ".css", ".json", ".svg", ".png", ".jpg", ".jpe
 # Left out: source maps, search for other languages (the handbook searches in English), the sitemap (only instant loading reads it,
 # and that is turned off here) and the 404 page (the app never asks a server for a page).
 HANDBOOK_SKIP = re.compile(r"(^|/)(assets/javascripts/lunr/|404\.html$|sitemap\.xml)|\.map$")
-_INLINE_SCRIPT_RE = re.compile(r"<script\b([^>]*)>(.*?)</script\s*>", re.S | re.I)
-_CONFIG_RE = re.compile(r'(<script id="__config" type="application/json">)(.*?)(</script>)', re.S)
+_INLINE_SCRIPT_RE = re.compile(r"<script\b([^>]*)>(.*?)</script\b[^>]*>", re.S | re.I)  # any end tag HTML accepts
+_CONFIG_RE = re.compile(r'(<script id="__config" type="application/json">)(.*?)(</script\b[^>]*>)', re.S | re.I)
 _CANONICAL_RE = re.compile(r'<link rel="canonical" href="[^"]*">\s*')
 _CHARSET_RE = re.compile(r'<meta charset="utf-8">', re.I)
 _REMOTE_RE = re.compile(r'''<(?:script|img|iframe|audio|video|source|embed|object)\b[^>]*\ssrc=["']?(?:https?:)?//|<link\b(?![^>]*rel="canonical")[^>]*href=["']?(?:https?:)?//''', re.I)

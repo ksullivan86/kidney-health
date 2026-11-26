@@ -20,6 +20,7 @@ final class Dictation: NSObject {
     private let engine = AVAudioEngine()
     private var request: SFSpeechAudioBufferRecognitionRequest?
     private var task: SFSpeechRecognitionTask?
+    private var recognizer: SFSpeechRecognizer? // kept while listening: a recognizer let go of can end the task early
     private weak var sheet: UIViewController?
     private let model = DictationModel()
     private var turn = 0
@@ -96,6 +97,7 @@ final class Dictation: NSObject {
         input.installTap(onBus: 0, bufferSize: 1024, format: input.outputFormat(forBus: 0), block: Self.tap(request))
         engine.prepare()
         try engine.start()
+        self.recognizer = recognizer
         task = recognizer.recognitionTask(with: request, resultHandler: Self.results(self, turn: turn))
         let mine = turn
         Task { @MainActor [weak self] in // the web app's limit: 60 seconds, then it stops by itself
@@ -163,8 +165,11 @@ final class Dictation: NSObject {
         task?.cancel()
         task = nil
         request = nil
+        recognizer = nil
         if let observer = resignObserver { NotificationCenter.default.removeObserver(observer) }
         resignObserver = nil
+        // Back to playing sound, so Read aloud and other sound work after dictating; then let other apps' sound resume.
+        try? AVAudioSession.sharedInstance().setCategory(.playback, mode: .default)
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         sheet?.dismiss(animated: true)
         sheet = nil
