@@ -214,7 +214,8 @@ let dumped = null;
   await fill(api);
   const s = await S.sendNow();
   ok(() => assert.equal(s.outcome, 'not_paired'));
-  ok(() => assert.deepEqual([...new Set(plain(asked))], ['serverInfo']));
+  // `reminders` plans this iPhone's own notifications after each save (js/mock/phone_reminders.js): it never reaches a server.
+  ok(() => assert.deepEqual([...new Set(plain(asked))].filter((k) => k !== 'reminders'), ['serverInfo']));
 }
 
 // 6. Skipped rows (counts only): the rows that could have been skipped are tried in smaller groups; the one the server cannot place
