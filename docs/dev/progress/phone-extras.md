@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # phone-extras (owner request 2026-11-26)
 
@@ -29,3 +29,10 @@ Three device-mode gaps, done in the order 1, 3, 2.
 ## Notes
 * Python venv: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/venv-new/bin/python
 * Server zip: app/account.py build_export; CSV writer `_csv` + `app/log.csv_safe`.
+
+## Final state
+* All three done and pushed. device_mode.py ask/no-mic checks are in HEAD (landed with 6abf889).
+* The full pytest run here hit the full disk (OSError in test_zip_reader); the orchestrator runs the full suite.
+  Targeted runs passed: test_export_vectors, test_demo_local_ui, test_phone_dictation, test_ask_voice_ui, test_handbook_in_app,
+  test_ios_app (my hunks); node export_vectors.mjs, run_vectors.mjs; e2e demo_local --only export, device_mode (172 passed).
+* Swift (Dictation.swift, HelpPages.swift, HelpPagesTests.swift) compiles only in CI: check the ios-app job's first run.
