@@ -62,7 +62,9 @@ jobs:
           NO_MKDOCS_2_WARNING: "true"
         run: |
           set -euo pipefail
-          python -m pip install --disable-pip-version-check --no-deps --require-hashes --only-binary=:all: -r requirements.lock
+          # watchdog is for `mkdocs serve` only and has no macOS wheel for Python 3.14 (scripts/lock_without.py)
+          python ../scripts/lock_without.py requirements.lock "$RUNNER_TEMP/handbook.lock" watchdog
+          python -m pip install --disable-pip-version-check --no-deps --require-hashes --only-binary=:all: -r "$RUNNER_TEMP/handbook.lock"
           mkdocs build --strict -d "$RUNNER_TEMP/handbook"
       - name: Pack the web app and the handbook into the iPhone app (design note 38; scripts/build_preview.py --device)
         run: python scripts/build_preview.py --device ios/WebApp --handbook "$RUNNER_TEMP/handbook"
@@ -99,13 +101,13 @@ jobs:
           export ASC_KEY_PATH="$key"
           # However this step ends: remove the development certificate this run made, then the key file.
           cleanup() {
-            python scripts/asc_ci_certs.py this-run || echo "::warning::Could not remove the development certificate of this run"
+            python -I -S scripts/asc_ci_certs.py this-run || echo "::warning::Could not remove the development certificate of this run"
             rm -f "$key"
           }
           trap cleanup EXIT
           umask 077
           printf '%s\n' "$ASC_KEY_P8" > "$key"
-          if [ "$REMOVE_OLD" = "true" ]; then python scripts/asc_ci_certs.py old-runs; fi
+          if [ "$REMOVE_OLD" = "true" ]; then python -I -S scripts/asc_ci_certs.py old-runs; fi
           auth=(-allowProvisioningUpdates
                 -authenticationKeyPath "$key"
                 -authenticationKeyID "$ASC_KEY_ID"

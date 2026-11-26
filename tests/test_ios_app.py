@@ -144,11 +144,11 @@ def test_testflight_runs_by_hand_from_main_with_the_key_only_where_it_is_used():
     # the key file is private to the job and removed however the job ends
     assert "umask 077" in code and "trap cleanup EXIT" in code
     cleanup = code[code.index("cleanup() {"):code.index("trap cleanup EXIT")]
-    assert 'rm -f "$key"' in cleanup and "asc_ci_certs.py this-run" in cleanup
+    assert 'rm -f "$key"' in cleanup and "python -I -S scripts/asc_ci_certs.py this-run" in cleanup  # no site packages near the key
     assert code.index("trap cleanup EXIT") < code.index('> "$key"')
     # removing the leftovers of earlier runs only when the person starting the run asks for it
     assert "remove_old_ci_certificates:" in code and "default: false" in code
-    assert 'if [ "$REMOVE_OLD" = "true" ]; then python scripts/asc_ci_certs.py old-runs; fi' in code
+    assert 'if [ "$REMOVE_OLD" = "true" ]; then python -I -S scripts/asc_ci_certs.py old-runs; fi' in code
     assert "-allowProvisioningUpdates" in code and "app-store-connect" in code and 'CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER"' in code
 
 

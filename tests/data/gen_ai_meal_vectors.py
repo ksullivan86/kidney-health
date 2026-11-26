@@ -148,7 +148,7 @@ def ref(r: str, *codes: str) -> dict:
 
 
 def mode_cases(base: Any, real: Any, rid: Any) -> list[tuple[str, dict[str, Any], dict[str, Any]]]:
-    potato, oj, chicken = rid("Potato, baked, with skin"), rid("Orange juice"), rid("Chicken breast, roasted, skinless")
+    potato, oj = rid("Potato, baked, with skin"), rid("Orange juice")
     breakfast_eaten = real(day=[G.entry(1, rid("Egg, scrambled"), "breakfast")])
     swap_potato = {"meal": "dinner", "swap": [potato, 1.0, None]}
     return [

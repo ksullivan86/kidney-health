@@ -222,9 +222,22 @@ final class Devices: NSObject, ObservableObject {
     }
 
     /// A working access token: refreshed first when under 5 minutes are left, or when `force`. The new pair is kept at once.
+    /// One refresh per company at a time: a refresh token works once, so a second refresh started meanwhile (Sync now during
+    /// a background sync) would be refused and the person signed out. A caller that finds one running waits for its token.
     private func access(_ company: DeviceCompany, force: Bool = false) async throws -> String {
-        guard let app = developerApp(company), var current = savedTokens(company) else { throw Failure.notConnected }
+        guard developerApp(company) != nil, let current = savedTokens(company) else { throw Failure.notConnected }
+        if let pending = refreshing[company] { return try await pending.value }
         if !force && current.expiresAt - Self.now() > 300 { return current.access }
+        let task = Task { try await self.refreshNow(company) }
+        refreshing[company] = task
+        defer { refreshing[company] = nil }
+        return try await task.value
+    }
+
+    private var refreshing: [DeviceCompany: Task<String, Error>] = [:]
+
+    private func refreshNow(_ company: DeviceCompany) async throws -> String {
+        guard let app = developerApp(company), var current = savedTokens(company) else { throw Failure.notConnected }
         var request = URLRequest(url: company.tokenURL)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")

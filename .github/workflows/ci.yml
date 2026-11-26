@@ -137,7 +137,9 @@ jobs:
           NO_MKDOCS_2_WARNING: "true"
         run: |
           set -euo pipefail
-          python -m pip install --disable-pip-version-check --no-deps --require-hashes --only-binary=:all: -r requirements.lock
+          # watchdog is for `mkdocs serve` only and has no macOS wheel for Python 3.14 (scripts/lock_without.py)
+          python ../scripts/lock_without.py requirements.lock "$RUNNER_TEMP/handbook.lock" watchdog
+          python -m pip install --disable-pip-version-check --no-deps --require-hashes --only-binary=:all: -r "$RUNNER_TEMP/handbook.lock"
           mkdocs build --strict -d "$RUNNER_TEMP/handbook"
       - name: Pack the web app and the handbook into the iPhone app (design note 38; scripts/build_preview.py --device)
         run: python scripts/build_preview.py --device ios/WebApp --handbook "$RUNNER_TEMP/handbook"

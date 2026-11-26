@@ -127,3 +127,13 @@ def test_the_relay_page_only_hands_the_sign_in_back_to_the_app() -> None:
     core = (ROOT / "ios" / "KidneyHealthCore" / "Sources" / "KidneyHealthCore" / "DeviceLinks.swift").read_text(encoding="utf-8")
     relay = re.search(r'relayURL = "([^"]+)"', core).group(1)
     assert urlsplit(relay).scheme == "https" and urlsplit(relay).path.endswith("/oauth/")
+
+
+def test_one_token_refresh_per_company_at_a_time() -> None:
+    """Audit, 2026-11-26: a refresh token works once. Sync now during a background sync must not start a second refresh, which
+    the company would refuse and the app would read as "connect again"."""
+    app = _code("KidneyHealth/Services/Devices.swift")
+    assert "private var refreshing: [DeviceCompany: Task<String, Error>] = [:]" in app
+    access = app[app.index("private func access("):app.index("private func refreshNow(")]
+    assert access.index("if let pending = refreshing[company] { return try await pending.value }") < access.index("refreshing[company] = task")
+    assert "defer { refreshing[company] = nil }" in access
