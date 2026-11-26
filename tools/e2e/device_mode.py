@@ -33,6 +33,9 @@ stands in for the iPhone app's message handlers. At 375x812 light and 1280x800 d
   the note is plain text and marked read with the version shown, Delete reaches the server and no note text is kept; Settings →
   Care team lists who is on it, read-only, and says to change it in the server's web app; No thanks on Plan; offline says so; with
   no server there is no Care team section.
+* a recipe page read on the iPhone with no server (owner, 2026-11-26; 375x812 light): the sheet says this iPhone reads the page
+  and only the link goes out; the app is asked for the link only; the review says where it was read; the page's scripts never run;
+  the recipe saves with its link.
 
 Nothing leaves the machine. Prints PASS / FAIL lines and writes ``<out>/report.json``; exit status 1 on any failure.
 """
@@ -263,6 +266,7 @@ def no_server_ask(page, base: str, tag: str) -> None:
     check(f"[{tag}] Ask says it uses the server's AI, not the demo's text",
           "Ask uses your Kidney Health server's AI." in text and "installed app" not in text and "preview" not in text, text[:200])
     check(f"[{tag}] and there is nothing to type into", page.locator("#ask-composer").is_hidden())
+    check(f"[{tag}] and no microphone", page.locator("#ask-mic").count() == 0 or page.locator("#ask-mic").is_hidden())
     page.goto(f"{base}/index.html#add")
     page.wait_for_selector("#view-add:not([hidden])", timeout=30000)
     page.wait_for_selector("#ai-photo-where", timeout=10000)
@@ -302,6 +306,8 @@ ASK = ("window.__kh = { copies: [], phone: [], api: [], chats: [] };"
        " : r.kind === 'serverSync' ? { ok: true, status: 200, json: JSON.stringify({ added: {}, already_there: {}, skipped: { food_not_found: 0, day_full: 0 } }) }"
        " : r.kind === 'serverApi' ? window.__kh.gateway(r)"
        " : r.kind === 'aiStatus' ? { ok: true, available: false, reason: 'not_eligible' }"
+       " : r.kind === 'speechStatus' ? { ok: true, available: true, reason: null }"
+       " : r.kind === 'dictate' ? (window.__kh.dictated = (window.__kh.dictated || 0) + 1, { ok: true, text: 'Can I have a banana now?' })"
        " : { error: 'off_off', message: 'off' } } } };")
 
 
@@ -335,6 +341,14 @@ def ask_walk(browser, base: str) -> None:
     check(f"[{tag}] Ask offers the conversation", page.locator("#ask-demo").is_hidden() and page.locator("#ask-input").is_visible())
     line = page.locator("#ask-trust-line").inner_text()
     check(f"[{tag}] and says it always asks before saving", "always asks before it saves" in line, line)
+    # Speaking the question (owner, 2026-11-26): the app works the words out on the iPhone; they go into the box, nothing is sent.
+    page.wait_for_selector("#ask-mic:not([hidden])", timeout=10000)
+    page.click("#ask-mic")
+    page.wait_for_function("() => document.querySelector('#ask-input').value.length > 0", timeout=10000)
+    check(f"[{tag}] the microphone asks the app to listen and puts the words in the box",
+          page.evaluate("window.__kh.dictated") == 1 and page.input_value("#ask-input") == "Can I have a banana now?", page.input_value("#ask-input"))
+    check(f"[{tag}] and nothing is sent until Send", page.evaluate("window.__kh.chats.length") == 0
+          and "Nothing has been sent to the AI." in page.inner_text("#ask-voice-line"), page.inner_text("#ask-voice-line"))
     page.fill("#ask-input", "I had a banana for breakfast")
     page.click("#ask-send")
     page.wait_for_selector("#ask-thread .ask-pending", timeout=10000)
@@ -931,6 +945,81 @@ def care_walk(browser, base: str) -> None:
     ctx.close()
 
 
+# A recipe page read on this iPhone with no server (owner, 2026-11-26; design note 30 §3). The stand-in app says it reads pages
+# (services.recipePage) and answers fetchRecipePage with a page whose JSON-LD holds the recipe, beside a script and an onerror that
+# must never run.
+RECIPE_PAGE = ("<!DOCTYPE html><html><head><title>Banana rice</title><script>window.pageScriptRan = true;</script>"
+               "<script type=\"application/ld+json\">{\"@context\": \"https://schema.org\", \"@type\": \"Recipe\", \"name\": \"Banana rice\","
+               " \"recipeYield\": \"2\", \"recipeIngredient\": [\"1 medium banana\", \"2 cups cooked white rice\"],"
+               " \"recipeInstructions\": [{\"@type\": \"HowToStep\", \"text\": \"Cook the rice.\"}]}</script></head>"
+               "<body><img src=\"x\" onerror=\"window.pageScriptRan = true\"><h1>Banana rice</h1></body></html>")
+RECIPE_STUB = ("window.__kh = { copies: [], phone: [], asked: [] };"
+               f"window.__kh.page = {json.dumps(RECIPE_PAGE)};"
+               "window.webkit = { messageHandlers: { safetyCopy: { postMessage: (t) => window.__kh.copies.push(String(t)) },"
+               " phone: { postMessage: (m) => window.__kh.phone.push(String(m)) },"
+               " bridge: { postMessage: async (r) => { window.__kh.asked.push(JSON.parse(JSON.stringify(r)));"
+               " return r.kind === 'services' ? { ok: true, off: false, usda: false, scan: false, recipePage: true }"
+               " : r.kind === 'serverInfo' ? { ok: true, paired: false }"
+               " : r.kind === 'fetchRecipePage' ? { ok: true, html: window.__kh.page }"
+               " : r.kind === 'aiStatus' ? { ok: true, available: false, reason: 'not_eligible' }"
+               " : { error: 'off_off', message: 'off' }; } } } };")
+
+
+def recipe_walk(browser, base: str) -> None:
+    """Import a recipe from a web page on the iPhone with no server: the sheet says the phone reads the page and only the link goes
+    out; the app is asked for that link only; the lines are matched with the phone's foods; the review says where it was read; the
+    page's own scripts never run and nothing of it enters the document; the recipe saves."""
+    tag = "recipe page"
+    ctx = browser.new_context(viewport={"width": 375, "height": 812}, color_scheme="light")
+    ctx.add_init_script(RECIPE_STUB)
+    page = ctx.new_page()
+    errors: list[str] = []
+    others: list[str] = []
+    page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.on("request", lambda r: others.append(r.url) if not r.url.startswith(base) else None)
+    page.goto(f"{base}/index.html#plan")
+    page.wait_for_selector("#view-plan:not([hidden])", timeout=30000)
+    page.wait_for_timeout(800)
+    page.evaluate("KH.request('PUT', '/api/device/setup', { done: true }).then(() => KH.mock.local.flush())")
+    page.reload()
+    page.wait_for_selector("#view-plan:not([hidden])", timeout=30000)
+    page.evaluate("KH.recipeImportView.open({})")
+    page.wait_for_selector("#ri-url", state="visible", timeout=10000)
+    hint = page.locator("#ri-url-hint").inner_text()
+    check(f"[{tag}] the sheet says this iPhone reads the page and only the link goes out",
+          "This iPhone opens the page" in hint and "Only the link goes to that site." in hint, hint)
+    check(f"[{tag}] pasting says nothing leaves this iPhone", "Nothing leaves this iPhone." in page.locator("#ri-text-hint").inner_text())
+    page.fill("#ri-url", "https://recipes.example.com/banana-rice")
+    page.click("#ri-read-page")
+    page.wait_for_selector("#ri-lines .ri-line", timeout=15000)
+    asked = [r for r in page.evaluate("window.__kh.asked") if r["kind"] == "fetchRecipePage"]
+    check(f"[{tag}] the app is asked for the link only", asked == [{"kind": "fetchRecipePage", "url": "https://recipes.example.com/banana-rice"}],
+          json.dumps(asked))
+    check(f"[{tag}] no server is asked", not any(r["kind"] == "serverApi" for r in page.evaluate("window.__kh.asked")))
+    check(f"[{tag}] two ingredient lines", page.locator("#ri-lines .ri-line").count() == 2)
+    check(f"[{tag}] the name is the page's", page.input_value("#ri-review-name") == "Banana rice")
+    read_on = page.locator("#ri-read-on").inner_text() if page.locator("#ri-read-on").count() else ""
+    check(f"[{tag}] the review says it was read on this iPhone", "Read on this iPhone." in read_on, read_on)
+    check(f"[{tag}] the page's scripts never ran", page.evaluate("window.pageScriptRan") is None)
+    check(f"[{tag}] nothing of the page entered the document",
+          page.evaluate("document.querySelectorAll('script[type=\"application/ld+json\"], img[onerror]').length") == 0)
+    for i in range(2):
+        page.check(f"#ri-ok-{i}")
+    page.wait_for_function("!document.querySelector('#recipe-import-go').disabled", timeout=5000)
+    page.click("#recipe-import-go")
+    page.wait_for_selector("#sheet-recipe-import", state="hidden", timeout=10000)
+    meals = page.evaluate("KH.request('GET', '/api/meals')")
+    saved = [m for m in (meals if isinstance(meals, list) else meals.get("meals", meals.get("items", []))) if m.get("name") == "Banana rice"]
+    check(f"[{tag}] the recipe is saved with the page's link",
+          len(saved) == 1 and saved[0].get("source_url") == "https://recipes.example.com/banana-rice", json.dumps(saved)[:200])
+    over = page.evaluate("document.documentElement.scrollWidth > window.innerWidth + 1")
+    check(f"[{tag}] no sideways scroll", not over)
+    check(f"[{tag}] no request to another host", not others, "; ".join(others[:3]))
+    check(f"[{tag}] no console or page error", not errors, "; ".join(errors[:3]))
+    ctx.close()
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description=__doc__.split("\n\n", 1)[0])
     ap.add_argument("--out", type=Path, default=OUT)
@@ -955,6 +1044,7 @@ def main(argv: list[str] | None = None) -> int:
                 phone_ai_order_walk(browser, base)
                 reminders_walk(browser, base)
                 care_walk(browser, base)
+                recipe_walk(browser, base)
             finally:
                 browser.close()
     finally:
