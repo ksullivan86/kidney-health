@@ -35,9 +35,13 @@
   function headingText(n) { return n === 1 ? '1 suggestion from your Care team' : `${n} suggestions from your Care team`; }
   /** What Add to my plan says when it is done. */
   function addedText(res) {
-    const n = (res.entries || []).length;
+    const waiting = Number(res.waiting) || 0; // the iPhone app: added on the server, not on this iPhone yet (js/mock/server_care.js)
+    const n = (res.entries || []).length + waiting;
     const added = `${n} planned ${n === 1 ? 'food' : 'foods'} added to your plan`;
-    return res.skipped ? `${added}. ${res.skipped} ${res.skipped === 1 ? 'food was' : 'foods were'} left out.` : added;
+    const left = res.skipped ? `${added}. ${res.skipped} ${res.skipped === 1 ? 'food was' : 'foods were'} left out.` : added;
+    if (!waiting) return left;
+    const who = waiting === n ? (n === 1 ? 'It reaches' : 'They reach') : `${waiting} of them ${waiting === 1 ? 'reaches' : 'reach'}`;
+    return `${left.replace(/\.$/, '')}. ${who} this iPhone with the next sync.`;
   }
 
   function authOn() { return ((state.authStatus || {}).auth_mode || 'local') !== 'none'; }

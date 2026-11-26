@@ -106,7 +106,7 @@ const about = { json: { account: 'acct-1', api_version: 1, features: { sync: fal
   const read = both.KH.mock.serverApi.readAbout;
   ok(() => assert.deepEqual(plain(read({ usda: false, ai: { routes: { describe: { available: true }, labs: false } } })),
     { account: null, version: null, sync: null, usda: false, barcode: null, ai: null, aiRoutes: { describe: true, labs: false },
-      recipe: null, instacart: null, listSync: null, changes: null }));
+      recipe: null, instacart: null, listSync: null, changes: null, careTeam: null }));
   ok(() => assert.equal(read({ sync: { gateway: true, changes: false } }).changes, false), 'the change feed, as the server says it (note 39 step 5)');
   ok(() => assert.equal(read({ features: { changes: true } }).changes, true));
   // an add-only token keeps today's behaviour: USDA with the phone's own key

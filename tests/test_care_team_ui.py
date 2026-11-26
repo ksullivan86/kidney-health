@@ -140,7 +140,11 @@ def test_the_pure_helpers():
         sentLine: C.sentLine({{ date: '2026-11-03', meal: 'dinner', items: [{{ name: 'Rice' }}, {{ name: 'Apple' }}], answer: 'declined' }}),
         sgTitle: G.titleText({{ from_name: 'Jordan', meal: 'dinner', date: '2026-11-03' }}),
         sgItems: [G.itemText({{ name: 'Rice', servings: 1, serving_desc: '1 cup', available: true }}), G.itemText({{ name: 'Soup', servings: 2, serving_desc: null, available: false }})],
-        sgHead: [G.headingText(1), G.headingText(3)], sgAdded: [G.addedText({{ entries: [1, 2], skipped: 0 }}), G.addedText({{ entries: [1], skipped: 1 }})],
+        sgHead: [G.headingText(1), G.headingText(3)], sgAdded: [G.addedText({{ entries: [1, 2], skipped: 0 }}), G.addedText({{ entries: [1], skipped: 1 }}),
+                 G.addedText({{ entries: [], skipped: 0, waiting: 2 }}), G.addedText({{ entries: [1], skipped: 1, waiting: 1 }}),
+                 G.addedText({{ entries: [], skipped: 0, waiting: 1 }})],
+        device: [S.deviceLine({{ name: 'Dee', role: 'clinician', areas: ['labs', 'food'] }}, true), S.deviceLine({{ name: 'Ana', role: 'care_helper', areas: [] }}, false),
+                 S.deviceLine({{ name: 'Jo', role: 'custom', areas: [] }}, true)],
         roleOf: [S.roleOf({{}}), S.roleOf({{ may_plan: true }}), S.roleOf({{ may_plan: true, may_log: true }}), S.roleOf({{ may_suggest: true }})],
         doText: [S.doText({{}}), S.doText({{ may_plan: true, may_log: true, may_suggest: true }})],
         needsFood: [S.needsFood({{ areas: ['labs'] }}, {{ may_log: true }}), S.needsFood({{ areas: ['food'] }}, {{ may_log: true }}), S.needsFood({{ areas: ['labs'] }}, {{}})],
@@ -170,7 +174,12 @@ def test_the_pure_helpers():
     assert got["sgTitle"] == "Jordan suggests dinner on Tue, Nov 3"
     assert got["sgItems"] == ["Rice, 1 serving of 1 cup", "Soup, 2 servings: no longer on your list, so it is left out"]
     assert got["sgHead"] == ["1 suggestion from your Care team", "3 suggestions from your Care team"]
-    assert got["sgAdded"] == ["2 planned foods added to your plan", "1 planned food added to your plan. 1 food was left out."]
+    assert got["sgAdded"] == ["2 planned foods added to your plan", "1 planned food added to your plan. 1 food was left out.",
+                              # the iPhone app: added on the server, on this iPhone after the next sync
+                              "2 planned foods added to your plan. They reach this iPhone with the next sync.",
+                              "2 planned foods added to your plan. 1 food was left out. 1 of them reaches this iPhone with the next sync.",
+                              "1 planned food added to your plan. It reaches this iPhone with the next sync."]
+    assert got["device"] == ["Dee, Clinician: food log and lab results", "Ana, Care helper", "Jo, Custom"]
     assert got["roleOf"] == ["viewer", "care_helper", "caregiver", "custom"]
     assert got["doText"] == [None, "may: planning, logging food and suggestions"]
     assert got["needsFood"] == [True, False, False]

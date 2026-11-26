@@ -13,7 +13,8 @@
      about filled in from what you are looking at.
 
    Notes are plain text: every text goes in with h() children (textContent), never as HTML, and nothing in a note is made into
-   a link. Notes never reach the AI. The demo answers from js/mock/care.js (Dee, a Clinician, has written you one note). */
+   a link. Notes never reach the AI. The demo answers from js/mock/care.js (Dee, a Clinician, has written you one note); the iPhone
+   app paired with a server answers from that server only while it can be reached (js/mock/server_care.js). */
 (() => {
   'use strict';
   const KH = window.KH;
@@ -173,7 +174,9 @@
       got = S.source ? await A.written(S.source.id) : await A.mine(older && S.notes.length ? S.notes[S.notes.length - 1].id : null);
     } catch (err) {
       if (req !== S.req) return;
-      clear(list).append(h('p', { class: 'form-error' }, `The notes could not be loaded (${errText(err)}).`));
+      // The iPhone app says why itself: its server cannot be reached, or the token cannot read notes (js/mock/server_care.js).
+      const why = KH.flags.DEVICE && (err.status === 503 || err.status === 409) ? errText(err) : `The notes could not be loaded (${errText(err)}).`;
+      clear(list).append(h('p', { class: 'form-error' }, why));
       if (err.status === 404 && S.source) list.append(h('p', { class: 'hint' }, `${S.source.name} no longer lets you write notes.`));
       return;
     }

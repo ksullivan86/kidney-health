@@ -718,7 +718,10 @@
   $('#profile-open-care').addEventListener('click', () => KH.views.settings.openSection('set-care'));
 
   router.register('profile', () => {
-    $('#profile-care').hidden = ((state.authStatus || {}).auth_mode || 'local') === 'none';
+    $('#profile-care').hidden = ((state.authStatus || {}).auth_mode || 'local') === 'none' || !!KH.flags.DEVICE;
+    if (KH.flags.DEVICE) { // the iPhone app: only while it is paired with a server, where the Care team lives (js/mock/server_care.js)
+      KH.request('GET', '/api/device/care-team').then((got) => { $('#profile-care').hidden = !(got && got.paired); }).catch(() => {});
+    }
     loadBodyHints();
     loadHeightUnit();
     loadWeightUnit();

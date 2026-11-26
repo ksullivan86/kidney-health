@@ -71,6 +71,11 @@
     return found ? NOTE_WORD(found[0]) : null;
   }
   const withRole = (x) => ({ ...x, role: roleOf(x) });
+  // The person's own notes and suggestions. In the iPhone app paired with a server they are the server's (js/mock/server_care.js
+  // answers first); everywhere else the handler here answers.
+  const mineRoute = (method, pattern, handler) => route(method, pattern, function (ctx) {
+    return M.serverCare ? M.serverCare.answer(this, ctx, handler) : handler.call(this, ctx);
+  });
   const switchesOf = (x) => Object.fromEntries(SWITCHES.map((k) => [k, !!x[k]]));
 
   Object.assign(MockApi.prototype, {
@@ -434,13 +439,13 @@
     return { suggestions: this._careSuggestions().filter((sg) => sg.share_id === p.id && sg.to !== 'me').slice().reverse().slice(0, 50).map((sg) => this._sentView(sg, w)) };
   });
   const mine = (api) => { api._careExpire(); return api._careSuggestions().filter((sg) => sg.to === 'me' && !sg.answer); };
-  route('GET', '/api/me/suggestions', function () {
+  mineRoute('GET', '/api/me/suggestions', function () {
     this._currentUser();
     const me = { entries: this._entries, profile: this._profile, templates: this._templates };
     return { enabled: true, suggestions: mine(this).slice().sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id)).map((sg) => ({
       ...this._sentView(sg, me), share_id: sg.share_id, from_name: sg.from_name, fit: this._careFit(me, sg.date, sg.meal, sg.items) })) };
   });
-  route('POST', /^\/api\/me\/suggestions\/(\d+)\/(accept|decline)$/, function ({ ids }) {
+  mineRoute('POST', /^\/api\/me\/suggestions\/(\d+)\/(accept|decline)$/, function ({ ids }) {
     this._currentUser();
     const sg = mine(this).find((x) => x.id === Number(ids[0]));
     if (!sg) fail(404, NO_SUGGESTION);
@@ -538,7 +543,7 @@
         from: n.author_name, body: n.body, created_at: n.created_at, edited_at: n.edited_at, read_at: n.read_at }));
     },
   });
-  route('GET', '/api/me/notes', function ({ query }) {
+  mineRoute('GET', '/api/me/notes', function ({ query }) {
     this._currentUser();
     const limit = query.get('limit') == null ? NOTE_MAX_PAGE : Number(query.get('limit'));
     if (!Number.isInteger(limit) || limit < 1 || limit > NOTE_MAX_PAGE) fail(400, `limit: Input should be less than or equal to ${NOTE_MAX_PAGE}`);
@@ -547,7 +552,7 @@
     return { enabled: true, unread: all.filter((n) => !n.read_at).length,
       notes: all.filter((n) => before == null || n.id < before).slice(0, limit).map(forMeView) };
   });
-  route('POST', /^\/api\/me\/notes\/(\d+)\/read$/, function ({ ids, header }) {
+  mineRoute('POST', /^\/api\/me\/notes\/(\d+)\/read$/, function ({ ids, header }) {
     this._currentUser();
     const T = NOTE_TEXTS_FOR('');
     if (header('If-Match') == null) fail(428, T.send_version);
@@ -558,7 +563,7 @@
     n.read_at = new Date().toISOString();
     return null;
   });
-  route('DELETE', /^\/api\/me\/notes\/(\d+)$/, function ({ ids }) {
+  mineRoute('DELETE', /^\/api\/me\/notes\/(\d+)$/, function ({ ids }) {
     this._currentUser();
     const s = this._care();
     if (!s.notes.some((x) => x.id === Number(ids[0]) && x.to === 'me')) fail(404, NOTE_TEXTS_FOR('').no_note);
