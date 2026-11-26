@@ -147,6 +147,19 @@ def walk(browser, base: str, width: int, height: int, scheme: str) -> None:
     me = page.evaluate("KH.request('GET', '/api/auth/status')")
     user = me.get("user") or {}
     check(f"[{tag}] one person, not an admin", user.get("username") == "me" and user.get("role") == "user", json.dumps(user)[:120])
+    # Profile's weight in the person's unit (user.units.weight, pounds by default) answered by the phone's own settings; kept in kg.
+    put = page.evaluate("KH.request('PUT', '/api/profile', { weight_kg: 70.23 }).then(() => KH.loadProfile(true)).then((p) => p.weight_kg, (e) => String(e && (e.detail || e.message)))")
+    page.goto(f"{base}/index.html#profile")
+    page.wait_for_selector("#view-profile:not([hidden])", timeout=30000)
+    for _ in range(100):
+        if page.input_value("#pf-weight"):
+            break
+        page.wait_for_timeout(100)
+    unit = page.evaluate("KH.request('GET', '/api/me/settings')")["settings"]["user.units.weight"]
+    check(f"[{tag}] Profile shows the weight in pounds, the phone's default unit",
+          unit["value"] == "lb" and page.input_value("#pf-weight") == "154.8" and page.locator("#pf-weight-label").inner_text() == "Weight (lb)",
+          f"{put} {page.input_value('#pf-weight')!r}")
+    page.evaluate("window.__kh.copies.length = 0")  # the profile's own safety copy is not the one the entry check below reads
     page.goto(f"{base}/index.html#settings")
     page.wait_for_selector("#view-settings:not([hidden])", timeout=30000)
     page.wait_for_timeout(800)
