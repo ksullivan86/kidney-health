@@ -38,3 +38,13 @@ Ask with no server stays off (needs the server's checks).
 * phone-ai-more2: app/ai/guard.py adds food `name` to order/rest rows (server change: check the name is the person's own/
   shared food and nothing else leaks). OnDeviceAI guides `.count(1...3)`, `.range(0...4)` may not compile (fallback
   `.maximumCount(3)`). OwnAI.maxText 60,000 vs the page's 80,000 for own key (pre-existing mismatch).
+
+## Audit (2026-11-26)
+* Security (outbound fetch, OAuth, signing, voice, handbook): no high or medium. Fixed: one token refresh per company;
+  the signing script runs `python -I -S`. Left: old-runs matches "Created via API" (owner approved the cleanup).
+* Server and owner rules: clean. Fixed: AI order rows carry the full stored name (guard.py + aimeal.js twin).
+  Left: about.care_team falls back to a user name when no display name (the person sees it on the web too).
+* Swift: fixed two ternaries with try/await (Devices.swift), PhoneTests task list, recognizer kept, audio back to playback,
+  Safari sheet swipe-down answers. Left: recipe fetch's connected-address check relies on metrics arriving first.
+* CI: lint (unused name), handbook on the Mac without watchdog (scripts/lock_without.py), CodeQL script end tags.
+* Pending: the page-logic audit; the full pytest run; CI on 3c6401b.
