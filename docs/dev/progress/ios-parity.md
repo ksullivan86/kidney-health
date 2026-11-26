@@ -13,7 +13,14 @@ in the ios app without the need for a server if the setting makes since without 
 * phone-devices: Withings and Whoop from the phone, with a server and without one.
 * phone-ai-more: AI order, swaps and day plans on the phone.
 * phone-recipe-import: recipe import from a web page with no server.
+* phone-extras: export.zip with CSVs, the handbook in the app, on-device voice for Ask.
+
+## Then (owner, 2026-11-26: "do that and then do an audit and then push the app")
+1. When every helper is complete: full pytest, node vectors, e2e device_mode.
+2. Audit: code review of the whole branch diff against main (security, CLAUDE.md rules, owner rules).
+3. Release PR (bump version, CHANGELOG), CI green, merge, TestFlight build 11.
 
 ## Left out on purpose (need a server by nature)
 Admin, accounts (password, two-step, passkeys, sign-in), phone shortcut tokens, outside AI apps (MCP), sharing with a care team
-when there is no server (nobody to share with).
+when there is no server (nobody to share with), list apps (Grocy, KitchenOwl, Mealie) and Instacart with no server (server keys).
+Ask with no server stays off (needs the server's checks).
