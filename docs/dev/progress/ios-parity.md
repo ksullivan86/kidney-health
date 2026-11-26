@@ -1,4 +1,4 @@
-# ios-parity: everything the web app does with a server, in the iPhone app (orchestrator note)
+Status: complete (2026-11-26): 0.26.0 merged (#196, 2d9e5d7); TestFlight build 11 started with remove_old_ci_certificates=true.
 
 Status: in progress (2026-11-26)
 
