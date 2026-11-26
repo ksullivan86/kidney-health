@@ -526,7 +526,7 @@ def run_config(pw_browser, cfg: str, w: int, h: int, scheme: str) -> None:
         check(A, "first launch: Profile has no 'Last saved'", page.inner_text("#profile-saved").strip() == "", page.inner_text("#profile-saved"))
         shot(page, A, "02-profile-empty")
         page.fill("#pf-name", "Alex Regress")
-        page.fill("#pf-weight", "70")
+        page.fill("#pf-weight", "154.3")  # pounds by default (user.units.weight): 154.3 lb = 69.99 kg
         page.fill("#pf-height-ft", "5")  # feet and inches by default (user.units.height): 5 ft 9 in = 175.26 cm, saved as 175.5
         page.fill("#pf-height-in", "9")
         page.select_option("#pf-stage", "3b")
@@ -573,7 +573,7 @@ def run_config(pw_browser, cfg: str, w: int, h: int, scheme: str) -> None:
         stored = bare(prof["targets"])
         check(A, "Save profile with suggested targets: server stores them", ri.value.status == 200 and stored == bare(t),
               f"stored={stored} suggested={t} body={body.get('targets')}")
-        check(A, "Profile name / weight / height saved", prof["name"] == "Alex Regress" and prof["weight_kg"] == 70 and prof["height_cm"] == 175.5, str(prof))
+        check(A, "Profile name / weight / height saved", prof["name"] == "Alex Regress" and prof["weight_kg"] == 69.99 and prof["height_cm"] == 175.5, str(prof))
         page.wait_for_function("() => document.getElementById('profile-saved').textContent.includes('Last saved')")
         check(A, "'Last saved' appears after saving", "Last saved" in page.inner_text("#profile-saved"))
 

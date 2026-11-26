@@ -561,6 +561,14 @@ def walk_trends(p: Pass, person: Any | None, mock: bool, hd: bool) -> None:
     page.evaluate("() => { delete KH.bodyImport; }")  # the stub was only for this check
 
 
+def same_weight(kg: float | None, box: str, unit: str) -> bool:
+    """A stored weight and the text of a Profile box in `unit` (pounds shown to 0.1) say the same weight."""
+    if kg is None or box == "":
+        return kg is None and box == ""
+    shown = kg if unit == "kg" else kg / 0.45359237
+    return abs(shown - float(box)) < (1e-9 if unit == "kg" else 0.0501)
+
+
 def walk_profile(p: Pass, person: Any | None, mock: bool, hd: bool) -> None:
     page, tag = p.page, p.tag
     page.click("#tab-profile")
@@ -571,14 +579,15 @@ def walk_profile(p: Pass, person: Any | None, mock: bool, hd: bool) -> None:
         check(f"[{tag}] on dialysis Profile offers no latest weight (it holds the dry weight)", latest.is_hidden())
     else:
         text = latest.inner_text()
-        check(f"[{tag}] under Weight: the latest weight in the log, with Use this", text.startswith("Latest in your log: ") and " kg" in text and " on " in text and "Use this" in text, text)
+        unit = page.evaluate("() => KH.state.weightUnit || 'lb'")  # Profile's boxes are in the person's unit (user.units.weight)
+        check(f"[{tag}] under Weight: the latest weight in the log, with Use this", text.startswith("Latest in your log: ") and f" {unit} on " in text and "Use this" in text, text)
         before = page.input_value("#pf-weight")
         latest.get_by_role("button", name="Use this").click()
         filled = page.input_value("#pf-weight")
         check(f"[{tag}] Use this fills the box and says Save profile keeps it", filled != "" and "Save profile" in latest.inner_text(), f"{before} -> {filled}")
         if person is not None:
             saved = person.json("GET", "/api/profile")["weight_kg"]
-            check(f"[{tag}] nothing is saved by tapping it: the profile still says {before or 'nothing'}", (saved is None and before == "") or saved == float(before), str(saved))
+            check(f"[{tag}] nothing is saved by tapping it: the profile still says {before or 'nothing'}", (saved is None and before == "") or same_weight(saved, before, unit), str(saved))
         # the form says dialysis: the latest-weight line goes, the six-month line stays (when there is one)
         six = page.locator("#pf-weight-6mo-log")
         had_six = six.is_visible()
@@ -601,7 +610,8 @@ def walk_profile(p: Pass, person: Any | None, mock: bool, hd: bool) -> None:
     if person is not None and not hd:
         page.click("#btn-save-profile")
         page.wait_for_function("() => document.querySelector('#toast').innerText.includes('Profile saved')", timeout=15000)
-        check(f"[{tag}] Save profile then saves what Use this filled", person.json("GET", "/api/profile")["weight_kg"] == float(page.input_value("#pf-weight")))
+        unit = page.evaluate("() => KH.state.weightUnit || 'lb'")
+        check(f"[{tag}] Save profile then saves what Use this filled", same_weight(person.json("GET", "/api/profile")["weight_kg"], page.input_value("#pf-weight"), unit))
 
 
 def walk_visit(p: Pass, person: Any | None, mock: bool, hd: bool, flagged: bool) -> None:

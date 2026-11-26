@@ -422,6 +422,7 @@
         await api.updateMySettings({ 'user.units.weight': unitSel.value });
         unitNote = unitSel.value === 'kg' ? 'Weights are now shown and typed in kilograms.' : 'Weights are now shown and typed in pounds.';
         S.units = unitSel.value;
+        if (KH.views.profile) KH.views.profile.setWeightUnit(unitSel.value);
         state.trends = null;
         state.dayLoadedFor = null;
         await renderSettings(); // the alarm's box is in the unit too

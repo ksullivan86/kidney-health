@@ -801,7 +801,7 @@ class Run:
         self.press("#sheet-guidance [data-close]", "Close Treating a low", nth=0, wait=self.wait_fn("() => !document.querySelector('#sheet-guidance').open"))
 
         # ---- Profile ----
-        self.press("#tab-profile", "Profile tab", wait=self.wait_fn("() => document.querySelector('#pf-weight').value === '70'"))
+        self.press("#tab-profile", "Profile tab", wait=self.wait_fn("() => document.querySelector('#pf-weight').value === '154.3'"))
         self.shot("profile", full=True)
         self.shot("profile-viewport")
         self.checks("Profile", contrast=True)
@@ -833,7 +833,7 @@ class Run:
                    wait=self.wait_fn("() => !!document.querySelector('#labs-history .confirm-row')"))
         self.press("#labs-history .confirm-row .btn.danger-solid", "Confirm delete result",
                    wait=self.wait_fn("() => !document.querySelector('#labs-alert .lab-alert.level-emergency')"))
-        self.press("#labs-back", "Back to Profile", wait=self.wait_fn("() => !document.querySelector('#view-profile').hidden && document.querySelector('#pf-weight').value === '70'"))
+        self.press("#labs-back", "Back to Profile", wait=self.wait_fn("() => !document.querySelector('#view-profile').hidden && document.querySelector('#pf-weight').value === '154.3'"))
         F.locator("#pf-dialysis").select_option("hemodialysis")
         F.wait_for_function("() => !document.querySelector('#pf-dialysis-days-field').hidden", timeout=3000)
         for i in (0, 2, 4):
@@ -1115,7 +1115,7 @@ def probes(port):
                 # 1. Suggest targets after switching to hemodialysis WITHOUT saving
                 r.load(page, "profile")
                 F = r.F
-                F.wait_for_function("() => document.querySelector('#pf-weight').value === '70'", timeout=5000)
+                F.wait_for_function("() => document.querySelector('#pf-weight').value === '154.3'", timeout=5000)
                 F.locator("#pf-dialysis").select_option("hemodialysis")
                 F.locator("#btn-suggest").click()
                 page.wait_for_timeout(500)
@@ -1148,7 +1148,7 @@ def probes(port):
                 # 3. Today: the week strip with the since-last-dialysis block (element shot)
                 r.load(page, "profile")
                 F = r.F
-                F.wait_for_function("() => document.querySelector('#pf-weight').value === '70'", timeout=5000)
+                F.wait_for_function("() => document.querySelector('#pf-weight').value === '154.3'", timeout=5000)
                 F.locator("#pf-dialysis").select_option("hemodialysis")
                 for i in (0, 2, 4):
                     F.locator(f"label[for=pf-dd-{i}]").click()
