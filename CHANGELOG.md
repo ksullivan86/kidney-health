@@ -24,6 +24,11 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * Reminders in the iPhone app, with no server. Settings → Reminders uses the iPhone's own notifications: turn them on, add a
   reminder to log a meal, plan tomorrow or log your weight, and send a test. A meal reminder is skipped when that meal is already
   logged today. Reminders set on the iPhone stay on the iPhone. Do not rely on them for low blood sugar; use your CGM's alerts.
+* Your Care team in the iPhone app, when it is paired with your server by a token both ways. Today shows new notes from your Care
+  team, the Plan tab shows their meal suggestions, and you can read, delete and answer them as in the web app. Settings → Care team
+  lists who is on it; you change it in the server's web app. Notes are read from your server each time and never kept on the
+  phone. With no server the app shows no Care team. For admins: the gateway list gains six routes (`/api/me/notes` and
+  `/api/me/suggestions`, see `docs/push.md`), and `GET /push/v1/about` gains `care_team`.
 
 ## 0.25.0 — 2026-11-24
 
