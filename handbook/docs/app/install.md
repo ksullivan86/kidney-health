@@ -203,12 +203,13 @@ phone and needs no server ([design note 38][NOTE38]):
   ingredients are matched with the foods on your phone. The shopping list comes from the plan on your server, so plans you made
   on the phone show there once they are sent. You set up your list app in the web app, not on the phone. Pasting ingredients
   works offline. Without a token both ways, these buttons do not appear.
-- On an iPhone with Apple Intelligence, **Describe a meal**, **AI meal ideas**, **AI recipes** and reading the text of a lab
-  report PDF can use Apple's AI on the phone. On iOS 27 it can also read a photo of your plate or of a label. Turn it on in
+- On an iPhone with Apple Intelligence, **Describe a meal**, **AI meal ideas**, **AI order**, **Ask AI to pick** (swaps),
+  **Let AI choose** (day plans), **AI recipes** and reading the text of a lab report PDF can use Apple's AI on the phone. On iOS 27 it can also read a photo of your plate or of a label. Turn it on in
   **Settings → AI features**. Nothing you write, read or photograph leaves the iPhone, and the questions and answers are not kept.
   Apple's AI on the phone is small, so its meal ideas and recipes choose from fewer of your foods. The app checks every answer the
   same way your server would, and you check each line before anything is saved. The AI never gives insulin or medicine doses.
-  AI order, AI swaps and AI day plans need your server. On other iPhones these buttons do not appear, and everything else works.
+  On other iPhones these buttons appear only with your server's AI or your own key, and everything else works. AI swaps and AI
+  day plans never go to your server's AI: they need your own key or Apple's AI on the phone.
 
 ### Your own AI key on the iPhone
 
@@ -223,9 +224,10 @@ You can use AI features with a key of your own from an AI company, with no serve
 
 What it does:
 
-- **Describe a meal**, **AI meal ideas** and **AI recipes** use your own key. If you have a server, your server's AI is used
-  first, and your own key only when your server cannot be reached or does not offer it. Meal ideas and recipes send the foods the
-  app's rules chose, your targets and today's totals, as your server would. They never send your name or date of birth.
+- **Describe a meal**, **AI meal ideas**, **AI order**, **AI swaps**, **AI day plans** and **AI recipes** use your own key. If you
+  have a server, your server's AI is used first, and your own key only when your server cannot be reached or does not offer it.
+  AI swaps and AI day plans skip your server's AI: they work on the iPhone's own log. These features send the foods the app's
+  rules chose, your targets and today's totals, as your server would. They never send your name or date of birth.
 - **Photos of a meal or a label** go to your own key only if you turn on **Also send meal and label photos to this AI**. It is off
   at first.
 - **Lab reports, and anything with your name or date of birth, are never sent to it.** If you type your name in a meal

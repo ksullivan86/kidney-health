@@ -28,6 +28,11 @@ the API. Security fixes are released as patch versions of the newest minor versi
   lists who is on it; you change it in the server's web app. Notes are read from your server each time and never kept on the
   phone. With no server the app shows no Care team. For admins: the gateway list gains six routes (`/api/me/notes` and
   `/api/me/suggestions`, see `docs/push.md`), and `GET /push/v1/about` gains `care_team`.
+* AI order, AI swaps and AI day plans in the iPhone app with your own AI key or Apple's AI on the phone, with no server (design
+  note 39 §6.7). They use the same foods, swaps, plan options and checks as your server, and the rules rebuild and check every
+  pick. AI order still uses your server's AI first when it is paired. AI swaps and AI day plans never go to your server's AI,
+  because they work on the iPhone's own log. A food that treated a low is never sent to any AI. For admins: in the answer of
+  `POST /api/ai/next-meal` with mode `rerank`, each `order` and `rest` row now also has the food's `name`.
 
 ## 0.25.0 — 2026-11-24
 

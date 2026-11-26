@@ -497,6 +497,64 @@ def phone_ai_walk(browser, base: str) -> None:
     ctx.close()
 
 
+# AI order on the iPhone's own model (the owner, 2026-11-26; phone-ai-more2): the stand-in model puts the second candidate first.
+PHONE_AI_ORDER = ("window.__kh = { copies: [], phone: [], ai: [] };"
+                  "window.webkit = { messageHandlers: { safetyCopy: { postMessage: (t) => window.__kh.copies.push(String(t)) },"
+                  " phone: { postMessage: (m) => window.__kh.phone.push(String(m)) },"
+                  " bridge: { postMessage: async (r) => r.kind === 'services' ? { ok: true, off: false, usda: false, scan: false }"
+                  " : r.kind === 'serverInfo' ? { ok: true, paired: false }"
+                  " : r.kind === 'aiStatus' ? { ok: true, available: true, reason: null, photos: false }"
+                  " : r.kind === 'ownAIStatus' ? { ok: true, set: false }"
+                  " : r.kind === 'ai' ? (window.__kh.ai.push(r), r.task === 'rerank'"
+                  "   ? { ok: true, answer: { order: [{ ref: 'f2', reason_codes: ['low_sodium'] }, { ref: 'f1', reason_codes: ['low_potassium'] }],"
+                  "     status: 'ok', refusal: 'none' } } : { error: 'ai_failed', message: 'x' })"
+                  " : { error: 'not_paired' } } } };")
+
+
+def phone_ai_order_walk(browser, base: str) -> None:
+    """No server and no own key: What fits on Add shows "AI order" with Apple's model, and the list comes back in its order."""
+    tag = "phone-ai-order"
+    ctx = browser.new_context(viewport={"width": 375, "height": 812}, color_scheme="light")
+    ctx.add_init_script(PHONE_AI_ORDER)
+    page = ctx.new_page()
+    errors: list[str] = []
+    others: list[str] = []
+    page.on("console", lambda m: errors.append(m.text) if m.type == "error" else None)
+    page.on("pageerror", lambda e: errors.append(str(e)))
+    page.on("request", lambda r: others.append(r.url) if not r.url.startswith(base) else None)
+    page.goto(f"{base}/index.html#today")
+    page.wait_for_selector("#view-today:not([hidden])", timeout=30000)
+    page.wait_for_timeout(800)
+    page.evaluate("KH.request('PUT', '/api/device/setup', { done: true })"
+                  ".then(() => KH.request('PATCH', '/api/me/ai', { opt_in: true }))"
+                  ".then(() => KH.request('GET', '/api/me/settings'))"
+                  ".then((s) => KH.request('PATCH', '/api/me/settings', { guidance: { ...((s.settings.guidance || {}).value || {}), ai_enrich: true } }))"
+                  ".then(() => { Object.assign(KH.mock.instance._profile, { targets: { potassium_mg: { max: 3000 }, phosphorus_mg: { max: 1000 },"
+                  " sodium_mg: { max: 2000 }, carbs_per_meal_g: 60 } }); return KH.mock.local.flush(); })")
+    page.wait_for_timeout(300)
+    page.goto(f"{base}/index.html#add")
+    page.reload()
+    page.wait_for_selector("#view-add:not([hidden])", timeout=30000)
+    page.wait_for_selector("#guidance-fits:not([hidden])", timeout=30000)
+    page.locator("label[for=gfm-dinner]").click()
+    toggle = page.locator(".g-ai-toggle")
+    toggle.wait_for(timeout=15000)
+    check(f"[{tag}] What fits offers AI order on this iPhone's model", "Apple" in toggle.inner_text(), toggle.inner_text())
+    toggle.click()
+    _until(page, "(document.querySelector('#guidance-fits-status') || {}).textContent.includes(\"AI's order\")", 15)
+    sent = page.evaluate("window.__kh.ai")
+    last = sent[-1] if sent else {}
+    check(f"[{tag}] AI order went to this iPhone's model with no ids", last.get("task") == "rerank" and "ids" not in last
+          and len(last.get("text", "")) <= 5000, json.dumps(last)[:200])
+    status = page.locator("#guidance-fits-status").text_content() or ""
+    check(f"[{tag}] the list is in the AI's order, the numbers the app's own", "numbers and fit checks are the app's own" in status, status)
+    over = page.evaluate("document.documentElement.scrollWidth > window.innerWidth + 1")
+    check(f"[{tag}] no sideways scroll", not over)
+    check(f"[{tag}] no request to another host", not others, "; ".join(others[:3]))
+    check(f"[{tag}] no console or page error", not errors, "; ".join(errors[:3]))
+    ctx.close()
+
+
 def both_ways_walk(browser, base: str) -> None:
     """Design note 39, steps 3 and 4: the server's food services and AI from the phone, and the choice of AI."""
     tag = "both-ways"
@@ -894,6 +952,7 @@ def main(argv: list[str] | None = None) -> int:
                 ask_walk(browser, base)
                 own_key_walk(browser, base)
                 phone_ai_walk(browser, base)
+                phone_ai_order_walk(browser, base)
                 reminders_walk(browser, base)
                 care_walk(browser, base)
             finally:

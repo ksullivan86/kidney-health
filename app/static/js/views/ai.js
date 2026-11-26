@@ -1139,10 +1139,11 @@
 
   // Device mode (the iPhone app with no server): Apple's on-device model, and one switch. Nothing is sent anywhere, so there is no
   // provider, key, consent or activity list; prompts and answers are not kept.
-  const DEVICE_TEXT = 'Describe a meal, meal ideas, AI recipes and reading the text of a lab report PDF use Apple\'s on-device model. '
+  const DEVICE_TEXT = 'Describe a meal, meal ideas, AI order, AI swaps, AI day plans, AI recipes and reading the text of a lab report PDF '
+    + 'use Apple\'s on-device model. '
     + 'On iOS 27 it also reads a photo of your plate or of a label. It runs on this iPhone: nothing you write, read or photograph is '
-    + 'sent to any company or server, and the questions and answers are not kept. Its window is small, so meal ideas and recipes '
-    + 'choose from fewer of your foods. The app checks every answer, and you check each line before anything is saved.';
+    + 'sent to any company or server, and the questions and answers are not kept. Its window is small, so meal ideas, AI order and '
+    + 'recipes choose from fewer of your foods. The app checks every answer, and you check each line before anything is saved.';
   // Design note 39 §6.1: with a token both ways, the server's AI runs what it can; this iPhone's runs the rest. The person may
   // choose to use only this iPhone's AI.
   const WHERE_TEXT = { server: 'your server\'s AI', iphone: 'this iPhone\'s AI', own: 'your own key' };
@@ -1150,7 +1151,11 @@
   // Where each feature runs now (server, own key, this iPhone), for anyone: with a server, an own key, or neither.
   function whereList(p) {
     const rows = Object.entries(p.where || {}).filter(([, w]) => w).map(([f, w]) => h('li', {}, `${(p.labels || {})[f] || f}: ${whereText(w, p)}`));
-    return rows.length ? h('ul', { class: 'list', id: 'set-ai-where' }, ...rows) : h('p', { class: 'hint' }, 'No AI feature can run just now.');
+    if (!rows.length) return h('p', { class: 'hint' }, 'No AI feature can run just now.');
+    const list = h('ul', { class: 'list', id: 'set-ai-where' }, ...rows);
+    // AI swaps and AI day plans use this iPhone's own log, so they never go to the server (js/mock/ai.js PHONE_ONLY_MODES).
+    return (p.where || {}).meal_ideas !== 'server' ? list : h('div', {}, list, h('p', { class: 'hint', id: 'set-ai-swap-plan' },
+      'AI swaps and AI day plans use this iPhone\'s AI or your own key, not your server\'s, because they work on this iPhone\'s own log.'));
   }
   // The person's own AI key (js/mock/ai.js; the key is set in the iPhone app, never in the page).
   function ownKeyPart(me) {
