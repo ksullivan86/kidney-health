@@ -79,6 +79,13 @@ Once, in Apple's websites:
 Each time: Actions → TestFlight → Run workflow. The build number is the run number. Apple takes 5 to 30 minutes to process a build,
 then it appears in the TestFlight app for internal testers. A build lasts 90 days.
 
+Each run uses a new Mac, and Xcode makes an "Apple Development" certificate there to archive the app. The last step removes it
+again (`scripts/asc_ci_certs.py`), because Apple allows only a few. Runs before build 11 left theirs behind, and build 10 failed
+with "Your account has reached the maximum number of certificates". To clear them, run the workflow once with **Remove the
+development certificates that earlier runs left behind** ticked. It removes only development certificates made with the API key.
+Certificates you made in Xcode on your own Mac, and the distribution certificate, are kept. You can also remove them by hand:
+Certificates, Identifiers & Profiles → Certificates, the ones named "Created via API".
+
 Family or friends as testers, or an App Store listing, need Apple's review and a privacy policy first (design note 15, out of scope).
 
 ## Running the tests

@@ -14,10 +14,20 @@
 #
 # The key needs the Admin role, because only Admin keys may use cloud-managed certificates.
 # The build number is this workflow's run number, so every upload has a new one.
+#
+# To archive, Xcode also makes an "Apple Development" certificate whose private key stays on the runner. The runner is thrown
+# away after the run, so the last step removes that certificate again (scripts/asc_ci_certs.py this-run). Before that step
+# existed, the leftovers filled the account and build 10 failed with "maximum number of certificates". Tick "Remove the
+# development certificates that earlier runs left behind" once to clear them (scripts/asc_ci_certs.py old-runs).
 name: TestFlight
 
 on:
   workflow_dispatch:
+    inputs:
+      remove_old_ci_certificates:
+        description: Remove the development certificates that earlier runs left behind (made through the API key only)
+        type: boolean
+        default: false
 
 permissions: {}
 
@@ -72,14 +82,22 @@ jobs:
           ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
           ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
           ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          REMOVE_OLD: ${{ inputs.remove_old_ci_certificates }}
         run: |
           set -euo pipefail
           sudo xcode-select -s "/Applications/Xcode_${XCODE_VERSION}.app"
           xcodebuild -version
           key="$RUNNER_TEMP/AuthKey_${ASC_KEY_ID}.p8"
-          trap 'rm -f "$key"' EXIT
+          export ASC_KEY_PATH="$key"
+          # However this step ends: remove the development certificate this run made, then the key file.
+          cleanup() {
+            python scripts/asc_ci_certs.py this-run || echo "::warning::Could not remove the development certificate of this run"
+            rm -f "$key"
+          }
+          trap cleanup EXIT
           umask 077
           printf '%s\n' "$ASC_KEY_P8" > "$key"
+          if [ "$REMOVE_OLD" = "true" ]; then python scripts/asc_ci_certs.py old-runs; fi
           auth=(-allowProvisioningUpdates
                 -authenticationKeyPath "$key"
                 -authenticationKeyID "$ASC_KEY_ID"

@@ -132,7 +132,9 @@ def test_the_project_signs_for_the_owners_team_and_has_an_icon():
 def test_testflight_runs_by_hand_from_main_with_the_key_only_where_it_is_used():
     text = TESTFLIGHT.read_text(encoding="utf-8")
     code = "\n".join(ln for ln in text.splitlines() if not ln.lstrip().startswith("#"))
-    assert re.search(r"^on:\n  workflow_dispatch:\n\n", code, re.M)  # never on a push or a pull request
+    on = code[code.index("\non:\n"):code.index("\npermissions:")]
+    assert re.search(r"^on:\n  workflow_dispatch:\n", on.lstrip("\n"))  # never on a push or a pull request
+    assert "push" not in on and "pull_request" not in on and "schedule" not in on
     assert "if: github.ref == 'refs/heads/main'" in code and "environment: release" in code
     assert f'TEAM_ID: "{TEAM_ID}"' in code
     # the key is read by the two steps that need it and nowhere else
@@ -140,8 +142,13 @@ def test_testflight_runs_by_hand_from_main_with_the_key_only_where_it_is_used():
     job_env = code[code.index("    env:\n"):code.index("    steps:\n")]
     assert "secrets." not in job_env
     # the key file is private to the job and removed however the job ends
-    assert "umask 077" in code and """trap 'rm -f "$key"' EXIT""" in code
-    assert code.index("trap 'rm -f") < code.index('> "$key"')
+    assert "umask 077" in code and "trap cleanup EXIT" in code
+    cleanup = code[code.index("cleanup() {"):code.index("trap cleanup EXIT")]
+    assert 'rm -f "$key"' in cleanup and "asc_ci_certs.py this-run" in cleanup
+    assert code.index("trap cleanup EXIT") < code.index('> "$key"')
+    # removing the leftovers of earlier runs only when the person starting the run asks for it
+    assert "remove_old_ci_certificates:" in code and "default: false" in code
+    assert 'if [ "$REMOVE_OLD" = "true" ]; then python scripts/asc_ci_certs.py old-runs; fi' in code
     assert "-allowProvisioningUpdates" in code and "app-store-connect" in code and 'CURRENT_PROJECT_VERSION="$GITHUB_RUN_NUMBER"' in code
 
 
