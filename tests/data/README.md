@@ -41,6 +41,7 @@ Run the commands from the repository root.
 | `care_vectors.json` | `python3 tests/data/gen_care_vectors.py` |
 | `ccda_labs_vectors.json` | `node tests/js/gen_ccda_labs_vectors.mjs` |
 | `entry_version_vectors.json` | `python3 tests/data/gen_entry_version_vectors.py` |
+| `export_vectors.json` | `python3 tests/data/gen_export_vectors.py` |
 | `fhir_labs_vectors.json` | `node tests/js/gen_fhir_labs_vectors.mjs` |
 | `guidance_vectors.json` | `python3 tests/data/gen_guidance_vectors.py` |
 | `import_vectors.json` | `python3 tests/data/gen_import_vectors.py` |
@@ -63,7 +64,7 @@ What to know about the commands:
   writes nothing and exits 1 when the file is out of date. That is what pytest runs.
 * `tests/js/gen_ccda_labs_vectors.mjs`, `tests/js/gen_fhir_labs_vectors.mjs` and `tests/js/gen_lab_import_vectors.mjs` have no `--check`.
   The files hold hand-written expectations, so read `git diff` after running them.
-* The generators for body, entry version, import, meta and symptoms start the app on a temporary database. They need the app's
+* The generators for body, entry version, export, import, meta and symptoms start the app on a temporary database. They need the app's
   dependencies and no network.
 * `personal_target_vectors.json` is not regenerated. Change `docs/dev/research/05-personalized-targets.md` first.
 
@@ -390,6 +391,31 @@ What a replayer must get right:
 * A food's flags are sorted first. A saved meal's items are `[food_name, servings]` each, in order: the food's id is left out, because it
   differs between servers. A food's 12 nutrient values follow its fields, in registry order.
 * A missing `note` of a lab result, symptom, weight or reading is the empty text, and so is a missing symptom `label`.
+
+## export_vectors.json
+
+The export .zip that the iPhone app with no server (and "Keep my data in this browser") builds in the page: its CSV files and README must be the server's text for the same data.
+
+* Server: `app/account.py` `build_export`, behind `GET /api/me/export.zip`.
+* Browser twin: `M.exportZip` in `app/static/js/mock/export.js`, replayed by `node tests/js/export_vectors.mjs` (not `run_vectors.mjs`).
+* Made by `tests/data/gen_export_vectors.py`. It fills one account on a fresh server through the ordinary routes, then downloads the zip.
+
+Top-level keys:
+
+* `names`: the files in the archive, in order.
+* `doc`: the `export.json` document of that archive.
+* `food_sources`: `{food id: [source, source_license]}` for each food an entry uses. `log.csv` reads these from the food row.
+* `files`: the text of every CSV file and of `README.txt`, by name.
+* `readme_brand`: `name` and `export_format`, the words the README is written with.
+* `filename`: `{username, day, name}`, the archive's file name on that day.
+* `filename_cases`: `{username, safe}`, how a username is made safe for the file name.
+
+What a replayer must get right:
+
+* Rebuild every file from `doc` and `food_sources` and compare the text byte for byte, line ends (`\r\n`) included.
+* A cell's text depends on what the server held, which JSON loses: a float is written as Python writes it (`5.0`), a bool as `True` or `False`. The twin knows each column's kind.
+* Text that starts with `=`, `+`, `-`, `@`, a tab or a line break (or their full-width forms) gets a `'` in front, so a spreadsheet does not run it.
+* `doc.exported_at` and the Activity times change at every run. The pytest check compares only the other keys.
 
 ## fhir_labs_vectors.json
 

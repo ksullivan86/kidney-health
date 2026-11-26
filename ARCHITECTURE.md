@@ -5646,9 +5646,13 @@ server stays the full version; this mode never exists in the installed app.
 * **Export** (`js/mock/export.js`): `GET /api/me/export.json` is a demo-only route returning the document of `app/account.py export_data`: the
   same keys in the same order (`tests/test_demo_local_storage.py` compares them), `log_entries` without the derived `version`, `custom_foods`,
   `linked_foods` (`linked_at: null`), `meal_templates`, `lab_results`, `symptoms`, `weights` and `blood_pressures` in the export shapes, `food_preferences`, `builtin_foods`, the
-  person's own settings and the activity list; the AI sections are empty and nothing secret is ever in it. The page downloads it as `export.json`
-  (`KH.demoLocal.exportFile()`; Settings → Your data shows **Export my data (export.json)** while the mode is on, and says what is needed
-  otherwise). The server's zip also has CSV files and a README; the demo gives the JSON only.
+  person's own settings and the activity list; the AI sections are empty and nothing secret is ever in it. The page downloads the server's
+  archive, built in the page (`KH.demoLocal.exportFile()` → `MockApi._exportArchive()`; Settings → Your data shows **Export my data
+  (.zip)** while the mode is on, and says what is needed otherwise): `M.exportZip` writes `export.json` (`JSON.stringify(doc, null, 2)`),
+  the CSV files and `README.txt` of `app/account.py build_export` in its order, as a zip with the STORE method and a CRC-32 per file,
+  named by `account.export_filename`. The CSV text is the server's (`_csv`, `log.csv_safe`; each column knows whether Python held a
+  float, a rounded nutrient or a bool, which JSON loses), and `log.csv` takes each entry's food source and licence from the food row.
+  Parity: `tests/data/export_vectors.json` (`tests/data/gen_export_vectors.py`) replayed by `node tests/js/export_vectors.mjs`.
 * **Import** (`js/mock/import.js`): `POST /api/me/import?dry_run=&merge=&replace_profile=` is the twin of `app/data_import.py` for the existing
   "Import from a file" screen (`js/views/settings.js`, which shows it instead of "no server to import into" while the mode is on). The same
   rules: `format` `kidney-health-export` version 1; **depth limit 32**; NaN/Infinity refused; every record kind a small schema (the server's pydantic models
@@ -5815,6 +5819,9 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
   the data is kept on this iPhone, with **Apple Health and server**, which posts `settings` to the app's `phone` message handler.
 * **The safety copy**: after each save `persist.js` gets `GET /api/me/export.json` from the in-page API and posts it to the app's
   `safetyCopy` handler. Nothing else leaves the page.
+* **Export** (owner, 2026-11-26): Settings → Your data → **Export my data (.zip)** gives the server's archive, made in the page
+  (`M.exportZip` in `js/mock/export.js`, "Keep my data in this browser" above), as a `blob:` download; `WebAppView` writes it to a
+  temporary file and opens the share sheet. No Swift change: the export.json download took the same way.
 * **The iPhone side** (`ios/KidneyHealth/WebShell/`, product-neutral): `WebAppSchemeHandler` serves the packed folder at
   `kidneyhealth-app://app/` (no `..`, no hidden files, only listed types, resolved inside the folder); `WebAppView` keeps the data in
   `WKWebsiteDataStore(forIdentifier:)`, cancels every navigation but its own files, opens a tapped `https` link in Safari, accepts

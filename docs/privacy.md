@@ -337,11 +337,11 @@ IndexedDB, on this device only**. **Nothing is sent anywhere**: the page makes n
 server to hold a copy. What that means for you:
 
 * it is **not backed up**: clearing site data, private browsing, or the browser deciding to free up space can delete it, so export
-  it regularly (**Settings → Your data → Export my data (export.json)**) and keep the file somewhere private, since it holds
+  it regularly (**Settings → Your data → Export my data (.zip)**) and keep the file somewhere private, since it holds
   your health data;
 * anyone who can use this browser on this device can open the demo and see it (the demo has no real sign-in);
 * **Stop keeping data here** deletes the stored copy; the demo then starts again with its sample data;
-* the file is the same `export.json` a server writes, so you can move to a real server with **Import from a file** (above);
+* the file is the same `.zip` a server writes, so you can move to a real server with **Import from a file** (above);
 * the installed app never does any of this: it keeps your data on your server only (its offline queue stores unsent entries
   on the device, see [Install on your phone](install-on-your-phone.md#offline)).
 
