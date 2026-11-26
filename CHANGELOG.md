@@ -33,6 +33,10 @@ the API. Security fixes are released as patch versions of the newest minor versi
   pick. AI order still uses your server's AI first when it is paired. AI swaps and AI day plans never go to your server's AI,
   because they work on the iPhone's own log. A food that treated a low is never sent to any AI. For admins: in the answer of
   `POST /api/ai/next-meal` with mode `rerank`, each `order` and `rest` row now also has the food's `name`.
+* A recipe from a web page in the iPhone app with no server. When no server reads the page, or yours cannot be reached, the
+  iPhone opens the link you typed and reads the recipe the same way a server does. It opens `https` links only, never a home or
+  local address, follows at most 3 redirects, and stops at 2 MB or 15 seconds. The page is not kept, and nothing else leaves the
+  phone. The review screen says the page was read on this iPhone.
 
 ## 0.25.0 — 2026-11-24
 

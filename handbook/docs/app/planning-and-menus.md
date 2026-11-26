@@ -143,7 +143,9 @@ the first save can still finish, but it will not close the new sheet.
 
 1. **Paste the ingredients**, one on each line, with how many servings the recipe makes. This always works, and nothing leaves
    your server. If your server can read recipe pages, you can paste the **link of a recipe page** instead: your server opens
-   the page (your phone does not), reads its ingredients and steps, and keeps only the link.
+   the page (your phone does not), reads its ingredients and steps, and keeps only the link. In the iPhone app with no server,
+   or when your server cannot be reached, the iPhone opens the page itself. Only the link goes to that site, and the sheet says
+   the page was read on this iPhone ([install the app](install.md)).
 2. The app shows each line with the food it chose from your food list and the amount in servings. Check every line:
    * pick another suggestion, or **Search for another food…**;
    * change the servings if they are wrong. If the box is empty, the app could not tell the amount from the line: type it in;

@@ -198,11 +198,14 @@ phone and needs no server ([design note 38][NOTE38]):
   if you turned on photos for it, then the iPhone's own AI on iOS 27. Your server decides which of its AIs may see photos. When
   no AI can read a photo, the Add screen says so under the AI buttons. You tick each food, then choose **Eaten** or **Planned**:
   Planned puts the foods in the plan for the day you are looking at.
-- **A recipe from a web page**, **Open in Instacart** and **Send to** your own list app work on the phone when your server has
-  them turned on. Your server reads the page and sends the list, with its own keys, so they need a connection. The recipe's
-  ingredients are matched with the foods on your phone. The shopping list comes from the plan on your server, so plans you made
-  on the phone show there once they are sent. You set up your list app in the web app, not on the phone. Pasting ingredients
-  works offline. Without a token both ways, these buttons do not appear.
+- **A recipe from a web page** works on the phone with or without a server. If your server reads recipe pages, it does. If not,
+  or if it cannot be reached, the iPhone opens the page itself. It goes only to the link you typed, which must start with
+  `https://`, and it does not open home or local network addresses. It reads the page's recipe data. The page is not shown or
+  kept, and nothing else leaves the phone. Either way, the ingredients are matched with the foods on your phone.
+- **Open in Instacart** and **Send to** your own list app work on the phone when your server has them turned on. Your server
+  sends the list with its own keys, so they need a connection. The shopping list comes from the plan on your server, so plans you
+  made on the phone show there once they are sent. You set up your list app in the web app, not on the phone. Without a token
+  both ways, these buttons do not appear. Pasting ingredients for a recipe works offline.
 - On an iPhone with Apple Intelligence, **Describe a meal**, **AI meal ideas**, **AI order**, **Ask AI to pick** (swaps),
   **Let AI choose** (day plans), **AI recipes** and reading the text of a lab report PDF can use Apple's AI on the phone. On iOS 27 it can also read a photo of your plate or of a label. Turn it on in
   **Settings → AI features**. Nothing you write, read or photograph leaves the iPhone, and the questions and answers are not kept.
