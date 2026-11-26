@@ -1,4 +1,4 @@
-Status: in progress
+Status: complete
 
 # phone-ai-more2: AI order, AI swaps and AI day plans on the iPhone (owner, 2026-11-26)
 
@@ -39,9 +39,15 @@ SwapAnswer / PlanAnswer, prompts.swap_extra / plan_extra. The gateway already al
 * Step 3-4 (d5d4556): gen_own_key_prompts.py + own_key_prompts.json, build_preview AI_DEVICE_TASKS, OwnAI.swift, OnDeviceAI.swift;
   tests/test_phone_ai_more2.py; pins updated in test_ai_device_vectors, test_ios_app (my hunk only), test_phone_own_key.
 
-## Next
-* e2e walk (tools/e2e/device_mode.py) if practical; docs (note 39 §6.6, ARCHITECTURE Device mode, handbook app/ai.md,
-  CHANGELOG Unreleased); full pytest.
+* Step 5-6 (7944f6b): docs (note 39 §6.7 + status line, ARCHITECTURE Device mode, handbook app/ai.md + install.md,
+  docs/privacy.md, CHANGELOG Unreleased), Settings text (views/ai.js DEVICE_TEXT, #set-ai-swap-plan hint when meal ideas run on
+  the server), e2e walk phone_ai_order_walk in tools/e2e/device_mode.py (passed with phone_ai, both_ways, own_key walks: 37 checks).
+* Targeted pytest (phone_ai_more2, phone_ai_more, phone_own_key, ai_device_vectors, ios_app, ai_guard*) and all node tests pass.
+  The full suite was not run (coordinator's request, disk space); an earlier -x run stopped at
+  tests/test_body_ui.py::test_profile_offers_the_logs_weights_and_never_applies_them, which is profile-weight-units' work, not mine.
+
+Left out: nothing. Swift is only read, not compiled here (CI): `.count(1...3)` on [ReasonCode] and `.range(0...4)` on Int are the
+FoundationModels guides I expect; if CI refuses them, use `.maximumCount(3)` / drop the range (the page checks both anyway).
 
 ## Commands
 Python with deps: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/venv-new/bin/python
