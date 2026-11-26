@@ -17,23 +17,24 @@ Owner, 2026-11-26: "Should the phone show care team notes?" "yes". Anything the 
    for Settings. Settings → Care team shown read-only when paired, hidden otherwise.
 4. Node tests, e2e walk, docs (push.md, handbook care team page, ARCHITECTURE, CHANGELOG Unreleased).
 
-## Done
-* Server (verified: `pytest tests/test_app_gateway.py`): ALLOWED +6 routes; `sharing.care_team_summary`; about `care_team`.
-  Tests: pinned list, never-list (`/api/me/shares`, `/api/shared`, writing notes), notes read/412/428/delete, suggestions
-  accept/decline, not-yours 404 with the other person's token, about's care_team. NOT YET COMMITTED: app_gateway.py and
-  test_app_gateway.py hold phone-devices' uncommitted hunks too (wait, then commit only mine).
-* Swift allow-list + idSegments (`{food_id}`, `{note_id}`, `{suggestion_id}`), ServerAPITests.swift (commit d35ce51). The pin in
-  tests/test_ios_app.py is written but NOT YET COMMITTED (other agents' hunks in the file).
-* Phone JS (commit 1befe81): js/mock/server_care.js, care.js `mineRoute`, server_api.js `careTeam`, views: sharing.js
-  `deviceBlock`/`deviceLine`, settings.js `renderCare` device branch (committed by phone-extras in 01aa262 with its own change),
-  profile.js card only when paired, notes.js plain error in the app, suggestions.js `waiting`. base.css: #set-care no longer
-  forced hidden. index.html and sw.js script lines NOT YET COMMITTED (other agents' hunks).
-* Tests: tests/js/server_care.mjs (stand-in + --relay), tests/test_server_care_phone.py (real server relay, passes),
-  tests/test_care_team_ui.py (addedText waiting, deviceLine), tests/js/server_services.mjs (readAbout careTeam: null).
+## Done (all committed and pushed unless said)
+* Server: ALLOWED +6 routes, `sharing.care_team_summary`, about `care_team` (da92815); tests in tests/test_app_gateway.py
+  (pinned list, never-list, notes read/412/428/delete, suggestions, not-yours 404, about). One hunk is still uncommitted: the
+  never-list additions in `test_the_allow_list_is_pinned` share a hunk with phone-devices' lines (commit when they have).
+* Swift allow-list + idSegments, ServerAPITests.swift (d35ce51); pin in tests/test_ios_app.py (da92815).
+* Phone JS (1befe81): js/mock/server_care.js, care.js `mineRoute`, server_api.js `careTeam`, sharing.js `deviceBlock`,
+  settings.js `renderCare` (in phone-extras' 01aa262), profile.js card, notes.js, suggestions.js `waiting`, base.css.
+  index.html / sw.js script lines (da92815).
+* Tests: tests/js/server_care.mjs, tests/test_server_care_phone.py (real server relay), tests/test_care_team_ui.py,
+  tests/js/server_services.mjs; e2e `care_walk` in tools/e2e/device_mode.py (b591b65; all PASS with
+  `$PY scratchpad/care_only.py <out> care_walk`).
+* Docs: docs/push.md, docs/api/openapi.json, handbook install.md + settings-and-keys.md, CHANGELOG Unreleased, ARCHITECTURE.
+* Commit trick used for shared files with other agents' hunks: filter my hunks into a patch, `git apply --cached`, commit with an
+  otherwise empty index (checked first).
 
 ## Next
-* Commit shared hunks when free: app_gateway.py, test_app_gateway.py, test_ios_app.py, index.html, sw.js.
-* e2e walk in tools/e2e/device_mode.py; openapi regen; docs (push.md, handbook care team, ARCHITECTURE, CHANGELOG).
+* Full `python -m pytest -q`; e2e device_mode full run; mark complete.
+* Seen, not mine: tests/js/server_sync.mjs fails on a 'reminders' bridge request (phone-reminders).
 
 ## Python
 `PY=/tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/venv-new/bin/python`
