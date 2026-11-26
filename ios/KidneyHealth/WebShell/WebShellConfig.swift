@@ -28,6 +28,7 @@ enum WebShellConfig {
     @MainActor static func pageLoaded(_ view: WKWebView) {
         PageBridge.shared.pageLoaded(view)
         QuickActions.shared.run() // a Home Screen shortcut that opened the app
+        LocalReminders.shared.run() // a reminder that was tapped
         Task { await SyncModel.shared.syncToPhone() } // Apple Health readings that came in while the app was closed
     }
 

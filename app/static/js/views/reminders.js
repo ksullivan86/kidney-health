@@ -9,6 +9,9 @@
    * Reminders are a convenience. The block says not to rely on them for low blood sugar, and there is no reminder about lows,
      insulin, medicines or glucose.
    * The demo (js/mock/reminders.js) never asks the browser for a subscription and never sends anything.
+   * In the iPhone app (KH.flags.DEVICE, design note 35 §7) they are the iPhone's own notifications: "This iPhone" asks the app
+     (js/mock/phone_reminders.js) whether they are allowed, asks iOS only from the person's tap, and sends a test. There is no
+     list of devices, and the reminders stay on this iPhone.
 
    All text goes in with h() children (textContent), never as HTML. */
 (() => {
@@ -33,6 +36,10 @@
   const IOS_HOME = 'On iPhone and iPad, notifications work only in the app on your Home Screen. In Safari, tap Share, then Add to Home Screen. Open the app from there and come back here.';
   const NO_PUSH = 'This browser cannot show notifications from this app.';
   const BLOCKED = 'Notifications are blocked for this site. Allow them in your browser or phone settings, then come back here.';
+  const PHONE_ONLY = 'Reminders set here are for this iPhone only. They are not sent to a server.';
+  const PHONE_DENIED = 'Notifications are off for this app. To allow them, open Settings on your iPhone, tap Notifications, then Kidney Health, and turn on Allow Notifications.';
+  const PHONE_ASK = 'Your iPhone asks you to allow notifications.';
+  const isDevice = () => !!(KH.flags && KH.flags.DEVICE === true);
   const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']; // bit 0 is Monday, as on the server
   const DAY_LONG = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
   const WHAT = [ // [value, label, kind, meal]
@@ -128,6 +135,17 @@
       clear(body).append(...parts);
       return true;
     }
+    if (isDevice()) {
+      parts.splice(1, 0, h('p', { class: 'hint', id: 'set-reminders-phone-only' }, PHONE_ONLY));
+      const phone = KH.mock && KH.mock.phoneReminders;
+      const status = phone ? await phone.status() : { error: 'no_app' };
+      if (ticket !== drawSeq) return true;
+      parts.push(h('h3', { class: 'settings-subtitle', id: 'set-reminders-device-h' }, 'This iPhone'), phoneBlock(body, status));
+      parts.push(h('h3', { class: 'settings-subtitle', id: 'set-reminders-list-h' }, 'Your reminders'), listBlock(body, res));
+      clear(body).append(...parts);
+      if (focusSel) { const el = $(focusSel, body); if (el) el.focus(); }
+      return true;
+    }
     const here = await thisDevice(res);
     if (ticket !== drawSeq) return true;
     parts.push(h('h3', { class: 'settings-subtitle', id: 'set-reminders-device-h' }, 'This device'), deviceBlock(body, res, here));
@@ -173,6 +191,50 @@
       test.addEventListener('click', () => sendTest(test, msg));
       box.querySelector('.settings-actions').append(test);
     }
+    return box;
+  }
+
+  // ---- the iPhone app: the iPhone's own notifications ----
+  function phoneBlock(body, status) {
+    const phone = KH.mock && KH.mock.phoneReminders;
+    const box = h('div', { id: 'set-reminders-device', role: 'region', 'aria-labelledby': 'set-reminders-device-h' });
+    const msg = h('p', { class: 'status-msg', id: 'set-reminders-device-msg', role: 'status', 'aria-live': 'polite' });
+    if (!phone || !status || status.error) {
+      box.append(h('p', { class: 'hint', id: 'set-reminders-unsupported' }, (status && status.message) || 'Notifications need the iPhone app.'));
+      return box;
+    }
+    if (status.permission === 'allowed') {
+      const test = h('button', { class: 'btn secondary', type: 'button', id: 'set-reminders-test' }, 'Send a test');
+      test.addEventListener('click', async () => {
+        if (test.disabled) return;
+        test.disabled = true;
+        try {
+          const out = await phone.test();
+          msg.textContent = out && out.ok ? 'A test notification comes in a few seconds.' : ((out && out.message) || 'The test could not be sent.');
+        } finally { if (document.contains(test)) test.disabled = false; }
+      });
+      box.append(h('p', { class: 'setting-status' }, h('span', { class: 'state-pill on' }, 'On'), ' Notifications are on for this iPhone.'),
+        h('div', { class: 'settings-actions' }, test), msg);
+      return box;
+    }
+    if (status.permission === 'denied') {
+      const open = h('button', { class: 'btn secondary', type: 'button', id: 'set-reminders-open-settings' }, 'Open iPhone Settings');
+      open.addEventListener('click', () => { phone.openSettings(); });
+      box.append(h('p', { class: 'hint', id: 'set-reminders-blocked' }, PHONE_DENIED), h('div', { class: 'settings-actions' }, open), msg);
+      return box;
+    }
+    const on = h('button', { class: 'btn primary', type: 'button', id: 'set-reminders-on' }, 'Turn on notifications on this iPhone');
+    on.addEventListener('click', async () => {
+      if (on.disabled) return;
+      on.disabled = true;
+      try {
+        const out = await phone.allow(); // iOS asks only from this tap
+        if (out && out.permission === 'allowed') { toast('Notifications are on for this iPhone.', 'ok'); await render(body, '#set-reminders-test'); return; }
+        if (out && out.permission === 'denied') { await render(body, '#set-reminders-open-settings'); return; }
+        msg.textContent = (out && out.message) || 'Notifications were not allowed. Tap the button again to try.';
+      } finally { if (document.contains(on)) on.disabled = false; }
+    });
+    box.append(h('p', { class: 'hint' }, PHONE_ASK), h('div', { class: 'settings-actions' }, on), msg);
     return box;
   }
 
@@ -274,7 +336,7 @@
     const f = h('form', { class: 'settings-form reminder-form', id: 'set-reminder-form', novalidate: true },
       h('div', { class: 'field' }, h('label', { for: 'set-reminder-what' }, 'Remind me to'), what),
       h('div', { class: 'field' }, h('label', { for: 'set-reminder-time' }, 'At'), time,
-        h('span', { class: 'hint' }, 'In this device\'s time zone.')),
+        h('span', { class: 'hint' }, isDevice() ? 'In this iPhone\'s time zone.' : 'In this device\'s time zone.')),
       h('fieldset', { class: 'field reminder-days' }, h('legend', {}, 'On these days'), h('div', { class: 'reminder-day-list' }, ...boxes)),
       h('div', { class: 'field' }, h('label', { class: 'reminder-check', for: 'set-reminder-enabled' }, enabled, ' On')),
       err, h('div', { class: 'settings-actions' }, save, cancel));
@@ -328,5 +390,5 @@
     return box;
   }
 
-  KH.reminders = { render, daysText, ERRORS, SAFETY };
+  KH.reminders = { render, daysText, ERRORS, SAFETY, PHONE_ONLY, PHONE_DENIED };
 })();

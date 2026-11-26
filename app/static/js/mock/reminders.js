@@ -2,7 +2,10 @@
 
    The demo answers like a server with reminders on, and never sends anything: there is no push key, a device is a placeholder,
    and "Send a test" answers demo: true so the page says no notification was sent. Same routes, shapes, limits and words as the
-   server; the loop that sends reminders does not exist here. */
+   server; the loop that sends reminders does not exist here.
+
+   In the iPhone app (device mode, design note 35 §7) the same routes keep the reminders in the log on the phone, and each change
+   asks js/mock/phone_reminders.js to plan the iPhone's own notifications again. */
 (() => {
   'use strict';
   const KH = window.KH;
@@ -54,6 +57,8 @@
   }
   const view = (r) => ({ id: r.id, kind: r.kind, meal: r.meal, time: r.time, days: r.days, time_zone: r.time_zone, enabled: r.enabled,
     created_at: r.created_at, last_sent_on: r.last_sent_on });
+  // Device mode: the iPhone's own notifications follow each change (js/mock/phone_reminders.js).
+  const replan = () => { if (M.phoneReminders) M.phoneReminders.soon(); };
   const deviceView = (d) => ({ id: d.id, endpoint_hash: d.endpoint_hash, user_agent: d.user_agent, created_at: d.created_at,
     last_ok_at: d.last_ok_at, last_error: d.last_error });
 
@@ -90,6 +95,7 @@
       enabled: b.enabled === undefined ? true : !!b.enabled, created_at: this._stamp(), last_sent_on: null };
     st.reminders.push(r);
     this._audit(u.id, 'reminder.set', 'reminder', r.id, { kind: r.kind, new: true });
+    replan();
     return view(r);
   });
   route('PATCH', '/api/reminders/{id}', function ({ id, body }) {
@@ -105,6 +111,7 @@
     if (time !== r.time || days !== r.days || zone !== r.time_zone) r.last_sent_on = null;
     Object.assign(r, { kind, meal, time, days, time_zone: zone, enabled: b.enabled != null ? !!b.enabled : r.enabled });
     this._audit(u.id, 'reminder.set', 'reminder', r.id, { kind, new: false });
+    replan();
     return view(r);
   });
   route('DELETE', '/api/reminders/{id}', function ({ id }) {
@@ -113,6 +120,7 @@
     const st = this._remindersState();
     st.reminders = st.reminders.filter((x) => x !== r);
     this._audit(u.id, 'reminder.removed', 'reminder', r.id, { kind: r.kind });
+    replan();
     return null;
   });
   route('POST', '/api/reminders/subscriptions', function ({ body, header }) {

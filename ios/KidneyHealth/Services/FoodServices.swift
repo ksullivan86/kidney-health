@@ -102,6 +102,8 @@ final class FoodServices: ObservableObject {
             return OwnAI.shared.status()
         case "ownAI":
             return await OwnAI.shared.answer(request)
+        case "reminders": // the iPhone's own notifications (Phone/LocalReminders.swift, design note 35 §7)
+            return await LocalReminders.shared.answer(request)
         case "enableOff":
             setOn(.openFoodFacts, true) // the page asked the person first, naming the host and what is sent (note 38, D5)
             return ["ok": true]

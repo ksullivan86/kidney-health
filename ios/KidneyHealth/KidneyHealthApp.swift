@@ -21,6 +21,8 @@ struct KidneyHealthApp: App {
 final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication,
                      didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
+        // Before launch ends, so a tapped reminder that opened the app is not lost (Phone/LocalReminders.swift).
+        MainActor.assumeIsolated { LocalReminders.shared.install() }
         Task { @MainActor in
             SyncModel.shared.startObserving()
             QuickActions.install()

@@ -121,6 +121,7 @@ const SHELL_URLS = [
   '/js/mock/import.js',
   '/js/mock/persist.js',
   '/js/mock/device.js',
+  '/js/mock/phone_reminders.js',
   '/js/mock/server_api.js',
   '/js/mock/server_sync.js',
   '/js/mock/server_changes.js',

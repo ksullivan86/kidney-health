@@ -2827,7 +2827,7 @@
   // The iPhone app with no server (design note 38; owner, 2026-11-21: Settings was "all messy"): the sections that need a server
   // are left out there. CSS hides them (base.css, .device-mode), and the menu does not list them.
   const DEVICE_LEFT_OUT = KH.flags && KH.flags.DEVICE
-    ? new Set(['set-care', 'set-connected', 'set-lists', 'set-assistant', 'set-reminders', 'set-admin-link', 'set-admin', 'set-admin-ai'])
+    ? new Set(['set-care', 'set-connected', 'set-lists', 'set-assistant', 'set-admin-link', 'set-admin', 'set-admin-ai'])
     : new Set();
   function renderNav() {
     const nav = $('#settings-nav');

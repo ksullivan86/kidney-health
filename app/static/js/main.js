@@ -83,6 +83,14 @@
       await action();
       return true;
     };
+    // A reminder tapped on the iPhone (design note 35 §7, Phone/LocalReminders.swift) opens its screen once the page has started.
+    const REMINDER_SCREENS = ['add', 'plan', 'today', 'settings'];
+    KH.openScreen = async (name) => {
+      if (!DEVICE || !REMINDER_SCREENS.includes(name)) return false;
+      await started;
+      router.show(name);
+      return true;
+    };
 
     async function init() {
       KH.theme.apply(KH.theme.stored());
