@@ -5288,7 +5288,7 @@ A recipe from pasted ingredients (always) or from a web page the server reads (`
 
 * **`app/recipe_import/parse.py`** (pure; JS twin `js/engine/recipe_import.js`, vectors `tests/data/lists_recipes_vectors.json`
   from `tests/data/gen_lists_recipes_vectors.py`): `ld_json_blocks` (stdlib `html.parser`, `application/ld+json` scripts only,
-  at most 20 blocks of 1 MiB; server only), `find_recipe` (an object, an array, `@graph`, `mainEntity`; `@type` a string or a
+  at most 20 blocks of 1 MiB; JS twin `ldJsonBlocks`, a port of `html.parser`, used on the iPhone), `find_recipe` (an object, an array, `@graph`, `mainEntity`; `@type` a string or a
   list, `…/Recipe` or `schema:Recipe`; depth 6), `recipe_from_jsonld` (`name` ≤ 200, `recipeYield` → the first number 0–100,
   `recipeIngredient` or `ingredients` ≤ 60 lines of 300, `recipeInstructions` as text, lists, `HowToStep`, `HowToSection` →
   ≤ 20 steps of ≤ 500, longer ones split at sentence ends; tags and entities removed; `nutrition` ignored), `parse_line`
@@ -5321,7 +5321,8 @@ Each opening owns its capability read, draft requests and save callback. Closing
 errors; an issued save still completes and refreshes its original caller, but cannot close or alter the newer sheet. Controls
 stay disabled while saving; failure restores the same checked draft. Searches are ordered per ingredient row, so independent
 rows do not discard each other's results; an abandoned search cannot report an error over another choice.
-The demo answers any link with a sample page (`js/mock/lists.js`). Tests: `tests/test_recipe_import.py`,
+The demo answers any link with a sample page (`js/mock/lists.js`); the iPhone app with no server reads the page itself ("Device
+mode", "A recipe page read on the iPhone"). Tests: `tests/test_recipe_import.py`,
 `tests/test_lists_recipes_ui.py`, `tools/e2e/lists_recipes.py`.
 
 ## Open the shopping list at Instacart (design note 33; v0.22 work)
@@ -6118,13 +6119,30 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
   * **Recipe pages, Instacart and the list app** (§7, step 9), in `js/mock/lists.js`: in device mode never the demo's stand-ins.
     With `both` and the service on in `about.services` (`recipe_import`, `instacart`, `list_sync`; one not mentioned is tried), each
     goes through the gateway; otherwise, and while the server cannot be reached, it answers as a server with it off (`web: false`,
-    `enabled: false`, the other routes `404`; a failed send is `503` "Your server cannot be reached right now"). A page's draft keeps
+    `enabled: false`, the other routes `404`; a failed send is `503` "Your server cannot be reached right now"). A recipe page is
+    the exception (owner, 2026-11-26): when the server does not read it (not paired both ways, `recipe_import` off, `web` false, or
+    unreachable, also between the GET and the POST), the iPhone reads it, below. A page's draft keeps
     the server's name, steps and lines, and the lines are matched again with the phone's own food search, so the saved recipe uses
     the phone's foods. Pasted ingredients are read on the phone. The server makes the Instacart and list app lines from its own Plan;
     the page shows each with the phone's id for the food of that name (or a negative id when the phone has no such planned food), so
     "ticked on this phone" works, and maps them back to the server's ids on Send (in memory, per range). The list app's set-up routes
     are `404` on the phone. `views/instacart.js` shows the demo's sentence only when `MOCK && !DEVICE`; on the phone the server's
     `https` link opens in Safari when pressed.
+* **A recipe page read on the iPhone** (owner, 2026-11-26; design note 30 §3). `GET /api/recipe-import` adds `read_on`:
+  `'server'`, `'phone'` (the app's `services` answer has `recipePage: true`) or `null` (an older app: paste only). On the phone,
+  `POST /api/recipe-import/page` asks the bridge `{kind: 'fetchRecipePage', url}` (only the link) and gets `{ok, html}` or
+  `{error: code}`, with the server's codes plus `rate_limited`; the page answers them as the server does (`bad_link` 400,
+  `rate_limited` 429, the rest 422, in the server's words, the phone's for `bad_link`, `blocked` and `unreachable`). The page reads
+  the HTML with `KH.recipeImport.pageRecipe`, a port of `parse.ld_json_blocks` over Python's `html.parser` (nothing is put into a
+  document and nothing on the page runs), then `findRecipe` and `recipeFromJsonld`; the draft has `read_on: 'phone'` and the review
+  says "Read on this iPhone". `Services/RecipePageFetcher.swift` keeps the server's rules (`KidneyHealthCore/RecipePage.swift`):
+  the link must pass `check_page_url` and be `https`, ASCII, with no user name or `%` and a plain host; every address the host
+  resolves to (`getaddrinfo`) must be `global` by `egress.classify_address`, and the connection's own address (task metrics) is
+  checked again; redirects by hand, at most 3, each checked again; 2 MiB, 15 s in all, HTML only, the header's or `<meta>`
+  charset; an ephemeral session with no cookies, cache or stored credentials; the server's User-Agent; 20 pages an hour. Vectors:
+  `tests/data/recipe_page_vectors.json` (`gen_recipe_page_vectors.py`; the same on Python 3.12 to 3.15), replayed by
+  `run_vectors.mjs` and `RecipePageTests.swift`. Tests: `tests/js/phone_recipe_page.mjs`, `tests/test_phone_recipe_import.py`,
+  `tools/e2e/device_mode.py` `recipe_walk`.
 * **Tests**: `tests/js/server_sync.mjs` and `tests/test_server_sync_phone.py` (the queue against a stand-in app, and the page's
   body through the real route), `tests/js/server_services.mjs` and `tests/test_server_services_phone.py` (note 39 steps 3 and 4
   against a fake gateway), `tests/js/server_lists.mjs` (step 9, run by the same pytest file), `tests/js/server_changes.mjs` (steps 6
