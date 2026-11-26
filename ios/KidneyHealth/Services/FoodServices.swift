@@ -86,12 +86,14 @@ final class FoodServices: ObservableObject {
     // MARK: - The page's requests
 
     /// Answers one request from the page: { kind: "usdaSearch", q } | { kind: "usdaFood", fdcId } | { kind: "offProduct", code } |
-    /// { kind: "services" } | { kind: "enableOff" }, and the server kinds of ServerSync.swift (serverApi: design note 39).
+    /// { kind: "services" } | { kind: "enableOff" } | { kind: "fetchRecipePage", url }, and the server kinds of ServerSync.swift
+    /// (serverApi: design note 39).
     func answer(_ body: Any) async -> [String: Any] {
         guard let request = body as? [String: Any], let kind = request["kind"] as? String else { return Self.problem("bad_request") }
         switch kind {
         case "services":
-            return ["ok": true, "usda": usdaOn && hasUsdaKey, "off": offOn, "scan": BarcodeScanner.available]
+            // recipePage: this app reads a recipe page itself (RecipePageFetcher.swift); always on, like opening a link
+            return ["ok": true, "usda": usdaOn && hasUsdaKey, "off": offOn, "scan": BarcodeScanner.available, "recipePage": true]
         case "scanBarcode": // the native scanner (Phone/BarcodeScanner.swift); the page looks the code up itself
             return await BarcodeScanner.shared.scan()
         case "speechStatus": // speaking a question for Ask (Phone/Dictation.swift): worked out on the phone only
@@ -108,6 +110,8 @@ final class FoodServices: ObservableObject {
             return await OwnAI.shared.answer(request)
         case "reminders": // the iPhone's own notifications (Phone/LocalReminders.swift, design note 35 §7)
             return await LocalReminders.shared.answer(request)
+        case "fetchRecipePage": // a recipe page the person typed, read with no server (RecipePageFetcher.swift)
+            return await RecipePageFetcher.shared.answer(request)
         case "enableOff":
             setOn(.openFoodFacts, true) // the page asked the person first, naming the host and what is sent (note 38, D5)
             return ["ok": true]

@@ -73,5 +73,6 @@ def test_recipe_pages_instacart_and_the_list_app_go_through_the_server_only_when
     from app.app_gateway import ALLOWED
 
     asked = set(re.findall(r"(?:viaServer|serverStatus)\('\w+', (?:'(GET|POST)', )?'(/api/[^']+)'", code))
+    asked |= set(re.findall(r"\.call\('(GET|POST)', '(/api/[^']+)'", code))  # a recipe page: the server, or this phone when it cannot
     assert len(asked) == 8 and {(m or "GET", p) for m, p in asked} <= ALLOWED
     assert "/api/recipe-import/text" not in {p for _, p in asked}

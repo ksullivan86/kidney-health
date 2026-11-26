@@ -53,6 +53,7 @@ Run the commands from the repository root.
 | `meta_vectors.json` | `python3 tests/data/gen_meta_vectors.py` |
 | `personal_target_vectors.json` | none: copied from a design note |
 | `push_vectors.json` | `python3 tests/data/gen_push_vectors.py` |
+| `recipe_page_vectors.json` | `python3 tests/data/gen_recipe_page_vectors.py` |
 | `rules_vectors.json` | `python3 tests/data/gen_rules_vectors.py` |
 | `settings_vectors.json` | `python3 tests/data/gen_settings_vectors.py` |
 | `symptoms_vectors.json` | `python3 tests/data/gen_symptoms_vectors.py` |
@@ -599,7 +600,9 @@ What a replayer must get right:
 * Digits are ASCII only (`[0-9]`), as in the server's patterns.
 * `1,5` is 1.5 but `1,000` is 1000; a range keeps its first number; "a" or "an" counts as 1 only before a unit.
 * Servings round half up to 0.01 (`floor(x * 100 + 0.5) / 100`) and are `null` outside 0.01 to 1000: never a guess, never 0.
-* Only the common named entities and numeric ones are decoded by the twin; the server decodes every HTML entity.
+* Numeric entities follow HTML 5 (`&#128;` is €, `&#0;` is U+FFFD). Named ones: the twin knows the HTML 4 names, `&apos;` and the
+  capital forms, and the legacy names that work without a ";" (`recipe_page_vectors.json` lists them); the server knows every HTML 5
+  name.
 
 ## menu_link_vectors.json
 
@@ -725,6 +728,37 @@ What a replayer must get right:
 * The source is cleaned by NFC, removing control and format characters, and folding spaces. A tab is a control character, so it is removed, not turned into a space.
 * A reading from a watch is planned with `watch: true`: the route counts it and stores nothing.
 * The rows are dated far in the past or far in the future, so the "not more than one day ahead" rule holds on any day the file is replayed.
+
+## recipe_page_vectors.json
+
+A recipe page read on the iPhone with no server (design note 30 §3). The app fetches the page with the server's checks and the page
+reads its recipe with the twin of the server's parser.
+
+* Server: `app/recipe_import/parse.py` (`ld_json_blocks`, `find_recipe`, `recipe_from_jsonld`, `text_of`), `app/recipe_import/fetch.py`
+  and `app/egress.py` (`classify_address`).
+* Browser twin: `app/static/js/engine/recipe_import.js` (`ldJsonBlocks`, `pageRecipe`) and `app/static/js/mock/lists.js` (the messages).
+* Native client: `ios/KidneyHealthCore` (`RecipePage.swift`): the link rule, the addresses and the charset names.
+* Made by `tests/data/gen_recipe_page_vectors.py`. Every case gives the same answer on Python 3.12 to 3.15.
+
+Top-level keys:
+
+* `about`: where the file comes from.
+* `constants`: the fetch limits, the page block limits, the server's messages, `no_recipe`, `no_lines` and the `user_agent`.
+* `entities`: `{name: text}`, every named entity the twin decodes, with the server's value.
+* `entity_cases`: `{value: string, text: string}`, `text_of("x " + value + " y")`.
+* `page_cases`: `{name, html | build, blocks: [any], recipe: {name, servings_made, steps, steps_cut, lines, lines_cut} | null}`.
+  `build` is `[[text, times]]`, joined, for a large page. In `blocks`, a text over 1000 characters is `{long_text: its length}`.
+* `address_cases`: `{address: string, class: "global" | "private" | "denied"}`. Only `global` may be opened.
+* `link_cases`: `{url: string, server: "ok" | code, phone: "ok" | code}`. The phone opens a link only when the server would too.
+* `charset_cases`: `{content_type: string, head: string, names: [string]}`, the names the server tries, in order.
+
+What a replayer must get right:
+
+* The blocks come from Python's `html.parser`: a `<script>` is raw text up to `</script` followed by a space, `/` or `>`, in any case;
+  `title`, `textarea`, `style` and `plaintext` hold text, not tags; a comment, a declaration or an unfinished tag hides what is in it.
+* Lengths are counted in code points, not UTF-16 units, so an emoji counts once.
+* `NaN` and `Infinity` are JSON to Python; the twin reads them as `null`.
+* An IPv6 address that carries an IPv4 address (mapped, 6to4, Teredo, NAT64, IPv4-compatible) is judged by that IPv4 address.
 
 ## rules_vectors.json
 
