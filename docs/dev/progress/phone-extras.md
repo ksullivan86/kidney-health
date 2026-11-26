@@ -10,9 +10,7 @@ Three device-mode gaps, done in the order 1, 3, 2.
    * Vectors: tests/data/gen_export_vectors.py → export_vectors.json; `node tests/js/export_vectors.mjs` (separate from
      run_vectors.mjs because another agent had uncommitted hunks there); pytest tests/test_export_vectors.py.
    * Verified: node check 30/30; pytest test_export_vectors, test_demo_local_ui; `tools/e2e/demo_local.py --only export` 25 passed.
-   * PENDING COMMIT (shared files with other agents' hunks): app/static/js/views/settings.js (button label
-     'Export my data (.zip)'), app/static/index.html (#dl-export text). Commit when those files have no foreign hunks.
-2. Voice for Ask: Apple's on-device speech recognition through the bridge. — done (commit pending for shared files)
+2. Voice for Ask: Apple's on-device speech recognition through the bridge. — done, committed (device_mode.py hunks landed in 6abf889 with the recipe walk)
    * ios/KidneyHealth/Phone/Dictation.swift: SFSpeechRecognizer, requiresOnDeviceRecognition = true, native sheet (Done/Cancel,
      60 s). Chose SFSpeechRecognizer over SpeechAnalyzer: available since iOS 13 (deployment target 17), a stable API I can write
      without a Mac to compile on; SpeechAnalyzer (iOS 26) could replace it later behind `if #available`.
@@ -20,9 +18,13 @@ Three device-mode gaps, done in the order 1, 3, 2.
    * Page: js/views/ask-voice.js syncPhone()/listenOnPhone(); ask.js calls askVoice.sync before its DEVICE branch.
    * Tests: tests/test_phone_dictation.py, tests/test_ask_voice_ui.py; e2e tools/e2e/device_mode.py ask_walk (mic → words in box,
      nothing sent) and no_server_ask (no mic): 159 passed.
-   * PENDING COMMIT (other agents' hunks there): tests/test_ios_app.py (AVFoundation, Speech allowed), tools/e2e/device_mode.py,
-     ARCHITECTURE.md (Voice for Ask + Export bullets in Device mode), app/static/index.html (#dl-export text).
-3. Handbook: bundle the built handbook into the iPhone app's web files, or the smallest safe version. — not started
+3. Handbook: bundle the built handbook into the iPhone app's web files. — in progress
+   * Before: device-flag.js already points Learn links at the public Pages site (opened in Safari) — needs HANDBOOK_PAGES published.
+   * scripts/build_preview.py --device DIR --handbook SITE: pack_handbook() copies an `mkdocs build` site into DIR/learn/,
+     inline scripts → learn/assets/javascripts/inline/<sha>.js, meta CSP, instant loading off, no maps/lunr/sitemap/404. ~12 MB.
+   * Local build: scratchpad/hbvenv (pip install handbook/requirements.lock), `cd handbook && mkdocs build --strict -d SITE` (60 s).
+   * Next: WebShell/HandbookView.swift (native sheet with its own WKWebView + scheme handler mapping dir URLs → index.html),
+     WebAppView intercepts learn/ links; mock/handbook.js local; CI macOS + TestFlight build the handbook; tests; docs.
 
 ## Notes
 * Python venv: /tmp/claude-0/-home-user-kidney-health/8a6bc573-c86c-5a92-a072-0545790bf9a4/scratchpad/venv-new/bin/python
