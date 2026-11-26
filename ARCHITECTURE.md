@@ -6211,7 +6211,7 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
     `_activityServer`; when that has days or the extra on, Today's extra (`_activitySource`) and `PUT /api/activity/extra` are the
     server's; offline, the kept copy answers.
   * Tests: `tests/js/phone_devices.mjs` (run by `tests/test_phone_devices.py`, which also pins the Swift side and the relay page),
-    `tests/test_devices_gateway.py`, `DeviceRouteTests.swift`, `DeviceLinksTests.swift`.
+    `tests/test_devices_gateway.py`, `DeviceRouteTests.swift`, `DeviceLinksTests.swift`, `tools/e2e/device_mode.py` `devices_walk`.
 * **Tests**: `tests/js/server_sync.mjs` and `tests/test_server_sync_phone.py` (the queue against a stand-in app, and the page's
   body through the real route), `tests/js/server_services.mjs` and `tests/test_server_services_phone.py` (note 39 steps 3 and 4
   against a fake gateway), `tests/js/server_lists.mjs` (step 9, run by the same pytest file), `tests/js/server_changes.mjs` (steps 6

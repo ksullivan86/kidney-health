@@ -31,6 +31,14 @@ Status: in progress (2026-11-26)
 * Relay page `handbook/oauth/` (index.html, relay.js, relay.css; CSP meta, no inline script) copied to the Pages site by
   `.github/workflows/handbook-pages.yml` (committed).
 
+* Docs (committed): ARCHITECTURE.md (gateway list, Connected devices "The iPhone app", Device mode bullet), docs/push.md,
+  docs/devices.md ("The iPhone app", what to register), handbook weight-and-blood-pressure.md `#devices-iphone` and
+  settings-and-keys.md, CHANGELOG Unreleased, note 39 out-of-scope line. (My CHANGELOG commit 3799c8f also carried another agent's
+  one-line "handbook is inside the iPhone app" entry, which was in the file at that moment.)
+* e2e: `tools/e2e/device_mode.py` `devices_walk` (10 checks pass; run alone with a small driver that builds `--device` and
+  calls `devices_walk`).
+* Swift cleanups: no tuple optional bindings, helper names that do not clash with locals.
+
 ## Waiting to commit (other agents' hunks in the same files)
 * `app/static/index.html` (device_map.js script line), `tests/js/run_vectors.mjs` (device map group),
   `tests/test_app_gateway.py` (pin), `tests/test_ios_app.py` (route list + frameworks). Check `git diff <file>`.
