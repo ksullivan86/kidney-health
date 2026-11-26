@@ -249,7 +249,8 @@ class Journey:
         self.goto(page, "#profile", "#view-profile:not([hidden]) #profile-form")
         page.fill("#pf-name", "Mum")
         page.fill("#pf-birth-month", "1968-04")
-        page.fill("#pf-height", "165")
+        page.fill("#pf-height-ft", "5")  # feet and inches by default (user.units.height): 5 ft 5 in = 165.1 cm, saved as 165
+        page.fill("#pf-height-in", "5")
         page.fill("#pf-weight", "68")
         page.select_option("#pf-sex", "female")
         page.check("#pf-act-low_active")

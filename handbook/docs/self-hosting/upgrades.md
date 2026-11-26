@@ -23,7 +23,7 @@ at start-up, so the work is choosing **what to follow** and **keeping a backup**
 | Tag | Moves when | Use it for |
 |---|---|---|
 | `0.13` | every 0.13.x patch release | **most homes**: security fixes, no breaking changes |
-| `0.24.1` | never | a fixed release |
+| `0.25.0` | never | a fixed release |
 | `latest` | every release, including a new minor version | not on a machine you care about |
 | `edge`, `sha-<short>` | every merge to `main` | testing only |
 
@@ -32,14 +32,14 @@ Tags move only after the image passed a vulnerability scan; pushes to `main` pub
 
 ## Tag or digest?
 
-- **Track `:0.24` with auto-update** (simplest). Quadlet's `AutoUpdate=registry` plus
+- **Track `:0.25` with auto-update** (simplest). Quadlet's `AutoUpdate=registry` plus
   `podman-auto-update.timer` pulls new patch releases daily and restarts the service
   ([Podman: Quadlet][PODMAN-QUADLET]).
-- **Pin a digest** (`…:0.24.1@sha256:…`) that you verified with `scripts/verify-image.sh`, and change it on
+- **Pin a digest** (`…:0.25.0@sha256:…`) that you verified with `scripts/verify-image.sh`, and change it on
   purpose ([security policy][SECURITYMD]). This is the default on Kubernetes, with
   `imagePullPolicy: IfNotPresent`.
 
-Auto-update trusts whoever controls the tag you follow. Signing and the `:0.24` advice reduce that risk
+Auto-update trusts whoever controls the tag you follow. Signing and the `:0.25` advice reduce that risk
 but do not remove it.
 
 !!! warning "Never mount the container engine's socket into an updater"
@@ -53,7 +53,7 @@ but do not remove it.
 - [ ] Read the release notes for changed settings and removed features.
 - [ ] Replace your deployment files if the notes say so.
 - [ ] Change the tag (or digest), start, and watch the log. The minor tag does not move to the next minor on its own: a host
-      that tracks `:0.23` stays on 0.23.x until you change it to `:0.24`.
+      that tracks `:0.23` stays on 0.23.x until you change it to `:0.25`.
 - [ ] Open the app, check **Server administration → About this server** for the version and schema.
 
 ## Database migrations
@@ -66,7 +66,7 @@ database. Each step checks before it changes anything, so a restart in the middl
 
 1. **Back up first.** The first start runs schema steps 35 and 36. They add empty tables for reminders and Care team notes, and
    change nothing that is there.
-2. **Change the tag** to `:0.24` (the shipped Quadlet unit, compose file and Kubernetes base already say `:0.24`) or to a digest
+2. **Change the tag** to `:0.25` (the shipped Quadlet unit, compose file and Kubernetes base already say `:0.25`) or to a digest
    you verified.
 3. **Nothing new is switched on.** Reminders and Care team notes each start only after you turn them on.
 4. **Coming from 0.22 or older**, also follow the next sections.

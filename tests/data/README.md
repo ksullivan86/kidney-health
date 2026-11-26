@@ -34,6 +34,7 @@ Run the commands from the repository root.
 |---|---|
 | `activity_vectors.json` | `python3 tests/data/gen_activity_vectors.py` |
 | `ai_device_vectors.json` | `python3 tests/data/gen_ai_device_vectors.py` |
+| `ai_meal_vectors.json` | `python3 tests/data/gen_ai_meal_vectors.py` |
 | `apple_health_vectors.json` | `node tests/js/gen_apple_health_vectors.mjs` |
 | `barcode_vectors.json` | `python3 tests/data/gen_barcode_vectors.py` |
 | `body_vectors.json` | `python3 tests/data/gen_body_vectors.py` |
@@ -93,6 +94,27 @@ What a replayer must get right:
 * The extra is never negative, is rounded half up to 10 kcal with whole-number arithmetic, and never passes the ceiling.
 * Only the calorie target changes; both ends of a range move by the same amount.
 
+## ai_meal_vectors.json
+
+AI meal ideas and AI recipes on the iPhone app, for the person's own AI key and the iPhone's own model (design note 39 §6.6).
+
+* Server: `app/guidance/ai_bridge.py` (the candidates and the meal check of an idea), `app/ai/guard.py` (the ideas judge),
+  `app/ai/recipes.py` (recipe candidates and the recipes judge, with cooking steps off) and `app/ai/prompts.py` (the data blocks,
+  the person block and how the condition is worded).
+* Browser twin: `app/static/js/engine/aimeal.js` (used by `app/static/js/mock/ai.js`).
+* Made by `tests/data/gen_ai_meal_vectors.py`, from the inputs of `gen_guidance_vectors.py`.
+
+Top-level keys:
+
+* `format`: the file's format number.
+* `about`: where the file comes from.
+* `label`: the provider named in the judged answers.
+* `model`: its model.
+* `foods`: the food rows, as in `guidance_vectors.json`.
+* `cases`: `{id, input, call: {fn, ...}, output}`. `input` has the shape of a guidance case. `fn` is one of `condition_text`,
+  `person_block`, `ai_candidates`, `ai_validate`, `ai_judge_ideas`, `ai_next_meal_data` (the data block and the fallback),
+  `ai_recipe_candidates`, `ai_recipe_data` and `ai_judge_recipes`.
+
 ## ai_device_vectors.json
 
 The server's checks on an AI answer, for the iPhone app's own AI (design note 38 §5.6). In device mode the page asks Apple's
@@ -120,6 +142,10 @@ Top-level keys:
 * `numbers_in_cases`: `{text: string, numbers: [number]}`, sorted.
 * `lab_judge_cases`: `{answer: LabReportAnswer, output: object}`.
 * `lab_text_cases`: `{answer: LabReportAnswer, text: string, output: object}`.
+* `extract_json_cases`: `{text: string, output: object | null}`: `app/ai/client.py` `extract_json` on a model's text (null when
+  it finds no JSON object). For the person's own AI key (design note 39 §6.5).
+* `label_cases`: `{answer: LabelAnswer, output: object}`: `features.label_draft`.
+* `plate_cases`: `{answer: PlateAnswer, output: object}`: the plate judge of `features.prepare_plate`, with the fixed search.
 
 What a replayer must get right:
 

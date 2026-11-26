@@ -271,7 +271,7 @@ phone, the person makes a new token and pairs again.
    | `POST /api/vision/label`, `/api/vision/plate` | label and plate photos |
    | `POST /api/ai/read-lab-report`, `/api/ai/read-lab-report-text` | lab report photos and text: on the local AI only |
    | `GET /api/foods/usda/search`, `POST /api/foods/usda/import`, `POST /api/foods/barcode` | the server's food services, with its keys |
-   | `PATCH /api/me/settings` with only `food.off_consent`, `user.units.labs`, `user.units.weight`, `body.weight_alarm`, `body.bp_goal` and `guidance`; `PATCH /api/me/ai` with only `opt_in` | the person's Open Food Facts consent, AI opt-in and account settings. Any other key, such as the theme, is `403` and the route does not run |
+   | `PATCH /api/me/settings` with only `food.off_consent`, `user.units.labs`, `user.units.weight`, `user.units.height`, `body.weight_alarm`, `body.bp_goal` and `guidance`; `PATCH /api/me/ai` with only `opt_in` | the person's Open Food Facts consent, AI opt-in and account settings. Any other key, such as the theme, is `403` and the route does not run |
    | `GET` and `PUT /api/profile`, `GET /api/me/settings` | the profile and targets, and the settings, which the server owns |
    | `GET /api/guidance/preferences`, `PUT` and `DELETE /api/guidance/preferences/{food_id}`, `GET /api/foods`, `GET /api/foods/{food_id}` | the food preferences, and finding which food each one is about |
    | `GET /api/recipe-import`, `POST /api/recipe-import/page` | a recipe from a web page: the server reads the page through its checked connection, as for the web app |
@@ -304,7 +304,7 @@ What this server offers this person, so the phone can choose without trying each
 
 ```json
 {"account": "5f1d0c1e9a8b7c6d5e4f3a2b1c0d9e8f",
- "api_version": 1, "app_version": "0.24.1",
+ "api_version": 1, "app_version": "0.25.0",
  "sync": {"gateway": true, "changes": true},
  "gateway": [{"method": "GET", "path": "/api/ai/status"}, …],
  "ai": {"enabled": true, "available": true, "routes": {"meal_ideas": {…}, "labs": {…}, …}},

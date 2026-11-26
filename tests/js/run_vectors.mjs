@@ -385,6 +385,84 @@ function guidanceVectors(GE, file = GUIDANCE_VECTORS) {
   return [checks, failures, `${doc.cases.length} cases: ${Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(', ')}`];
 }
 
+// AI meal ideas and AI recipes on the iPhone app (design note 39 §6.6): app/static/js/engine/aimeal.js against
+// tests/data/ai_meal_vectors.json (tests/data/gen_ai_meal_vectors.py, from app/ai and app/guidance). The inputs replay as in the
+// guidance group.
+function aiMealVectors() {
+  const context = vm.createContext({ console });
+  vm.runInContext('globalThis.window = globalThis;', context);
+  for (const rel of [...GUIDANCE_ENGINE, 'app/static/js/engine/textclean.js', 'app/static/js/engine/aiguard.js', 'app/static/js/engine/aimeal.js']) {
+    vm.runInContext(readFileSync(join(ROOT, rel), 'utf8'), context, { filename: rel });
+  }
+  const KH = vm.runInContext('globalThis.KH', context);
+  const GE = KH.guidanceEngine;
+  const A = KH.aiMeal;
+  const doc = JSON.parse(readFileSync(join(ROOT, 'tests', 'data', 'ai_meal_vectors.json'), 'utf8'));
+  const failures = [];
+  let checks = 0;
+  const all = new Map(doc.foods.map((r) => [r.id, GE.makeFood(r)]));
+  const foodsFor = (inp) => {
+    const fixture = inp.food_set === 'fixture';
+    const foods = inp.food_set === 'all' ? new Map(all) : new Map([...all].filter(([id]) => (id < 101) === fixture));
+    for (const [fid, values] of Object.entries(inp.food_overrides || {})) {
+      const row = doc.foods.find((r) => r.id === Number(fid));
+      foods.set(Number(fid), GE.makeFood({ ...row, nutrients: { ...row.nutrients, ...values } }));
+    }
+    return foods;
+  };
+  const contextFrom = (inp) => {
+    const foods = foodsFor(inp);
+    const hist = (rows) => rows.map((h) => GE.historyEntry({ ...h, flags: foods.get(h.food_id).flags }));
+    return GE.makeContext({ date: inp.date, profile: inp.profile, prefs: { ...inp.prefs, food_pref: new Map(inp.prefs.food_pref || []) }, foods,
+      day: inp.day.map((e) => GE.dayEntry({ id: e.id, meal: e.meal, status: e.status, food: foods.get(e.food_id), name: e.name, servings: e.servings,
+        nutrients: { ...e.nutrients }, purpose: e.purpose })),
+      history: hist(inp.history), history60: inp.history60 != null ? hist(inp.history60) : null,
+      planned30: (inp.planned30 || []).map(([food_id, date, meal]) => ({ food_id, date, meal })),
+      saved_meals: inp.saved_meals.map((m) => ({ id: m.id, name: m.name, meal_hint: m.meal_hint, items: m.items.map(([f, q]) => [f, q]) })),
+      combos: inp.combos.map((c) => ({ ...c, items: c.items.map(([f, q]) => [f, q]) })), tunables: inp.tunables });
+  };
+  const call = (inp, spec) => {
+    const fn = spec.fn;
+    if (fn === 'condition_text') return A.conditionText(spec.person);
+    if (fn === 'person_block') return A.personBlock(spec.profile, spec.ai_prefs, spec.today, spec.tastes || {});
+    const ctx = contextFrom(inp);
+    const exclude = new Set(spec.exclude || []);
+    if (fn === 'ai_candidates') return A.candidatesForAi(ctx, spec.meal, exclude);
+    if (fn === 'ai_validate') return A.validateAiItems(ctx, spec.meal, spec.ideas, spec.candidate_ids == null ? null : spec.candidate_ids);
+    if (fn === 'ai_judge_ideas') return A.judgeIdeas(spec.answer, ctx, spec.meal, A.candidatesForAi(ctx, spec.meal, exclude), doc.label, doc.model);
+    if (fn === 'ai_next_meal_data') {
+      const bridge = A.candidatesForAi(ctx, spec.meal, exclude);
+      return { data: A.nextMealContext(bridge, ctx, spec.meal, GE.budget.openSlots(spec.meal, ctx.day), spec.person), fallback: A.fallback(bridge) };
+    }
+    const target = { kind: spec.target.kind, meal: spec.target.meal || null };
+    const original = (spec.recipe || []).map(([id, q]) => [ctx.foods.get(id), q]);
+    const bridge = A.recipeCandidates(ctx, target, original.map(([f]) => f), exclude);
+    if (fn === 'ai_recipe_candidates') return bridge;
+    const makes = Number(spec.makes);
+    if (fn === 'ai_recipe_data') {
+      const meal = target.kind === 'meal' && target.meal ? target.meal : bridge.meal;
+      const request = spec.mode === 'suggest' ? { mode: spec.mode, makes, dish: spec.dish } : { mode: spec.mode, makes };
+      const block = spec.mode === 'change' ? A.recipeChangeBlock(ctx, bridge, original, makes, target) : null;
+      return A.recipeContext(bridge, ctx, target.kind === 'meal' ? meal : 'day', target.kind === 'meal' ? GE.budget.openSlots(meal, ctx.day) : [],
+        spec.person, request, block);
+    }
+    if (fn === 'ai_judge_recipes') {
+      return A.judgeRecipes(spec.answer, ctx, target, bridge, { mode: spec.mode, makes, original, name: spec.name || null,
+        providerLabel: doc.label, model: doc.model });
+    }
+    throw new Error(`unknown fn ${fn}`);
+  };
+  const counts = {};
+  for (const c of doc.cases) {
+    counts[c.call.fn] = (counts[c.call.fn] || 0) + 1;
+    let got;
+    try { got = call(c.input, c.call); } catch (e) { got = { exception: String(e && e.stack || e) }; }
+    checks += 1;
+    if (!isDeepStrictEqual(plainSigned(got), c.output)) failures.push({ label: `${c.id} (${c.call.fn})`, got: plainSigned(got), want: c.output });
+  }
+  return [checks, failures, `${doc.cases.length} cases: ${Object.entries(counts).map(([k, v]) => `${v} ${k}`).join(', ')}`];
+}
+
 function loadBarcode() {
   const context = vm.createContext({ console, URL });
   vm.runInContext('globalThis.window = globalThis;', context);
@@ -1356,10 +1434,23 @@ function aiDeviceVectors() {
     expect(`lab judge ${JSON.stringify(c.answer)}`, L.judge(checked.answer), c.output);
   }
   for (const c of doc.lab_text_cases) expect(`lab judge_text ${JSON.stringify(c.text)}`, L.judgeText(c.answer, c.text), c.output);
+  // The person's own AI key (design note 39 §6.5).
+  for (const c of doc.extract_json_cases) expect(`extract_json ${JSON.stringify(c.text)}`, J.extractJson(c.text), c.output);
+  for (const c of doc.label_cases) {
+    const checked = J.checkLabel(c.answer);
+    expect(`label answer fits ${JSON.stringify(c.answer)}`, checked.ok, true);
+    expect(`label draft ${JSON.stringify(c.answer)}`, J.labelDraft(checked.answer), c.output);
+  }
+  for (const c of doc.plate_cases) {
+    const checked = J.checkPlate(c.answer);
+    expect(`plate answer fits ${JSON.stringify(c.answer)}`, checked.ok && checked.malformed.length === 0, true);
+    expect(`plate judge ${JSON.stringify(c.answer)}`, J.judgePlate(checked.answer, search, checked.malformed), c.output);
+  }
   const n = (k) => doc[k].length;
   return [checks, failures, `${n('prefilter_cases')} prefilter, ${n('name_policy_cases')} name policy, ${n('serving_quantity_cases')} serving quantity, `
     + `${n('servings_for_cases')} servings, ${n('payload_cases')} payload, ${n('parse_meal_cases')} parse-meal, ${n('printed_date_cases')} date, `
-    + `${n('numbers_in_cases')} number, ${n('lab_judge_cases')} lab judge and ${n('lab_text_cases')} lab text cases`];
+    + `${n('numbers_in_cases')} number, ${n('lab_judge_cases')} lab judge, ${n('lab_text_cases')} lab text, ${n('extract_json_cases')} JSON, `
+    + `${n('label_cases')} label and ${n('plate_cases')} plate cases`];
 }
 
 function report(name, file, [checks, failures, summary]) {
@@ -1449,6 +1540,7 @@ function main() {
   status |= report('lists and recipes', 'tests/data/lists_recipes_vectors.json vs app/static/js/engine/recipe_import.js + js/mock/lists.js',
     listsRecipesVectors());
   status |= report('ai device', 'tests/data/ai_device_vectors.json vs app/static/js/engine/aijudge.js + lab_report.js', aiDeviceVectors());
+  status |= report('ai meal', 'tests/data/ai_meal_vectors.json vs app/static/js/engine/aimeal.js', aiMealVectors());
   return status;
 }
 

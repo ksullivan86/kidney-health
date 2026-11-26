@@ -19,6 +19,34 @@ from khserver import Server, first_admin
 from playwright.sync_api import sync_playwright
 
 
+def height_walk(page, person, check) -> None:
+    """Height in feet and inches by default, centimetres from Settings (user.units.height); the profile keeps centimetres."""
+    person.json("PUT", "/api/profile", {"height_cm": 170.2})
+    page.evaluate("() => KH.loadProfile(true).then(() => KH.views.profile.renderProfile())")
+    page.wait_for_function("() => document.querySelector('#pf-height-ft').value === '5'")
+    check("A saved 170.2 cm shows as 5 ft 7 in, in two labelled boxes",
+          page.is_visible("#pf-height-ftin-field") and not page.is_visible("#pf-height-cm-field")
+          and page.input_value("#pf-height-in") == "7" and page.get_by_label("Height (feet)").count() == 1
+          and page.get_by_role("group", name="Height").count() == 1)
+    with page.expect_response(lambda r: r.request.method == "PUT" and r.url.endswith("/api/profile")):
+        page.click("#btn-save-profile")
+    check("Saving without touching the height keeps 170.2 cm", person.json("GET", "/api/profile")["height_cm"] == 170.2)
+    page.fill("#pf-height-ft", "5")
+    page.fill("#pf-height-in", "10")
+    with page.expect_response(lambda r: r.request.method == "PUT" and r.url.endswith("/api/profile")):
+        page.click("#btn-save-profile")
+    check("5 ft 10 in is saved as 178 cm", person.json("GET", "/api/profile")["height_cm"] == 178)
+    page.click("#settings-open")
+    page.wait_for_function("() => document.querySelector('#set-height-units').value === 'ft_in'")
+    with page.expect_response(lambda r: r.request.method == "PATCH" and r.url.endswith("/api/me/settings")):
+        page.select_option("#set-height-units", "cm")
+    check("Settings saves Units for height", person.json("GET", "/api/me/settings")["settings"]["user.units.height"]["value"] == "cm")
+    page.click("#tab-profile")
+    page.wait_for_function("() => !document.querySelector('#pf-height-cm-field').hidden")
+    check("Profile then shows the height in centimetres", page.input_value("#pf-height") == "178" and not page.is_visible("#pf-height-ftin-field"))
+    person.json("PATCH", "/api/me/settings", {"user.units.height": "ft_in"})
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--port", type=int, default=8101)
@@ -88,6 +116,7 @@ def main() -> int:
                 page.wait_for_function("() => !document.querySelector('#btn-save-profile').disabled")
                 saved = ana.json("GET", "/api/profile")
                 check("Retry saves the preserved profile entries", saved["name"] == "Retry profile" and saved["targets"]["potassium_mg"] == 1800)
+                height_walk(page, ana, check)
                 ctx.close()
             finally:
                 browser.close()

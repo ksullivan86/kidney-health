@@ -190,7 +190,7 @@ const about = { json: { account: 'acct-1', api_version: 1, features: { sync: fal
   const me = await api.request('PATCH', '/api/me/ai', { opt_in: true });
   ok(() => assert.deepEqual(JSON.parse(gateway('/push/v1/api/me/ai')[0].body), { opt_in: true }), 'the AI switch goes to the server too, alone');
   ok(() => assert.deepEqual([me.phone.both_ways, me.phone.where.describe, me.phone.where.labs, me.phone.where.chat], [true, 'server', 'server', null]),
-    'Settings: where each feature runs (Ask stays off on the phone)');
+    'Settings: where each feature runs (Ask waits for two-way sync, which this server does not offer)');
   const st = await api.request('GET', '/api/ai/status');
   ok(() => assert.deepEqual([st.features.parse_meal, st.features.next_meal, st.features.label, st.features.chat, st.features.voice],
     [true, true, true, false, false]), 'the server\'s features, without Ask and voice');
@@ -242,8 +242,11 @@ const about = { json: { account: 'acct-1', api_version: 1, features: { sync: fal
   ok(() => assert.equal(got.provider.label, 'Apple\'s on-device model'), 'only the iPhone');
   ok(() => assert.equal(gateway('/push/v1/api/ai/parse-meal').length, before), 'the server was not asked');
   const st2 = await api.request('GET', '/api/ai/status');
-  ok(() => assert.deepEqual([st2.features.next_meal, st2.features.parse_meal], [false, true]), 'only the iPhone\'s features');
-  await fails(api.request('POST', '/api/ai/next-meal', { date: D, meal: 'lunch' }), 404);
+  ok(() => assert.deepEqual([st2.features.next_meal, st2.features.parse_meal, st2.features.chat], [true, true, false]), 'only the iPhone\'s features');
+  const ideasBefore = gateway('/push/v1/api/ai/next-meal').length;
+  const ideas = await api.request('POST', '/api/ai/next-meal', { date: D, meal: 'lunch' }); // meal ideas on the iPhone's model (note 39 §6.6)
+  ok(() => assert.ok(ideas.status === 'no_targets' || ideas.provider.label === 'Apple\'s on-device model', JSON.stringify(ideas).slice(0, 200)));
+  ok(() => assert.equal(gateway('/push/v1/api/ai/next-meal').length, ideasBefore), 'the server was not asked for meal ideas');
   await KH.mock.aiDevice.setOnly(false);
   // with no AI on this iPhone and the server unreachable: the feature's way without AI
   const p2 = await page({ gw: { 'GET /push/v1/about': about, 'GET /push/v1/api/ai/status': serverStatus(['meal_ideas']), 'POST /push/v1/api/ai/next-meal': 'offline' },

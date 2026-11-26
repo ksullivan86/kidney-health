@@ -5,8 +5,8 @@
    1. Welcome: where the data lives, and the one choice of how to start: an empty log of your own (the default), or the sample
       data to try the app first. The sample data can be swapped for an empty log later (Settings → This device → Start over).
    2. About you: your name, CKD stage, dialysis and diabetes type, saved to the profile (the same choices as Profile).
-   3. Your server, optional: what connecting one does now (your log on your other devices, your care team) and what comes later
-      (the server's AI and keys, changes coming back; owner, 2026-11-21), how to pair, a button that opens the app's own settings, and Not now.
+   3. Your server, optional: what connecting one adds (the log both ways, the server's AI and keys, the care team; owner,
+      2026-11-21 and note 39), how to pair, a button that opens the app's own settings, and Not now.
    4. Done.
    The setup shows at every start until it is finished; Settings → This device → Run the setup again shows it once more.
 
@@ -93,10 +93,10 @@
     show(step(3, 'Your own server (optional)', [
       h('p', {}, 'You do not need a server: the app works fully on this iPhone. If you run a Kidney Health server, connecting it adds:'),
       h('ul', {},
-        h('li', {}, 'Your log on your other devices. What you add here is sent to your server, so you see it in the web app and it is kept there too.'),
-        h('li', {}, 'Your care team, if you share your log with them on the server.'),
-        h('li', {}, 'Coming later: your server\'s AI, the keys and food services set up there, and changes made on your other devices coming back to this iPhone.')),
-      handler ? h('p', {}, 'To connect one, open the web app on your server: Settings → Account → Your data → Phone shortcuts. Make a token for "The iPhone app". Then tap Open phone settings here and scan its QR code. You can do this any time later.') : null],
+        h('li', {}, 'Your log on all your devices. What you add or change here reaches your server, and what you change in the web app comes back to this iPhone.'),
+        h('li', {}, 'Your server\'s AI, and the keys and food services set up there. When the server cannot be reached, the app uses this iPhone\'s own.'),
+        h('li', {}, 'Your care team, if you share your log with them on the server.')),
+      handler ? h('p', {}, 'To connect one, open the web app on your server: Settings → Account → Your data → Phone shortcuts. Make a token for "The iPhone app, both ways". If that choice is missing, ask whoever runs the server to turn it on. Then tap Open phone settings here and scan its QR code. You can do this any time later.') : null],
     actions(
       handler ? button('Open phone settings', 'secondary', () => handler.postMessage('settings'), 'welcome-server') : null,
       button(handler ? 'Not now' : 'Next', 'primary', stepDone, 'welcome-server-next'))));

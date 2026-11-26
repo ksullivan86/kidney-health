@@ -66,8 +66,9 @@ RECIPE_PATH = "/api/meals"
 def effective_trust(*, admin_allows: bool, stored: str, requested: str | None) -> str:
     """The trust this request runs with. ``ask`` unless the admin switch is on **and** the person chose it: ``always``
     is the stored choice alone; ``conversation`` needs the stored choice and the page saying this conversation is
-    trusted (the page forgets it at New conversation and after 12 hours). Anything else is ``ask``."""
-    if not admin_allows or stored not in TRUST_CHOICES:
+    trusted (the page forgets it at New conversation and after 12 hours). Anything else is ``ask``. A page that asks for
+    ``ask`` gets it whatever is stored: the iPhone app does, because it saves the card itself (design note 39)."""
+    if not admin_allows or stored not in TRUST_CHOICES or requested == "ask":
         return "ask"
     if stored == "always":
         return "always"

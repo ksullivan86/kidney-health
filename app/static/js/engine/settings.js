@@ -311,6 +311,9 @@
         + 'When off, every new token expires. Tokens already made keep working until they are removed; to end them, use Revoke tokens in People.' },
     { key: 'ui.theme', type: 'choice', options: ['system', 'light', 'dark'], default: 'system', scope: 'user_default', env: 'UI_THEME',
       label: 'Theme', help: '' },
+    { key: 'user.units.height', type: 'choice', options: ['ft_in', 'cm'], default: 'ft_in', scope: 'user_default', env: 'HEIGHT_UNITS',
+      label: 'Units for height',
+      help: "ft_in (feet and inches, the app's US default) or cm. Only how your height is shown and typed changes; it is stored in centimetres." },
     { key: 'user.units.labs', type: 'choice', options: ['us', 'si'], default: 'us', scope: 'user_default', env: 'LAB_UNITS',
       label: 'Units for lab results',
       help: 'us: mg/dL (creatinine, phosphate), g/dL (albumin), mg/g (urine albumin), % (HbA1c). si: µmol/L, mmol/L, g/L, mg/mmol, '

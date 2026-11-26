@@ -1118,7 +1118,10 @@ checks a maintainer runs before tagging are in `docs/maintainers.md`, and everyt
 
 **Unreleased (2026-11-12):** reminders by phone notification (note 35, schema step 35), off until `REMINDERS_ENABLED`.
 
-**Status (2026-11-20): v0.24.1 is prepared.** The iPhone app is called Kidney Health everywhere (bundle ID
+**Status (2026-11-24): v0.25.0 is prepared.** The iPhone app runs with no server (note 38: storage, food services, Apple
+Health into the phone's log, the iPhone's own AI, native scanners, Home Screen shortcuts) and with your own server both ways
+(note 39: the both-ways token and its gateway, the change feed with schema steps 37 and 38, sync with conflict cards, profile
+and targets from the server, recipe import, Instacart and lists). **v0.24.1**: The iPhone app is called Kidney Health everywhere (bundle ID
 `io.github.ksullivan86.kidneyhealth`, pairing links `kidneyhealth://`), goes to TestFlight by a workflow, and says the whole path to a
 phone token; design note 38 (the iPhone app without a server) is decided. **v0.24.0**: Reminders by phone notification (note 35, schema step 35, `REMINDERS_ENABLED`),
 reading the text of a lab PDF on the local AI (note 36, no schema step), and Care team notes, phase 1 (note 37, schema step 36,
@@ -1427,7 +1430,7 @@ still forgets a preview and invalidates an outstanding dry run.
 * **Profile.** Only with `replace_profile=1` (default off): the profile fields, the targets (replaced, not merged;
   `profile.apply_profile_changes`, the body of `PUT /api/profile`; a stage or diabetes type the file marks "not chosen
   yet" stays unchosen) and the settings `guidance`, `ui.theme`, `user.units.labs`, `food.scan_prefer_camera`, `user.units.weight`,
-  `body.weight_alarm` and `body.bp_goal` (the last two are the numbers the person's care team gave them; validated by the registry; a locked one
+  `user.units.height`, `body.weight_alarm` and `body.bp_goal` (the last two are the numbers the person's care team gave them; validated by the registry; a locked one
   is skipped and listed). They are clinical settings the person may have
   agreed with their care team on this server.
 * **One transaction.** After parsing, `BEGIN IMMEDIATE`, then everything above, then (import only) the audit row and
@@ -1876,7 +1879,8 @@ lab validation messages, history, deletion, the kidney-function card, ~150 sugge
   or replace a newer Lab results/Profile summary. Concurrent readers share one read until invalidated; older readers then
   converge on the fresh result.
 * **Today**: a `{min}`-only target (fiber) is a goal bar ("of at least X", no over state); a range with
-  `min === max` reads "about X". **Settings**: Preferences → *Units for lab results* (`user.units.labs`);
+  `min === max` reads "about X". **Settings**: Preferences → *Units for lab results* (`user.units.labs`) and *Units for height*
+  (`user.units.height`, see below);
   Admin → server settings group *Personalised targets and lab results* (`targets.*`, `user.units.labs` default).
 
 ## M2 API: guidance
@@ -3860,12 +3864,26 @@ weights; the project's own number) and keep the default 1 MiB body limit.
 
 ### Settings (registered in `app/settings_registry.py`)
 
-`user.units.weight` (`user_default`, `kg` or `lb`, default `lb`), `body.weight_alarm` (`user`; `{amount_kg: 0.2 to 10 or null, over: "between_sessions" |
+`user.units.weight` (`user_default`, `kg` or `lb`, default `lb`), `user.units.height` (`user_default`, `ft_in` or `cm`, default `ft_in`,
+env `HEIGHT_UNITS`: Profile's height in feet and inches, or in centimetres; the profile's `height_cm` is stored as before, see *Height units*
+below), `body.weight_alarm` (`user`; `{amount_kg: 0.2 to 10 or null, over: "between_sessions" |
 "days", days: 1 to 7}`, default `{null, "days", 1}`) and `body.bp_goal` (`user`; `{systolic: 80 to 200 or null, diastolic: 40 to 130 or null}`, default both
 null; **the top number must be above the bottom one** when both are set). There is **no default alarm and no default goal**: the right numbers are the
 care team's (note 10 §2 and F3: KDIGO's 120 is for standardized office readings). They are in the export's `settings` and carried over by an import with
 `replace_profile`. The unit's default for everyone is in Admin → Server settings → Default for everyone. The browser twin is `js/engine/settings.js` (a `num`
 type for the float, `nullable` fields), checked by `tests/data/settings_vectors.json`.
+
+### Height units (`user.units.height`)
+
+The profile stores `height_cm` as before; the setting changes only Profile → About you. With `ft_in` (the default) Profile shows a
+fieldset "Height" with two boxes, `#pf-height-ft` (3–8) and `#pf-height-in` (0–11.5, step 0.5); with `cm`, the old `#pf-height` box
+(the other is hidden). `KH.bodyRules` (`js/engine/body.js`) converts: `feetInchesToCm` uses 1 in = 2.54 cm exactly and rounds half up
+to 0.5 cm, the box's step; `cmToFeetInches` rounds to the nearest 0.5 in and carries 12 in to the next foot, so every height the
+boxes take comes back the same. A height the person did not touch keeps the saved centimetres (`readHeightCm` in `js/views/profile.js`),
+so showing it in feet and inches never changes it or counts as an unsaved change. Profile reads the unit from `GET /api/me/settings`
+when it opens; Settings → Preferences → *Units for height* saves it and calls `KH.views.profile.setHeightUnit`, which shows the same
+height, typed or saved, in the new unit. The first-sync card in Settings shows the height in the person's unit. There is no server
+twin: the server never converts a height. Tests: `tests/js/height_units.test.mjs`, `tests/test_height_units.py`.
 
 ### The handbook's words (what the app says, and where it comes from)
 
@@ -4876,7 +4894,7 @@ Code `app/app_gateway.py`, `GatewayCaller` in `app/auth/deps.py`, `app:sync` in 
   `opt_in`: any other key is `403` before the route runs); since plan step 8 also `GET` and `PUT /api/profile`, `GET /api/me/settings`,
   `GET /api/guidance/preferences`, `PUT` and `DELETE /api/guidance/preferences/{food_id}`, `GET /api/foods` and `GET /api/foods/{food_id}`
   (the profile, targets, account settings and food preferences, which the server owns; the two food reads name a preference's food), with
-  `PATCH /api/me/settings` taking also `user.units.labs`, `user.units.weight`, `body.weight_alarm`, `body.bp_goal` and `guidance` (never the
+  `PATCH /api/me/settings` taking also `user.units.labs`, `user.units.weight`, `user.units.height`, `body.weight_alarm`, `body.bp_goal` and `guidance` (never the
   theme, the camera, the AI's trust or route; at most 16 KiB); since plan step 9 also `GET /api/recipe-import`, `POST /api/recipe-import/page`
   (the page is read by the server's `RecipeFetcher` through the SSRF-checked transport), `GET /api/instacart`, `POST /api/instacart/preview`,
   `/api/instacart/send`, `GET /api/list-sync`, `POST /api/list-sync/preview` and `/api/list-sync/send`, each answering as for the web app
@@ -5635,8 +5653,8 @@ server stays the full version; this mode never exists in the installed app.
   "Import from a file" screen (`js/views/settings.js`, which shows it instead of "no server to import into" while the mode is on). The same
   rules: `format` `kidney-health-export` version 1; **depth limit 32**; NaN/Infinity refused; every record kind a small schema (the server's pydantic models
   with `extra="forbid"`, strict types, bounded lists and strings) checked in the same order, so the **first problem is the same one**, named by record
-  kind and position and never repeating a value; the `user` and AI sections accepted but never read; **`settings` carries over only the seven
-  allowlisted keys** (`guidance`, `ui.theme`, `user.units.labs`, `food.scan_prefer_camera`, `user.units.weight`, `body.weight_alarm`, `body.bp_goal`) and only with `replace_profile` (`ai` and the consents never);
+  kind and position and never repeating a value; the `user` and AI sections accepted but never read; **`settings` carries over only the eight
+  allowlisted keys** (`guidance`, `ui.theme`, `user.units.labs`, `food.scan_prefer_camera`, `user.units.weight`, `user.units.height`, `body.weight_alarm`, `body.bp_goal`) and only with `replace_profile` (`ai` and the consents never);
   ids remapped; an own food identical to one already there is reused; built-in foods found by FoodData Central id (older files: id and name);
   shared foods linked or kept as the person's own copy or reported; an account that has data is refused (409, or `can_import: false` on a dry
   run) unless `merge`; what is already there is left out; the profile and targets are replaced, not merged; a dry run runs the same code and puts
@@ -5906,12 +5924,65 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
     a safety card, a consent question (409), a limit (429) or a failure, is the server's and is shown as it is. "Use only this
     iPhone's AI" (`GET`/`PUT /api/device/ai-choice`, kept with the log) skips the server. `GET /api/ai/status` merges the two: the
     server's route, features and consent for what it runs, the iPhone's for the rest; voice is off. Lab text and photos go only to
-    the server's lab routes (local AI only) or the iPhone's model. Ask stays off on the phone: the server's assistant can save to
-    the server's log, which the phone sees only with two-way sync (step 6). Answers pass `M.serverApi.localize`: foods sent in full
+    the server's lab routes (local AI only) or the iPhone's model. Answers pass `M.serverApi.localize`: foods sent in full
     are kept and renamed to the phone's ids, other `food_id`s are matched by the built-in food of that exact name or the one food of
     that name, and an idea or card naming a food the phone lacks is left out (`dropped: not_on_this_iphone`); server row ids
     (`entry_id`, `meal_id`) are never kept; a safety answer is never cut. Requests drop `exclude_food_ids` (the phone's ids).
     Photos go from `KH.ai.uploadPhoto` to the in-page API, which sends them as `jpeg`.
+  * **Ask on the phone** (`POST /api/ai/chat` in `js/mock/ai.js`): the server's AI only, and only while the phone syncs both ways
+    (`M.serverChanges.active()`), since the assistant reads the person's log on the server. Waiting phone rows are sent first (5 s at
+    most). The page always sends `trust: "ask"`, which the server honours whatever the person stored (`chat_save.effective_trust`),
+    so the server writes nothing and answers with a card. The card's foods are renamed to the phone's ids (`M.serverApi.foodHere`:
+    the built-in food of that name, else the one food of that name, else the one with that brand); a card that names a food the
+    phone lacks becomes a question. Save on the card posts to the phone's own routes with the server's `client_id`, and step 4 sends
+    the row up once. The rule-based low and emergency answers pass untouched. An older server that saved at once: the `saved`
+    cards lose Undo (`undo: null, on_server: true`) and a sync follows. Voice stays off. `GET /api/me/ai` → `phone.ask` and
+    `phone.photos` give why the server's AI cannot run Ask or photos now (`not_paired`, `not_both_ways`, `offline`, `device_only`,
+    `not_synced`, `not_opted_in`, `server_off`); the Ask tab is always shown on the phone and words the reason (`js/views/ask.js`),
+    and the Add screen says where a meal photo comes from when "Plate photo (AI)" is not offered (`js/views/ai.js`). The phone never
+    shows the web demo's Ask text.
+* **The person's own AI key (design note 39 §6.5, the owner's decision of 2026-11-25)**, with or without a server. The order per
+  feature is: the server's AI (D2, unchanged) → the own key → the iPhone's model → no AI; "Use only this iPhone's AI" skips the
+  own key too. Only an unreachable or failing provider (`offline`, `not_available`) moves on; a refusal or a checked answer is
+  shown as it is.
+  * **The app** (`ios/KidneyHealth/Services/OwnAI.swift`, Keys and services): providers are the server's `user_allowed` presets
+    (OpenAI `api.openai.com/v1`, OpenRouter `openrouter.ai/api/v1`, Nous Portal `inference-api.nousresearch.com/v1`), with their
+    token field, structured mode, temperature and extra body fields; a model name; the key in the Keychain (`ownAIKey`, this
+    device only). Bridge kinds: `{kind: 'ownAIStatus'}` → `{ok, set, provider, label, host, model, photos}` (never the key);
+    `{kind: 'ownAI', task, text | jpeg}` → `{ok, content, refusal, finish}` or `{error: own_off | photos_off | key_refused |
+    rate_limited | not_available | offline | ai_failed | bad_request, message}`. Tasks: `parse_meal`, and `read_label` and
+    `plate` only with the photo switch on (off by default). The app builds the Chat Completions body from `ai-prompts.json`
+    `own_key` (the server's `TASK_SYSTEM_PROMPT`, task messages for `json_schema` and `prompt` mode, schemas and names, written
+    by `scripts/build_preview.py --device` from `app/ai`), and posts it over HTTPS to the fixed host with the key in
+    `Authorization`, through the transport with no cookies, no cache and no redirects, with size limits; nothing is logged or kept.
+  * **The page** (`js/mock/ai.js`): the server's prefilter first; then the own key, after a consent sheet naming the provider and
+    host (purpose `text` or `photos`, provider id `-1`, kept with the log); the answer is read with the twin of
+    `client.extract_json` and checked with the server's judges (`js/engine/aijudge.js`: `checkParseMeal`/`judgeParseMeal`,
+    `checkLabel`/`labelDraft`, `checkPlate`/`judgePlate`, vectors in `tests/data/ai_device_vectors.json`). The data for these tasks
+    has no name or birth field, and a request whose data holds the profile's name or birth month is not sent to the own key
+    (`identityIn`): it goes to the iPhone's model or answers 503 `identity`. Lab text and lab photos never reach `viaOwnKey`.
+    `GET /api/me/ai` → `phone.own_key` and `phone.where` (`server`, `own`, `iphone`); `phone.photos` adds `own_photos_off`.
+  * **Not on the own key**: Ask (its tools read the log on the server), lab reports, voice.
+* **More on the phone's own AIs (design note 39 §6.6)**. Meal ideas (mode `ideas` only) and AI recipes (cooking steps off) run on
+  the own key and on the iPhone's model in the same order; on iOS 27 the iPhone's model also reads a label or plate photo, after
+  the own key.
+  * **Twins** (`js/engine/aimeal.js`, `KH.aiMeal`; vectors `tests/data/ai_meal_vectors.json` from `tests/data/gen_ai_meal_vectors.py`):
+    `candidates_for_ai` (ideas), `validate_ai_items`, `lower_to_fit`, `guard.judge_ideas`, `guard.fallback`,
+    `recipes.recipe_candidates`, `recipes.judge_recipes`, `prompts.next_meal_context`, `recipe_context`, `person_block`,
+    `condition_text`, and the V2 checks of `IdeasAnswer` and `RecipesAnswer`.
+  * **The page** (`js/mock/ai.js` `mealIdeasHere`, `recipesHere`): the server's route checks and guidance gate, the candidates,
+    trimmed lowest-ranked first until the data block fits (`DATA_CHARS`: 80,000 characters for the own key, 5,000 for the iPhone's
+    model), then the server's judge. Requests: `{kind: 'ownAI', task: 'next_meal' | 'recipes', text, condition, ids}` and
+    `{kind: 'ai', task, text, condition}`; `condition` is `prompts.condition_text` of the person block. Rerank, swap and plan answer
+    503 `not_on_phone`.
+  * **The app**: `ai-prompts.json` holds `systems` (the meal ideas and recipe rules with `[[CONDITION]]`), `conditions` (every
+    wording `condition_text` can give; anything else is refused) and per task `{template, system, image}`. `own_key` gets
+    `next_meal` and `recipes` with the schema holding `"__CANDIDATE_IDS__"` where the server puts its id list
+    (`scripts/gen_own_key_prompts.py`); `OwnAI.swift` puts the page's whole-number ids in the schema and in the schema line.
+    `OnDeviceAI.swift` answers with `@Generable` shapes of the server's schemas (the ids are plain whole numbers there; the judge
+    drops any that is not a candidate). Photos: `OnDeviceVision.swift`, iOS 27 or later (the photo is a
+    `FoundationModels.Attachment` in the prompt); `aiStatus` says `photos`.
+  * **Ask** stays the server's: free text checked by the server's chat checks, which have no twin here.
 * **Sync both ways (design note 39, steps 6 and 7)**: `js/mock/server_changes.js` (device mode only, `M.serverChanges`) reads the
   change feed and sends the phone's edits and deletes ("The change feed" above), through `M.serverApi.call` and the app's
   `serverApi` message (allow-list: `GET /push/v1/changes` with `after` and `limit`, `POST /push/v1/changes`, `POST /push/v1/match`).
@@ -5966,7 +6037,7 @@ Design note 38 (step 1). `scripts/build_preview.py --device DIR` writes the Page
   * **The profile, targets, account settings and food preferences** (step 8, D5), `js/mock/server_account.js` (`M.serverAccount`):
     after each run (at most every 5 minutes unless Sync now) it reads `GET /push/v1/api/profile`, `/me/settings` and
     `/guidance/preferences` and copies them into the phone's profile, its user settings of `ACCOUNT_KEYS` (`user.units.labs`,
-    `user.units.weight`, `body.weight_alarm`, `body.bp_goal`, `guidance`; the `guidance` lists that name this phone's ids,
+    `user.units.weight`, `user.units.height`, `body.weight_alarm`, `body.bp_goal`, `guidance`; the `guidance` lists that name this phone's ids,
     `repeat_ok_foods`, `repeat_ok_meals`, `hidden_usual_meals`, stay as they are here) and its food preferences, each food found by
     `GET /push/v1/api/foods/{id}` and remembered (`foodIds`). While the phone is paired both ways with an account (offline too), the
     phone's `PUT /api/profile`, `PATCH /api/me/settings` (the account keys; the theme and the camera stay local), `PUT`/`DELETE

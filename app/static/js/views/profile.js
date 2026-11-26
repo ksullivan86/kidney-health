@@ -22,7 +22,7 @@
   };
   // Where a server error about a field is shown.
   const FIELD_INPUT = {
-    name: 'pf-name', weight_kg: 'pf-weight', height_cm: 'pf-height', ckd_stage: 'pf-stage', dialysis: 'pf-dialysis', diabetes: 'pf-diabetes',
+    name: 'pf-name', weight_kg: 'pf-weight', get height_cm() { return heightInput().id; }, ckd_stage: 'pf-stage', dialysis: 'pf-dialysis', diabetes: 'pf-diabetes',
     warn_fraction: 'pf-warn', about_tolerance_pct: 'pf-about-tol', week_start: 'pf-week-start', dialysis_days: 'pf-dd-0', birth_month: 'pf-birth-month', sex: 'pf-sex',
     activity: 'pf-act-none', transplant_date: 'pf-transplant-date', frail_or_sarcopenic: 'pf-frail', weight_6_months_ago_kg: 'pf-weight-6mo',
     pregnant_or_breastfeeding: 'pf-pregnant', hyperkalemia_history: 'pf-hyperk', urine_output_ml: 'pf-urine', pd_uf_ml: 'pf-uf',
@@ -30,7 +30,7 @@
   };
   // missing_inputs (note 05 §4.6) → the prompt's words and the field it opens.
   const MISSING = {
-    height_cm: ['your height', 'pf-height'], birth_month: ['your birth month', 'pf-birth-month'], sex: ['the sex used in formulas', 'pf-sex'],
+    get height_cm() { return ['your height', heightInput().id]; }, birth_month: ['your birth month', 'pf-birth-month'], sex: ['the sex used in formulas', 'pf-sex'],
     activity: ['your activity', 'pf-act-inactive'], urine_output_ml: ['your daily urine volume', 'pf-urine'],
     pd_uf_ml: ['your daily ultrafiltration', 'pf-uf'], pd_dialysate_kcal: ['the calories from dialysis fluid', 'pf-pdkcal'],
   };
@@ -86,6 +86,46 @@
     const today = KH.util.todayStr();
     $('#pf-transplant-date').max = today;
     $('#pf-birth-month').max = today.slice(0, 7);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Height in feet and inches or in centimetres (user.units.height, chosen in Settings → Preferences). The profile stores
+  // centimetres (KH.bodyRules.feetInchesToCm / cmToFeetInches). A height the person has not touched keeps the saved centimetres,
+  // so showing it in feet and inches never changes it.
+  // ---------------------------------------------------------------------------
+  let heightUnit = state.heightUnit === 'cm' ? 'cm' : 'ft_in';
+  let heightShown = null; // { cm, text }: the centimetres behind the boxes as they were filled, and what the boxes then held
+  const heightInput = () => (heightUnit === 'cm' ? $('#pf-height') : $('#pf-height-ft'));
+  const heightText = () => (heightUnit === 'cm' ? $('#pf-height').value : `${$('#pf-height-ft').value} ft ${$('#pf-height-in').value} in`);
+  function fillHeight(cm) {
+    $('#pf-height-cm-field').hidden = heightUnit !== 'cm';
+    $('#pf-height-ftin-field').hidden = heightUnit === 'cm';
+    const fi = KH.bodyRules.cmToFeetInches(cm);
+    $('#pf-height').value = cm ?? '';
+    $('#pf-height-ft').value = fi ? String(fi.feet) : '';
+    $('#pf-height-in').value = fi ? String(fi.inches) : '';
+    heightShown = { cm: cm ?? null, text: heightText() };
+  }
+  function readHeightCm() {
+    if (heightShown && heightText() === heightShown.text) return heightShown.cm;
+    if (heightUnit === 'cm') return numOrNull($('#pf-height').value);
+    return KH.bodyRules.feetInchesToCm($('#pf-height-ft').value, $('#pf-height-in').value);
+  }
+  // Settings changed the unit, or Profile learned it: show the same height in the other unit, typed or saved.
+  function setHeightUnit(unit) {
+    const next = unit === 'cm' ? 'cm' : 'ft_in';
+    state.heightUnit = next;
+    if (next === heightUnit) return;
+    const cm = readHeightCm();
+    heightUnit = next;
+    fillHeight(cm);
+  }
+  async function loadHeightUnit() {
+    try {
+      const res = await api.mySettings();
+      const item = res && res.settings ? res.settings['user.units.height'] : null;
+      if (item) setHeightUnit(item.value);
+    } catch (err) { /* the boxes stay in the unit last seen */ }
   }
 
   // ---------------------------------------------------------------------------
@@ -162,7 +202,7 @@
     setMaxDates();
     $('#pf-name').value = p.name || '';
     $('#pf-weight').value = p.weight_kg ?? '';
-    $('#pf-height').value = p.height_cm ?? '';
+    fillHeight(p.height_cm ?? null);
     // "Not chosen yet" (schema step 8): the stored default still applies until the person picks.
     $('#pf-stage').value = p.ckd_stage_chosen === false ? '' : (p.ckd_stage || '3b');
     $('#pf-dialysis').value = p.dialysis || 'none';
@@ -248,7 +288,7 @@
       const root = p.field ? p.field.split('.')[0] : null;
       const input = root && document.getElementById(FIELD_INPUT[root] || '');
       if (!input) continue;
-      fieldError(input, p.message, input.type === 'radio' || input.type === 'checkbox' ? input.closest('fieldset, .field') : null);
+      fieldError(input, p.message, input.type === 'radio' || input.type === 'checkbox' || input.id === 'pf-height-ft' ? input.closest('fieldset, .field') : null);
       placed += 1;
       if (!first) first = input;
     }
@@ -257,6 +297,7 @@
     if (first) { revealField(first); first.focus(); }
   }
   function fieldLabel(field) {
+    if (field.split('.')[0] === 'height_cm') return 'Height';
     const id = FIELD_INPUT[field.split('.')[0]];
     const input = id && document.getElementById(id);
     const label = input && (input.labels && input.labels[0] ? input.labels[0].textContent : null);
@@ -278,7 +319,7 @@
     return {
       name: $('#pf-name').value.trim(),
       weight_kg: numOrNull($('#pf-weight').value),
-      height_cm: numOrNull($('#pf-height').value),
+      height_cm: readHeightCm(),
       // Empty = "Not chosen yet": null keeps the stored value and leaves the choice open.
       ckd_stage: $('#pf-stage').value || null,
       dialysis: $('#pf-dialysis').value,
@@ -627,6 +668,7 @@
   router.register('profile', () => {
     $('#profile-care').hidden = ((state.authStatus || {}).auth_mode || 'local') === 'none';
     loadBodyHints();
+    loadHeightUnit();
     KH.loadProfile().then(() => {
       renderProfile();
       // "Review suggested targets" in the Labs view: suggest once the saved profile is in the form.
@@ -634,5 +676,5 @@
     }).catch(toastError);
     loadLabsSummary();
   });
-  KH.views.profile = { renderProfile, fillTargets, readTargets, suggestTargetsIntoForm, targetText, sameTarget, renderTargetsReview, refusalFor };
+  KH.views.profile = { setHeightUnit, renderProfile, fillTargets, readTargets, suggestTargetsIntoForm, targetText, sameTarget, renderTargetsReview, refusalFor };
 })();

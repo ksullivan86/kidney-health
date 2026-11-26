@@ -9,6 +9,12 @@ struct KeysView: View {
     @State private var key = ""
     @State private var keyMessage: String?
     @State private var testing = false
+    @ObservedObject private var own = OwnAI.shared
+    @State private var ownProvider: OwnAIProvider = .openai
+    @State private var ownModel = ""
+    @State private var ownKey = ""
+    @State private var ownMessage: String?
+    @State private var ownTesting = false
 
     var body: some View {
         Form {
@@ -59,6 +65,61 @@ struct KeysView: View {
                 Text("Open Food Facts")
             } footer: {
                 Text("Talks to world.openfoodfacts.org and sends only the barcode. No key is needed. Product data © Open Food Facts contributors, ODbL. It is written by volunteers, so check it against the package.")
+            }
+            Section {
+                Text(own.ready
+                     ? "Using \(own.provider?.label ?? "your provider") with your own key. Your server's AI is used first when this iPhone is paired with one both ways."
+                     : "Add a key from an AI company to use AI features with no server. Your server's AI is used first when this iPhone is paired with one both ways.")
+                Picker("Provider", selection: $ownProvider) {
+                    ForEach(OwnAIProvider.allCases) { provider in
+                        Text(provider.label).tag(provider)
+                    }
+                }
+                .onChange(of: ownProvider) { _, provider in
+                    if provider != own.provider { ownModel = provider.defaultModel ?? "" }
+                }
+                TextField("Model, as \(ownProvider.label) names it", text: $ownModel)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                SecureField(own.hasKey && own.provider == ownProvider ? "A key is saved" : "Paste your key", text: $ownKey)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                Button(own.hasKey ? "Save" : "Save the key") {
+                    ownMessage = own.save(provider: ownProvider, model: ownModel, key: ownKey)
+                        ?? "Saved. The key is kept on this phone only and is not shown again."
+                    ownKey = ""
+                }
+                .disabled(ownModel.isEmpty || (ownKey.isEmpty && !(own.hasKey && own.provider == ownProvider)))
+                if own.ready {
+                    Button(ownTesting ? "Testing…" : "Test the key") {
+                        ownTesting = true
+                        Task {
+                            ownMessage = await own.test()
+                            ownTesting = false
+                        }
+                    }
+                    .disabled(ownTesting)
+                    Toggle("Also send meal and label photos to this AI", isOn: Binding(get: { own.photosOn }, set: { own.setPhotos($0) }))
+                    Button("Remove the key", role: .destructive) {
+                        own.remove()
+                        ownMessage = "The key was removed from this phone."
+                    }
+                }
+                if let ownMessage {
+                    Text(ownMessage)
+                }
+            } header: {
+                Text("Your own AI key")
+            } footer: {
+                Text("Talks only to \(ownProvider.host). It is used for describing a meal, and for photos of a meal or a label only if you turn that on. Lab reports, and anything with your name or date of birth, are never sent to it. They stay on this iPhone or your own server. Turn AI features on in Settings → AI features in the app. \(ownProvider.policy)")
+            }
+            .onAppear {
+                if let saved = own.provider {
+                    ownProvider = saved
+                    ownModel = own.model
+                } else if ownModel.isEmpty {
+                    ownModel = ownProvider.defaultModel ?? ""
+                }
             }
         }
         .navigationTitle("Keys and services")

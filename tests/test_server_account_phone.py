@@ -79,7 +79,7 @@ def test_the_modules_are_device_mode_only_and_have_no_network_of_their_own():
     code = (STATIC / "js" / "mock" / "server_account.js").read_text(encoding="utf-8")
     assert "M.serverApi.call(" in code
     # only the account keys go to the server; the theme and the camera are this iPhone's own
-    assert "const ACCOUNT_KEYS = ['user.units.labs', 'user.units.weight', 'body.weight_alarm', 'body.bp_goal', 'guidance'];" in code
+    assert "const ACCOUNT_KEYS = ['user.units.labs', 'user.units.weight', 'user.units.height', 'body.weight_alarm', 'body.bp_goal', 'guidance'];" in code
     html = (STATIC / "index.html").read_text(encoding="utf-8")
     assert html.index('src="js/mock/guidance.js"') < html.index('src="js/mock/server_changes.js"') < html.index('src="js/mock/server_account.js"')
     assert html.index('src="js/views/settings.js"') < html.index('src="js/views/server_review.js"') < html.index('src="js/scan.js"')

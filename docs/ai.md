@@ -291,7 +291,9 @@ Lab report text and photos go only to the local AI, and never fall back to a clo
   always shown to you to check. Both trust options need your admin to allow them (`ai.allow_trusted_saves`, below); if the
   admin turns that off, Ask goes back to asking before every save and Settings says so. Every change of this choice is in
   your activity list. The trust choice applies to the Ask screen only: an assistant you connected with a token
-  ([`assistant.md`](assistant.md)) is told in its own instructions to confirm first.
+  ([`assistant.md`](assistant.md)) is told in its own instructions to confirm first. A page may send `trust: "ask"` with a
+  message to get a card whatever you chose. The iPhone app always does: on the phone, Save on the card saves on the phone and
+  sync sends it to the server, so the row is made once.
 * **Your tastes and the AI.** Meal ideas and Ask are told which foods and food groups you marked **Like**, **Less often**
   or **Not for me** (on the food preference screens, or by telling Ask), and are asked to treat them as tastes: prefer what
   you like, not to put a food you want less often first, never to use a food you said no to. They cannot make a food fit

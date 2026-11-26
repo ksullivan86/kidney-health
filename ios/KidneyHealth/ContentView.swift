@@ -111,7 +111,7 @@ struct ContentView: View {
                     Toggle("Lock with Face ID or passcode", isOn: Binding(get: { lock.enabled },
                                                                          set: { on in Task { await lock.setEnabled(on) } }))
                 } footer: {
-                    Text("Keys and services finds more foods with your own USDA key or Open Food Facts. The lock asks for Face ID or your passcode each time you come back to the app.")
+                    Text("Keys and services finds more foods with your own USDA key or Open Food Facts, and adds your own AI key. No server is needed for either. The lock asks for Face ID or your passcode each time you come back to the app.")
                 }
 
                 Section {

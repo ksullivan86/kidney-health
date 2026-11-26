@@ -1850,7 +1850,7 @@
       },
       "ChatBody": {
         "additionalProperties": false,
-        "description": "The conversation so far, kept in the page only: the server stores no transcript.\n\n``request_id`` is made by the page for each send (and kept when the same text is sent again after a failure): a save\nthe model makes in this request carries a key made from it, so a request sent twice saves once. ``trust:\n\"conversation\"`` is the page saying this conversation is trusted (it forgets that at New conversation and after 12\nhours); the server honours it only for a person who chose \"Trust it for this conversation\" and only while the admin\nswitch ``ai.allow_trusted_saves`` is on (:func:`app.ai.chat_save.effective_trust`).",
+        "description": "The conversation so far, kept in the page only: the server stores no transcript.\n\n``request_id`` is made by the page for each send (and kept when the same text is sent again after a failure): a save\nthe model makes in this request carries a key made from it, so a request sent twice saves once. ``trust:\n\"conversation\"`` is the page saying this conversation is trusted (it forgets that at New conversation and after 12\nhours); the server honours it only for a person who chose \"Trust it for this conversation\" and only while the admin\nswitch ``ai.allow_trusted_saves`` is on (:func:`app.ai.chat_save.effective_trust`). ``trust: \"ask\"`` asks before every\nsave whatever the person chose: the iPhone app sends it and saves the card on the phone (design note 39).",
         "properties": {
           "messages": {
             "items": {
@@ -14716,7 +14716,7 @@
   "info": {
     "description": "Self-hosted food log with renal-diet and type 1 diabetes nutrient warnings, meal planning and period summaries.\n\nThis document is checked in as `docs/api/openapi.json`. `info.version` is the app's version; `info.x-api-version` is the API version, an integer that is raised only for a breaking change. Every error answer is `{\"detail\": string, ...}`; request validation is **400** with `errors`, never 422. Sign in with `POST /api/auth/login` (a cookie, see the `session` scheme); `/mcp` and `/push/v1/body` take bearer tokens.",
     "title": "Kidney Health Food Log",
-    "version": "0.24.1",
+    "version": "0.25.0",
     "x-api-version": 1
   },
   "openapi": "3.1.0",

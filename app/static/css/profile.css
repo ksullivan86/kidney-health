@@ -2,6 +2,10 @@
 
 /* ---------- Profile ---------- */
 .profile-form { display: flex; flex-direction: column; gap: 12px; }
+/* Height in feet and inches (user.units.height): two boxes side by side, each with its label above. */
+.height-ftin { display: flex; gap: 8px; }
+.height-part { display: flex; flex-direction: column; gap: 4px; flex: 1 1 0; min-width: 0; }
+.height-part label { font-size: 0.85rem; font-weight: 600; color: var(--text-2); }
 .disclaimer {
   margin-top: 8px; padding: 12px 14px; border-radius: var(--radius-sm); background: var(--surface-2);
   color: var(--text-2); font-size: 0.85rem; line-height: 1.45;

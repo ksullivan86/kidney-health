@@ -7,6 +7,20 @@ the API. Security fixes are released as patch versions of the newest minor versi
 
 ## Unreleased
 
+## 0.25.0 — 2026-11-24
+
+The iPhone app works with no server, and with your own server both ways (design notes 38 and 39).
+
+### Upgrading from 0.24 (read this first)
+
+* Back up `kidney.db` first, change the image tag to `:0.25`, and start it. Schema steps 37 and 38 run once at start. They add
+  tables and an ID on every row, and change no value.
+* Nothing new is turned on for you. Sending from the iPhone app needs `PUSH_ENABLED`; sync both ways also needs the new
+  `PUSH_APP_SYNC`, off by default.
+* If a reverse proxy lists the paths it passes on, also pass `/push/v1/sync`, `/push/v1/about`, `/push/v1/api/`,
+  `/push/v1/changes` and `/push/v1/match` (see `deploy/caddy/Caddyfile.example`). A proxy that passes all of `/push/v1/` needs
+  no change.
+
 ### Added
 
 * The iPhone app runs the whole app on the phone with no server (design note 38, step 1). It starts empty, keeps your data on the
@@ -65,6 +79,31 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * With a token both ways, the iPhone app can import a recipe from a web page, open the shopping list in Instacart, and send it to
   your own list app, through your server and only when it has them turned on (design note 39, step 9). The list app is still set up
   in the web app. Without such a server these stay off on the phone.
+* Ask, the AI assistant, works in the iPhone app when it syncs both ways with your server and your server has Ask on (design note
+  39). It uses your server's AI with the same safety rules as the web app. On the phone it always asks before it saves: **Save** on
+  the card saves on the phone, and sync sends it to your server once. When Ask cannot be used, the Ask tab says why and what to
+  do, instead of the demo's text. Talking to Ask stays off on the phone. A page can now ask the server for "ask before every save"
+  whatever the person chose (`trust: "ask"` in `POST /api/ai/chat`); the iPhone app always does.
+* In the iPhone app, **Plate photo (AI)** on the Add screen uses your server's AI when your server offers it. When it does not,
+  the Add screen says that a photo of your meal needs your server's AI, and why it cannot be used now. Photos never go to the
+  iPhone's own AI.
+* Profile → About you takes your height in feet and inches. To use centimetres, choose **Units for height** in Settings →
+  Preferences. The height is still saved in centimetres, so nothing changes for a height you saved before. The new setting
+  `user.units.height` (`ft_in` or `cm`, default `ft_in`) works like the weight unit: an admin can set the default for everyone, the
+  variable is `HEIGHT_UNITS`, it moves with an import, and the iPhone app with a token both ways can set it.
+* The iPhone app can use your own AI key, with or without a server (design note 39 §6.5). In **Keys and services**, choose
+  OpenAI, OpenRouter or Nous Portal, enter the model and paste your key. The key stays on the phone and is never shown again;
+  **Test the key** sends one short fixed question. Describing a meal then uses it when your server's AI is not there. Photos of a
+  meal or a label go to it only if you turn on **Also send meal and label photos to this AI**, which is off at first. Lab
+  reports, and anything with your name or date of birth, are never sent to it. The app runs your server's own checks before
+  and after every request, and a low, an emergency or a dose question gets the app's own card without asking the AI. Ask still
+  needs your server. **Settings → AI features** says which AI each feature uses.
+* In the iPhone app, AI meal ideas and AI recipes work with your own AI key and with Apple's AI on the phone, when your server's AI
+  is not there (design note 39 §6.6). They use the same foods, targets and checks as your server. Apple's AI on the phone is small,
+  so it chooses from fewer of your foods. AI order, AI swaps and AI day plans still need your server, and recipes on the phone
+  never include cooking steps written by AI. On iOS 27, Apple's AI on the phone can also read a photo of your plate or of a label;
+  the photo stays on the phone. As before, you tick each food and choose Eaten or Planned. Ask still needs your server: it reads
+  your log there and checks every answer.
 
 ### Fixed
 
@@ -73,7 +112,7 @@ the API. Security fixes are released as patch versions of the newest minor versi
 * The iPhone app no longer shows the demo's sample recipe page or a pretend Instacart link when it has no server.
 * A file exported from the demo can be imported into the demo again: entries no longer carry a field the import refuses.
 
-### Upgrading
+### Upgrading details
 
 * Schema step 37 adds one table, `app_sync_rows`: what the iPhone app sent. It changes nothing else.
 * If a reverse proxy lists the paths it passes on, add `/push/v1/sync` next to `/push/v1/body` (the commented second host name in

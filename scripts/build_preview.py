@@ -232,34 +232,76 @@ def device_flag_js() -> str:
 
 AI_PROMPTS = "ai-prompts.json"
 AI_PROMPT_PLACEHOLDER = "{text}"
-# The tasks the iPhone app's model does (design note 38 §5.6): the bridge's task name -> app/ai/prompts.py TASK_LINES key.
-AI_DEVICE_TASKS = {"parse_meal": "parse_meal", "read_lab_report_text": "lab_report_text"}
+# The tasks the iPhone app's model does (design note 38 §5.6; note 39 §6.6): the bridge's task name -> (app/ai/prompts.py
+# TASK_LINES key, the system message: "task" (TASK_SYSTEM_PROMPT), "meal" (the meal ideas rules) or "recipe" (the AI recipes
+# rules without steps), a photo task). A photo task has no data block: the photo goes beside the message (iOS 27 only).
+AI_DEVICE_TASKS = {
+    "parse_meal": ("parse_meal", "task", False),
+    "read_lab_report_text": ("lab_report_text", "task", False),
+    "read_label": ("read_label", "task", True),
+    "plate": ("plate", "task", True),
+    "next_meal": ("ideas", "meal", False),
+    "recipes": ("recipes_suggest", "recipe", False),
+}
+CONDITION = "[[CONDITION]]"
 PDFJS = "vendor/pdfjs-dist-6.4.299"
 PDFJS_FILES = ("pdf.min.mjs", "pdf.worker.min.mjs", "LICENSE")
+
+
+def recipe_system_template(prompts) -> str:
+    """``prompts.recipe_system_prompt(person, steps=False)`` with ``[[CONDITION]]`` left in (the phone never shows AI steps)."""
+    text = prompts.RECIPE_SYSTEM_PROMPT
+    for n in (3, 4, 6, 7, 8, 9):
+        text = text.replace(f"[[RULE{n}]]", prompts._meal_rule(n))
+    return text.replace("[[STEPS]]", prompts.RECIPE_NO_STEPS_RULE)
 
 
 def ai_prompts() -> dict:
     """``ai-prompts.json``: what the iPhone app gives Apple's on-device model, taken from ``app/ai/prompts.py``.
 
-    ``system`` is ``TASK_SYSTEM_PROMPT``. Each task's ``template`` is the user message ``prompts.user_message`` builds for a provider
-    that enforces the answer's schema itself (mode ``json_schema``: no schema line, because guided generation enforces the shape),
-    with the data block's JSON replaced by ``{text}``. The page sends that JSON, cleaned and escaped exactly as the server does
-    (``KH.aiJudge.dataPayload``), so filling the template gives the server's message byte for byte."""
+    ``system`` is ``TASK_SYSTEM_PROMPT``; ``systems`` holds the meal ideas and AI recipes rules with ``[[CONDITION]]`` left in, and
+    ``conditions`` every text ``prompts.condition_text`` can give, so the app only ever puts in one of those (the page names it).
+    Each task's ``template`` is the user message ``prompts.user_message`` builds for a provider that enforces the answer's schema
+    itself (mode ``json_schema``: no schema line, because guided generation enforces the shape), with the data block's JSON
+    replaced by ``{text}``. The page sends that JSON, cleaned and escaped exactly as the server does (``KH.aiJudge.dataPayload``),
+    so filling the template gives the server's message byte for byte. A photo task's template is the message alone."""
     sys.path.insert(0, str(ROOT))
     try:
         from app.ai import prompts
     finally:
         sys.path.pop(0)
     tasks = {}
-    for task, key in AI_DEVICE_TASKS.items():
+    for task, (key, system, image) in AI_DEVICE_TASKS.items():
+        if image:
+            tasks[task] = {"template": prompts.user_message(key, None, mode="json_schema", schema={}), "system": system, "image": True}
+            continue
         marker = {"marker": "x"}  # a data block whose JSON is found and replaced below
         message = prompts.user_message(key, marker, mode="json_schema", schema={})
         block = prompts.data_block(marker)
         if not message.endswith("\n" + block) or AI_PROMPT_PLACEHOLDER in message:
             raise SystemExit(f"app/ai/prompts.py: the {key} message is not a task line and one data block")
         template = message[: -len(block)] + "<data>\n" + AI_PROMPT_PLACEHOLDER + "\n</data>"
-        tasks[task] = {"template": template}
-    return {"system": prompts.TASK_SYSTEM_PROMPT, "tasks": tasks}
+        tasks[task] = {"template": template, "system": system, "image": False}
+    systems = {"meal": prompts.SYSTEM_PROMPT, "recipe": recipe_system_template(prompts)}
+    for text in systems.values():
+        if text.count(CONDITION) != 1:
+            raise SystemExit("app/ai/prompts.py: the meal and recipe system messages must hold [[CONDITION]] once")
+    conditions = sorted({prompts.condition_text({"ckd_stage": stage, "dialysis": dialysis, "diabetes": diabetes})
+                         for stage in (None, *prompts.CKD_STAGES) for dialysis in (None, "none", *prompts.DIALYSIS_TEXT)
+                         for diabetes in (None, "none", "other", *prompts.DIABETES_TEXT)})
+    return {"system": prompts.TASK_SYSTEM_PROMPT, "systems": systems, "conditions": conditions, "tasks": tasks,
+            "own_key": own_key_prompts()}
+
+
+# The person's own AI key (owner, 2026-11-25; design note 39 §6.5): its prompts and schemas come from the server's code through
+# scripts/gen_own_key_prompts.py, which needs the app's dependencies. This script runs with plain Python (the macOS jobs that pack
+# the iPhone app install nothing), so it reads the generated file. tests/test_phone_own_key.py fails when that file is stale.
+OWN_KEY_PROMPTS = ROOT / "app" / "ai" / "own_key_prompts.json"
+
+
+def own_key_prompts() -> dict:
+    """``own_key`` in ``ai-prompts.json``, read from ``app/ai/own_key_prompts.json`` (see :data:`OWN_KEY_PROMPTS`)."""
+    return json.loads(OWN_KEY_PROMPTS.read_text(encoding="utf-8"))
 
 
 def build_device(out_dir: Path, static_dir: Path = STATIC, foods_json: Path = FOODS_JSON) -> list[Path]:

@@ -77,6 +77,7 @@ const SHELL_URLS = [
   '/js/engine/textclean.js',
   '/js/engine/aiguard.js',
   '/js/engine/aijudge.js',
+  '/js/engine/aimeal.js',
   '/js/engine/lab_report.js',
   '/js/engine/gtin.js',
   '/js/engine/additives.js',

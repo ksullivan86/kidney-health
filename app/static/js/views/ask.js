@@ -4,6 +4,10 @@
      AI on and set up, the person opted in, and the admin switch "Ask" on). In the demo and the preview the tab
      is there too, with a note that the chat works in the installed app with an AI provider: the demo never
      contacts a provider and has no mock answers.
+   * The iPhone app (device mode, design note 39): the tab is always there. Ask runs on the paired server's AI, through
+     js/mock/ai.js, while the phone syncs both ways with that server; otherwise the screen says why and what to do
+     (GET /api/me/ai → phone.ask, PHONE_TEXT below). It never shows the demo's text. On the phone the assistant always
+     asks before it saves, and Save goes through the phone's own routes (then sync sends it to the server). No voice.
    * The conversation lives in this page only (the server stores no transcript): "New conversation", reloading
      or signing out forgets it. Each send posts the last 20 messages to POST /api/ai/chat.
    * Every answer is the server's checked answer: its text is set with textContent, never as HTML; a low or an
@@ -34,11 +38,27 @@
   const KH = window.KH;
   const { $, h, clear, toastError, router, state } = KH;
   const { MOCK } = KH.flags;
+  const DEVICE = !!KH.flags.DEVICE; // the iPhone app: Ask through the paired server (js/mock/ai.js)
 
   const MAX_SENT = 20; // the server's limit on the messages of one request
   const MAX_CHARS = 2000;
   const NOTE_LINE = 'Answers are written by an AI language model and can be wrong. Every number is the app\'s own. Not medical advice.';
   const DEMO_TEXT = 'The AI assistant works in the installed app, with an AI your admin sets up. This preview has no AI, so there is nothing to ask here.';
+  // The iPhone app, when Ask cannot run now (js/mock/ai.js serverReason).
+  const ASK_NEEDS = 'Ask uses your Kidney Health server\'s AI.';
+  // Ask reads your log on the server with the server's own tools and checks every answer there, so neither your own AI key nor this
+  // iPhone's own AI can answer it (design note 39 §6.6).
+  const OWN_KEY_ASK = 'Your own AI key and this iPhone\'s own AI help with describing a meal, meal ideas and recipes, but Ask needs the server, because it reads your log there and checks every answer.';
+  const PHONE_TEXT = {
+    not_paired: `${ASK_NEEDS} ${OWN_KEY_ASK} If you have a Kidney Health server, connect this iPhone to it with a token for the iPhone app, both ways, in Settings → This device → Apple Health and server.`,
+    not_both_ways: `${ASK_NEEDS} This iPhone's token only sends your log. Make a token for the iPhone app, both ways, and pair again in Settings → This device → Apple Health and server.`,
+    offline: `${ASK_NEEDS} Your server could not be reached just now. Try again later.`,
+    device_only: `${ASK_NEEDS} You chose to use only this iPhone's AI in Settings → AI features, so Ask is off.`,
+    not_synced: `${ASK_NEEDS} It works once this iPhone syncs both ways with your server. Check Settings → This device.`,
+    not_opted_in: `${ASK_NEEDS} AI features are off for you on your server. Turn them on in Settings → AI features.`,
+    server_off: `${ASK_NEEDS} Your server has Ask off. Your server's admin can turn it on.`,
+  };
+  const PHONE_TRUST = 'On this iPhone the AI assistant always asks before it saves. Nothing is saved until you press Save.';
   const LEARN_PATH = /\/learn\/[A-Za-z0-9_\-/#]*[A-Za-z0-9_\-/#]/g;
 
   const thread = []; // what the server gets back as `messages`: { role: 'user' | 'assistant', text }
@@ -56,22 +76,40 @@
   async function refreshTab() {
     const tab = $('#tab-ask');
     if (!tab) return false;
-    if (MOCK) { tab.hidden = false; return true; }
+    if (MOCK && !DEVICE) { tab.hidden = false; return true; }
+    if (DEVICE) tab.hidden = false; // the phone always has the tab: it says why when Ask cannot run
     let available = false;
     let where = '';
+    phoneWhy = 'not_paired';
     try {
-      const st = await KH.ai.status();
+      const st = await KH.ai.status(DEVICE);
       available = !!(st && st.features && st.features.chat);
+      if (DEVICE) phoneWhy = available ? null : (st && st.phone && st.phone.ask) || (st && st.phone ? 'server_off' : 'not_paired');
       // Where the AI assistant runs, in the server's words (GET /api/ai/status → routes.chat.text): "Runs on your local AI (…)"
       // or "Runs on … a cloud AI outside your network."
       where = (st && st.routes && st.routes.chat && st.routes.chat.text) || '';
     } catch (err) { /* the tab stays out of the way when the status cannot be read */ }
     const whereEl = $('#ask-where');
     if (whereEl) { whereEl.textContent = available && where ? where : ''; whereEl.hidden = !(available && where); }
+    if (DEVICE) {
+      if (state.view === 'ask') { notice(available ? null : PHONE_TEXT[phoneWhy] || PHONE_TEXT.not_paired); if (available) syncControls(); }
+      return available;
+    }
     tab.hidden = !available;
     if (KH.askVoice) KH.askVoice.sync(available); // js/views/ask-voice.js: the microphone and read aloud follow the same answer
     if (!available && state.view === 'ask') router.show('today');
     return available;
+  }
+  let phoneWhy = null;
+
+  // The note in place of the conversation (the demo's text, or on the phone why Ask cannot run); null shows the conversation.
+  function notice(text) {
+    els.demo.textContent = text || '';
+    els.demo.hidden = !text;
+    els.composer.hidden = !!text;
+    els.note.hidden = !!text;
+    els.list.hidden = !!text;
+    if (text) { els.fresh.hidden = true; els.intro.hidden = true; const box = $('#ask-trust'); if (box) box.hidden = true; }
   }
 
   // ---------------------------------------------------------------------------
@@ -286,7 +324,8 @@
     const actions = $('#ask-trust-actions');
     if (!box || !line || !actions) return;
     clear(actions);
-    if (MOCK) { box.hidden = true; return; }
+    if (MOCK && !DEVICE) { box.hidden = true; return; }
+    if (DEVICE) { line.textContent = PHONE_TRUST; box.hidden = false; return; } // the phone never lets it save on its own
     const t = trustInfo;
     const chosen = t.setting === 'conversation' || t.setting === 'always';
     const trusted = t.allowed && t.setting === 'conversation' && conversationTrusted();
@@ -449,6 +488,10 @@
     if ((card.added_to_foods || []).length) box.append(h('p', { class: 'hint' }, `Added to your foods: ${card.added_to_foods.join('; ')}. Undo keeps these foods.`));
     const totals = numbersBlock(card.numbers, 'From the app');
     if (totals) box.append(totals);
+    if (!card.undo) { // the iPhone app: an older server saved this at once; the row reaches the phone with the next sync
+      box.append(h('p', { class: 'hint ask-save-status' }, 'Saved on your server. It comes to this iPhone with the next sync. To undo it, delete it from your log.'));
+      return box;
+    }
     const status = h('p', { class: 'hint ask-save-status', role: 'status' });
     const undo = button('Undo', 'secondary', async (btn) => {
       btn.disabled = true;
@@ -639,16 +682,9 @@
   // Wiring
   // ---------------------------------------------------------------------------
   async function show() {
-    if (MOCK) {
-      els.demo.textContent = DEMO_TEXT;
-      els.demo.hidden = false;
-      els.composer.hidden = true;
-      els.note.hidden = true;
-      els.fresh.hidden = true;
-      els.intro.hidden = true;
-      return;
-    }
+    if (MOCK && !DEVICE) { notice(DEMO_TEXT); return; } // never on the phone
     const available = await refreshTab();
+    if (DEVICE) notice(available ? null : PHONE_TEXT[phoneWhy] || PHONE_TEXT.not_paired);
     if (!available) return;
     await refreshTrust();
     syncControls();

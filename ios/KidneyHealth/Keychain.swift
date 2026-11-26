@@ -13,6 +13,8 @@ enum Keychain {
         case phoneAnchors
         /// The person's USDA FoodData Central key (step 2). Written once, never shown again.
         case usdaKey
+        /// The person's own AI key (design note 39 §6.5). Written once, never shown again, never sent to the page.
+        case ownAIKey
     }
 
     struct Failure: Error, Equatable {

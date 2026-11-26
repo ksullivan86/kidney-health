@@ -225,8 +225,20 @@
     return answer;
   }
 
+  // The food of this name on this phone, as localize names a food it was not given in full (Ask's cards, js/mock/ai.js): the one
+  // built-in food of that name, else the one food of that name here (with that brand, when the name alone is not enough), else null.
+  function foodHere(api, name, brand = null) {
+    if (typeof name !== 'string' || !name) return null;
+    const builtin = api._foods.filter((f) => f.source === 'builtin' && !f.hidden && f.name === name);
+    if (builtin.length === 1) return builtin[0].id;
+    const mine = api._foods.filter((f) => !f.hidden && api._foodVisible(f) && f.name === name);
+    if (mine.length === 1) return mine[0].id;
+    const branded = mine.filter((f) => (f.brand || null) === brand);
+    return branded.length === 1 ? branded[0].id : null;
+  }
+
   M.serverApi = {
-    check, offers, call, failWith, forget, readAbout, base64, localize,
+    check, offers, call, failWith, forget, readAbout, base64, localize, foodHere,
     status: () => known,
     subscribe(fn) { listeners.add(fn); return () => listeners.delete(fn); },
   };

@@ -18,6 +18,7 @@
    "user.units.labs",
    "food.scan_prefer_camera",
    "user.units.weight",
+   "user.units.height",
    "body.weight_alarm",
    "body.bp_goal"
   ],
@@ -115,6 +116,7 @@
    },
    "food.off_consent": true,
    "user.units.weight": "kg",
+   "user.units.height": "cm",
    "body.weight_alarm": {
     "amount_kg": 1.5,
     "over": "days",
@@ -32400,6 +32402,30 @@
    }
   },
   {
+   "name": "a height unit that is not one",
+   "method": "POST",
+   "path": "/api/me/import?dry_run=1",
+   "edits": [
+    {
+     "op": "set",
+     "path": [
+      "settings"
+     ],
+     "value": {
+      "user.units.height": "inches"
+     }
+    }
+   ],
+   "answer": {
+    "status": 400,
+    "body": {
+     "detail": "The file was not imported. settings: user.units.height: not a value this server accepts",
+     "kind": "settings",
+     "index": null
+    }
+   }
+  },
+  {
    "name": "a weight alarm above the highest",
    "method": "POST",
    "path": "/api/me/import?dry_run=1",
@@ -33783,7 +33809,7 @@
       "blood_pressures": 32,
       "food_preferences": 4,
       "profile": 1,
-      "settings": 7
+      "settings": 8
      },
      "already_there": {
       "log_entries": 0,
@@ -33988,7 +34014,7 @@
       "blood_pressures": 32,
       "food_preferences": 4,
       "profile": 1,
-      "settings": 7
+      "settings": 8
      },
      "already_there": {
       "log_entries": 0,
@@ -35072,7 +35098,7 @@
       "blood_pressures": 32,
       "food_preferences": 4,
       "profile": 1,
-      "settings": 7
+      "settings": 8
      },
      "already_there": {
       "log_entries": 0,
@@ -35396,7 +35422,7 @@
       "blood_pressures": 0,
       "food_preferences": 0,
       "profile": 1,
-      "settings": 7
+      "settings": 8
      },
      "already_there": {
       "log_entries": 7,
@@ -35601,7 +35627,7 @@
       "blood_pressures": 0,
       "food_preferences": 0,
       "profile": 1,
-      "settings": 7
+      "settings": 8
      },
      "already_there": {
       "log_entries": 7,

@@ -62,7 +62,7 @@ def test_no_code_names_another_health_type(word):
 
 def test_no_third_party_packages_and_only_apple_frameworks():
     assert "XCRemoteSwiftPackageReference" not in PROJECT
-    allowed = {"Foundation", "FoundationModels", "HealthKit", "LocalAuthentication", "Security", "SwiftUI", "UIKit", "Vision", "VisionKit", "WebKit", "XCTest",
+    allowed = {"Foundation", "FoundationModels", "HealthKit", "ImageIO", "LocalAuthentication", "Security", "SwiftUI", "UIKit", "Vision", "VisionKit", "WebKit", "XCTest",
                "PackageDescription", "KidneyHealthCore", "KidneyHealth"}
     for name, text in SWIFT.items():
         for module in re.findall(r"^(?:@testable )?import (\w+)", text, re.M):
@@ -270,11 +270,12 @@ def test_sending_to_the_server_goes_only_to_the_paired_server_with_the_keychain_
     assert "khd_" not in page and "Authorization" not in page
 
 
-def test_the_iphones_own_ai_does_two_narrow_tasks_and_keeps_nothing():
-    """Design note 38, step 5: Apple's on-device model for describe a meal and lab text only. Nothing leaves the phone and nothing
+def test_the_iphones_own_ai_does_narrow_tasks_and_keeps_nothing():
+    """Design note 38, step 5, and note 39 §6.6: Apple's on-device model for describe a meal, lab text, meal ideas, recipes and (iOS
+    27) plate and label photos only. Nothing leaves the phone and nothing
     is stored; the instructions are the server's own (ai-prompts.json, built from app/ai/prompts.py), never written twice."""
     ai = APP["KidneyHealth/Services/OnDeviceAI.swift"]
-    assert 'static let tasks: Set<String> = ["parse_meal", "read_lab_report_text"]' in ai
+    assert 'static let tasks: Set<String> = ["parse_meal", "read_lab_report_text", "next_meal", "recipes", "read_label", "plate"]' in ai
     for word in ("URLSession", "UserDefaults", "FileManager.default.create", ".write(to:", "Keychain"):
         assert word not in ai, word  # no network, and no prompt or reply is kept
     assert "ai-prompts.json" in ai and "TASK_SYSTEM_PROMPT" not in ai.replace("TASK_SYSTEM_PROMPT, verbatim", "")
@@ -325,12 +326,12 @@ def test_the_server_api_bridge_carries_only_its_allow_list():
         for word in ("/admin", "/auth", "/tokens", "/sessions", "/provider", "/me/import", "/export", "/keys", "delete", "transcribe"):
             assert word not in path, path
     # a settings route takes only its own key; the person's AI switch only opt_in
-    assert ('bodyKeys: ["food.off_consent", "user.units.labs", "user.units.weight", "body.weight_alarm", "body.bp_goal", "guidance"]'
-            in core)
+    assert ('bodyKeys: ["food.off_consent", "user.units.labs", "user.units.weight", "user.units.height", "body.weight_alarm", "body.bp_goal", '
+            '"guidance"]' in core)
     from app.app_gateway import BODY_KEYS
 
-    assert BODY_KEYS[("PATCH", "/api/me/settings")] == {"food.off_consent", "user.units.labs", "user.units.weight", "body.weight_alarm",
-                                                       "body.bp_goal", "guidance"}  # the app and the server agree
+    assert BODY_KEYS[("PATCH", "/api/me/settings")] == {"food.off_consent", "user.units.labs", "user.units.weight", "user.units.height",
+                                                       "body.weight_alarm", "body.bp_goal", "guidance"}  # the app and the server agree
     assert 'Route("PATCH", "/push/v1/api/me/ai", bodyKeys: ["opt_in"])' in core
     sync = CODE["KidneyHealth/Services/ServerSync.swift"]
     assert 'case "serverApi":' in sync
