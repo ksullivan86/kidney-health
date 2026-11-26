@@ -79,6 +79,7 @@ async function page({ own = null, iphone = true, model = (req) => ({ answer: ans
     }
     if (req.kind === 'ownAIStatus') return state.own || { ok: true, set: false };
     if (req.kind === 'ownAI') {
+      state.ownKeys = Object.keys(req).sort(); // as the app gets them: a key that is there, even undefined, is there
       if (!OWN_TASKS.includes(req.task)) return { error: 'bad_request', message: 'x' };
       const r = state.provider ? state.provider(req) : { error: 'offline' };
       if (r.error) return { error: r.error, message: `provider: ${r.error}` };
@@ -195,7 +196,7 @@ const POTATO = 'Potato, baked, with skin';
 
 // 5. The own key: the three tasks with the person's condition and no ids, after consent; before the iPhone's model.
 {
-  const { api, sent } = await page({ own: OPENAI, provider: (req) => ({ content: JSON.stringify(answerFor(req)) }) });
+  const { api, sent, state } = await page({ own: OPENAI, provider: (req) => ({ content: JSON.stringify(answerFor(req)) }) });
   await fails(api.request('POST', '/api/ai/next-meal', { meal: 'dinner', date: D, mode: 'rerank' }), 409, (e) => e.extra.consent.host === 'api.openai.com');
   ok(() => assert.equal(sent('ownAI').length, 0), 'nothing sent before the person agrees');
   await api.request('POST', '/api/ai/consent', { provider_id: -1, purpose: 'text', skip_preview: true });
@@ -203,7 +204,7 @@ const POTATO = 'Potato, baked, with skin';
     const got = await api.request('POST', '/api/ai/next-meal', { meal: mode === 'plan' ? 'breakfast' : 'dinner', date: D, mode, ...extra });
     const req = sent('ownAI').at(-1);
     ok(() => assert.equal(req.task, mode), `the ${mode} task`);
-    ok(() => assert.deepEqual(Object.keys(req).sort(), ['condition', 'kind', 'task', 'text']), `${mode}: a condition, no ids`);
+    ok(() => assert.deepEqual(state.ownKeys, ['condition', 'kind', 'task', 'text']), `${mode}: a condition, no ids`);
     ok(() => assert.equal(req.condition, 'chronic kidney disease (CKD, stage 4) and type 1 diabetes'));
     ok(() => assert.equal(got.provider.label, 'OpenAI (your own key)'));
     ok(() => assert.equal(got.status, 'ok'), `${mode} checked`);

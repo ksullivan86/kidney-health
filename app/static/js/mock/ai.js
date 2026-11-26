@@ -605,11 +605,11 @@
       if (dry) {
         return { dry: { dry_run: true, device: true, own_key: true, feature: task, mode: null, destination: `https://${ai.own.host}`, host: ai.own.host,
           provider: { id: OWN_ID, label: provider.label, preset: ai.own.provider, scope: 'user', local: false }, method: 'POST',
-          headers: { Authorization: 'Bearer [your key, not shown]' }, body: { task, data: req.text, condition: req.condition, ids: req.ids },
+          headers: { Authorization: 'Bearer [your key, not shown]' }, body: { task, data: req.text, condition: req.condition, ...(req.ids ? { ids: req.ids } : {}) },
           image_bytes: 0, images: [], trimmed_candidates: req.trimmed,
           message: `This iPhone sends this to ${ai.own.label} at ${ai.own.host} with your own key, with the app's fixed instructions. Your name and date of birth are never sent.` } };
       }
-      const res = await KH.mock.device.lookup({ kind: 'ownAI', task, text: req.text, condition: req.condition, ids: req.ids });
+      const res = await KH.mock.device.lookup({ kind: 'ownAI', task, text: req.text, condition: req.condition, ...(req.ids ? { ids: req.ids } : {}) });
       if (!res || res.ok !== true) {
         const code = res && res.error;
         if (['offline', 'not_available', 'own_off', 'no_app'].includes(code)) return { skip: 'unreachable' };

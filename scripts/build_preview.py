@@ -243,6 +243,9 @@ AI_DEVICE_TASKS = {
     "plate": ("plate", "task", True),
     "next_meal": ("ideas", "meal", False),
     "recipes": ("recipes_suggest", "recipe", False),
+    "rerank": ("rerank", "meal", False),  # AI order, AI swaps and AI day plans (phone-ai-more2): the meal ideas rules
+    "swap": ("swap", "meal", False),
+    "plan": ("plan", "meal", False),
 }
 CONDITION = "[[CONDITION]]"
 PDFJS = "vendor/pdfjs-dist-6.4.299"

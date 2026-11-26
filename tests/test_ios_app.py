@@ -275,7 +275,8 @@ def test_the_iphones_own_ai_does_narrow_tasks_and_keeps_nothing():
     27) plate and label photos only. Nothing leaves the phone and nothing
     is stored; the instructions are the server's own (ai-prompts.json, built from app/ai/prompts.py), never written twice."""
     ai = APP["KidneyHealth/Services/OnDeviceAI.swift"]
-    assert 'static let tasks: Set<String> = ["parse_meal", "read_lab_report_text", "next_meal", "recipes", "read_label", "plate"]' in ai
+    assert ('static let tasks: Set<String> = ["parse_meal", "read_lab_report_text", "next_meal", "recipes", "read_label", "plate", "rerank", "swap",\n'
+            '                                     "plan"]') in ai
     for word in ("URLSession", "UserDefaults", "FileManager.default.create", ".write(to:", "Keychain"):
         assert word not in ai, word  # no network, and no prompt or reply is kept
     assert "ai-prompts.json" in ai and "TASK_SYSTEM_PROMPT" not in ai.replace("TASK_SYSTEM_PROMPT, verbatim", "")

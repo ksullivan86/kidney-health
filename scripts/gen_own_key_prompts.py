@@ -32,9 +32,15 @@ AI_OWN_KEY_TASKS = {
     # or recipe rules (ai-prompts.json "systems"), with the person's condition from "conditions".
     "next_meal": ("ideas", "ideas_schema", "kidney_ideas", False),
     "recipes": ("recipes_suggest", "recipes_schema", "kidney_recipes", False),
+    # AI order, AI swaps and AI day plans (phone-ai-more2, 2026-11-26): the meal ideas rules too. Their answers name refs ("f1",
+    # "s1") and meal slots, not ids, so the schema lists no refs and the page drops any ref that is not in its request.
+    "rerank": ("rerank", "rerank_schema", "kidney_rerank", False),
+    "swap": ("swap", "swap_schema", "kidney_swap", False),
+    "plan": ("plan", "plan_schema", "kidney_plan", False),
 }
 CANDIDATE_IDS = "__CANDIDATE_IDS__"
-SYSTEMS = {"next_meal": "meal", "recipes": "recipe"}
+SYSTEMS = {"next_meal": "meal", "recipes": "recipe", "rerank": "meal", "swap": "meal", "plan": "meal"}
+WITH_IDS = ("next_meal", "recipes")
 
 
 def schema_for(schemas, prompts, builder: str) -> dict:
@@ -43,6 +49,12 @@ def schema_for(schemas, prompts, builder: str) -> dict:
         schema = schemas.ideas_schema([-1], prompts.AI_HANDBOOK_SLUGS)
     elif builder == "recipes_schema":
         schema = schemas.recipes_schema([-1], steps=False)  # the phone never shows cooking steps from AI
+    elif builder in ("rerank_schema", "swap_schema"):
+        return getattr(schemas, builder)([])  # a ref is any short text; the page keeps only the refs it sent
+    elif builder == "plan_schema":
+        from app.guidance import rules
+
+        return schemas.plan_schema(schemas.MEAL_SLOTS, rules.AI_PLAN_OPTIONS_MAX - 1)
     else:
         return getattr(schemas, builder)()
 
@@ -71,7 +83,7 @@ def own_key_prompts() -> dict:
     for task, (key, builder, name, image) in AI_OWN_KEY_TASKS.items():
         schema = schema_for(schemas, prompts, builder)
         entry: dict = {"schema_name": name, "schema": schema, "image": image, "system": SYSTEMS.get(task, "task"),
-                       "ids": task in SYSTEMS}
+                       "ids": task in WITH_IDS}
         for mode in ("json_schema", "prompt"):
             if image:
                 entry[mode] = prompts.user_message(key, None, mode=mode, schema=schema)

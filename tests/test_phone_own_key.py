@@ -108,7 +108,7 @@ def test_the_own_key_prompts_are_the_servers(tmp_path) -> None:
     own = json.loads((tmp_path / "ai-prompts.json").read_text(encoding="utf-8"))["own_key"]
     assert own["system"] == prompts.TASK_SYSTEM_PROMPT and own["prompt_version"] == prompts.PROMPT_VERSION
     assert own["max_tokens"] == config.DEFAULT_MAX_TOKENS
-    assert set(own["tasks"]) == {"parse_meal", "read_label", "plate", "next_meal", "recipes"}  # never a lab report task
+    assert set(own["tasks"]) == {"parse_meal", "read_label", "plate", "next_meal", "recipes", "rerank", "swap", "plan"}  # never a lab report task
     data = prompts.parse_meal_data("2 eggs & <toast>")
     payload = prompts.data_block(data)[len("<data>\n"):-len("\n</data>")]
     for mode in ("json_schema", "prompt"):
@@ -138,7 +138,7 @@ def test_the_own_key_prompts_are_the_servers(tmp_path) -> None:
 
 
 def test_the_app_talks_only_to_the_fixed_hosts_with_the_keychain_key_and_logs_nothing() -> None:
-    assert 'static let tasks: Set<String> = ["parse_meal", "read_label", "plate", "next_meal", "recipes"]' in CODE
+    assert 'static let tasks: Set<String> = ["parse_meal", "read_label", "plate", "next_meal", "recipes", "rerank", "swap", "plan"]' in CODE
     assert 'static let photoTasks: Set<String> = ["read_label", "plate"]' in CODE
     for word in ("lab_report", "read_lab_", "lab report", "transcri", "chat"):
         assert word not in CODE.lower().replace("/chat/completions", ""), word  # no lab task, no Ask, no voice
