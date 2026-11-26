@@ -177,6 +177,11 @@ phone and needs no server ([design note 38][NOTE38]):
 - **Food look-ups** go through your server while it can be reached, with the key your server uses for you. A food it finds is
   saved on the phone at once, so it works offline. When your server cannot be reached, the phone uses its own keys from Keys and
   services, if you added them, and otherwise the food list it already has. No key ever moves between the phone and the server.
+- **Your Care team.** Notes from your Care team show on Today, and their meal suggestions on the Plan tab, as in the web app.
+  You can read, delete and answer them. **Add to my plan** adds the foods on your server, and a sync brings them to the
+  phone at once. Notes are read from your server each time and are not kept on the phone; when it cannot be reached, the app says so.
+  **Settings → Care team** shows who is on it. You change it in your server's web app
+  ([Care team](settings-and-keys.md#sharing)).
 - **AI features** use your server's AI when your server can be reached and offers the feature, with the choices and consent you
   made there. Otherwise they use your own AI key if you added one, then the iPhone's own AI where it has one, and otherwise the
   app works without AI, as before.

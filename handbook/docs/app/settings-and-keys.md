@@ -296,6 +296,12 @@ your Care team** in Settings → Care team and on Visit prep.
 - Only you and the writer see a note. Other people on your Care team do not, and neither does the AI.
 - While someone may write notes, your activity shows each part they looked at, once an hour.
 
+**In the iPhone app.** A Care team lives on a server, so the iPhone app shows yours only when it is paired with your server by a
+token **both ways** ([The iPhone app](install.md#with-a-token-both-ways)). Then Today shows new notes, the Plan tab shows
+suggestions, and you can read, delete and answer them as in the web app. **Settings → Care team** lists who is on your Care team
+and whose Care team you are on, but you change it in your server's web app. Notes are read from your server each time and are not
+kept on the phone. When your server cannot be reached, the app says so. Without a server there is no Care team in the app.
+
 **When you are on someone's Care team**, they are under **Care teams you are on**. **Open** shows their summary page, **Trends**
 their charts; **Leave** ends it. Their weight chart uses their dry weight, never yours. If a part cannot load, tap **Retry**.
 
