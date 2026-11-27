@@ -5,11 +5,11 @@
 # Other DNS providers: swap the --with module (https://caddyserver.com/docs/modules/, "dns.providers").
 # Both FROM lines are digest-pinned and literal so Dependabot (docker, directory /deploy/caddy)
 # bumps them together; keep the version in the xcaddy line equal to the tag.
-FROM docker.io/library/caddy:2.11.9-builder@sha256:3fddbec729442a56b942d4c9eaef1df80893dbf2cf5b86701bfae6aad1408eeb AS build
+FROM docker.io/library/caddy:2.11.9-builder@sha256:cda07fe9d82728c7ac44d844306d435e98131423dc7b114f05a8a8ecfff94707 AS build
 # Go verifies every module against the public checksum database (sum.golang.org).
 RUN xcaddy build v2.11.9 --with github.com/caddy-dns/cloudflare@v0.2.4
 
-FROM docker.io/library/caddy:2.11.9@sha256:0c2243efcf437ab7f7a978f1027fcf0d4f9be8a75df27b1b3fbc5dbe0ffa8cf0
+FROM docker.io/library/caddy:2.11.9@sha256:4851e54a46b206517c574821bb5cc67f170d2156041e9fbc4c9193b45e84a75b
 LABEL org.opencontainers.image.title="kidney-health-caddy" \
       org.opencontainers.image.description="Caddy 2.11.9 with caddy-dns/cloudflare v0.2.4 for DNS-01 certificates" \
       org.opencontainers.image.source="https://github.com/ksullivan86/kidney-health" \
