@@ -34,7 +34,7 @@
 # Dependabot (which updates only literal FROM lines) leaves this pin alone instead of proposing a 3.15 digest that fails.
 ARG HANDBOOK_BASE=cgr.dev/chainguard/python:latest-dev@sha256:630df1be3733f7b38d1b535872904248adfe23fbea4befcb08da47cb7436ddb2
 
-FROM cgr.dev/chainguard/python:latest-dev@sha256:9f76d277ca81d3079eb3be24c742de3b6598f032fc9943fed6951ff99e581d02 AS builder
+FROM cgr.dev/chainguard/python:latest-dev@sha256:69e90282a0f83fcd7a8f3e94e93755f6d3e340280639c2bf6440522085c6ae90 AS builder
 # Root only in this throw-away stage (it creates /opt/venv); the runtime stage ends as 10001.
 # hadolint ignore=DL3002
 USER 0
@@ -111,7 +111,7 @@ RUN /opt/hb/bin/mkdocs build --strict -d /out/learn \
 # ---------------------------------------------------------------------------------------------------
 # Stage 3: runtime. Chainguard python:latest: no shell, no pip, no apk; glibc (manylinux wheels).
 # ---------------------------------------------------------------------------------------------------
-FROM cgr.dev/chainguard/python:latest@sha256:e5322b9d32064a645225b8b2419f11127bcf2d8b9927f9514f0acee1e1d25751
+FROM cgr.dev/chainguard/python:latest@sha256:9c4bfa852765da1bfb86d4d500c3333db1c0929c4b9845a90ca7d199d857f90c
 
 # OCI annotations. CI (docker/metadata-action) adds version, revision and created. The licences are
 # SPDX ids: the code's LICENSE, PolyForm Noncommercial 1.0.0 (personal and noncommercial use only),
